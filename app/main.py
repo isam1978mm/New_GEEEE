@@ -54,7 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             payload = json.loads(body)
             verify_redacted(payload)
         except Exception:
-            return public_error_response(status_code=500, code="redaction_violation")
+            return public_error_response(status_code=500, code="internal_error")
 
         return Response(
             content=body,

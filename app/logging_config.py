@@ -11,7 +11,7 @@ class JsonFormatter(logging.Formatter):
         payload = {
             "level": record.levelname,
             "logger": record.name,
-            "message": redact_for_log(record.getMessage()),
+            "message": redact_for_log(record.getMessage(), levelno=record.levelno),
         }
         return json.dumps(payload)
 

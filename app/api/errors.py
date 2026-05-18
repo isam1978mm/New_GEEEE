@@ -11,7 +11,13 @@ from app.services.redaction import verify_redacted
 
 def public_error_response(status_code: int, code: str, message: str | None = None) -> JSONResponse:
     payload = ErrorPublic(error=code, message=message or "Request could not be processed.").model_dump()
-    verify_redacted(payload)
+    try:
+        verify_redacted(payload)
+    except AppError:
+        payload = ErrorPublic(
+            error="internal_error",
+            message="Request could not be processed.",
+        ).model_dump()
     return JSONResponse(status_code=status_code, content=payload)
 
 
