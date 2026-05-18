@@ -33,3 +33,9 @@ class ArtifactNotFoundError(AppError):
     public_code = "artifact_unavailable"
     public_message = "Artifact is unavailable."
 
+
+class ActiveRunConflictError(AppError):
+    status_code = 409
+    public_code = "active_run_exists"
+    public_message = "Another run is already active."
+
