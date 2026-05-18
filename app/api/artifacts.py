@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import Response
 
 from app.config import Settings
 from app.deps import get_db_session, get_settings_from_request
@@ -17,7 +17,7 @@ async def get_artifact(
     artifact_name: str,
     settings: Settings = Depends(get_settings_from_request),
     session: AsyncSession = Depends(get_db_session),
-) -> FileResponse:
+) -> Response:
     return await serve_artifact_response(
         run_id=run_id,
         artifact_name=artifact_name,

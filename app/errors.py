@@ -30,6 +30,6 @@ class ArtifactServeViolation(AppError):
 
 class ArtifactNotFoundError(AppError):
     status_code = 404
-    public_code = "artifact_not_found"
+    public_code = "artifact_unavailable"
     public_message = "Artifact is unavailable."
 
