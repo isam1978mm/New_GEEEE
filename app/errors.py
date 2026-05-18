@@ -21,3 +21,15 @@ class EEInitializationError(AppError):
     public_code = "ee_not_ready"
     public_message = "Service is not ready."
 
+
+class ArtifactServeViolation(AppError):
+    status_code = 404
+    public_code = "artifact_unavailable"
+    public_message = "Artifact is unavailable."
+
+
+class ArtifactNotFoundError(AppError):
+    status_code = 404
+    public_code = "artifact_not_found"
+    public_message = "Artifact is unavailable."
+

@@ -1,19 +1,37 @@
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response
 
+from app.api.artifacts import router as artifacts_router
 from app.api.errors import add_exception_handlers, public_error_response
 from app.api.health import router as health_router
+from app.config import Settings, get_settings
+from app.db.session import create_engine, create_session_factory
 from app.logging_config import configure_logging
 from app.services.redaction import verify_redacted
+from app.services.storage import ensure_data_dirs
 
 
-def create_app() -> FastAPI:
+def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging()
-    app = FastAPI(openapi_url=None, docs_url=None, redoc_url=None)
+    settings = settings or get_settings()
+    ensure_data_dirs(settings)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.state.settings = settings
+        app.state.engine = create_engine(settings)
+        app.state.session_factory = create_session_factory(settings, engine=app.state.engine)
+        try:
+            yield
+        finally:
+            await app.state.engine.dispose()
+
+    app = FastAPI(openapi_url=None, docs_url=None, redoc_url=None, lifespan=lifespan)
 
     @app.middleware("http")
     async def verify_public_json_responses(request, call_next):
@@ -48,6 +66,7 @@ def create_app() -> FastAPI:
 
     add_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(artifacts_router)
 
     @app.get("/", response_class=JSONResponse)
     async def root() -> dict[str, str]:
