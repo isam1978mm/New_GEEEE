@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.run import Run
@@ -12,7 +13,14 @@ ACTIVE_RUN_STATUSES = (RunStatus.QUEUED, RunStatus.RUNNING)
 
 
 async def mark_stale_running_runs(session: AsyncSession) -> int:
-    result = await session.execute(select(Run).where(Run.status == RunStatus.RUNNING))
+    try:
+        result = await session.execute(select(Run).where(Run.status == RunStatus.RUNNING))
+    except OperationalError as exc:
+        if _is_missing_runs_table_error(exc):
+            await session.rollback()
+            return 0
+        raise
+
     running_runs = result.scalars().all()
     for run in running_runs:
         run.status = RunStatus.STALE_FAILED
@@ -25,3 +33,7 @@ async def ensure_single_active_run(session: AsyncSession) -> None:
     active_run_id = result.scalar_one_or_none()
     if active_run_id is not None:
         raise ActiveRunConflictError()
+
+
+def _is_missing_runs_table_error(exc: OperationalError) -> bool:
+    return "no such table: runs" in str(exc.orig).lower()

@@ -32,6 +32,11 @@ def test_ensure_single_active_run_allows_inactive_runs() -> None:
         asyncio.run(_run_inactive_run_allowed_test(Path(temp_dir)))
 
 
+def test_mark_stale_running_runs_returns_zero_when_runs_table_missing() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_missing_runs_table_test(Path(temp_dir)))
+
+
 async def _run_mark_stale_running_runs_test(tmp_path: Path) -> None:
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "db.sqlite")
     ensure_data_dirs(settings)
@@ -108,5 +113,18 @@ async def _run_inactive_run_allowed_test(tmp_path: Path) -> None:
         await session.commit()
 
         await ensure_single_active_run(session)
+
+    await engine.dispose()
+
+
+async def _run_missing_runs_table_test(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "db.sqlite")
+    ensure_data_dirs(settings)
+    engine = create_async_engine(settings.database_url, future=True)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        updated_count = await mark_stale_running_runs(session)
+        assert updated_count == 0
 
     await engine.dispose()

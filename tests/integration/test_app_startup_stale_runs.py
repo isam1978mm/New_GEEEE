@@ -30,6 +30,22 @@ def test_startup_marks_running_runs_stale_failed(tmp_path: Path) -> None:
     assert run_status == RunStatus.STALE_FAILED
 
 
+def test_startup_allows_existing_unmigrated_sqlite_db(tmp_path: Path) -> None:
+    settings = Settings(
+        data_dir=tmp_path / "data",
+        database_path=tmp_path / "data" / "gee_screening.db",
+    )
+
+    ensure_data_dirs(settings)
+    settings.database_path.touch()
+
+    with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+        response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 async def _create_running_run(settings: Settings) -> None:
     ensure_data_dirs(settings)
     engine = create_async_engine(settings.database_url, future=True)
