@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gee-screening-app"
+version = "0.1.0"
+description = "GEE Screening Web App"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.16.0",
+    "fastapi>=0.115.0",
+    "pydantic-settings>=2.8.0",
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.21.0",
+    "uvicorn>=0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--basetemp=.pytest-tmp"
