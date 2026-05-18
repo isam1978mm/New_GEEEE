@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "gee-screening-app"
 version = "0.1.0"
 description = "GEE Screening Web App"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.16.0",
     "fastapi>=0.115.0",

@@ -3,4 +3,13 @@ __pycache__/
 .pytest_cache/
 *.pyc
 data/
-
+.env
+logs/
+*.log
+*.kmz
+*.kml
+*.tif
+*.tiff
+*.npy
+*.npz
+.pytest-tmp/
