@@ -54,7 +54,7 @@ def build_hypercube_products(
     if not source_layers:
         raise StageError("Hypercube assembly requires at least one source TIFF.")
 
-    band_names = [name for name, _array in source_layers]
+    source_band_names = [name for name, _array in source_layers]
     layers = [array.astype(np.float32, copy=True) for _name, array in source_layers]
     cube_raw = np.stack(layers, axis=-1).astype(np.float32)
     cube_raw[cube_raw == nodata] = np.nan
@@ -86,10 +86,12 @@ def build_hypercube_products(
         cube_norm[:, :, index] = normalized.astype(np.float32)
 
     cube_norm_plus_mask = np.concatenate([cube_norm, mask_any[:, :, None].astype(np.float32)], axis=-1)
-    cube_out = np.where(np.isfinite(cube_raw), cube_raw, nodata).astype(np.float32)
+    cube_out = np.where(np.isfinite(cube_norm_plus_mask), cube_norm_plus_mask, nodata).astype(np.float32)
+    persisted_band_names = [*source_band_names, "valid_mask"]
 
     return {
-        "band_names": band_names,
+        "source_band_names": source_band_names,
+        "band_names": persisted_band_names,
         "cube_raw": cube_out,
         "cube_clean": cube_clean,
         "cube_norm": cube_norm,
@@ -120,6 +122,8 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
     assert isinstance(cube_raw, np.ndarray)
     band_names = products["band_names"]
     assert isinstance(band_names, list)
+    source_band_names = products["source_band_names"]
+    assert isinstance(source_band_names, list)
 
     tif_path = run_dir / HYPERCUBE_TIF_NAME
     npy_path = run_dir / HYPERCUBE_NPY_NAME
@@ -142,14 +146,15 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
         ["band_index", "band_name", "source_file"],
         (
             {"band_index": index, "band_name": name, "source_file": f"{name}.tif"}
-            for index, name in enumerate(band_names)
+            for index, name in enumerate(source_band_names)
         ),
     )
 
-    cube_raw_nan = np.where(cube_raw == grid_spec.nodata, np.nan, cube_raw)
+    cube_norm = products["cube_norm"]
+    assert isinstance(cube_norm, np.ndarray)
     stats_rows = []
-    for index, name in enumerate(band_names):
-        channel = cube_raw_nan[:, :, index]
+    for index, name in enumerate(source_band_names):
+        channel = cube_norm[:, :, index]
         valid = channel[np.isfinite(channel)]
         stats_rows.append(
             {
@@ -181,7 +186,7 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
                 "median": float(medians[index]),
                 "iqr": float(iqrs[index]),
             }
-            for index, name in enumerate(band_names)
+            for index, name in enumerate(source_band_names)
         ),
     )
 
@@ -225,6 +230,24 @@ class HypercubeStage(Stage):
                 relative_path=outputs["hypercube_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=outputs["hypercube_npy"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="hypercube_band_order",
+                relative_path=outputs["band_order_csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["band_order_csv"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="hypercube_band_stats",
+                relative_path=outputs["band_stats_csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["band_stats_csv"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="hypercube_norm_params",
+                relative_path=outputs["norm_params_csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["norm_params_csv"].stat().st_size,
             ),
         ]
         band_names = products["band_names"]

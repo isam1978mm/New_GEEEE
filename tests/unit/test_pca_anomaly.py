@@ -26,6 +26,8 @@ def test_compute_pca_anomaly_is_seeded_and_normalized() -> None:
     assert np.allclose(anomaly_a, anomaly_b)
     assert report_a["seed"] == 0
     assert report_a["explained_variance_ratio"] == report_b["explained_variance_ratio"]
+    assert "eigenvalues" in report_a
+    assert "explained_variance" in report_a
     assert float(np.min(anomaly_a)) >= 0.0
     assert float(np.max(anomaly_a)) <= 1.0
 
@@ -49,6 +51,7 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
         report = read_manifest(run_dir / "pca_eigenvalues.json")
         assert report["seed"] == 0
+        assert "eigenvalues" in report or "explained_variance" in report
 
 
 def _settings(run_dir: Path):

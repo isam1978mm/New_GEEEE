@@ -23,15 +23,18 @@ def test_build_hypercube_products_matches_notebook_masks_and_norm() -> None:
     cube_raw = products["cube_raw"]
     cube_clean = products["cube_clean"]
     cube_norm_plus_mask = products["cube_norm_plus_mask"]
+    band_names = products["band_names"]
     assert isinstance(cube_raw, np.ndarray)
     assert isinstance(cube_clean, np.ndarray)
     assert isinstance(cube_norm_plus_mask, np.ndarray)
-    assert cube_raw.shape == (2, 2, 2)
+    assert cube_raw.shape == (2, 2, 3)
     assert cube_clean[1, 1, 0] == 0.0
     assert products["mask_any"][1, 1] == 1
     assert products["mask_all"][1, 1] == 0
     assert cube_norm_plus_mask.shape == (2, 2, 3)
     assert cube_norm_plus_mask[0, 0, -1] == 1.0
+    assert band_names == ["a", "b", "valid_mask"]
+    assert np.allclose(cube_raw, cube_norm_plus_mask)
 
 
 def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
@@ -44,10 +47,17 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["hypercube_tif", "hypercube_npy"]
+        assert [artifact.name for artifact in result.artifacts] == [
+            "hypercube_tif",
+            "hypercube_npy",
+            "hypercube_band_order",
+            "hypercube_band_stats",
+            "hypercube_norm_params",
+        ]
         assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
         cube = np.load(run_dir / "hypercube.npy")
-        assert cube.shape == (grid_spec.size, grid_spec.size, 2)
+        assert cube.shape == (grid_spec.size, grid_spec.size, 3)
+        assert np.all(cube[:, :, -1] == 1.0)
         sidecar = read_manifest(raster_sidecar_path(run_dir / "hypercube.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
 

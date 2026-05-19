@@ -18,12 +18,15 @@ def test_hypercube_parity_matches_notebook_stack_clean_normalize_append_mask() -
     cube_clean = products["cube_clean"]
     cube_norm = products["cube_norm"]
     cube_norm_plus_mask = products["cube_norm_plus_mask"]
+    band_names = products["band_names"]
 
     assert HypercubeStage.parity_category is ParityCategory.PARITY_REPRODUCES
-    assert cube_raw.shape == (2, 2, 2)
+    assert cube_raw.shape == (2, 2, 3)
     assert mask_any.tolist() == [[1, 1], [1, 1]]
     assert mask_all.tolist() == [[1, 0], [1, 1]]
     assert cube_clean[0, 1, 0] == 0.0
     assert cube_norm.shape == (2, 2, 2)
     assert cube_norm_plus_mask.shape == (2, 2, 3)
     assert np.all(cube_norm_plus_mask[:, :, -1] == mask_any.astype(np.float32))
+    assert np.allclose(cube_raw, cube_norm_plus_mask)
+    assert band_names == ["a", "b", "valid_mask"]

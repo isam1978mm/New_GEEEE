@@ -18,6 +18,7 @@ def test_pca_parity_matches_notebook_seeded_fit_and_normed_magnitude() -> None:
     assert report["seed"] == 0
     assert report["sample_size"] == 100
     assert len(report["explained_variance_ratio"]) == 3
+    assert "eigenvalues" in report or "explained_variance" in report
     assert float(np.min(anomaly)) >= 0.0
     assert float(np.max(anomaly)) <= 1.0
     assert anomaly.shape == (10, 10)

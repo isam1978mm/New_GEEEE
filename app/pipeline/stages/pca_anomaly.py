@@ -49,7 +49,7 @@ def _fit_pca_components(
     fit_matrix: np.ndarray,
     *,
     n_components: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     mean = fit_matrix.mean(axis=0, dtype=np.float64)
     centered = fit_matrix - mean
     _u, singular_values, vt = np.linalg.svd(centered, full_matrices=False)
@@ -57,7 +57,7 @@ def _fit_pca_components(
     explained_variance = ((singular_values[:n_components] ** 2) / max(fit_matrix.shape[0] - 1, 1)).astype(np.float32)
     total_variance = float(np.var(fit_matrix, axis=0, ddof=1).sum()) if fit_matrix.shape[0] > 1 else float(explained_variance.sum())
     explained_ratio = (explained_variance / max(total_variance, 1e-12)).astype(np.float32)
-    return mean.astype(np.float32), components, explained_ratio
+    return mean.astype(np.float32), components, explained_variance, explained_ratio
 
 
 def compute_pca_anomaly(
@@ -84,7 +84,7 @@ def compute_pca_anomaly(
     sample_idx = rng.choice(pixel_count, size=sample_size, replace=False)
     fit_matrix = matrix[sample_idx]
 
-    mean, components, explained_ratio = _fit_pca_components(fit_matrix, n_components=n_components)
+    mean, components, explained_variance, explained_ratio = _fit_pca_components(fit_matrix, n_components=n_components)
     projected = (matrix - mean) @ components.T
     pc1 = projected[:, 0].reshape(height, width).astype(np.float32)
     pc2 = projected[:, 1].reshape(height, width).astype(np.float32)
@@ -103,6 +103,8 @@ def compute_pca_anomaly(
         "sample_size": int(sample_size),
         "pixel_count": int(pixel_count),
         "components_count": int(n_components),
+        "eigenvalues": [float(value) for value in explained_variance],
+        "explained_variance": [float(value) for value in explained_variance],
         "explained_variance_ratio": [float(value) for value in explained_ratio],
         "mean_vector_length": int(mean.shape[0]),
         "percentile_range": {"p01": float(p01), "p99": float(p99)},
