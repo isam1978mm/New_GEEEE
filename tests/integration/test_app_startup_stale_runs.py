@@ -24,10 +24,8 @@ def test_startup_marks_running_runs_stale_failed(tmp_path: Path) -> None:
     asyncio.run(_create_running_run(settings))
 
     with TestClient(create_app(settings), raise_server_exceptions=False):
-        pass
-
-    run_status = asyncio.run(_fetch_run_status(settings, "run-startup"))
-    assert run_status == RunStatus.STALE_FAILED
+        run_status = asyncio.run(_fetch_run_status(settings, "run-startup"))
+        assert run_status == RunStatus.STALE_FAILED
 
 
 def test_startup_allows_existing_unmigrated_sqlite_db(tmp_path: Path) -> None:
