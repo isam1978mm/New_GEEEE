@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import asyncio
+import inspect
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from app.config import Settings
+from app.db.base import Base
+from app.db.models.artifact import Artifact
+from app.db.models.enums import ArtifactClass, RunStatus
+from app.db.models.run import Run
+from app.pipeline._base import (
+    ParityCategory,
+    Stage,
+    StageContext,
+    StageResult,
+    build_stage_artifact,
+)
+from app.pipeline.orchestrator import Orchestrator
+from app.services.storage import ensure_data_dirs, read_manifest
+
+
+class DemoStage(Stage):
+    name = "demo"
+    parity_category = ParityCategory.PARITY_REPLACES
+    parity_reason = "Replaces notebook orchestration side effects with app-managed execution."
+
+    async def run(self, context: StageContext) -> StageResult:
+        artifact_path = context.run_dir / "demo.txt"
+        artifact_path.write_text("demo", encoding="utf-8")
+        return StageResult(
+            artifacts=[
+                build_stage_artifact(
+                    name="demo",
+                    relative_path="demo.txt",
+                    artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                    size_bytes=artifact_path.stat().st_size,
+                )
+            ],
+            metadata={"note": "ok"},
+        )
+
+
+def test_orchestrator_persists_stage_status_and_artifacts() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_orchestrator_test(Path(temp_dir)))
+
+
+def test_orchestrator_does_not_reference_stages_experimental() -> None:
+    source = inspect.getsource(__import__("app.pipeline.orchestrator", fromlist=["Orchestrator"]))
+    assert "stages_experimental" not in source
+
+
+async def _run_orchestrator_test(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "db.sqlite")
+    ensure_data_dirs(settings)
+    engine = create_async_engine(settings.database_url, future=True)
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        session.add(
+            Run(
+                id="run-1",
+                name="demo",
+                status=RunStatus.QUEUED,
+                latitude=1.0,
+                longitude=2.0,
+            )
+        )
+        await session.commit()
+
+    orchestrator = Orchestrator(
+        settings=settings,
+        session_factory=session_factory,
+        stages=[DemoStage()],
+    )
+    records = await orchestrator.run_run("run-1")
+    assert len(records) == 1
+    assert records[0].stage_name == "demo"
+    assert records[0].status == "done"
+
+    async with session_factory() as session:
+        run_status = await session.scalar(select(Run.status).where(Run.id == "run-1"))
+        assert run_status == RunStatus.DONE
+
+        artifact = await session.scalar(select(Artifact).where(Artifact.run_id == "run-1"))
+        assert artifact is not None
+        assert artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE
+
+    manifest = read_manifest(settings.data_dir / "runs" / "run-1" / "stage_demo.manifest.json")
+    assert manifest["status"] == "done"
+    assert manifest["artifact_count"] == 1
+    assert manifest["parity_category"] == ParityCategory.PARITY_REPLACES.value
+    assert manifest["artifact_class"] == ArtifactClass.LOCAL_SENSITIVE.value
+
+    await engine.dispose()

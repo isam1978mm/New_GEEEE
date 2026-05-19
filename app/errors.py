@@ -39,3 +39,21 @@ class ActiveRunConflictError(AppError):
     public_code = "active_run_exists"
     public_message = "Another run is already active."
 
+
+class StageError(AppError):
+    status_code = 500
+    public_code = "stage_failed"
+    public_message = "Pipeline stage execution failed."
+
+
+class ArtifactClassError(AppError):
+    status_code = 500
+    public_code = "artifact_class_required"
+    public_message = "Artifact could not be recorded safely."
+
+
+class ParityMetadataError(AppError):
+    status_code = 500
+    public_code = "invalid_stage_metadata"
+    public_message = "Stage metadata is invalid."
+
