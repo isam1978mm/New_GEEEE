@@ -72,6 +72,33 @@ def test_alignment_qa_stage_raises_on_transform_drift() -> None:
         with pytest.raises(GridDriftError):
             asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
 
+        summary_path = run_dir / "alignment_qa.json"
+        assert summary_path.is_file()
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        assert summary["pass"] is False
+        assert "pca_anomaly.tif" in summary["failing_artifacts"]
+
+        summary_text = summary_path.read_text(encoding="utf-8")
+        for forbidden in (
+            "transform",
+            "bounds",
+            "bbox",
+            "crs_transform",
+            "hash",
+            "checksum",
+            "fingerprint",
+            str(run_dir),
+        ):
+            assert forbidden not in summary_text
+        bounds = grid_spec.manifest.bounds_m
+        for numeric_fragment in (
+            str(bounds["xmin"]),
+            str(bounds["xmax"]),
+            str(bounds["ymin"]),
+            str(bounds["ymax"]),
+        ):
+            assert numeric_fragment not in summary_text
+
 
 def _write_raster(path: Path, array: np.ndarray, grid_spec) -> None:
     Image.fromarray(array.astype(np.float32)).save(path, format="TIFF")

@@ -154,10 +154,8 @@ class AlignmentQaStage(Stage):
 
     async def run(self, context: StageContext) -> StageResult:
         audit_rows, summary, mask_selection = build_alignment_reports(context.run_dir, self.grid_spec)
-        if not bool(summary["pass"]):
-            raise GridDriftError(f"Alignment QA failed for: {', '.join(summary['failing_artifacts'])}")
-
         outputs = write_alignment_outputs(context.run_dir, audit_rows, summary, mask_selection)
+
         artifacts = [
             build_stage_artifact(
                 name="alignment_qa",
@@ -178,4 +176,6 @@ class AlignmentQaStage(Stage):
                 size_bytes=outputs["mask_selection_json"].stat().st_size,
             ),
         ]
+        if not bool(summary["pass"]):
+            raise GridDriftError(f"Alignment QA failed for: {', '.join(summary['failing_artifacts'])}")
         return StageResult(artifacts=artifacts, metadata=summary)
