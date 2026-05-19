@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -231,7 +230,13 @@ def lin_to_db(lin: np.ndarray) -> np.ndarray:
     return 10.0 * np.log10(np.maximum(lin, 1e-12))
 
 
-def apply_local_dem_rtc(cube_3: np.ndarray, dem: np.ndarray, *, nodata: float) -> dict[str, np.ndarray]:
+def apply_local_dem_rtc(
+    cube_3: np.ndarray,
+    dem: np.ndarray,
+    *,
+    nodata: float,
+    scale_m: float,
+) -> dict[str, np.ndarray]:
     if cube_3.shape[-1] != 3:
         raise ValueError("SAR cube must contain VV_dB, VH_dB, and angle bands.")
     if cube_3.shape[:2] != dem.shape:
@@ -239,7 +244,9 @@ def apply_local_dem_rtc(cube_3: np.ndarray, dem: np.ndarray, *, nodata: float) -
 
     dem_float = dem.astype(np.float32, copy=True)
     dem_float = np.where(dem_float == nodata, np.nan, dem_float)
-    dz_dy, dz_dx = np.gradient(dem_float, 10.0, 10.0)
+    # Notebook cell 12 performs the local DEM-based RTC/Gamma0 approximation
+    # after sampling VV_dB/VH_dB/angle to the GRID. Reproduce that flow here.
+    dz_dy, dz_dx = np.gradient(dem_float, scale_m, scale_m)
     slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
     corr = np.cos(slope_rad)
     corr = np.where(np.isfinite(corr), np.maximum(corr, 0.25), np.nan)
@@ -341,7 +348,12 @@ class SarRtcStage(Stage):
             end_date=self.end_date,
         )
         cube_3 = fetcher(grid_spec=self.grid_spec)
-        outputs = apply_local_dem_rtc(cube_3, dem, nodata=self.grid_spec.nodata)
+        outputs = apply_local_dem_rtc(
+            cube_3,
+            dem,
+            nodata=self.grid_spec.nodata,
+            scale_m=float(self.grid_spec.manifest.scale_m),
+        )
         written_paths = write_sar_outputs(context.run_dir, self.grid_spec, outputs)
         artifacts = [
             build_stage_artifact(

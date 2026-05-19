@@ -22,18 +22,46 @@ from app.pipeline.stages.sar_rtc import (
 from app.services.storage import read_manifest
 
 
-def test_apply_local_dem_rtc_builds_expected_bands() -> None:
+def test_apply_local_dem_rtc_builds_expected_bands_and_formula() -> None:
     grid_spec = build_run_grid(35.59499, 36.12694)
     dem = np.full((grid_spec.size, grid_spec.size), 100.0, dtype=np.float32)
     cube = deterministic_radar_cube_fetcher(grid_spec=grid_spec)
 
-    outputs = apply_local_dem_rtc(cube, dem, nodata=grid_spec.nodata)
+    outputs = apply_local_dem_rtc(
+        cube,
+        dem,
+        nodata=grid_spec.nodata,
+        scale_m=float(grid_spec.manifest.scale_m),
+    )
 
     assert set(outputs) == {"VV_dB", "VH_dB", "logRatio_dB", "incidence"}
     assert outputs["VV_dB"].shape == (640, 640)
     assert outputs["incidence"][0, 0] == np.float32(38.5)
     valid = outputs["logRatio_dB"] != grid_spec.nodata
     np.testing.assert_allclose(outputs["logRatio_dB"][valid], outputs["VV_dB"][valid] - outputs["VH_dB"][valid])
+
+    # Flat DEM => corr = 1.0, so notebook local RTC reduces to dividing linear sigma0 by cos(incidence).
+    vv_in = float(cube[0, 0, 0])
+    cos_inc = float(np.cos(np.deg2rad(cube[0, 0, 2])))
+    expected_vv = float(10.0 * np.log10((10.0 ** (vv_in / 10.0)) / cos_inc))
+    assert outputs["VV_dB"][0, 0] == pytest.approx(expected_vv, abs=1e-5)
+
+
+def test_apply_local_dem_rtc_uses_passed_scale_m() -> None:
+    dem = np.arange(16, dtype=np.float32).reshape(4, 4)
+    cube = np.stack(
+        [
+            np.full((4, 4), -10.0, dtype=np.float32),
+            np.full((4, 4), -16.0, dtype=np.float32),
+            np.full((4, 4), 38.5, dtype=np.float32),
+        ],
+        axis=-1,
+    )
+
+    outputs_scale_10 = apply_local_dem_rtc(cube, dem, nodata=-9999.0, scale_m=10.0)
+    outputs_scale_20 = apply_local_dem_rtc(cube, dem, nodata=-9999.0, scale_m=20.0)
+
+    assert not np.allclose(outputs_scale_10["VV_dB"], outputs_scale_20["VV_dB"])
 
 
 def test_build_s1_base_collection_uses_notebook_filters(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -67,7 +95,10 @@ def test_build_s1_base_collection_uses_notebook_filters(monkeypatch: pytest.Monk
             return self
 
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Filter", FakeFilter)
-    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.ImageCollection", lambda dataset: calls.append(("ImageCollection", dataset)) or FakeCollection())
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc.ee.ImageCollection",
+        lambda dataset: calls.append(("ImageCollection", dataset)) or FakeCollection(),
+    )
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.build_grid_region", lambda _grid_spec: "grid-region")
 
     build_s1_base_collection(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
