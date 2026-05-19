@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from PIL import Image
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
 from app.config import Settings
 from app.db.base import Base
@@ -28,47 +28,53 @@ PACKAGE_NAME = "app.pipeline.stages_experimental"
 async def test_validate_experimental_inputs_accepts_completed_grid_consistent_run(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
     inputs_module = _load_inputs_module()
-    settings, session_factory, run_id = await _build_completed_run_fixture(tmp_path)
+    settings, session_factory, run_id, engine = await _build_completed_run_fixture(tmp_path)
+    try:
+        validated = await inputs_module.validate_experimental_inputs(
+            settings=settings,
+            session_factory=session_factory,
+            run_id=run_id,
+        )
 
-    validated = await inputs_module.validate_experimental_inputs(
-        settings=settings,
-        session_factory=session_factory,
-        run_id=run_id,
-    )
-
-    assert validated.run_id == run_id
-    assert validated.hypercube_npy_path.name == HYPERCUBE_NPY_NAME
-    assert validated.pca_anomaly_tif_path.name == PCA_ANOMALY_TIF_NAME
-    assert len(validated.object_rows) == 2
-    assert len(validated.cluster_rows) == 1
+        assert validated.run_id == run_id
+        assert validated.hypercube_npy_path.name == HYPERCUBE_NPY_NAME
+        assert validated.pca_anomaly_tif_path.name == PCA_ANOMALY_TIF_NAME
+        assert len(validated.object_rows) == 2
+        assert len(validated.cluster_rows) == 1
+    finally:
+        await engine.dispose()
 
 
 @pytest.mark.asyncio
 async def test_validate_experimental_inputs_rejects_non_done_run(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
     inputs_module = _load_inputs_module()
-    settings, session_factory, run_id = await _build_completed_run_fixture(tmp_path, status=RunStatus.RUNNING)
-
-    with pytest.raises(Exception, match="run is not done"):
-        await inputs_module.validate_experimental_inputs(
-            settings=settings,
-            session_factory=session_factory,
-            run_id=run_id,
-        )
+    settings, session_factory, run_id, engine = await _build_completed_run_fixture(tmp_path, status=RunStatus.RUNNING)
+    try:
+        with pytest.raises(Exception, match="run is not done"):
+            await inputs_module.validate_experimental_inputs(
+                settings=settings,
+                session_factory=session_factory,
+                run_id=run_id,
+            )
+    finally:
+        await engine.dispose()
 
 
 @pytest.mark.asyncio
 async def test_validate_experimental_inputs_rejects_transform_drift_before_classifier_runs(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
     inputs_module = _load_inputs_module()
-    settings, session_factory, run_id = await _build_completed_run_fixture(tmp_path, drift_transform=True)
-
-    with pytest.raises(Exception, match="transform mismatch"):
-        await inputs_module.validate_experimental_inputs(
-            settings=settings,
-            session_factory=session_factory,
-            run_id=run_id,
-        )
+    settings, session_factory, run_id, engine = await _build_completed_run_fixture(tmp_path, drift_transform=True)
+    try:
+        with pytest.raises(Exception, match="transform mismatch"):
+            await inputs_module.validate_experimental_inputs(
+                settings=settings,
+                session_factory=session_factory,
+                run_id=run_id,
+            )
+    finally:
+        await engine.dispose()
 
 
 def _load_inputs_module():
@@ -82,7 +88,7 @@ async def _build_completed_run_fixture(
     *,
     status: RunStatus = RunStatus.DONE,
     drift_transform: bool = False,
-) -> tuple[Settings, async_sessionmaker, str]:
+) -> tuple[Settings, async_sessionmaker, str, AsyncEngine]:
     data_dir = tmp_path / "data"
     settings = Settings(data_dir=data_dir, database_path=data_dir / "gee_screening.db")
     run_id = "run-1"
@@ -223,7 +229,7 @@ async def _build_completed_run_fixture(
         )
         await session.commit()
 
-    return settings, session_factory, run_id
+    return settings, session_factory, run_id, engine
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, object]]) -> None:

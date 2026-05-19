@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.db.models.enums import ArtifactClass
@@ -16,3 +18,4 @@ class ArtifactInternal(BaseModel):
 class ArtifactPublic(BaseModel):
     name: str
     artifact_class: ArtifactClass
+    created_at: datetime | None = None

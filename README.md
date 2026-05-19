@@ -22,7 +22,7 @@ The default app surface is local-only. FastAPI binds to `127.0.0.1` by default, 
 - No public API response may expose coordinates, geometry, bounds, filesystem paths, hashes, or CRS transforms.
 - Experimental outputs are always `FILESYSTEM_ONLY` and are never listed or served over HTTP.
 
-See [docs/SAFETY_CONSTANTS.md](/C:/Dev/New_GEE/docs/SAFETY_CONSTANTS.md), [docs/PIPELINE.md](/C:/Dev/New_GEE/docs/PIPELINE.md), and [docs/EXPERIMENTAL_MODULE.md](/C:/Dev/New_GEE/docs/EXPERIMENTAL_MODULE.md).
+See [docs/SAFETY_CONSTANTS.md](docs/SAFETY_CONSTANTS.md), [docs/PIPELINE.md](docs/PIPELINE.md), and [docs/EXPERIMENTAL_MODULE.md](docs/EXPERIMENTAL_MODULE.md).
 
 ## Local setup
 

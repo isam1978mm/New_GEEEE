@@ -29,20 +29,31 @@ from app.services.storage import ensure_data_dirs
 
 def test_full_core_run_completes_and_app_serves_safe_outputs(monkeypatch) -> None:
     with TemporaryDirectory() as temp_dir:
-        asyncio.run(_run_full_core_pipeline(Path(temp_dir)))
-
         settings = Settings(
             data_dir=Path(temp_dir) / "data",
             database_path=Path(temp_dir) / "data" / "gee_screening.db",
         )
+        asyncio.run(_create_database(settings))
         monkeypatch.setattr("app.api.health.initialize_ee_session", lambda _settings: None)
+        monkeypatch.setattr("app.api.runs.enqueue_core_pipeline_run", _deterministic_background_runner(settings))
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            post_run = client.post("/runs", json={"lat": 35.59499, "lon": 36.12694, "name": "integration"})
+            run_id = post_run.json()["id"]
+            runs = client.get("/runs")
+            run_detail = client.get(f"/runs/{run_id}")
             root = client.get("/")
             health = client.get("/healthz")
             ready = client.get("/readyz")
-            objects_index = client.get("/runs/run-1/artifacts/objects_index")
+            objects_index = client.get(f"/runs/{run_id}/artifacts/objects_index")
 
+        assert post_run.status_code == 201
+        assert "lat" not in post_run.text.casefold()
+        assert runs.status_code == 200
+        assert len(runs.json()) == 1
+        assert run_detail.status_code == 200
+        assert run_detail.json()["status"] == "done"
+        assert {artifact["name"] for artifact in run_detail.json()["artifacts"]} >= {"objects_index", "alignment_qa"}
         assert root.status_code == 200
         assert "GEE Screening Workspace" in root.text
         assert health.status_code == 200
@@ -56,35 +67,37 @@ def test_full_core_run_completes_and_app_serves_safe_outputs(monkeypatch) -> Non
         assert "longitude" not in objects_index.text.casefold()
 
 
-async def _run_full_core_pipeline(tmp_path: Path) -> None:
-    data_dir = tmp_path / "data"
-    db_path = data_dir / "gee_screening.db"
-    settings = Settings(data_dir=data_dir, database_path=db_path)
+async def _create_database(settings: Settings) -> None:
     ensure_data_dirs(settings)
-
     engine = create_async_engine(settings.database_url, future=True)
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+    await engine.dispose()
 
+
+def _deterministic_background_runner(settings: Settings):
+    def run(run_id: str, _settings: Settings) -> None:
+        assert _settings.data_dir == settings.data_dir
+        asyncio.run(_run_full_core_pipeline(settings, run_id=run_id))
+
+    return run
+
+
+async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
+    engine = create_async_engine(settings.database_url, future=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
-        session.add(
-            Run(
-                id="run-1",
-                name="integration",
-                status=RunStatus.QUEUED,
-                latitude=35.59499,
-                longitude=36.12694,
-            )
-        )
-        await session.commit()
+        run = await session.scalar(select(Run).where(Run.id == run_id))
+        assert run is not None
+        latitude = float(run.latitude)
+        longitude = float(run.longitude)
 
-    grid_spec = build_run_grid(35.59499, 36.12694)
+    grid_spec = build_run_grid(latitude, longitude)
     orchestrator = Orchestrator(
         settings=settings,
         session_factory=session_factory,
         stages=[
-            GridStage(latitude=35.59499, longitude=36.12694),
+            GridStage(latitude=latitude, longitude=longitude),
             DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile),
             ZeroShiftStage(grid_spec=grid_spec),
             SarRtcStage(grid_spec=grid_spec, radar_cube_fetcher=deterministic_radar_cube_fetcher),
@@ -97,15 +110,15 @@ async def _run_full_core_pipeline(tmp_path: Path) -> None:
             AlignmentQaStage(grid_spec=grid_spec),
         ],
     )
-    records = await orchestrator.run_run("run-1")
+    records = await orchestrator.run_run(run_id)
 
     assert len(records) == 11
 
     async with session_factory() as session:
-        run = await session.scalar(select(Run).where(Run.id == "run-1"))
-        artifact_count = await session.scalar(select(func.count(Artifact.id)).where(Artifact.run_id == "run-1"))
-        objects_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == "run-1", Artifact.name == "objects_index"))
-        alignment_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == "run-1", Artifact.name == "alignment_qa"))
+        run = await session.scalar(select(Run).where(Run.id == run_id))
+        artifact_count = await session.scalar(select(func.count(Artifact.id)).where(Artifact.run_id == run_id))
+        objects_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "objects_index"))
+        alignment_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "alignment_qa"))
 
     assert run is not None
     assert run.status == RunStatus.DONE

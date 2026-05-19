@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.artifacts import router as artifacts_router
 from app.api.errors import add_exception_handlers, public_error_response
 from app.api.health import router as health_router
+from app.api.runs import router as runs_router
 from app.config import Settings, get_settings
 from app.db.session import create_engine, create_session_factory
 from app.logging_config import configure_logging
@@ -71,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     add_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(runs_router)
     app.include_router(artifacts_router)
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
     if frontend_dir.is_dir():

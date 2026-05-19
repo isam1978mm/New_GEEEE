@@ -42,4 +42,4 @@ These outputs are never listed, previewed, tiled, or downloaded through HTTP.
 
 App-side code, tests, filenames, logs, and outputs use only neutral identifiers such as `Class_A` through `Class_N`.
 
-The mapping to source-notebook classifier labels exists only in [CLASS_MAPPING.md](/C:/Dev/New_GEE/docs/CLASS_MAPPING.md).
+The mapping to source-notebook classifier labels exists only in [CLASS_MAPPING.md](CLASS_MAPPING.md).
