@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from app.pipeline._base import ParityCategory
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import (
     DEFAULT_END,
     DEFAULT_START,
     S2_SOURCE_BANDS,
+    S2IndicesStage,
     build_s2_composite,
     create_ee_s2_cube_fetcher,
     finalize_for_sample,
@@ -109,6 +111,9 @@ def test_s2_parity_iron_swir_correction_reference() -> None:
     corrected = (b11 - b12) / (b11 + b12)
     buggy = (b11 - b12) / (b11 - b12)
 
+    assert S2IndicesStage.parity_category is ParityCategory.PARITY_CORRECTS
+    assert "notebook bug" in S2IndicesStage.parity_reason
+    assert "B11+B12" in S2IndicesStage.parity_reason
     assert corrected != buggy
     assert corrected == (0.4 - 0.25) / (0.4 + 0.25)
 

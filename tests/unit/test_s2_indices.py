@@ -39,6 +39,25 @@ def test_compute_s2_indices_uses_correct_iron_swir_formula() -> None:
     assert outputs["IRON_SWIR"][0, 0] != pytest.approx(1.0)
 
 
+def test_compute_s2_indices_masks_only_formulas_that_require_nodata_band() -> None:
+    nodata = -9999.0
+    cube = np.zeros((1, 1, len(S2_SOURCE_BANDS)), dtype=np.float32)
+    cube[:, :, 0] = 0.1  # B2
+    cube[:, :, 1] = 0.2  # B3
+    cube[:, :, 2] = 0.3  # B4
+    cube[:, :, 3] = 0.6  # B8
+    cube[:, :, 4] = 0.4  # B11
+    cube[:, :, 5] = nodata  # B12
+
+    outputs = compute_s2_indices(cube, nodata=nodata)
+
+    assert outputs["NBR"][0, 0] == nodata
+    assert outputs["IRON_SWIR"][0, 0] == nodata
+    assert outputs["NDVI"][0, 0] == pytest.approx((0.6 - 0.3) / (0.6 + 0.3))
+    assert outputs["NDMI"][0, 0] == pytest.approx((0.6 - 0.4) / (0.6 + 0.4))
+    assert outputs["BSI"][0, 0] == pytest.approx(((0.4 + 0.3) - (0.6 + 0.1)) / ((0.4 + 0.3) + (0.6 + 0.1)))
+
+
 def test_build_s2_composite_uses_notebook_filters(monkeypatch: pytest.MonkeyPatch) -> None:
     grid_spec = build_run_grid(35.59499, 36.12694)
     calls: list[tuple[str, object]] = []

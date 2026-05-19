@@ -120,15 +120,29 @@ def deterministic_s2_cube_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
     return np.stack([b2, b3, b4, b8, b11, b12], axis=-1).astype(np.float32)
 
 
-def _safe_divide(numerator: np.ndarray, denominator: np.ndarray, *, nodata: float) -> np.ndarray:
+def _safe_divide(
+    numerator: np.ndarray,
+    denominator: np.ndarray,
+    *,
+    nodata: float,
+    valid_mask: np.ndarray | None = None,
+) -> np.ndarray:
     result = np.full(numerator.shape, nodata, dtype=np.float32)
-    valid = np.isfinite(numerator) & np.isfinite(denominator) & (denominator != 0.0)
+    valid = (
+        np.isfinite(numerator)
+        & np.isfinite(denominator)
+        & (numerator != nodata)
+        & (denominator != nodata)
+        & (denominator != 0.0)
+    )
+    if valid_mask is not None:
+        valid &= valid_mask
     result[valid] = (numerator[valid] / denominator[valid]).astype(np.float32)
     return result
 
 
 def _normalized_difference(a: np.ndarray, b: np.ndarray, *, nodata: float) -> np.ndarray:
-    return _safe_divide(a - b, a + b, nodata=nodata)
+    return _safe_divide(a - b, a + b, nodata=nodata, valid_mask=(a != nodata) & (b != nodata))
 
 
 def compute_s2_indices(cube: np.ndarray, *, nodata: float) -> dict[str, np.ndarray]:
@@ -146,10 +160,20 @@ def compute_s2_indices(cube: np.ndarray, *, nodata: float) -> dict[str, np.ndarr
     ndwi = _normalized_difference(b3, b8, nodata=nodata)
     ndmi = _normalized_difference(b8, b11, nodata=nodata)
     nbr = _normalized_difference(b8, b12, nodata=nodata)
-    ironox = _safe_divide(b4, b3, nodata=nodata)
+    ironox = _safe_divide(b4, b3, nodata=nodata, valid_mask=(b4 != nodata) & (b3 != nodata))
     # Corrects the notebook bug: denominator must be (B11 + B12), not (B11 - B12).
-    iron_swir = _safe_divide(b11 - b12, b11 + b12, nodata=nodata)
-    bsi = _safe_divide((b11 + b4) - (b8 + b2), (b11 + b4) + (b8 + b2), nodata=nodata)
+    iron_swir = _safe_divide(
+        b11 - b12,
+        b11 + b12,
+        nodata=nodata,
+        valid_mask=(b11 != nodata) & (b12 != nodata),
+    )
+    bsi = _safe_divide(
+        (b11 + b4) - (b8 + b2),
+        (b11 + b4) + (b8 + b2),
+        nodata=nodata,
+        valid_mask=(b11 != nodata) & (b4 != nodata) & (b8 != nodata) & (b2 != nodata),
+    )
 
     return {
         "NDVI": ndvi,
