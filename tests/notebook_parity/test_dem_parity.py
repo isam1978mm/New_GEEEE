@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pyproj import Transformer
+
 from app.pipeline.stages.dem import DEM_TILE_SIZE, build_ee_dem_image, create_ee_dem_tile_fetcher
 from app.pipeline.stages.grid import build_run_grid
 
@@ -64,12 +66,16 @@ def test_dem_parity_uses_notebook_gee_ingest_flow(monkeypatch) -> None:
         grid_spec=grid_spec,
         tile_row=0,
         tile_col=0,
-        xmin=-3200.0,
-        ymin=0.0,
-        xmax=0.0,
-        ymax=3200.0,
+        xmin=grid_spec.manifest.bounds_m["xmin"],
+        ymin=(grid_spec.manifest.bounds_m["ymin"] + grid_spec.manifest.bounds_m["ymax"]) / 2.0,
+        xmax=(grid_spec.manifest.bounds_m["xmin"] + grid_spec.manifest.bounds_m["xmax"]) / 2.0,
+        ymax=grid_spec.manifest.bounds_m["ymax"],
         size=DEM_TILE_SIZE,
     )
+
+    transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{grid_spec.manifest.epsg}", always_xy=True)
+    center_x, center_y = transformer.transform(36.12694, 35.59499)
+    expected_transform = [10.0, 0.0, center_x - 3200.0, 0.0, -10.0, center_y + 3200.0]
 
     assert tile.shape == (DEM_TILE_SIZE, DEM_TILE_SIZE)
     assert tile[0, 0] == 7.0
@@ -80,7 +86,7 @@ def test_dem_parity_uses_notebook_gee_ingest_flow(monkeypatch) -> None:
     assert ("unmask", grid_spec.nodata) in calls
     assert (
         "reproject",
-        {"crs": "EPSG:32637", "crsTransform": [10.0, 0.0, -3200.0, 0.0, -10.0, 3200.0]},
+        {"crs": "EPSG:32637", "crsTransform": expected_transform},
     ) in calls
     sample_call = next(value for name, value in calls if name == "sampleRectangle")
     assert sample_call["defaultValue"] == grid_spec.nodata

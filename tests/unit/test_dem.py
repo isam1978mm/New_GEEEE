@@ -26,16 +26,22 @@ def test_build_dem_tile_requests_follow_notebook_grid_tiling() -> None:
     grid_spec = build_run_grid(35.59499, 36.12694)
 
     requests = build_dem_tile_requests(grid_spec)
+    xmin = grid_spec.manifest.bounds_m["xmin"]
+    xmax = grid_spec.manifest.bounds_m["xmax"]
+    ymin = grid_spec.manifest.bounds_m["ymin"]
+    ymax = grid_spec.manifest.bounds_m["ymax"]
+    mid_x = (xmin + xmax) / 2.0
+    mid_y = (ymin + ymax) / 2.0
 
     assert [(request.tile_row, request.tile_col) for request in requests] == [(0, 0), (0, 1), (1, 0), (1, 1)]
-    assert requests[0].xmin == -3200.0
-    assert requests[0].ymin == 0.0
-    assert requests[0].xmax == 0.0
-    assert requests[0].ymax == 3200.0
-    assert requests[-1].xmin == 0.0
-    assert requests[-1].ymin == -3200.0
-    assert requests[-1].xmax == 3200.0
-    assert requests[-1].ymax == 0.0
+    assert requests[0].xmin == xmin
+    assert requests[0].ymin == mid_y
+    assert requests[0].xmax == mid_x
+    assert requests[0].ymax == ymax
+    assert requests[-1].xmin == mid_x
+    assert requests[-1].ymin == ymin
+    assert requests[-1].xmax == xmax
+    assert requests[-1].ymax == mid_y
     assert all(request.size == DEM_TILE_SIZE for request in requests)
 
 
@@ -88,15 +94,26 @@ def test_create_ee_dem_tile_fetcher_uses_sample_rectangle(monkeypatch: pytest.Mo
         grid_spec=grid_spec,
         tile_row=0,
         tile_col=0,
-        xmin=-3200.0,
-        ymin=0.0,
-        xmax=0.0,
-        ymax=3200.0,
+        xmin=grid_spec.manifest.bounds_m["xmin"],
+        ymin=(grid_spec.manifest.bounds_m["ymin"] + grid_spec.manifest.bounds_m["ymax"]) / 2.0,
+        xmax=(grid_spec.manifest.bounds_m["xmin"] + grid_spec.manifest.bounds_m["xmax"]) / 2.0,
+        ymax=grid_spec.manifest.bounds_m["ymax"],
         size=DEM_TILE_SIZE,
     )
 
     assert initialize_calls == ["init"]
-    assert rectangle_calls == [([-3200.0, 0.0, 0.0, 3200.0], "EPSG:32637", False)]
+    assert rectangle_calls == [
+        (
+            [
+                grid_spec.manifest.bounds_m["xmin"],
+                (grid_spec.manifest.bounds_m["ymin"] + grid_spec.manifest.bounds_m["ymax"]) / 2.0,
+                (grid_spec.manifest.bounds_m["xmin"] + grid_spec.manifest.bounds_m["xmax"]) / 2.0,
+                grid_spec.manifest.bounds_m["ymax"],
+            ],
+            "EPSG:32637",
+            False,
+        )
+    ]
     assert tile.shape == (DEM_TILE_SIZE, DEM_TILE_SIZE)
     assert tile.dtype == np.float32
 
@@ -104,8 +121,9 @@ def test_create_ee_dem_tile_fetcher_uses_sample_rectangle(monkeypatch: pytest.Mo
 def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
         context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
-        stage = DemStage(grid_spec=build_run_grid(35.59499, 36.12694), tile_fetcher=deterministic_dem_tile)
+        stage = DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile)
 
         result = asyncio.run(stage.run(context))
 
@@ -127,7 +145,7 @@ def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
         assert sidecar["crs"] == "EPSG:32637"
         assert sidecar["width"] == 640
         assert sidecar["height"] == 640
-        assert sidecar["transform"] == [10.0, 0.0, -3200.0, 0.0, -10.0, 3200.0]
+        assert sidecar["transform"] == grid_spec.manifest.crs_transform
 
 
 def _settings(run_dir: Path):
