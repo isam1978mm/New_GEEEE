@@ -46,6 +46,12 @@ class StageError(AppError):
     public_message = "Pipeline stage execution failed."
 
 
+class GridDriftError(StageError):
+    status_code = 500
+    public_code = "grid_drift"
+    public_message = "Stage output drifted from the RUN grid."
+
+
 class ArtifactClassError(AppError):
     status_code = 500
     public_code = "artifact_class_required"

@@ -1,0 +1,269 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
+
+import ee
+import numpy as np
+from PIL import Image
+
+from app.db.models.enums import ArtifactClass
+from app.pipeline._base import (
+    ParityCategory,
+    Stage,
+    StageContext,
+    StageResult,
+    build_stage_artifact,
+)
+from app.pipeline.stages.grid import GridSpec
+from app.services.ee_session import initialize_ee_session
+from app.services.grid import GridManifest
+
+DEM_TIF_NAME = "dem.tif"
+DEM_NPY_NAME = "dem.npy"
+DEM_TILE_SIZE = 320
+
+
+class DemTileFetcher(Protocol):
+    def __call__(
+        self,
+        *,
+        grid_spec: GridSpec,
+        tile_row: int,
+        tile_col: int,
+        xmin: float,
+        ymin: float,
+        xmax: float,
+        ymax: float,
+        size: int,
+    ) -> np.ndarray: ...
+
+
+@dataclass(frozen=True, slots=True)
+class DemTileRequest:
+    tile_row: int
+    tile_col: int
+    xmin: float
+    ymin: float
+    xmax: float
+    ymax: float
+    size: int
+
+
+def build_dem_tile_requests(grid_spec: GridSpec, *, tile_size: int = DEM_TILE_SIZE) -> list[DemTileRequest]:
+    if grid_spec.size % tile_size != 0:
+        raise ValueError(f"GRID size {grid_spec.size} must be divisible by tile size {tile_size}.")
+
+    scale_x, _, xmin, _, scale_y, ymax = grid_spec.transform
+    requests: list[DemTileRequest] = []
+    n_tiles = grid_spec.size // tile_size
+
+    for tile_row in range(n_tiles):
+        for tile_col in range(n_tiles):
+            tile_xmin = xmin + tile_col * tile_size * scale_x
+            tile_xmax = tile_xmin + tile_size * scale_x
+            tile_ymax = ymax + tile_row * tile_size * scale_y
+            tile_ymin = tile_ymax + tile_size * scale_y
+            requests.append(
+                DemTileRequest(
+                    tile_row=tile_row,
+                    tile_col=tile_col,
+                    xmin=float(tile_xmin),
+                    ymin=float(tile_ymin),
+                    xmax=float(tile_xmax),
+                    ymax=float(tile_ymax),
+                    size=tile_size,
+                )
+            )
+    return requests
+
+
+def deterministic_dem_tile(
+    *,
+    grid_spec: GridSpec,
+    tile_row: int,
+    tile_col: int,
+    xmin: float,
+    ymin: float,
+    xmax: float,
+    ymax: float,
+    size: int,
+) -> np.ndarray:
+    del xmin, ymin, xmax, ymax
+    row_offset = tile_row * size
+    col_offset = tile_col * size
+    rows, cols = np.indices((size, size), dtype=np.float32)
+    zone_term = np.float32(grid_spec.manifest.utm_zone * 3.0)
+    hemisphere_term = np.float32(25.0 if grid_spec.manifest.hemisphere == "north" else -25.0)
+    elevation = (
+        np.float32(1000.0)
+        + zone_term
+        + hemisphere_term
+        + (rows + np.float32(row_offset)) * np.float32(0.5)
+        + (cols + np.float32(col_offset)) * np.float32(0.25)
+    )
+    return elevation.astype(np.float32, copy=False)
+
+
+def build_grid_region(grid_spec: GridSpec):
+    scale_x, _, xmin, _, scale_y, ymax = grid_spec.transform
+    xmax = xmin + grid_spec.size * scale_x
+    ymin = ymax + grid_spec.size * scale_y
+    return ee.Geometry.Rectangle([xmin, ymin, xmax, ymax], grid_spec.crs, False)
+
+
+def build_ee_dem_image(grid_spec: GridSpec):
+    return (
+        ee.ImageCollection("COPERNICUS/DEM/GLO30")
+        .mosaic()
+        .select("DEM")
+        .clip(build_grid_region(grid_spec))
+        .toFloat()
+        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
+        .unmask(grid_spec.nodata)
+    )
+
+
+def create_ee_dem_tile_fetcher(settings, grid_spec: GridSpec) -> DemTileFetcher:
+    initialize_ee_session(settings)
+    dem_image = build_ee_dem_image(grid_spec)
+
+    def fetch_tile(
+        *,
+        grid_spec: GridSpec,
+        tile_row: int,
+        tile_col: int,
+        xmin: float,
+        ymin: float,
+        xmax: float,
+        ymax: float,
+        size: int,
+    ) -> np.ndarray:
+        del tile_row, tile_col
+        tile_geo = ee.Geometry.Rectangle([xmin, ymin, xmax, ymax], grid_spec.crs, False)
+        rect = dem_image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+        tile = np.array(rect["properties"]["DEM"], dtype=np.float32)[:size, :size]
+        if tile.shape != (size, size):
+            raise ValueError(f"EE DEM tile returned shape {tile.shape}, expected {(size, size)}.")
+        return tile
+
+    return fetch_tile
+
+
+def build_dem_array(
+    grid_spec: GridSpec,
+    *,
+    tile_fetcher: DemTileFetcher,
+    tile_size: int = DEM_TILE_SIZE,
+) -> np.ndarray:
+    requests = build_dem_tile_requests(grid_spec, tile_size=tile_size)
+    dem = np.full((grid_spec.size, grid_spec.size), grid_spec.nodata, dtype=np.float32)
+
+    for request in requests:
+        tile = tile_fetcher(
+            grid_spec=grid_spec,
+            tile_row=request.tile_row,
+            tile_col=request.tile_col,
+            xmin=request.xmin,
+            ymin=request.ymin,
+            xmax=request.xmax,
+            ymax=request.ymax,
+            size=request.size,
+        )
+        if tile.shape != (request.size, request.size):
+            raise ValueError(
+                f"DEM tile ({request.tile_row},{request.tile_col}) returned shape {tile.shape}, "
+                f"expected {(request.size, request.size)}."
+            )
+        row_start = request.tile_row * request.size
+        col_start = request.tile_col * request.size
+        dem[row_start : row_start + request.size, col_start : col_start + request.size] = tile
+
+    return dem
+
+
+def raster_sidecar_path(raster_path: Path) -> Path:
+    return raster_path.with_name(f"{raster_path.name}.meta.json")
+
+
+def write_raster_sidecar(
+    raster_path: Path,
+    *,
+    grid_manifest: GridManifest,
+    nodata: float,
+    dtype: str,
+    shape: tuple[int, int],
+) -> Path:
+    payload = {
+        "crs": f"EPSG:{grid_manifest.epsg}",
+        "dtype": dtype,
+        "height": int(shape[0]),
+        "width": int(shape[1]),
+        "nodata": float(nodata),
+        "transform": [float(value) for value in grid_manifest.crs_transform],
+    }
+    sidecar_path = raster_sidecar_path(raster_path)
+    sidecar_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return sidecar_path
+
+
+def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> dict[str, Path]:
+    dem_tif_path = run_dir / DEM_TIF_NAME
+    dem_npy_path = run_dir / DEM_NPY_NAME
+
+    Image.fromarray(dem_array).save(dem_tif_path, format="TIFF")
+    np.save(dem_npy_path, dem_array)
+    sidecar_path = write_raster_sidecar(
+        dem_tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=dem_array.shape,
+    )
+    return {"dem_tif": dem_tif_path, "dem_npy": dem_npy_path, "dem_tif_sidecar": sidecar_path}
+
+
+class DemStage(Stage):
+    name = "dem"
+    parity_category = ParityCategory.PARITY_REPRODUCES
+
+    def __init__(
+        self,
+        *,
+        grid_spec: GridSpec,
+        tile_fetcher: DemTileFetcher | None = None,
+    ) -> None:
+        self.grid_spec = grid_spec
+        self.tile_fetcher = tile_fetcher
+
+    async def run(self, context: StageContext) -> StageResult:
+        tile_fetcher = self.tile_fetcher or create_ee_dem_tile_fetcher(context.settings, self.grid_spec)
+        dem_array = build_dem_array(self.grid_spec, tile_fetcher=tile_fetcher)
+        outputs = write_dem_outputs(context.run_dir, self.grid_spec, dem_array)
+        artifacts = [
+            build_stage_artifact(
+                name="dem_tif",
+                relative_path=outputs["dem_tif"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["dem_tif"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="dem_npy",
+                relative_path=outputs["dem_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["dem_npy"].stat().st_size,
+            ),
+        ]
+        return StageResult(
+            artifacts=artifacts,
+            metadata={
+                "dem_shape": list(dem_array.shape),
+                "dem_min": float(dem_array.min()),
+                "dem_max": float(dem_array.max()),
+                "grid_crs": f"EPSG:{self.grid_spec.manifest.epsg}",
+                "tile_size": DEM_TILE_SIZE,
+                "tile_count": len(build_dem_tile_requests(self.grid_spec)),
+            },
+        )
