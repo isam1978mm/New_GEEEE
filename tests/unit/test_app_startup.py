@@ -11,7 +11,8 @@ def test_app_starts_and_root_returns_ok() -> None:
     response = client.get("/")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert "text/html" in response.headers["content-type"]
+    assert "GEE Screening Workspace" in response.text
 
 
 def test_health_and_ready_routes_are_registered() -> None:

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.api.artifacts import router as artifacts_router
@@ -74,7 +74,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(artifacts_router)
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
     if frontend_dir.is_dir():
-        app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+        index_path = frontend_dir / "index.html"
+        app_js_path = frontend_dir / "app.js"
+        style_path = frontend_dir / "style.css"
+        vendor_dir = frontend_dir / "vendor"
+
+        @app.get("/", include_in_schema=False)
+        async def frontend_index() -> FileResponse:
+            return FileResponse(index_path)
+
+        @app.get("/app.js", include_in_schema=False)
+        async def frontend_app_js() -> FileResponse:
+            return FileResponse(app_js_path, media_type="application/javascript")
+
+        @app.get("/style.css", include_in_schema=False)
+        async def frontend_style_css() -> FileResponse:
+            return FileResponse(style_path, media_type="text/css")
+
+        if vendor_dir.is_dir():
+            app.mount("/vendor", StaticFiles(directory=vendor_dir), name="frontend-vendor")
 
     return app
 

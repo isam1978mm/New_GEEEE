@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -15,33 +16,37 @@ from app.main import create_app
 from app.services.storage import ensure_data_dirs
 
 
-def test_startup_marks_running_runs_stale_failed(tmp_path: Path) -> None:
-    settings = Settings(
-        data_dir=tmp_path / "data",
-        database_path=tmp_path / "data" / "gee_screening.db",
-    )
+def test_startup_marks_running_runs_stale_failed() -> None:
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        settings = Settings(
+            data_dir=root / "data",
+            database_path=root / "data" / "gee_screening.db",
+        )
 
-    asyncio.run(_create_running_run(settings))
+        asyncio.run(_create_running_run(settings))
 
-    with TestClient(create_app(settings), raise_server_exceptions=False):
-        run_status = asyncio.run(_fetch_run_status(settings, "run-startup"))
-        assert run_status == RunStatus.STALE_FAILED
+        with TestClient(create_app(settings), raise_server_exceptions=False):
+            run_status = asyncio.run(_fetch_run_status(settings, "run-startup"))
+            assert run_status == RunStatus.STALE_FAILED
 
 
-def test_startup_allows_existing_unmigrated_sqlite_db(tmp_path: Path) -> None:
-    settings = Settings(
-        data_dir=tmp_path / "data",
-        database_path=tmp_path / "data" / "gee_screening.db",
-    )
+def test_startup_allows_existing_unmigrated_sqlite_db() -> None:
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        settings = Settings(
+            data_dir=root / "data",
+            database_path=root / "data" / "gee_screening.db",
+        )
 
-    ensure_data_dirs(settings)
-    settings.database_path.touch()
+        ensure_data_dirs(settings)
+        settings.database_path.touch()
 
-    with TestClient(create_app(settings), raise_server_exceptions=False) as client:
-        response = client.get("/healthz")
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get("/healthz")
 
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
 
 
 async def _create_running_run(settings: Settings) -> None:
