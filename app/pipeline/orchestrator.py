@@ -42,8 +42,8 @@ class Orchestrator:
         await self._set_run_status(run_id, RunStatus.RUNNING)
 
         records: list[StageExecutionRecord] = []
-        try:
-            for stage in self.stages:
+        for stage in self.stages:
+            try:
                 await self._persist_stage_status(run_id, stage.name, "running", stage, artifact_count=0)
                 result = await stage.run(StageContext(run_id=run.id, settings=self.settings, run_dir=run_dir))
                 self._validate_stage_result(result)
@@ -63,9 +63,17 @@ class Orchestrator:
                         status="done",
                     )
                 )
-        except Exception:
-            await self._set_run_status(run_id, RunStatus.FAILED)
-            raise
+            except Exception:
+                await self._persist_stage_status(
+                    run_id,
+                    stage.name,
+                    "failed",
+                    stage,
+                    artifact_count=0,
+                    metadata={"failure": "stage_failed"},
+                )
+                await self._set_run_status(run_id, RunStatus.FAILED)
+                raise
 
         await self._set_run_status(run_id, RunStatus.DONE)
         return records

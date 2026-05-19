@@ -5,6 +5,7 @@ import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -45,9 +46,25 @@ class DemoStage(Stage):
         )
 
 
+class FailingStage(Stage):
+    name = "failing"
+    parity_category = ParityCategory.PARITY_REPLACES
+    parity_reason = "Replaces notebook orchestration side effects with app-managed execution."
+
+    async def run(self, context: StageContext) -> StageResult:
+        raise RuntimeError(
+            "raw failure lat=12.34 path=C:/secret/run-1/demo.txt hash=abc123 request_input=boom"
+        )
+
+
 def test_orchestrator_persists_stage_status_and_artifacts() -> None:
     with TemporaryDirectory() as temp_dir:
         asyncio.run(_run_orchestrator_test(Path(temp_dir)))
+
+
+def test_orchestrator_persists_safe_failed_stage_manifest() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_orchestrator_failure_test(Path(temp_dir)))
 
 
 def test_orchestrator_does_not_reference_stages_experimental() -> None:
@@ -98,5 +115,57 @@ async def _run_orchestrator_test(tmp_path: Path) -> None:
     assert manifest["artifact_count"] == 1
     assert manifest["parity_category"] == ParityCategory.PARITY_REPLACES.value
     assert manifest["artifact_class"] == ArtifactClass.LOCAL_SENSITIVE.value
+
+    await engine.dispose()
+
+
+async def _run_orchestrator_failure_test(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "db.sqlite")
+    ensure_data_dirs(settings)
+    engine = create_async_engine(settings.database_url, future=True)
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        session.add(
+            Run(
+                id="run-fail",
+                name="demo",
+                status=RunStatus.QUEUED,
+                latitude=1.0,
+                longitude=2.0,
+            )
+        )
+        await session.commit()
+
+    orchestrator = Orchestrator(
+        settings=settings,
+        session_factory=session_factory,
+        stages=[FailingStage()],
+    )
+
+    with pytest.raises(RuntimeError):
+        await orchestrator.run_run("run-fail")
+
+    async with session_factory() as session:
+        run_status = await session.scalar(select(Run.status).where(Run.id == "run-fail"))
+        assert run_status == RunStatus.FAILED
+
+    manifest = read_manifest(settings.data_dir / "runs" / "run-fail" / "stage_failing.manifest.json")
+    assert manifest["status"] == "failed"
+    assert manifest["artifact_count"] == 0
+    assert manifest["parity_category"] == ParityCategory.PARITY_REPLACES.value
+    assert manifest["parity_reason"] == FailingStage.parity_reason
+    assert manifest["metadata"] == {"failure": "stage_failed"}
+
+    manifest_text = (settings.data_dir / "runs" / "run-fail" / "stage_failing.manifest.json").read_text(
+        encoding="utf-8"
+    )
+    assert "raw failure" not in manifest_text
+    assert "12.34" not in manifest_text
+    assert "C:/secret/run-1/demo.txt" not in manifest_text
+    assert "abc123" not in manifest_text
+    assert "request_input=boom" not in manifest_text
 
     await engine.dispose()
