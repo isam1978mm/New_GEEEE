@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GEE Screening Workspace</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <p class="eyebrow">Local Operator Workspace</p>
+        <h1>GEE Screening</h1>
+        <p class="lede">
+          The web app stays local-first, keeps external tiles off by default, and exposes artifacts
+          only through guarded API downloads.
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="panel map-panel" aria-labelledby="map-title">
+          <div class="panel-head">
+            <h2 id="map-title">Blank Basemap</h2>
+            <span class="status-chip" id="tile-mode">External tiles disabled</span>
+          </div>
+          <div class="blank-map" aria-label="Blank local map workspace">
+            <div class="gridlines"></div>
+            <div class="map-copy">
+              <p>Local workspace only</p>
+              <p>No external tile provider is active.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel results-panel" aria-labelledby="results-title">
+          <div class="panel-head">
+            <h2 id="results-title">Visible Artifacts</h2>
+            <span class="status-chip" id="artifact-count">0 visible</span>
+          </div>
+          <p class="panel-copy">
+            The frontend excludes experimental outputs and Class IV filesystem-only artifacts.
+          </p>
+          <ul class="artifact-list" id="artifact-list"></ul>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

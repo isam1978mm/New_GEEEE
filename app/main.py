@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from app.api.artifacts import router as artifacts_router
 from app.api.errors import add_exception_handlers, public_error_response
@@ -70,10 +72,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     add_exception_handlers(app)
     app.include_router(health_router)
     app.include_router(artifacts_router)
-
-    @app.get("/", response_class=JSONResponse)
-    async def root() -> dict[str, str]:
-        return {"status": "ok"}
+    frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+    if frontend_dir.is_dir():
+        app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
     return app
 
