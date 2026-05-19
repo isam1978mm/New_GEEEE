@@ -64,6 +64,27 @@ def test_apply_local_dem_rtc_uses_passed_scale_m() -> None:
     assert not np.allclose(outputs_scale_10["VV_dB"], outputs_scale_20["VV_dB"])
 
 
+def test_apply_local_dem_rtc_keeps_all_outputs_nodata_when_angle_is_nodata() -> None:
+    nodata = -9999.0
+    dem = np.full((4, 4), 100.0, dtype=np.float32)
+    cube = np.stack(
+        [
+            np.full((4, 4), -10.0, dtype=np.float32),
+            np.full((4, 4), -16.0, dtype=np.float32),
+            np.full((4, 4), 38.5, dtype=np.float32),
+        ],
+        axis=-1,
+    )
+    cube[1, 2, 2] = nodata
+
+    outputs = apply_local_dem_rtc(cube, dem, nodata=nodata, scale_m=10.0)
+
+    assert outputs["VV_dB"][1, 2] == nodata
+    assert outputs["VH_dB"][1, 2] == nodata
+    assert outputs["logRatio_dB"][1, 2] == nodata
+    assert outputs["incidence"][1, 2] == nodata
+
+
 def test_build_s1_base_collection_uses_notebook_filters(monkeypatch: pytest.MonkeyPatch) -> None:
     grid_spec = build_run_grid(35.59499, 36.12694)
     calls: list[tuple[str, object]] = []

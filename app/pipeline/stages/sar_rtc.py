@@ -244,8 +244,9 @@ def apply_local_dem_rtc(
 
     dem_float = dem.astype(np.float32, copy=True)
     dem_float = np.where(dem_float == nodata, np.nan, dem_float)
-    # Notebook cell 12 performs the local DEM-based RTC/Gamma0 approximation
-    # after sampling VV_dB/VH_dB/angle to the GRID. Reproduce that flow here.
+    # The canonical notebook SAR RTC stage performs the local DEM-based
+    # RTC/Gamma0 approximation after sampling VV_dB/VH_dB/angle to the GRID.
+    # Reproduce that SAR-stage behavior here.
     dz_dy, dz_dx = np.gradient(dem_float, scale_m, scale_m)
     slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
     corr = np.cos(slope_rad)
@@ -259,7 +260,13 @@ def apply_local_dem_rtc(
     cos_inc = np.cos(inc_rad)
     cos_inc = np.where(np.isfinite(cos_inc), np.maximum(cos_inc, 1e-6), np.nan)
 
-    valid = (vv_db != nodata) & (vh_db != nodata) & np.isfinite(corr) & np.isfinite(cos_inc)
+    valid = (
+        (vv_db != nodata)
+        & (vh_db != nodata)
+        & (angle != nodata)
+        & np.isfinite(corr)
+        & np.isfinite(cos_inc)
+    )
     vv_lin = np.full(dem.shape, np.nan, dtype=np.float32)
     vh_lin = np.full(dem.shape, np.nan, dtype=np.float32)
     vv_lin[valid] = db_to_lin(vv_db[valid]).astype(np.float32)
