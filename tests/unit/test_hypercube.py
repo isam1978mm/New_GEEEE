@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -58,6 +59,11 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         cube = np.load(run_dir / "hypercube.npy")
         assert cube.shape == (grid_spec.size, grid_spec.size, 3)
         assert np.all(cube[:, :, -1] == 1.0)
+        with (run_dir / "hypercube_band_order.csv").open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        assert len(rows) == 3
+        assert rows[-1]["band_name"] == "valid_mask"
+        assert rows[-1]["source_file"] == "generated"
         sidecar = read_manifest(raster_sidecar_path(run_dir / "hypercube.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
 

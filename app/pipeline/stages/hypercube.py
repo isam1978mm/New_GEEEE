@@ -141,14 +141,18 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
         shape=cube_raw.shape[:2],
     )
 
-    _write_csv(
-        order_path,
-        ["band_index", "band_name", "source_file"],
-        (
-            {"band_index": index, "band_name": name, "source_file": f"{name}.tif"}
-            for index, name in enumerate(source_band_names)
-        ),
+    order_rows = [
+        {"band_index": index, "band_name": name, "source_file": f"{name}.tif"}
+        for index, name in enumerate(source_band_names)
+    ]
+    order_rows.append(
+        {
+            "band_index": len(source_band_names),
+            "band_name": "valid_mask",
+            "source_file": "generated",
+        }
     )
+    _write_csv(order_path, ["band_index", "band_name", "source_file"], order_rows)
 
     cube_norm = products["cube_norm"]
     assert isinstance(cube_norm, np.ndarray)
