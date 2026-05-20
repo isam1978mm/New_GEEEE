@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.check_notebook_safety import main, scan_notebooks
+from scripts.check_notebook_safety import collect_notebook_paths, main, scan_notebooks
 
 
 CLASS_MAPPING = """# Class Mapping
@@ -106,6 +106,43 @@ def test_notebook_safety_scanner_requires_allowlist_reason(tmp_path: Path) -> No
     assert any("coordinate allowlist requires a non-empty reason string" in item for item in violations)
 
 
+def test_notebook_safety_scanner_rejects_markdown_ee_authenticate(tmp_path: Path) -> None:
+    mapping_path = tmp_path / "CLASS_MAPPING.md"
+    mapping_path.write_text(CLASS_MAPPING, encoding="utf-8")
+
+    notebook_path = tmp_path / "markdown_auth.ipynb"
+    forbidden_ee_auth = "ee." + "Authenticate("
+    write_notebook(
+        notebook_path,
+        cells=[markdown_cell(f"Migration note still shows {forbidden_ee_auth}) as an example.")],
+    )
+
+    violations = scan_notebooks([notebook_path], mapping_path)
+    expected_ee_auth_message = "forbidden ee." + "Authenticate()"
+
+    assert any(expected_ee_auth_message in item for item in violations)
+
+
+def test_notebook_safety_scanner_rejects_markdown_absolute_paths(tmp_path: Path) -> None:
+    mapping_path = tmp_path / "CLASS_MAPPING.md"
+    mapping_path.write_text(CLASS_MAPPING, encoding="utf-8")
+
+    notebook_path = tmp_path / "markdown_path.ipynb"
+    write_notebook(
+        notebook_path,
+        cells=[
+            markdown_cell(
+                'Legacy note: credentials were once stored at "C:/Users/alice/keys/service-account-key.json".'
+            )
+        ],
+    )
+
+    violations = scan_notebooks([notebook_path], mapping_path)
+
+    assert any("hardcoded absolute local path" in item for item in violations)
+    assert any("service-account key path" in item for item in violations)
+
+
 def test_notebook_safety_main_scans_default_notebooks_directory(tmp_path: Path, monkeypatch) -> None:
     notebooks_dir = tmp_path / "notebooks"
     notebooks_dir.mkdir()
@@ -127,6 +164,15 @@ def test_notebook_safety_main_scans_default_notebooks_directory(tmp_path: Path, 
     monkeypatch.chdir(tmp_path)
 
     assert main([]) == 0
+
+
+def test_notebook_safety_real_repo_notebooks_are_clean() -> None:
+    violations = scan_notebooks(
+        collect_notebook_paths([Path("notebooks")]),
+        Path("docs/CLASS_MAPPING.md"),
+    )
+
+    assert violations == []
 
 
 def write_notebook(path: Path, *, cells: list[dict[str, object]]) -> None:

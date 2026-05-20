@@ -11,10 +11,10 @@ FORBIDDEN_EE_AUTH = "ee.Authenticate("
 ALLOW_COORD_SOURCE_RE = re.compile(r"#\s*parity:\s*allow-coord\b(?::|\s+-\s+|\s+)?(.*)$", re.IGNORECASE)
 ALLOW_COORD_REASON_RE = re.compile(r"#\s*parity:\s*allow-coord-reason\b(?::|\s+)(.+)$", re.IGNORECASE)
 ABSOLUTE_LOCAL_PATH_RE = re.compile(
-    r"(?i)(?:[A-Z]:[\\/][^\s\"']+|/(?:Users|home|content|mnt|private|tmp|var|opt|srv)[^\s\"']*)"
+    r"(?i)(?:(?<![A-Za-z])[A-Z]:[\\/](?![nrt'\"\\])[^\s\"']+|(?<![A-Za-z0-9:])/(?:Users|home|content|mnt|private|tmp|var|opt|srv)(?:/[^\s\"']*)?)"
 )
 SERVICE_ACCOUNT_KEY_PATH_RE = re.compile(
-    r"(?i)(?:[A-Z]:[\\/][^\s\"']*|/(?:Users|home|content|mnt|private|tmp|var|opt|srv)[^\s\"']*)"
+    r"(?i)(?:(?<![A-Za-z])[A-Z]:[\\/](?![nrt'\"\\])[^\s\"']*|(?<![A-Za-z0-9:])/(?:Users|home|content|mnt|private|tmp|var|opt|srv)(?:/[^\s\"']*)?)"
     r"(?:service[_ -]?account|credentials?|earthengine|gee|key)[^\s\"']*\.json"
 )
 COORDINATE_PATTERNS = (
@@ -61,15 +61,15 @@ def scan_notebook(notebook_path: Path, forbidden_terms: Sequence[str]) -> list[s
         output_text = join_output_texts(cell.get("outputs", []))
         output_context = f"{notebook_path}:cell-{index}:output"
 
+        if FORBIDDEN_EE_AUTH in source_text:
+            violations.append(f"{source_context}: forbidden ee.Authenticate()")
+        if FORBIDDEN_EE_AUTH in output_text:
+            violations.append(f"{output_context}: forbidden ee.Authenticate()")
+
+        violations.extend(scan_text_for_paths(source_text, source_context))
+        violations.extend(scan_text_for_paths(output_text, output_context))
+
         if cell_type == "code":
-            if FORBIDDEN_EE_AUTH in source_text:
-                violations.append(f"{source_context}: forbidden ee.Authenticate()")
-            if FORBIDDEN_EE_AUTH in output_text:
-                violations.append(f"{output_context}: forbidden ee.Authenticate()")
-
-            violations.extend(scan_text_for_paths(source_text, source_context))
-            violations.extend(scan_text_for_paths(output_text, output_context))
-
             if contains_coordinate_like_content(source_text) or contains_coordinate_like_content(output_text):
                 allowlisted, reason = get_coordinate_allowlist(cell)
                 if not allowlisted:
