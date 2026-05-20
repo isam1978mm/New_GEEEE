@@ -833,6 +833,17 @@ Create/update:
 Requirements:
 
 - Explain install, `.env` setup, migration, app startup, submitting a run, checking status, artifact retrieval, parity tests, EE key rotation, backups, stale run recovery, and local temp pytest workaround.
+- Document the canonical local startup command:
+  - `uvicorn app.main:app --host 127.0.0.1 --port 8000`
+- Document how to verify startup and readiness:
+  - `curl http://127.0.0.1:8000/healthz`
+  - `curl http://127.0.0.1:8000/readyz`
+- Document how to stop the app cleanly.
+- Document the Windows pytest cache/temp workaround used during v1 verification:
+  - set `TEMP` and `TMP` to a writable directory
+  - run pytest with `--basetemp` pointing to a writable temp path
+  - optionally use `-p no:cacheprovider` or `--cache-clear` if the local pytest cache is unwritable
+- Do not require changing `pyproject.toml` unless a future test proves it is needed.
 - Include Alembic/SQLite migration discipline note: use batch mode for future SQLite schema changes and test future migrations against SQLite and PostgreSQL target before v2.
 
 Validation:
