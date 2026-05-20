@@ -652,3 +652,193 @@ pytest tests/notebook_parity/
 ```
 
 Stop after M17 and report release readiness.
+
+---
+
+# Production-hardening phase
+
+v1 is accepted. The next phase is production-by-parity:
+Given the same ROI/input settings, the app must reproduce the notebook's operational/calculation outputs, except explicitly documented `PARITY_CORRECTS` cases.
+
+---
+
+# Goal H0 — Freeze accepted v1 baseline
+
+Requirements:
+
+- Confirm working tree is clean.
+- Tag `v1-accepted` if not already tagged.
+- Do not modify source files.
+
+Validation:
+
+```bash
+git status
+git tag
+```
+
+---
+
+# Goal H1 — Production parity contract
+
+Create/update:
+
+- `docs/OUTPUT_PARITY_CONTRACT.md`
+
+Requirements:
+
+- Define the production output parity goal.
+- Define required artifact parity for GRID, DEM, SAR RTC, DEM derivatives, thermal LST, Sentinel-2 indices, hypercube, PCA, object extraction, cluster summary, and alignment QA.
+- Define comparison rules for rasters, NPY, CSV, JSON, manifests, and sidecars.
+- Document allowed `PARITY_CORRECTS` exceptions, especially `IRON_SWIR` with corrected `B11+B12` denominator.
+- State clearly that this is not real-world detection-accuracy validation.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal H2 — Notebook safety scanner
+
+Create/update:
+
+- `scripts/check_notebook_safety.py`
+- `tests/unit/test_notebook_safety.py`
+
+Requirements:
+
+- Scan `notebooks/*.ipynb`.
+- Fail on `ee.Authenticate(`.
+- Fail on hardcoded absolute local paths.
+- Fail on raw coordinate-like output in code cells or outputs.
+- Fail on real service-account key paths.
+- Fail on forbidden classifier source terms outside `docs/CLASS_MAPPING.md`.
+- Allow documented `PARITY_CORRECTS` notes for `IRON_SWIR`.
+
+Validation:
+
+```bash
+pytest tests/unit/test_notebook_safety.py
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal H3 — GitHub Actions CI
+
+Create/update:
+
+- `.github/workflows/ci.yml`
+
+Requirements:
+
+- Run on `push` and `pull_request` to `main`.
+- Use Python `3.11` or `3.12`.
+- Install project with dev dependencies.
+- Run `pytest tests/unit/ tests/integration/ tests/notebook_parity/`.
+- Run `scripts/check_no_ee_authenticate.py`.
+- Run `scripts/check_no_direct_streaming.py`.
+- Run `scripts/check_notebook_safety.py` if present.
+- Do not require real Earth Engine credentials.
+- Do not upload sensitive artifacts.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal H4 — Reference notebook fixture capture protocol
+
+Create/update:
+
+- `docs/REFERENCE_CAPTURE_PROTOCOL.md`
+- `tests/notebook_parity/fixtures/reference_run_v1/README.md`
+
+Requirements:
+
+- Document how to run `notebooks/new.ipynb` on the canonical ROI.
+- Document which notebook outputs must be exported.
+- Document required metadata: notebook hash, environment, date, Earth Engine datasets, ROI label, grid manifest.
+- Document how to store artifacts under `tests/notebook_parity/fixtures/reference_run_v1/`.
+- Document how to compare app outputs against frozen notebook outputs.
+- Do not add large binary fixtures unless already available.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal H5 — Reference-output comparison tests
+
+Create/update:
+
+- `tests/notebook_parity/test_reference_outputs_contract.py` or equivalent split tests
+
+Requirements:
+
+- Add tests that skip cleanly if large frozen reference artifacts are absent.
+- When reference artifacts are present, compare app outputs against notebook outputs according to `docs/OUTPUT_PARITY_CONTRACT.md`.
+- Compare raster shape, transform, CRS, nodata, band order, dtype policy, and numeric tolerance.
+- Compare CSV/JSON deterministically.
+- Respect documented `PARITY_CORRECTS` exceptions.
+
+Validation:
+
+```bash
+pytest tests/notebook_parity/
+```
+
+---
+
+# Goal H6 — Production runbook
+
+Create/update:
+
+- `docs/RUNBOOK.md`
+
+Requirements:
+
+- Explain install, `.env` setup, migration, app startup, submitting a run, checking status, artifact retrieval, parity tests, EE key rotation, backups, stale run recovery, and local temp pytest workaround.
+- Include Alembic/SQLite migration discipline note: use batch mode for future SQLite schema changes and test future migrations against SQLite and PostgreSQL target before v2.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal H7 — Live EE validation checklist
+
+Create/update:
+
+- `docs/LIVE_EE_VALIDATION.md`
+
+Requirements:
+
+- Checklist for service-account-only live Earth Engine validation.
+- Include `/readyz` check.
+- Include canonical ROI live run.
+- Include comparison against notebook reference outputs.
+- Include public API leakage checks.
+- Include instruction not to commit `.env`, keys, or live artifacts.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+At the end of the new section, use this command template:
+
+`/goal Read AGENTS.md and plan.md. Execute Goal H1 only. Stop after H1 and report files changed, commands run, test results, and blockers.`
