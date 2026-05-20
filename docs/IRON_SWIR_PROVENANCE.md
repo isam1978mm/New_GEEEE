@@ -79,27 +79,55 @@ Interpretation:
 - the sign convention difference is treated as a documented convention mismatch
 - H5 must document and enforce that narrower comparison rule explicitly
 
-## Current Status
+## Accepted Production Interpretation
 
-No final production interpretation has been accepted automatically in the repo state as of `2026-05-20`.
+Accepted decision: **Option A**
 
-The provenance decision is therefore unresolved.
+Option A is the accepted v1 production interpretation.
 
-## Required Human Decision Before H5
+Rationale:
 
-A human project decision is required before H5:
+- the app formula is canonical for v1 production parity
+- `IRON_SWIR` remains `PARITY_CORRECTS`
+- H5 must compare `IRON_SWIR` against the corrected analytical/app reference
+- H5 must not compare pixel-for-pixel against the checked-in notebook sign-flipped `IRON_SWIR` raster
 
-1. Choose exactly one of Options A, B, C, or D.
-1. Record the rationale.
-1. If Option C is chosen, record the canonical notebook commit SHA and/or file hash.
-1. Update `docs/OUTPUT_PARITY_CONTRACT.md` and `docs/PARITY_EXCEPTIONS.md` if the accepted interpretation changes the comparison rule.
+## Rejected or Not Selected Options
+
+### Option B
+
+Not selected.
+
+Reason:
+
+- it would force a later app-sign reversal to match the checked-in notebook evidence
+- that would contradict the accepted v1 app formula and current stage parity intent
+
+### Option C
+
+Not selected.
+
+Reason:
+
+- no older canonical notebook revision has been pinned by commit SHA or file hash in the current repo state
+- v1 production parity needs a clear rule now rather than deferring the interpretation to an unverified earlier notebook revision
+
+### Option D
+
+Not selected.
+
+Reason:
+
+- magnitude-only comparison would weaken the parity contract by hiding a meaningful sign-convention difference
+- the accepted production rule is stricter and clearer: use the corrected app analytical reference directly
 
 ## H5 Rule
 
-Until this provenance decision is resolved, H5 must not silently pass `IRON_SWIR` parity.
+The provenance decision is resolved by Option A.
 
 Required behavior:
 
 - H5 must read this document.
-- If the decision remains unresolved, H5 must fail or skip with a clear reason that `IRON_SWIR` provenance is unresolved.
-- If the decision is resolved, H5 must apply the accepted comparison rule exactly as documented here.
+- H5 must apply Option A exactly as documented here.
+- H5 must compare `IRON_SWIR` against the corrected analytical/app reference using `(B11 - B12) / (B11 + B12)`.
+- H5 must not silently compare against the checked-in notebook sign-flipped raster.

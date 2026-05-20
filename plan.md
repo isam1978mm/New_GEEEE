@@ -849,7 +849,9 @@ Requirements:
 - When reference artifacts are present, compare app outputs against notebook outputs according to `docs/OUTPUT_PARITY_CONTRACT.md`.
 - When reference artifacts are present, tests must fail on parity mismatch, not skip.
 - H5 must read `docs/IRON_SWIR_PROVENANCE.md` and apply the accepted `IRON_SWIR` comparison rule.
-- If `IRON_SWIR` provenance remains unresolved, H5 must fail or skip with a clear reason instead of silently choosing a comparison interpretation.
+- H5 must apply Option A.
+- H5 must compare `IRON_SWIR` against the corrected analytical/app reference using `(B11 - B12) / (B11 + B12)`.
+- H5 must not silently compare against the checked-in notebook sign-flipped `IRON_SWIR` raster.
 - Compare raster shape, transform, CRS, nodata, band order, dtype policy, and numeric tolerance.
 - Compare CSV/JSON deterministically.
 - Respect documented `PARITY_CORRECTS` exceptions.

@@ -235,7 +235,12 @@ The app intentionally uses:
 
 H4 found that the checked-in notebook evidence is not yet fully reconciled with the older parity notes. See [IRON_SWIR_PROVENANCE.md](IRON_SWIR_PROVENANCE.md).
 
-The checked-in notebook inspection found a sign-flipped form, not just a denominator discrepancy, so the accepted production interpretation must be resolved before H5 reference-output comparison.
+The accepted H4.5 production interpretation is Option A from [IRON_SWIR_PROVENANCE.md](IRON_SWIR_PROVENANCE.md).
+
+H5 comparison rule for `IRON_SWIR`:
+
+- compare against the corrected analytical/app reference using `(B11 - B12) / (B11 + B12)`
+- do not compare pixel-for-pixel against the checked-in notebook sign-flipped `IRON_SWIR` raster
 
 This exception is allowed because the PRD and current parity metadata already accept an `IRON_SWIR` denominator correction in the app.
 

@@ -6,10 +6,10 @@ This file records intentional deviations from source-notebook output for stages 
 
 - Stage: `app/pipeline/stages/s2_indices.py`
 - Category: `PARITY_CORRECTS`
-- Reason: parity provenance is under reconciliation; current app formula keeps the accepted corrected denominator while notebook sign/source evidence is being resolved
+- Reason: provenance reconciliation is resolved by H4.5 Option A; the app formula is canonical for v1 production parity
 - Corrected app formula: `(B11 - B12) / (B11 + B12)`
 - Provenance note: see `docs/IRON_SWIR_PROVENANCE.md`
-- Validation rule: H5 must use the accepted provenance decision from `docs/IRON_SWIR_PROVENANCE.md`; if unresolved, H5 must fail or skip with a clear reason
+- Validation rule: H5 must use Option A from `docs/IRON_SWIR_PROVENANCE.md`, compare against the corrected analytical/app reference, and must not silently compare against the checked-in notebook sign-flipped raster
 
 ## Current Status
 
