@@ -660,6 +660,12 @@ Stop after M17 and report release readiness.
 v1 is accepted. The next phase is production-by-parity:
 Given the same ROI/input settings, the app must reproduce the notebook's operational/calculation outputs, except explicitly documented `PARITY_CORRECTS` cases.
 
+Official sequence:
+
+- `H0` -> `H1` -> `H2` -> `H3` -> `H4` -> `H5` -> `H6` -> `H7`
+- `H3` already runs the `H2` scanner if present.
+- Do not start deployment `D0`-`D7` until at least `H1`-`H3` are complete.
+
 ---
 
 # Goal H0 — Freeze accepted v1 baseline
@@ -668,13 +674,17 @@ Requirements:
 
 - Confirm working tree is clean.
 - Tag `v1-accepted` if not already tagged.
+- Confirm the current working tree and `HEAD` are compared against `v1-accepted`.
 - Do not modify source files.
+- The current full suite must pass.
 
 Validation:
 
 ```bash
 git status
-git tag
+git tag --list v1-accepted
+git diff v1-accepted --stat
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
 ```
 
 ---
@@ -692,6 +702,10 @@ Requirements:
 - Define comparison rules for rasters, NPY, CSV, JSON, manifests, and sidecars.
 - Document allowed `PARITY_CORRECTS` exceptions, especially `IRON_SWIR` with corrected `B11+B12` denominator.
 - State clearly that this is not real-world detection-accuracy validation.
+- Add a rollback/recovery rule:
+  - If a parity test fails, the offending stage must be rolled back to its accepted M-phase implementation pending PRD/parity-contract review.
+  - No band-aid fixes that bypass the parity contract.
+  - This applies to SAR RTC, S2, hypercube, PCA, objects, and all other parity stages.
 
 Validation:
 
@@ -713,7 +727,12 @@ Requirements:
 - Scan `notebooks/*.ipynb`.
 - Fail on `ee.Authenticate(`.
 - Fail on hardcoded absolute local paths.
-- Fail on raw coordinate-like output in code cells or outputs.
+- Fail on coordinate-like content in code cells or outputs unless explicitly allowlisted.
+- Support an explicit allowlist mechanism for legitimate explanatory notebook cells:
+  - source marker: `# parity: allow-coord`
+  - or notebook cell metadata: `"parity_allow_coord": true`
+- Require each allowlisted coordinate-like cell to include a reason string.
+- Fail on coordinate-like content without the allowlist marker and reason.
 - Fail on real service-account key paths.
 - Fail on forbidden classifier source terms outside `docs/CLASS_MAPPING.md`.
 - Allow documented `PARITY_CORRECTS` notes for `IRON_SWIR`.
@@ -737,7 +756,9 @@ Requirements:
 
 - Run on `push` and `pull_request` to `main`.
 - Use Python `3.11` or `3.12`.
+- Optional Python version matrix for `3.11` and `3.12` if runtime permits.
 - Install project with dev dependencies.
+- Run `pytest tests/unit/test_no_ee_authenticate.py tests/unit/test_forbidden_terms.py -v`.
 - Run `pytest tests/unit/ tests/integration/ tests/notebook_parity/`.
 - Run `scripts/check_no_ee_authenticate.py`.
 - Run `scripts/check_no_direct_streaming.py`.
@@ -786,7 +807,11 @@ Create/update:
 Requirements:
 
 - Add tests that skip cleanly if large frozen reference artifacts are absent.
+- Missing large frozen reference artifacts must be reported as pytest `SKIPPED`, not passed.
+- The skip reason must state exactly which reference artifact directory or file is missing.
+- CI logs must show skip counts clearly.
 - When reference artifacts are present, compare app outputs against notebook outputs according to `docs/OUTPUT_PARITY_CONTRACT.md`.
+- When reference artifacts are present, tests must fail on parity mismatch, not skip.
 - Compare raster shape, transform, CRS, nodata, band order, dtype policy, and numeric tolerance.
 - Compare CSV/JSON deterministically.
 - Respect documented `PARITY_CORRECTS` exceptions.
