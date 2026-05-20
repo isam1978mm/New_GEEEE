@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +68,17 @@ def read_manifest(path: Path) -> dict[str, Any]:
 
 
 def resolve_run_artifact_path(settings: Settings, run_id: str, relative_path: str) -> Path:
+    if not relative_path:
+        raise ArtifactServeViolation()
+    if relative_path.startswith(("/", "\\")):
+        raise ArtifactServeViolation()
+    if re.match(r"^[A-Za-z]:[\\/]", relative_path):
+        raise ArtifactServeViolation()
+
+    raw_segments = re.split(r"[\\/]", relative_path)
+    if any(segment in {"", ".", ".."} for segment in raw_segments):
+        raise ArtifactServeViolation()
+
     run_dir = get_run_dir(settings, run_id).resolve()
     candidate = (run_dir / relative_path).resolve()
     if run_dir not in (candidate, *candidate.parents):
