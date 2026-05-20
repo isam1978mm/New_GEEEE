@@ -17,6 +17,11 @@ REFERENCE_MANIFEST_PATH = FIXTURE_ROOT / "reference_manifest.json"
 IRON_SWIR_PROVENANCE_PATH = Path("docs/IRON_SWIR_PROVENANCE.md")
 
 EXPECTED_OPTION_A = "Accepted decision: **Option A**"
+IRON_SWIR_OPTION_A_RULE = "option_a_corrected_app_reference"
+REJECTED_IRON_SWIR_RULES = {
+    "checked_in_notebook_raster",
+    "sign_flipped_notebook_raster",
+}
 
 FLOAT_TOLERANCES: dict[str, float] = {
     "dem.tif": 1e-5,
@@ -164,6 +169,49 @@ def test_reference_tabular_and_json_match_contract_or_skip() -> None:
             compare_json_pair(name, reference_path, app_path)
 
 
+def test_iron_swir_manifest_requires_option_a_rule(tmp_path: Path) -> None:
+    manifest_path = write_reference_manifest(
+        tmp_path,
+        iron_swir_entry={
+            "reference": "reference/IRON_SWIR.tif",
+            "app": "app/IRON_SWIR.tif",
+        },
+    )
+    manifest = load_reference_manifest_from_path(manifest_path)
+
+    with pytest.raises(AssertionError, match="IRON_SWIR.tif reference manifest entry must declare comparison_rule"):
+        validate_iron_swir_reference_rule(manifest.artifacts["IRON_SWIR.tif"])
+
+
+def test_iron_swir_manifest_rejects_sign_flipped_notebook_rule(tmp_path: Path) -> None:
+    manifest_path = write_reference_manifest(
+        tmp_path,
+        iron_swir_entry={
+            "reference": "reference/IRON_SWIR.tif",
+            "app": "app/IRON_SWIR.tif",
+            "comparison_rule": "sign_flipped_notebook_raster",
+        },
+    )
+    manifest = load_reference_manifest_from_path(manifest_path)
+
+    with pytest.raises(AssertionError, match="must not use a checked-in notebook or sign-flipped notebook raster"):
+        validate_iron_swir_reference_rule(manifest.artifacts["IRON_SWIR.tif"])
+
+
+def test_iron_swir_manifest_accepts_option_a_rule(tmp_path: Path) -> None:
+    manifest_path = write_reference_manifest(
+        tmp_path,
+        iron_swir_entry={
+            "reference": "reference/IRON_SWIR.tif",
+            "app": "app/IRON_SWIR.tif",
+            "comparison_rule": IRON_SWIR_OPTION_A_RULE,
+        },
+    )
+    manifest = load_reference_manifest_from_path(manifest_path)
+
+    validate_iron_swir_reference_rule(manifest.artifacts["IRON_SWIR.tif"])
+
+
 def require_option_a() -> None:
     text = IRON_SWIR_PROVENANCE_PATH.read_text(encoding="utf-8")
     if EXPECTED_OPTION_A not in text:
@@ -171,14 +219,18 @@ def require_option_a() -> None:
 
 
 def load_reference_manifest() -> ManifestContext:
-    if not REFERENCE_MANIFEST_PATH.is_file():
-        pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
-    payload = json.loads(REFERENCE_MANIFEST_PATH.read_text(encoding="utf-8"))
-    reference_root = (REFERENCE_MANIFEST_PATH.parent / payload["reference_dir"]).resolve()
-    app_root = (REFERENCE_MANIFEST_PATH.parent / payload["app_dir"]).resolve()
+    return load_reference_manifest_from_path(REFERENCE_MANIFEST_PATH)
+
+
+def load_reference_manifest_from_path(manifest_path: Path) -> ManifestContext:
+    if not manifest_path.is_file():
+        pytest.skip(f"missing reference artifact file: {manifest_path.as_posix()}")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    reference_root = (manifest_path.parent / payload["reference_dir"]).resolve()
+    app_root = (manifest_path.parent / payload["app_dir"]).resolve()
     artifacts = payload["artifacts"]
     return ManifestContext(
-        root=REFERENCE_MANIFEST_PATH.parent.resolve(),
+        root=manifest_path.parent.resolve(),
         reference_root=reference_root,
         app_root=app_root,
         artifacts=artifacts,
@@ -187,6 +239,8 @@ def load_reference_manifest() -> ManifestContext:
 
 def resolve_artifact_pair(manifest: ManifestContext, artifact_name: str) -> tuple[Path, Path]:
     entry = manifest.artifacts[artifact_name]
+    if artifact_name == "IRON_SWIR.tif":
+        validate_iron_swir_reference_rule(entry)
     reference_path = (manifest.root / entry.get("reference", f"{manifest.reference_root.name}/{artifact_name}")).resolve()
     app_path = (manifest.root / entry.get("app", f"{manifest.app_root.name}/{artifact_name}")).resolve()
     if not reference_path.is_file():
@@ -194,6 +248,23 @@ def resolve_artifact_pair(manifest: ManifestContext, artifact_name: str) -> tupl
     if not app_path.is_file():
         pytest.skip(f"missing reference artifact file: {app_path.as_posix()}")
     return reference_path, app_path
+
+
+def validate_iron_swir_reference_rule(entry: dict[str, Any]) -> None:
+    comparison_rule = entry.get("comparison_rule")
+    assert comparison_rule, (
+        "IRON_SWIR.tif reference manifest entry must declare comparison_rule="
+        f"'{IRON_SWIR_OPTION_A_RULE}' for Option A validation"
+    )
+    assert comparison_rule not in REJECTED_IRON_SWIR_RULES, (
+        "IRON_SWIR.tif reference manifest must not use a checked-in notebook or sign-flipped notebook raster; "
+        f"got comparison_rule={comparison_rule!r}"
+    )
+    assert comparison_rule == IRON_SWIR_OPTION_A_RULE, (
+        "IRON_SWIR.tif reference manifest must declare comparison_rule="
+        f"'{IRON_SWIR_OPTION_A_RULE}' and compare against the corrected analytical/app reference "
+        "using (B11 - B12) / (B11 + B12)"
+    )
 
 
 def compare_raster_pair(name: str, reference_path: Path, app_path: Path) -> None:
@@ -311,3 +382,16 @@ def tolerance_for(name: str) -> float:
 
 def is_number(value: Any) -> bool:
     return isinstance(value, (int, float, np.integer, np.floating)) and not isinstance(value, bool)
+
+
+def write_reference_manifest(tmp_path: Path, *, iron_swir_entry: dict[str, Any]) -> Path:
+    manifest_path = tmp_path / "reference_manifest.json"
+    payload = {
+        "reference_dir": "reference",
+        "app_dir": "app",
+        "artifacts": {
+            "IRON_SWIR.tif": iron_swir_entry,
+        },
+    }
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    return manifest_path
