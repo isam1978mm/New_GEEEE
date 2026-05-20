@@ -801,6 +801,39 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
+# Goal H4.5 — IRON_SWIR provenance reconciliation
+
+Create/update:
+
+- `docs/IRON_SWIR_PROVENANCE.md`
+- `docs/OUTPUT_PARITY_CONTRACT.md` if needed
+- `docs/PARITY_EXCEPTIONS.md` if needed
+- `plan.md`
+
+Requirements:
+
+- Resolve the conflict found during H4:
+  - the checked-in notebook appears to use `(B12 - B11) / (B12 + B11)`
+  - while the app uses `(B11 - B12) / (B11 + B12)`
+- State clearly that these are sign-flipped formulas.
+- Decide and document one accepted production interpretation before H5:
+  - A. app formula is canonical and notebook output is treated as `PARITY_CORRECTS`
+  - B. checked-in notebook formula is canonical and app must be changed later
+  - C. an older notebook revision is canonical and must be identified by commit SHA/hash
+  - D. H5 compares magnitude only, with sign convention documented
+- Do not silently choose one without documenting rationale.
+- If no final decision can be made automatically, write `docs/IRON_SWIR_PROVENANCE.md` with the conflict, options, and a required human decision before H5.
+- Update H5 requirements so H5 must read `docs/IRON_SWIR_PROVENANCE.md` and apply the accepted `IRON_SWIR` comparison rule.
+- H5 must fail or skip with a clear reason if the `IRON_SWIR` provenance decision is unresolved.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
 # Goal H5 — Reference-output comparison tests
 
 Create/update:
@@ -815,6 +848,8 @@ Requirements:
 - CI logs must show skip counts clearly.
 - When reference artifacts are present, compare app outputs against notebook outputs according to `docs/OUTPUT_PARITY_CONTRACT.md`.
 - When reference artifacts are present, tests must fail on parity mismatch, not skip.
+- H5 must read `docs/IRON_SWIR_PROVENANCE.md` and apply the accepted `IRON_SWIR` comparison rule.
+- If `IRON_SWIR` provenance remains unresolved, H5 must fail or skip with a clear reason instead of silently choosing a comparison interpretation.
 - Compare raster shape, transform, CRS, nodata, band order, dtype policy, and numeric tolerance.
 - Compare CSV/JSON deterministically.
 - Respect documented `PARITY_CORRECTS` exceptions.

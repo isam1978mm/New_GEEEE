@@ -233,9 +233,9 @@ The app intentionally uses:
 
 `(B11 - B12) / (B11 + B12)`
 
-The exact notebook buggy formula must be verified and recorded during H4 reference capture; current repo parity notes record the denominator bug as `(B11 - B12) / (B11 - B12)` if confirmed.
+H4 found that the checked-in notebook evidence is not yet fully reconciled with the older parity notes. See [IRON_SWIR_PROVENANCE.md](IRON_SWIR_PROVENANCE.md).
 
-H4 must cite the exact notebook cell or source reference that demonstrates the bug.
+The checked-in notebook inspection found a sign-flipped form, not just a denominator discrepancy, so the accepted production interpretation must be resolved before H5 reference-output comparison.
 
 This exception is allowed because the PRD and current parity metadata already accept an `IRON_SWIR` denominator correction in the app.
 
