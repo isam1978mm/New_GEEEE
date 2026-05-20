@@ -786,6 +786,9 @@ Requirements:
 - Document how to run `notebooks/new.ipynb` on the canonical ROI.
 - Document which notebook outputs must be exported.
 - Document required metadata: notebook hash, environment, date, Earth Engine datasets, ROI label, grid manifest.
+- Declare explicit numeric tolerance values per stage and artifact class used in parity comparison.
+- Verify and record the exact notebook `IRON_SWIR` buggy formula and its notebook cell or source reference.
+- Record whether object clustering in the notebook is deterministic or seeded.
 - Document how to store artifacts under `tests/notebook_parity/fixtures/reference_run_v1/`.
 - Document how to compare app outputs against frozen notebook outputs.
 - Do not add large binary fixtures unless already available.

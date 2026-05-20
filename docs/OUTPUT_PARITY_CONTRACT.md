@@ -107,6 +107,8 @@ Required parity:
 - same channel ordering
 - same normalized-plus-mask behavior
 - same support-file semantics for band order, per-band statistics, and normalization parameters
+- `hypercube_band_order.csv`, `hypercube_band_stats.csv`, and `hypercube_norm_params.csv` must be band-order-aligned
+- row order in those CSVs is semantic and must match the persisted hypercube channel order
 
 ### PCA
 
@@ -124,7 +126,11 @@ Required parity:
 
 Required parity:
 
-- notebook-equivalent object extraction, labeling, ordering, and clustering behavior
+- same thresholding behavior
+- same connected-component and object ordering behavior
+- same clustering parameters
+- same cluster labeling and output ordering behavior
+- if H4 finds randomized clustering in the notebook, the production path must persist the seed and support deterministic replay
 
 ### Alignment QA
 
@@ -227,11 +233,11 @@ The app intentionally uses:
 
 `(B11 - B12) / (B11 + B12)`
 
-instead of the notebook bug:
+The exact notebook buggy formula must be verified and recorded during H4 reference capture; current repo parity notes record the denominator bug as `(B11 - B12) / (B11 - B12)` if confirmed.
 
-`(B11 - B12) / (B11 - B12)`
+H4 must cite the exact notebook cell or source reference that demonstrates the bug.
 
-This exception is allowed because it is a known notebook defect already accepted by the PRD and parity metadata.
+This exception is allowed because the PRD and current parity metadata already accept an `IRON_SWIR` denominator correction in the app.
 
 ### Future exceptions
 
