@@ -64,6 +64,10 @@ PARITY_TEST_REGISTRY: dict[str, ParityRegistryEntry] = {
     ),
 }
 
+CONTRACT_LEVEL_PARITY_TEST_FILES = {
+    "test_reference_outputs_contract.py",
+}
+
 
 def load_stage_class(entry: ParityRegistryEntry) -> type[Stage]:
     module = import_module(entry.stage_module)
@@ -95,6 +99,26 @@ def iter_registry_validation_errors(
     return errors
 
 
+def iter_missing_registry_entries(
+    parity_files: set[str],
+    *,
+    registry: dict[str, ParityRegistryEntry] | None = None,
+    contract_level_files: set[str] | None = None,
+) -> list[str]:
+    active_registry = registry or PARITY_TEST_REGISTRY
+    allowed_contract_level_files = contract_level_files or CONTRACT_LEVEL_PARITY_TEST_FILES
+    return sorted(
+        filename
+        for filename in parity_files
+        if (
+            filename.startswith("test_")
+            and filename.endswith(".py")
+            and filename not in active_registry
+            and filename not in allowed_contract_level_files
+        )
+    )
+
+
 def pytest_collection_modifyitems(session: pytest.Session, config: pytest.Config, items: list[pytest.Item]) -> None:
     del session, config
     parity_root = Path(__file__).resolve().parent
@@ -104,11 +128,7 @@ def pytest_collection_modifyitems(session: pytest.Session, config: pytest.Config
         if parity_root in Path(str(item.fspath)).resolve().parents
     }
 
-    unknown_files = sorted(
-        filename
-        for filename in parity_files
-        if filename.startswith("test_") and filename.endswith(".py") and filename not in PARITY_TEST_REGISTRY
-    )
+    unknown_files = iter_missing_registry_entries(parity_files)
     errors = iter_registry_validation_errors()
     if unknown_files:
         errors.extend(f"{filename}: missing PARITY_TEST_REGISTRY entry" for filename in unknown_files)
