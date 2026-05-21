@@ -174,6 +174,95 @@ Operational implication:
 - `GET /runs/<run_id>` will not list `LOCAL_SENSITIVE` or `FILESYSTEM_ONLY` artifacts as public artifacts
 - retrieve only artifacts that are intentionally exposed by policy
 
+## Full-Job Output Retrieval
+
+Notebook-equivalent full-job outputs are local run-directory artifacts, not public API products.
+
+Canonical local run directory:
+
+```text
+./data/runs/<run_id>/
+```
+
+Full-job output retrieval is done from the local filesystem under that run directory, not from notebook-style Drive locations.
+
+The current contracted directory families are:
+
+- `./data/runs/<run_id>/`
+  Core canonical stage outputs such as `grid_manifest.json`, `dem.tif`, `VV_dB.tif`, `NDVI.tif`, `hypercube.tif`, `pca_anomaly.tif`, `objects_index.csv`, and `alignment_qa.json`
+- `./data/runs/<run_id>/qa/`
+  Internal QA summaries, audits, nodata reports, parity-support files, and alignment/grid checks
+- `./data/runs/<run_id>/stacks/`
+  Approved feature-stack, tensor-support, and optical-support outputs
+- `./data/runs/<run_id>/objects/`
+  Non-public object-support side products such as masks and patch tensors
+- `./data/runs/<run_id>/full_job/`
+  Reserved for approved notebook-equivalent outputs that do not belong in a narrower domain folder
+- `./data/runs/<run_id>/experimental/`
+  Experimental classifier outputs only, governed by the experimental module rules
+
+Operator retrieval examples:
+
+```powershell
+Get-ChildItem .\data\runs\<run_id> -Recurse
+Copy-Item .\data\runs\<run_id>\qa -Destination C:\tmp\run-qa -Recurse
+Copy-Item .\data\runs\<run_id>\stacks -Destination C:\tmp\run-stacks -Recurse
+```
+
+Use filesystem copy workflows for local operational review. Do not expect the API to list or serve the full notebook-equivalent set.
+
+## Full-Job Artifact Classes
+
+The full-job contract uses these practical retrieval rules:
+
+- `REDACTED_PUBLIC`
+  Public-safe artifacts that may appear in `GET /runs/<run_id>` and may be retrieved through the guarded artifact route. Current examples include `objects_index`, `clusters_summary`, `alignment_qa`, `alignment_audit`, and `alignment_mask_selection`.
+- `LOCAL_SENSITIVE`
+  Local-only artifacts that are not publicly listed. They may be retrievable only under the existing guarded local policy on `127.0.0.1`. Current examples include core rasters such as `dem.tif`, `VV_dB.tif`, `lst.tif`, `hypercube.tif`, and `pca_anomaly.tif`.
+- `FILESYSTEM_ONLY`
+  Local filesystem artifacts that are never served over HTTP and must be retrieved directly from the run directory. This is the default class for notebook full-job support outputs. Current examples include:
+  - `qa/grid_dem/*.json`
+  - `qa/sar/*.json` and `qa/sar/*.csv`
+  - `qa/stacks/*.json` and `qa/stacks/*.csv`
+  - `qa/parity/*.json` and `qa/parity/*.csv`
+  - `stacks/tensor_support/*`
+  - `stacks/optical_support/*`
+  - `objects/object_mask.npy`
+  - `objects/object_patches/*.npy`
+- `PREVIEW_ONLY`
+  Safe preview artifacts only when a later goal explicitly introduces them.
+
+Operational rule:
+
+- if an output is not explicitly redacted and publicly exposed, treat it as a local artifact only
+- if an output is `FILESYSTEM_ONLY`, retrieve it from `./data/runs/<run_id>/...`, not through HTTP
+
+## Drive-First Mapping
+
+The notebook is Drive-first and Colab-first. The app is not.
+
+For v1 and the N-phase full-job outputs:
+
+- notebook Drive folders map to local app run directories
+- notebook copy-back and Drive-export behavior does not imply any app Drive integration
+- no Drive mirroring, Drive scanning, or Colab path semantics are part of the app runtime unless a later explicit goal approves them
+
+Operational implication:
+
+- when the notebook refers to exported folders, copied rasters, or supporting CSV/JSON deliverables, the app equivalent is the local `./data/runs/<run_id>/` tree
+- treat that tree as the authoritative local job bundle for operator review and copy-out
+
+## Full-Job Outputs Are Not Public API Products
+
+Notebook-equivalent full-job outputs remain local artifacts unless a later goal explicitly introduces a redacted derivative.
+
+This means:
+
+- the API is not the inventory of all run outputs
+- `GET /runs/<run_id>` intentionally omits non-public full-job outputs
+- the guarded artifact route does not override `FILESYSTEM_ONLY`
+- local operator review of the complete output set happens from the run directory, not from public HTTP responses
+
 ## Parity Tests
 
 Run the current local verification suite:
