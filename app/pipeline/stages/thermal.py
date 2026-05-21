@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Protocol
 
@@ -124,6 +125,31 @@ def write_lst_output(run_dir: Path, grid_spec: GridSpec, lst: np.ndarray) -> Pat
     return tif_path
 
 
+def write_thermal_summary(run_dir: Path, lst: np.ndarray, *, nodata: float, start_date: str, end_date: str) -> Path:
+    qa_dir = run_dir / "qa" / "stacks"
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = qa_dir / "thermal_summary.json"
+    valid = lst != nodata
+    values = lst[valid]
+    summary_path.write_text(
+        json.dumps(
+            {
+                "stage": "thermal",
+                "start_date": start_date,
+                "end_date": end_date,
+                "valid_fraction": round(float(valid.mean()), 6),
+                "min": round(float(values.min()), 6) if values.size else None,
+                "max": round(float(values.max()), 6) if values.size else None,
+                "mean": round(float(values.mean()), 6) if values.size else None,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return summary_path
+
+
 class ThermalStage(Stage):
     name = "thermal"
     parity_category = ParityCategory.PARITY_REPRODUCES
@@ -152,14 +178,30 @@ class ThermalStage(Stage):
         if lst.shape != (self.grid_spec.size, self.grid_spec.size):
             raise StageError("Thermal LST output must align to the authoritative GRID.")
         tif_path = write_lst_output(context.run_dir, self.grid_spec, lst)
-        artifact = build_stage_artifact(
-            name="lst",
-            relative_path=tif_path.relative_to(context.run_dir).as_posix(),
-            artifact_class=ArtifactClass.LOCAL_SENSITIVE,
-            size_bytes=tif_path.stat().st_size,
+        summary_path = write_thermal_summary(
+            context.run_dir,
+            lst,
+            nodata=self.grid_spec.nodata,
+            start_date=self.start_date,
+            end_date=self.end_date,
         )
+        artifacts = [
+            build_stage_artifact(
+                name="lst",
+                relative_path=tif_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=tif_path.stat().st_size,
+            ),
+            build_stage_artifact(
+                name="thermal_summary",
+                relative_path=summary_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=summary_path.stat().st_size,
+                http_servable=False,
+            ),
+        ]
         return StageResult(
-            artifacts=[artifact],
+            artifacts=artifacts,
             metadata={
                 "band_names": ["lst"],
                 "shape": [self.grid_spec.size, self.grid_spec.size],

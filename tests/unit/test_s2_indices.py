@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -150,13 +151,20 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == list(INDEX_NAMES)
-        assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
+        assert [artifact.name for artifact in result.artifacts] == [*INDEX_NAMES, "s2_indices_summary"]
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        for name in INDEX_NAMES:
+            assert artifact_classes[name] == ArtifactClass.LOCAL_SENSITIVE
+        assert artifact_classes["s2_indices_summary"] == ArtifactClass.FILESYSTEM_ONLY
         assert result.metadata["band_names"] == list(INDEX_NAMES)
 
         for name in INDEX_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        summary = json.loads((run_dir / "qa" / "stacks" / "s2_indices_summary.json").read_text(encoding="utf-8"))
+        assert summary["stage"] == "s2_indices"
+        assert summary["index_bands"] == list(INDEX_NAMES)
+        assert summary["source_bands"] == list(S2_SOURCE_BANDS)
 
 
 def _settings(run_dir: Path):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -111,10 +112,15 @@ def test_thermal_stage_writes_classified_grid_aligned_output() -> None:
 
         result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["lst"]
+        assert [artifact.name for artifact in result.artifacts] == ["lst", "thermal_summary"]
         assert result.artifacts[0].artifact_class == ArtifactClass.LOCAL_SENSITIVE
+        assert result.artifacts[1].artifact_class == ArtifactClass.FILESYSTEM_ONLY
         sidecar = read_manifest(raster_sidecar_path(run_dir / "lst.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        summary = json.loads((run_dir / "qa" / "stacks" / "thermal_summary.json").read_text(encoding="utf-8"))
+        assert summary["stage"] == "thermal"
+        assert summary["start_date"] == DEFAULT_START
+        assert summary["end_date"] == DEFAULT_END
 
 
 def _settings(run_dir: Path):

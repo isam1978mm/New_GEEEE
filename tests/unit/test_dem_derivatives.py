@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -52,11 +53,17 @@ def test_dem_derivatives_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == list(OUTPUT_NAMES)
-        assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
+        assert [artifact.name for artifact in result.artifacts] == [*OUTPUT_NAMES, "dem_derivatives_summary"]
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        for name in OUTPUT_NAMES:
+            assert artifact_classes[name] == ArtifactClass.LOCAL_SENSITIVE
+        assert artifact_classes["dem_derivatives_summary"] == ArtifactClass.FILESYSTEM_ONLY
         for name in OUTPUT_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        summary = json.loads((run_dir / "qa" / "stacks" / "dem_derivatives_summary.json").read_text(encoding="utf-8"))
+        assert summary["stage"] == "dem_derivatives"
+        assert summary["band_count"] == len(OUTPUT_NAMES)
 
 
 def _settings(run_dir: Path):

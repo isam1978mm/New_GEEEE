@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -119,6 +120,37 @@ def write_dem_derivative_outputs(run_dir: Path, grid_spec: GridSpec, outputs: di
     return written_paths
 
 
+def write_dem_derivatives_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float) -> Path:
+    qa_dir = run_dir / "qa" / "stacks"
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = qa_dir / "dem_derivatives_summary.json"
+    band_summaries = {}
+    for name in OUTPUT_NAMES:
+        array = outputs[name]
+        valid = array != nodata
+        values = array[valid]
+        band_summaries[name] = {
+            "valid_fraction": round(float(valid.mean()), 6),
+            "min": round(float(values.min()), 6) if values.size else None,
+            "max": round(float(values.max()), 6) if values.size else None,
+            "mean": round(float(values.mean()), 6) if values.size else None,
+        }
+    summary_path.write_text(
+        json.dumps(
+            {
+                "stage": "dem_derivatives",
+                "band_count": len(OUTPUT_NAMES),
+                "bands": list(OUTPUT_NAMES),
+                "band_summaries": band_summaries,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return summary_path
+
+
 class DemDerivativesStage(Stage):
     name = "dem_derivatives"
     parity_category = ParityCategory.PARITY_REPRODUCES
@@ -136,6 +168,7 @@ class DemDerivativesStage(Stage):
             scale_m=float(self.grid_spec.manifest.scale_m),
         )
         written_paths = write_dem_derivative_outputs(context.run_dir, self.grid_spec, outputs)
+        summary_path = write_dem_derivatives_summary(context.run_dir, outputs, nodata=self.grid_spec.nodata)
         artifacts = [
             build_stage_artifact(
                 name=path.stem,
@@ -145,6 +178,15 @@ class DemDerivativesStage(Stage):
             )
             for path in written_paths
         ]
+        artifacts.append(
+            build_stage_artifact(
+                name="dem_derivatives_summary",
+                relative_path=summary_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=summary_path.stat().st_size,
+                http_servable=False,
+            )
+        )
         return StageResult(
             artifacts=artifacts,
             metadata={

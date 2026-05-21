@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Protocol
 
@@ -206,6 +207,40 @@ def write_s2_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.n
     return written_paths
 
 
+def write_s2_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float, start_date: str, end_date: str, cloud_max: int) -> Path:
+    qa_dir = run_dir / "qa" / "stacks"
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = qa_dir / "s2_indices_summary.json"
+    index_summaries = {}
+    for name in INDEX_NAMES:
+        array = outputs[name]
+        valid = array != nodata
+        values = array[valid]
+        index_summaries[name] = {
+            "valid_fraction": round(float(valid.mean()), 6),
+            "min": round(float(values.min()), 6) if values.size else None,
+            "max": round(float(values.max()), 6) if values.size else None,
+            "mean": round(float(values.mean()), 6) if values.size else None,
+        }
+    summary_path.write_text(
+        json.dumps(
+            {
+                "stage": "s2_indices",
+                "start_date": start_date,
+                "end_date": end_date,
+                "cloud_max": cloud_max,
+                "source_bands": list(S2_SOURCE_BANDS),
+                "index_bands": list(INDEX_NAMES),
+                "index_summaries": index_summaries,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return summary_path
+
+
 class S2IndicesStage(Stage):
     name = "s2_indices"
     parity_category = ParityCategory.PARITY_CORRECTS
@@ -237,6 +272,14 @@ class S2IndicesStage(Stage):
         cube = fetcher(grid_spec=self.grid_spec)
         outputs = compute_s2_indices(cube, nodata=self.grid_spec.nodata)
         written_paths = write_s2_outputs(context.run_dir, self.grid_spec, outputs)
+        summary_path = write_s2_summary(
+            context.run_dir,
+            outputs,
+            nodata=self.grid_spec.nodata,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            cloud_max=self.cloud_max,
+        )
         artifacts = [
             build_stage_artifact(
                 name=path.stem,
@@ -246,6 +289,15 @@ class S2IndicesStage(Stage):
             )
             for path in written_paths
         ]
+        artifacts.append(
+            build_stage_artifact(
+                name="s2_indices_summary",
+                relative_path=summary_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=summary_path.stat().st_size,
+                http_servable=False,
+            )
+        )
         return StageResult(
             artifacts=artifacts,
             metadata={
