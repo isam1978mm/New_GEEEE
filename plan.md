@@ -1169,3 +1169,297 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 At the end of the new section, use this command template:
 
 `/goal Read AGENTS.md and plan.md. Execute Goal N0 only. Stop after N0 and report files changed, commands run, test results, and blockers.`
+
+---
+
+# Full notebook local-output expansion phase
+
+The N-phase made the app comparable to the approved science-core notebook workflow. The F-phase expands the app toward the user-approved full notebook local-output workflow.
+
+This phase is local-output first. It may generate exact-location artifacts, classifier outputs, KMZ, GeoJSON, focus-mask products, GPS comparison reports, and local path/reference reports only as local run artifacts unless a later explicit goal changes access policy.
+
+Source inventory:
+
+- docs/NOTEBOOK_FULL_JOB_INVENTORY.md
+- docs/Notebook_Cells_E.md
+- docs/NOTEBOOK_FULL_JOB_ARTIFACT_CONTRACT.md
+
+User-approved scope:
+
+- Add safe map/manual pin UI.
+- Keep local outputs under the user's PC run directory: data/runs/<run_id>/.
+- Add duplicate notebook stack variants where useful:
+  - NANO stack family
+  - SIGMA0 master variants
+  - GPHYS master
+  - RAD master cube
+  - ULTIMATE GPHYS scan
+  - Tesla v7.2 stack variants
+- Add domain/treasure-specific feature stacks only as local-only experimental outputs with neutral external names.
+- Add 17m focus-mask and exact target-zone analysis.
+- Add exact lat/lon GeoJSON and KMZ outputs as FILESYSTEM_ONLY.
+- Add hard classifiers and target labels as local-only experimental outputs with neutral names.
+- Keep training scaffolding and CNN/Swin/YOLO/SegFormer inference on hold.
+- Add field-operations KMZ outputs as FILESYSTEM_ONLY.
+- Add Drive/reference-file locator utilities, but do not scan secret folders and do not expose local/Drive paths publicly.
+- Add GPS point comparison reports as FILESYSTEM_ONLY.
+- Keep broken or experimental model-build cells excluded unless rebuilt cleanly in a separate approved ML phase.
+
+F-phase access rules:
+
+- FILESYSTEM_ONLY is allowed for exact-location artifacts.
+- Exact lat/lon, GeoJSON, KMZ, WKT, target-zone outputs, classifier target outputs, GPS comparison reports, and path inventories must not be public-listed.
+- These outputs must not be served over HTTP unless a later explicit local-only download goal changes artifact policy with tests.
+- No new public coordinate, geometry, path, target, or classifier leakage is allowed.
+- Core app public responses remain redacted.
+- Do not modify notebooks/new.ipynb unless a goal explicitly says so.
+- Training/deep-learning inference remains on hold.
+
+Official sequence:
+
+- F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6 -> F7 -> F8 -> F9
+
+---
+
+# Goal F0 — Record full notebook local-output expansion contract
+
+Create/update:
+
+- plan.md
+- docs/NOTEBOOK_FULL_JOB_ARTIFACT_CONTRACT.md
+- docs/NOTEBOOK_FULL_JOB_INVENTORY.md if corrections are needed
+
+Requirements:
+
+- Record the user-approved F-phase scope.
+- Convert the approved excluded/missing notebook sections into an implementation contract.
+- Define which outputs remain FILESYSTEM_ONLY.
+- Define which outputs may be experimental local outputs.
+- Define which outputs remain on hold:
+  - training scaffolding
+  - CNN/Swin/YOLO/SegFormer inference
+  - broken model-build cells
+- Do not change app logic.
+- Do not change tests except optional documentation-link checks.
+- Do not change the notebook.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F1 — Safe map/manual pin UI
+
+Create/update:
+
+- frontend map/pin UI files as needed
+- API/frontend tests as needed
+- docs if needed
+
+Requirements:
+
+- Add a safe operator workflow for selecting a point manually.
+- The selected point may be submitted to /runs.
+- Do not display exact coordinates in public run responses.
+- Do not emit public WKT, GeoJSON, or ROI geometry.
+- Any ROI/WKT debug output must be local-only or FILESYSTEM_ONLY.
+- Preserve existing API redaction behavior.
+- Do not change notebook code.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F2 — Notebook stack-variant local outputs
+
+Create/update:
+
+- relevant stack/output stages
+- tests for approved stack families
+- docs/contract updates if mappings require clarification
+
+Requirements:
+
+- Add approved duplicate/variant stack families only as local outputs.
+- Use neutral names for app outputs.
+- Implement only useful, reproducible formulas from the notebook inventory.
+- Avoid blind duplication of broken or near-identical notebook cells.
+- Stack outputs default to FILESYSTEM_ONLY.
+- No target/classifier public exposure.
+- Preserve existing science-core outputs and parity behavior.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F3 — 17m focus-mask and exact target-zone local outputs
+
+Create/update:
+
+- local focus-mask stage or module
+- tests for focus-mask artifacts
+- docs/contract updates if needed
+
+Requirements:
+
+- Add 17m focus-mask and exact target-zone analysis approved by the user.
+- Outputs must be FILESYSTEM_ONLY.
+- Exact coordinates, geometry, WKT, GeoJSON, bounds, CRS transforms, and target-zone context must not appear in public API responses.
+- Do not public-list focus-mask artifacts.
+- Do not serve focus-mask artifacts over HTTP unless a later explicit local-only download goal changes policy with tests.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F4 — Exact-location GeoJSON and KMZ local outputs
+
+Create/update:
+
+- local GeoJSON/KMZ export module
+- tests for artifact classes and access blocking
+- docs/contract updates if needed
+
+Requirements:
+
+- Add exact lat/lon GeoJSON and KMZ outputs approved by the user.
+- Outputs must be FILESYSTEM_ONLY.
+- Outputs must be written under the local run directory.
+- They must not be public-listed.
+- They must not be served through normal artifact routes.
+- Add tests proving these artifacts are inaccessible over HTTP by default.
+- Do not change public redaction rules.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F5 — Hard classifiers and neutral target-label local outputs
+
+Create/update:
+
+- experimental/local classifier module as needed
+- tests for neutral names and filesystem-only outputs
+- docs/contract updates if needed
+
+Requirements:
+
+- Add hard classifier/target-label logic only as local experimental outputs.
+- Use neutral external names such as Class_A, Class_B, etc.
+- Keep original/domain label mapping only in approved documentation if needed.
+- Classifier outputs must be FILESYSTEM_ONLY.
+- No classifier outputs are public-listed.
+- No classifier outputs are served over HTTP by default.
+- Do not connect this to the public frontend by default.
+- Do not implement training or deep-learning inference in this goal.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F6 — Field-operations KMZ and local report outputs
+
+Create/update:
+
+- local report/KMZ exporter module
+- tests for artifact classes and access blocking
+- docs/contract updates if needed
+
+Requirements:
+
+- Add field-operations KMZ outputs approved by the user.
+- Add local-only report outputs needed to reproduce notebook field-operation deliverables.
+- Outputs must be FILESYSTEM_ONLY.
+- Do not public-list or serve these files by default.
+- Keep exact-location and target context out of public API responses.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F7 — Drive/reference locator utilities
+
+Create/update:
+
+- local utility scripts or modules
+- tests for path redaction and no secret-folder scanning
+- docs/contract updates if needed
+
+Requirements:
+
+- Add Drive/reference-file locator utilities approved by the user.
+- Utilities may support local path discovery and reference-file matching.
+- Do not scan secret folders.
+- Do not print or expose local/Drive paths through public API responses.
+- Any path inventory report must be FILESYSTEM_ONLY.
+- Prefer local filesystem utilities over Drive integration unless Drive is explicitly required.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F8 — GPS point comparison reports
+
+Create/update:
+
+- local GPS comparison module or script
+- tests for report generation and access blocking
+- docs/contract updates if needed
+
+Requirements:
+
+- Add GPS point comparison reports approved by the user.
+- Reports must be FILESYSTEM_ONLY.
+- Exact GPS/reference/target coordinates must not be public-listed or served by default.
+- Reports must stay under the local run directory or an approved local comparison output directory.
+- Do not add public API exposure.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+---
+
+# Goal F9 — Full notebook local-output comparison report
+
+Create/update:
+
+- comparison script or test utilities
+- docs/runbook updates
+- tests if needed
+
+Requirements:
+
+- Compare notebook local-output inventory against app local-output inventory.
+- Produce a report showing:
+  - covered outputs
+  - missing approved outputs
+  - intentionally excluded outputs
+  - on-hold outputs
+  - artifact class for each output family
+- The report must be local-only unless explicitly redacted.
+- Keep training/deep-learning inference and broken model-build cells excluded/on hold.
+- Do not expose exact coordinates, KMZ, GeoJSON, GPS reports, classifier outputs, or local paths publicly.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+At the end of the F-phase section, use this command template:
+
+/goal Read AGENTS.md and plan.md. Execute Goal F0 only. Stop after F0 and report files changed, commands run, test results, and blockers.
