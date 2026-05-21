@@ -15,10 +15,14 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "GEE Screening Workspace" in response.text
     assert 'src="/app.js"' in response.text
     assert 'href="/style.css"' in response.text
-    assert "Blank Basemap" in response.text
+    assert "Manual Pin Workspace" in response.text
     assert "External tiles disabled" in response.text
+    assert "Queue local run" in response.text
+    assert "Stage a local point" in response.text
     assert "latitude" not in response.text.casefold()
     assert "longitude" not in response.text.casefold()
+    assert "geojson" not in response.text.casefold()
+    assert "wkt" not in response.text.casefold()
     assert "cdn" not in response.text.casefold()
     assert "fonts.googleapis" not in response.text.casefold()
     assert "googletagmanager" not in response.text.casefold()
@@ -34,9 +38,13 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert js_response.status_code == 200
     assert "application/javascript" in js_response.headers["content-type"] or "text/javascript" in js_response.headers["content-type"]
     assert 'externalTilesEnabled: false' in js_response.text
+    assert 'fetch("/runs"' in js_response.text
+    assert 'method: "POST"' in js_response.text
     assert '/artifacts/' in js_response.text
     assert 'FILESYSTEM_ONLY' in js_response.text
     assert 'experimental/' in js_response.text
+    assert 'GeoJSON' not in js_response.text
+    assert 'WKT' not in js_response.text
     assert 'https://' not in js_response.text
     assert 'http://' not in js_response.text
 

@@ -118,6 +118,95 @@ body {
   mask-image: radial-gradient(circle at center, black 42%, transparent 92%);
 }
 
+.hemisphere-ring {
+  position: absolute;
+  inset: 24px;
+  border: 1px dashed rgba(31, 43, 34, 0.16);
+  border-radius: 50%;
+}
+
+.hemisphere-ring::before,
+.hemisphere-ring::after {
+  content: "";
+  position: absolute;
+  background: rgba(31, 43, 34, 0.12);
+}
+
+.hemisphere-ring::before {
+  left: 50%;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.hemisphere-ring::after {
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.ring-label {
+  position: absolute;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(31, 43, 34, 0.46);
+}
+
+.ring-label.north {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ring-label.south {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ring-label.west {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ring-label.east {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pin-marker {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #6b3418, #b76832);
+  border: 2px solid rgba(255, 252, 245, 0.95);
+  box-shadow: 0 10px 24px rgba(62, 33, 14, 0.24);
+}
+
+.pin-marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(107, 52, 24, 0.22);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pin-marker.is-hidden {
+  display: none;
+}
+
 .map-copy {
   position: absolute;
   inset: auto 24px 24px 24px;
@@ -135,6 +224,92 @@ body {
 .map-copy p:last-child {
   margin: 0;
   color: var(--muted);
+}
+
+.map-toolbar {
+  display: grid;
+  grid-template-columns: 0.95fr 1.2fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.selection-card,
+.run-form {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(31, 43, 34, 0.08);
+}
+
+.selection-label,
+.run-field {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.selection-value {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.run-form {
+  display: grid;
+  gap: 10px;
+}
+
+.run-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 43, 34, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 252, 245, 0.96);
+  color: var(--ink);
+  font: inherit;
+}
+
+.run-input:focus-visible,
+.submit-button:focus-visible,
+.blank-map:focus-visible {
+  outline: 2px solid rgba(107, 52, 24, 0.55);
+  outline-offset: 3px;
+}
+
+.submit-button {
+  min-height: 46px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6b3418, #9d5c36);
+  color: #fffaf4;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.map-legend,
+.run-feedback {
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+kbd {
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(31, 43, 34, 0.12);
+  font-family: inherit;
+  font-size: 0.88rem;
 }
 
 .panel-copy {
@@ -193,6 +368,10 @@ body {
 
   .blank-map {
     min-height: 320px;
+  }
+
+  .map-toolbar {
+    grid-template-columns: 1fr;
   }
 
   .artifact-card {
