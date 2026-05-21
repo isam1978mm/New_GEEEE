@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -166,6 +168,8 @@ def test_create_ee_radar_cube_fetcher_uses_sample_rectangle(monkeypatch: pytest.
     assert cube.shape == (640, 640, 3)
     assert cube.dtype == np.float32
     assert len(rectangle_calls) == 4
+    assert fetcher.diagnostics.tile_request_count == 4
+    assert fetcher.diagnostics.pairs == []
 
 
 def test_build_final_radar_image_fails_cleanly_for_empty_ascending_collection(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -354,13 +358,65 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(SarRtcStage(grid_spec=grid_spec, radar_cube_fetcher=deterministic_radar_cube_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
-        assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
+        assert [artifact.name for artifact in result.artifacts] == [
+            "VV_dB",
+            "VH_dB",
+            "logRatio_dB",
+            "incidence",
+            "sar_pair_diagnostics",
+            "sar_summary",
+            "sar_nodata_audit",
+            "sar_alignment_summary",
+        ]
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        assert artifact_classes == {
+            "VV_dB": ArtifactClass.LOCAL_SENSITIVE,
+            "VH_dB": ArtifactClass.LOCAL_SENSITIVE,
+            "logRatio_dB": ArtifactClass.LOCAL_SENSITIVE,
+            "incidence": ArtifactClass.LOCAL_SENSITIVE,
+            "sar_pair_diagnostics": ArtifactClass.FILESYSTEM_ONLY,
+            "sar_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "sar_nodata_audit": ArtifactClass.FILESYSTEM_ONLY,
+            "sar_alignment_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        artifact_http_flags = {artifact.name: artifact.http_servable for artifact in result.artifacts}
+        assert artifact_http_flags["sar_pair_diagnostics"] is False
+        assert artifact_http_flags["sar_summary"] is False
+        assert artifact_http_flags["sar_nodata_audit"] is False
+        assert artifact_http_flags["sar_alignment_summary"] is False
         assert result.metadata["band_names"] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
+        assert result.metadata["qa_artifact_names"] == [
+            "sar_pair_diagnostics",
+            "sar_summary",
+            "sar_nodata_audit",
+            "sar_alignment_summary",
+        ]
 
         for name in ("VV_dB", "VH_dB", "logRatio_dB", "incidence"):
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
+
+        pair_diagnostics = json.loads((run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
+        assert pair_diagnostics["pair_diagnostics_available"] is False
+        assert pair_diagnostics["pair_count"] == 0
+        assert "bounds" not in pair_diagnostics
+        assert "transform" not in pair_diagnostics
+
+        with (run_dir / "qa" / "sar" / "sar_summary.csv").open("r", encoding="utf-8", newline="") as handle:
+            summary_rows = list(csv.DictReader(handle))
+        assert [row["band_name"] for row in summary_rows] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
+        assert all("mean" in row for row in summary_rows)
+
+        with (run_dir / "qa" / "sar" / "sar_nodata_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+            nodata_rows = list(csv.DictReader(handle))
+        assert [row["band_name"] for row in nodata_rows] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
+        assert all(set(row) == {"band_name", "total_pixels", "nodata_count", "nodata_fraction", "all_nodata"} for row in nodata_rows)
+
+        alignment_summary = json.loads((run_dir / "qa" / "sar" / "sar_alignment_summary.json").read_text(encoding="utf-8"))
+        assert alignment_summary["all_shapes_match"] is True
+        assert alignment_summary["all_float32"] is True
+        assert alignment_summary["expected_shape"] == [640, 640]
+        assert "crs_transform" not in alignment_summary
 
 
 def _settings(run_dir: Path):

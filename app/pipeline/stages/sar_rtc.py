@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -34,6 +36,36 @@ class SarPair:
     asc_id: str
     desc_id: str
     dt_ms: int
+
+
+@dataclass(frozen=True, slots=True)
+class SarFetchDiagnostics:
+    pairs: list[SarPair]
+    tile_request_count: int | None = None
+
+
+class EeRadarCubeFetcher:
+    def __init__(self, *, final_for_sample, requests: list[dict[str, float | int]], grid_spec: GridSpec, diagnostics: SarFetchDiagnostics) -> None:
+        self._final_for_sample = final_for_sample
+        self._requests = requests
+        self._grid_spec = grid_spec
+        self.diagnostics = diagnostics
+
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray:
+        cube = np.full((grid_spec.size, grid_spec.size, len(RADAR_BANDS)), grid_spec.nodata, dtype=np.float32)
+        for request in self._requests:
+            tile_geo = ee.Geometry.Rectangle(
+                [request["xmin"], request["ymin"], request["xmax"], request["ymax"]],
+                self._grid_spec.crs,
+                False,
+            )
+            rect = self._final_for_sample.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            for band_index, band_name in enumerate(RADAR_BANDS):
+                data = np.array(rect["properties"][band_name], dtype=np.float32)[: DEM_TILE_SIZE, : DEM_TILE_SIZE]
+                row_start = request["tile_row"] * DEM_TILE_SIZE
+                col_start = request["tile_col"] * DEM_TILE_SIZE
+                cube[row_start : row_start + DEM_TILE_SIZE, col_start : col_start + DEM_TILE_SIZE, band_index] = data
+        return cube
 
 
 def build_grid_region(grid_spec: GridSpec):
@@ -213,23 +245,15 @@ def build_final_radar_image(grid_spec: GridSpec, *, start_date: str, end_date: s
 
 def create_ee_radar_cube_fetcher(settings, grid_spec: GridSpec, *, start_date: str, end_date: str) -> RadarCubeFetcher:
     initialize_ee_session(settings)
-    final_radar, _pairs = build_final_radar_image(grid_spec, start_date=start_date, end_date=end_date)
+    final_radar, pairs = build_final_radar_image(grid_spec, start_date=start_date, end_date=end_date)
     final_for_sample = finalize_for_sample(final_radar, grid_spec)
     requests = build_sar_tile_requests(grid_spec)
-
-    def fetch_cube(*, grid_spec: GridSpec) -> np.ndarray:
-        cube = np.full((grid_spec.size, grid_spec.size, len(RADAR_BANDS)), grid_spec.nodata, dtype=np.float32)
-        for request in requests:
-            tile_geo = ee.Geometry.Rectangle([request["xmin"], request["ymin"], request["xmax"], request["ymax"]], grid_spec.crs, False)
-            rect = final_for_sample.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
-            for band_index, band_name in enumerate(RADAR_BANDS):
-                data = np.array(rect["properties"][band_name], dtype=np.float32)[: DEM_TILE_SIZE, : DEM_TILE_SIZE]
-                row_start = request["tile_row"] * DEM_TILE_SIZE
-                col_start = request["tile_col"] * DEM_TILE_SIZE
-                cube[row_start : row_start + DEM_TILE_SIZE, col_start : col_start + DEM_TILE_SIZE, band_index] = data
-        return cube
-
-    return fetch_cube
+    return EeRadarCubeFetcher(
+        final_for_sample=final_for_sample,
+        requests=requests,
+        grid_spec=grid_spec,
+        diagnostics=SarFetchDiagnostics(pairs=list(pairs), tile_request_count=len(requests)),
+    )
 
 
 def build_sar_tile_requests(grid_spec: GridSpec) -> list[dict[str, float | int]]:
@@ -345,6 +369,138 @@ def write_sar_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.
     return written_paths
 
 
+def build_band_summary_rows(outputs: dict[str, np.ndarray], *, nodata: float) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for band_name in OUTPUT_BANDS:
+        array = outputs[band_name]
+        valid_mask = array != nodata
+        valid_values = array[valid_mask]
+        valid_count = int(valid_mask.sum())
+        nodata_count = int(array.size - valid_count)
+        row = {
+            "band_name": band_name,
+            "valid_count": str(valid_count),
+            "nodata_count": str(nodata_count),
+            "nodata_fraction": f"{(nodata_count / array.size):.6f}",
+            "min": "",
+            "max": "",
+            "mean": "",
+        }
+        if valid_count > 0:
+            row["min"] = f"{float(valid_values.min()):.6f}"
+            row["max"] = f"{float(valid_values.max()):.6f}"
+            row["mean"] = f"{float(valid_values.mean()):.6f}"
+        rows.append(row)
+    return rows
+
+
+def build_nodata_audit_rows(outputs: dict[str, np.ndarray], *, nodata: float) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for band_name in OUTPUT_BANDS:
+        array = outputs[band_name]
+        nodata_count = int((array == nodata).sum())
+        rows.append(
+            {
+                "band_name": band_name,
+                "total_pixels": str(int(array.size)),
+                "nodata_count": str(nodata_count),
+                "nodata_fraction": f"{(nodata_count / array.size):.6f}",
+                "all_nodata": str(nodata_count == int(array.size)).lower(),
+            }
+        )
+    return rows
+
+
+def build_pair_diagnostics_payload(
+    *,
+    start_date: str,
+    end_date: str,
+    diagnostics: SarFetchDiagnostics | None,
+) -> dict[str, Any]:
+    pairs = diagnostics.pairs if diagnostics is not None else []
+    return {
+        "stage": "sar_rtc",
+        "start_date": start_date,
+        "end_date": end_date,
+        "pair_diagnostics_available": diagnostics is not None,
+        "pair_count": len(pairs),
+        "tile_request_count": diagnostics.tile_request_count if diagnostics is not None else None,
+        "pairs": [
+            {
+                "asc_id": pair.asc_id,
+                "desc_id": pair.desc_id,
+                "dt_hours": round(pair.dt_ms / (60.0 * 60.0 * 1000.0), 6),
+            }
+            for pair in pairs
+        ],
+    }
+
+
+def build_alignment_summary_payload(
+    outputs: dict[str, np.ndarray],
+    *,
+    diagnostics: SarFetchDiagnostics | None,
+) -> dict[str, Any]:
+    shape = list(outputs["VV_dB"].shape)
+    return {
+        "stage": "sar_rtc",
+        "band_names": list(OUTPUT_BANDS),
+        "expected_shape": shape,
+        "all_shapes_match": all(list(array.shape) == shape for array in outputs.values()),
+        "all_float32": all(array.dtype == np.float32 for array in outputs.values()),
+        "tile_request_count": diagnostics.tile_request_count if diagnostics is not None else None,
+        "pair_count": len(diagnostics.pairs) if diagnostics is not None else 0,
+    }
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def write_csv_rows(path: Path, rows: list[dict[str, str]], *, fieldnames: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_sar_qa_outputs(
+    run_dir: Path,
+    *,
+    outputs: dict[str, np.ndarray],
+    nodata: float,
+    start_date: str,
+    end_date: str,
+    diagnostics: SarFetchDiagnostics | None,
+) -> list[Path]:
+    pair_diagnostics_path = run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
+    summary_path = run_dir / "qa" / "sar" / "sar_summary.csv"
+    nodata_audit_path = run_dir / "qa" / "sar" / "sar_nodata_audit.csv"
+    alignment_summary_path = run_dir / "qa" / "sar" / "sar_alignment_summary.json"
+
+    write_json(
+        pair_diagnostics_path,
+        build_pair_diagnostics_payload(start_date=start_date, end_date=end_date, diagnostics=diagnostics),
+    )
+    write_csv_rows(
+        summary_path,
+        build_band_summary_rows(outputs, nodata=nodata),
+        fieldnames=["band_name", "valid_count", "nodata_count", "nodata_fraction", "min", "max", "mean"],
+    )
+    write_csv_rows(
+        nodata_audit_path,
+        build_nodata_audit_rows(outputs, nodata=nodata),
+        fieldnames=["band_name", "total_pixels", "nodata_count", "nodata_fraction", "all_nodata"],
+    )
+    write_json(
+        alignment_summary_path,
+        build_alignment_summary_payload(outputs, diagnostics=diagnostics),
+    )
+    return [pair_diagnostics_path, summary_path, nodata_audit_path, alignment_summary_path]
+
+
 def deterministic_radar_cube_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
     size = grid_spec.size
     rows, cols = np.indices((size, size), dtype=np.float32)
@@ -380,6 +536,7 @@ class SarRtcStage(Stage):
             end_date=self.end_date,
         )
         cube_3 = fetcher(grid_spec=self.grid_spec)
+        diagnostics = getattr(fetcher, "diagnostics", None)
         outputs = apply_local_dem_rtc(
             cube_3,
             dem,
@@ -387,6 +544,14 @@ class SarRtcStage(Stage):
             scale_m=float(self.grid_spec.manifest.scale_m),
         )
         written_paths = write_sar_outputs(context.run_dir, self.grid_spec, outputs)
+        qa_paths = write_sar_qa_outputs(
+            context.run_dir,
+            outputs=outputs,
+            nodata=self.grid_spec.nodata,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            diagnostics=diagnostics,
+        )
         artifacts = [
             build_stage_artifact(
                 name=path.stem,
@@ -396,6 +561,16 @@ class SarRtcStage(Stage):
             )
             for path in written_paths
         ]
+        artifacts.extend(
+            build_stage_artifact(
+                name=path.stem,
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=path.stat().st_size,
+                http_servable=False,
+            )
+            for path in qa_paths
+        )
         return StageResult(
             artifacts=artifacts,
             metadata={
@@ -403,5 +578,6 @@ class SarRtcStage(Stage):
                 "sar_shape": list(outputs["VV_dB"].shape),
                 "start_date": self.start_date,
                 "end_date": self.end_date,
+                "qa_artifact_names": [path.stem for path in qa_paths],
             },
         )
