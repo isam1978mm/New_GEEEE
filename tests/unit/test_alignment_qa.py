@@ -48,13 +48,24 @@ def test_alignment_qa_stage_writes_reports_as_redacted_public() -> None:
             "alignment_qa",
             "alignment_audit",
             "alignment_mask_selection",
+            "alignment_summary_redacted",
         ]
-        assert all(artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC for artifact in result.artifacts)
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        assert artifact_classes == {
+            "alignment_qa": ArtifactClass.REDACTED_PUBLIC,
+            "alignment_audit": ArtifactClass.REDACTED_PUBLIC,
+            "alignment_mask_selection": ArtifactClass.REDACTED_PUBLIC,
+            "alignment_summary_redacted": ArtifactClass.LOCAL_SENSITIVE,
+        }
         with (run_dir / "alignment_audit.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         assert len(rows) == 2
         summary = json.loads((run_dir / "alignment_qa.json").read_text(encoding="utf-8"))
         assert summary["pass"] is True
+        redacted_summary = json.loads((run_dir / "qa" / "alignment" / "alignment_summary_redacted.json").read_text(encoding="utf-8"))
+        assert redacted_summary["pass"] is True
+        assert "transform" not in redacted_summary
+        assert "bounds" not in redacted_summary
 
 
 def test_alignment_qa_stage_raises_on_transform_drift() -> None:

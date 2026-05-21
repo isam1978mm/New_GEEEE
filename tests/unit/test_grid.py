@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from pyproj import Transformer
 
+from app.db.models.enums import ArtifactClass
+from app.pipeline._base import StageContext
+from app.pipeline.stages.grid import GridStage
 from app.services.grid import build_grid_manifest
 
 
@@ -55,3 +63,31 @@ def test_grid_manifest_is_centered_on_projected_roi_center() -> None:
     assert abs(((ymin + ymax) / 2.0) - center_y) < 0.01
     assert abs(manifest.crs_transform[2] - xmin) < 0.01
     assert abs(manifest.crs_transform[5] - ymax) < 0.01
+
+
+def test_grid_stage_writes_grid_guard_summary_as_filesystem_only() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+        stage = GridStage(latitude=35.59499, longitude=36.12694)
+
+        result = asyncio.run(stage.run(context))
+
+        assert [artifact.name for artifact in result.artifacts] == ["grid_manifest", "grid_guard_summary"]
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        assert artifact_classes == {
+            "grid_manifest": ArtifactClass.LOCAL_SENSITIVE,
+            "grid_guard_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        guard_summary = json.loads((run_dir / "qa" / "grid_dem" / "grid_guard_summary.json").read_text(encoding="utf-8"))
+        assert guard_summary["stage"] == "grid"
+        assert guard_summary["grid_identity_recorded"] is True
+        assert "bounds_m" not in guard_summary
+        assert "crs_transform" not in guard_summary
+
+
+def _settings(run_dir: Path):
+    from app.config import Settings
+
+    data_dir = run_dir / "data"
+    return Settings(data_dir=data_dir, database_path=data_dir / "db.sqlite")

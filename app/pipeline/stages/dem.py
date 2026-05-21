@@ -225,6 +225,27 @@ def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray)
     return {"dem_tif": dem_tif_path, "dem_npy": dem_npy_path, "dem_tif_sidecar": sidecar_path}
 
 
+def write_dem_audit_summary(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> Path:
+    qa_dir = run_dir / "qa" / "grid_dem"
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = qa_dir / "dem_audit_summary.json"
+    nodata_count = int((dem_array == grid_spec.nodata).sum())
+    payload = {
+        "stage": "dem",
+        "shape": [int(dem_array.shape[0]), int(dem_array.shape[1])],
+        "dtype": str(dem_array.dtype),
+        "tile_size": DEM_TILE_SIZE,
+        "tile_count": len(build_dem_tile_requests(grid_spec)),
+        "nodata_count": nodata_count,
+        "nodata_fraction": round(nodata_count / float(dem_array.size), 6),
+        "dem_min": round(float(dem_array.min()), 6),
+        "dem_max": round(float(dem_array.max()), 6),
+        "grid_locked": True,
+    }
+    summary_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return summary_path
+
+
 class DemStage(Stage):
     name = "dem"
     parity_category = ParityCategory.PARITY_REPRODUCES
@@ -242,6 +263,7 @@ class DemStage(Stage):
         tile_fetcher = self.tile_fetcher or create_ee_dem_tile_fetcher(context.settings, self.grid_spec)
         dem_array = build_dem_array(self.grid_spec, tile_fetcher=tile_fetcher)
         outputs = write_dem_outputs(context.run_dir, self.grid_spec, dem_array)
+        audit_summary_path = write_dem_audit_summary(context.run_dir, self.grid_spec, dem_array)
         artifacts = [
             build_stage_artifact(
                 name="dem_tif",
@@ -254,6 +276,13 @@ class DemStage(Stage):
                 relative_path=outputs["dem_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=outputs["dem_npy"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="dem_audit_summary",
+                relative_path=audit_summary_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=audit_summary_path.stat().st_size,
+                http_servable=False,
             ),
         ]
         return StageResult(

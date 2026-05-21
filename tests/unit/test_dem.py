@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -128,8 +129,13 @@ def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
         result = asyncio.run(stage.run(context))
 
         assert stage.parity_category == ParityCategory.PARITY_REPRODUCES
-        assert [artifact.name for artifact in result.artifacts] == ["dem_tif", "dem_npy"]
-        assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
+        assert [artifact.name for artifact in result.artifacts] == ["dem_tif", "dem_npy", "dem_audit_summary"]
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        assert artifact_classes == {
+            "dem_tif": ArtifactClass.LOCAL_SENSITIVE,
+            "dem_npy": ArtifactClass.LOCAL_SENSITIVE,
+            "dem_audit_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
         assert result.metadata["tile_size"] == DEM_TILE_SIZE
         assert result.metadata["tile_count"] == 4
 
@@ -146,6 +152,11 @@ def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
         assert sidecar["width"] == 640
         assert sidecar["height"] == 640
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
+
+        audit_summary = json.loads((run_dir / "qa" / "grid_dem" / "dem_audit_summary.json").read_text(encoding="utf-8"))
+        assert audit_summary["stage"] == "dem"
+        assert audit_summary["grid_locked"] is True
+        assert audit_summary["tile_count"] == 4
 
 
 def _settings(run_dir: Path):

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
 
+from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError
 from app.pipeline._base import ParityCategory, StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
@@ -25,9 +27,18 @@ def test_zero_shift_stage_accepts_grid_locked_outputs() -> None:
         result = asyncio.run(ZeroShiftStage(grid_spec=grid_spec).run(context))
 
         assert ZeroShiftStage(grid_spec=grid_spec).parity_category == ParityCategory.PARITY_REPRODUCES
+        assert [artifact.name for artifact in result.artifacts] == ["zero_shift_summary", "drift_audit"]
+        assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert result.metadata["validated_tifs"] == 1
         assert result.metadata["validated_arrays"] == 1
         assert result.metadata["status"] == "grid_locked"
+
+        summary = json.loads((run_dir / "qa" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
+        assert summary["status"] == "grid_locked"
+        with (run_dir / "qa" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        assert [row["artifact_name"] for row in rows] == ["dem.tif", "dem.npy"]
+        assert all(row["passes_alignment"] == "true" for row in rows)
 
 
 def test_zero_shift_stage_raises_grid_drift_error_for_half_pixel_shift() -> None:
@@ -44,6 +55,15 @@ def test_zero_shift_stage_raises_grid_drift_error_for_half_pixel_shift() -> None
 
         with pytest.raises(GridDriftError):
             asyncio.run(ZeroShiftStage(grid_spec=grid_spec).run(context))
+
+        summary = json.loads((run_dir / "qa" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
+        assert summary["status"] == "grid_drift_detected"
+        assert "dem.tif" in summary["failing_artifacts"]
+        with (run_dir / "qa" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        dem_row = next(row for row in rows if row["artifact_name"] == "dem.tif")
+        assert dem_row["passes_alignment"] == "false"
+        assert "half_pixel_shift" in dem_row["issues"]
 
 
 def _settings(run_dir: Path):

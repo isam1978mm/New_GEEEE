@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import (
@@ -55,6 +57,25 @@ def pixel_center_from_transform(
     return (x, y)
 
 
+def write_grid_guard_summary(run_dir: Path, grid_spec: GridSpec) -> Path:
+    qa_dir = run_dir / "qa" / "grid_dem"
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    path = qa_dir / "grid_guard_summary.json"
+    payload = {
+        "stage": "grid",
+        "crs": grid_spec.crs,
+        "size_px": grid_spec.size,
+        "scale_m": float(grid_spec.manifest.scale_m),
+        "extent_m": float(grid_spec.manifest.scale_m) * float(grid_spec.size),
+        "utm_zone": int(grid_spec.manifest.utm_zone),
+        "hemisphere": grid_spec.manifest.hemisphere,
+        "nodata": float(grid_spec.nodata),
+        "grid_identity_recorded": True,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
 class GridStage(Stage):
     name = "grid"
     parity_category = ParityCategory.PARITY_REPRODUCES
@@ -67,14 +88,24 @@ class GridStage(Stage):
     async def run(self, context: StageContext) -> StageResult:
         grid_spec = build_run_grid(self.latitude, self.longitude, nodata=self.nodata)
         manifest_path = save_grid_manifest(context.settings, context.run_id, grid_spec.manifest)
-        artifact = build_stage_artifact(
-            name="grid_manifest",
-            relative_path=manifest_path.relative_to(context.run_dir).as_posix(),
-            artifact_class=ArtifactClass.LOCAL_SENSITIVE,
-            size_bytes=manifest_path.stat().st_size,
-        )
+        guard_summary_path = write_grid_guard_summary(context.run_dir, grid_spec)
+        artifacts = [
+            build_stage_artifact(
+                name="grid_manifest",
+                relative_path=manifest_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=manifest_path.stat().st_size,
+            ),
+            build_stage_artifact(
+                name="grid_guard_summary",
+                relative_path=guard_summary_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=guard_summary_path.stat().st_size,
+                http_servable=False,
+            ),
+        ]
         return StageResult(
-            artifacts=[artifact],
+            artifacts=artifacts,
             metadata={
                 "crs": grid_spec.crs,
                 "size_px": grid_spec.size,

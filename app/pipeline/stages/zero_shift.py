@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
 import numpy as np
 
+from app.db.models.enums import ArtifactClass
+from app.pipeline._base import build_stage_artifact
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import GridSpec, pixel_center_from_transform
@@ -22,7 +25,7 @@ def read_raster_metadata(raster_path: Path) -> dict[str, object]:
     return json.loads(sidecar_path.read_text(encoding="utf-8"))
 
 
-def validate_raster_alignment(raster_path: Path, grid_spec: GridSpec) -> None:
+def inspect_raster_alignment(raster_path: Path, grid_spec: GridSpec) -> list[str]:
     metadata = read_raster_metadata(raster_path)
     transform = tuple(float(value) for value in metadata["transform"])
     crs = str(metadata["crs"])
@@ -57,14 +60,84 @@ def validate_raster_alignment(raster_path: Path, grid_spec: GridSpec) -> None:
     if half_px_x or half_px_y:
         issues.append("half_pixel_shift")
 
+    return issues
+
+
+def validate_raster_alignment(raster_path: Path, grid_spec: GridSpec) -> None:
+    issues = inspect_raster_alignment(raster_path, grid_spec)
     if issues:
         raise GridDriftError(f"{raster_path.name} failed alignment checks: {','.join(issues)}")
 
 
-def validate_array_alignment(array_path: Path, grid_spec: GridSpec) -> None:
+def inspect_array_alignment(array_path: Path, grid_spec: GridSpec) -> list[str]:
     array = np.load(array_path)
+    issues: list[str] = []
     if array.shape != (grid_spec.size, grid_spec.size):
-        raise GridDriftError(f"{array_path.name} failed alignment checks: size_mismatch")
+        issues.append("size_mismatch")
+    return issues
+
+
+def validate_array_alignment(array_path: Path, grid_spec: GridSpec) -> None:
+    issues = inspect_array_alignment(array_path, grid_spec)
+    if issues:
+        raise GridDriftError(f"{array_path.name} failed alignment checks: {','.join(issues)}")
+
+
+def write_zero_shift_reports(
+    run_dir: Path,
+    *,
+    tif_paths: list[Path],
+    npy_paths: list[Path],
+    tif_issues: dict[str, list[str]],
+    npy_issues: dict[str, list[str]],
+) -> tuple[Path, Path]:
+    qa_dir = run_dir / "qa" / "grid_dem"
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = qa_dir / "zero_shift_summary.json"
+    audit_path = qa_dir / "drift_audit.csv"
+
+    failing_artifacts = [
+        name
+        for name, issues in {**tif_issues, **npy_issues}.items()
+        if issues
+    ]
+    summary_payload = {
+        "stage": "zero_shift",
+        "status": "grid_locked" if not failing_artifacts else "grid_drift_detected",
+        "validated_tifs": len(tif_paths),
+        "validated_arrays": len(npy_paths),
+        "failing_artifacts": failing_artifacts,
+        "issue_count": sum(len(issues) for issues in tif_issues.values()) + sum(len(issues) for issues in npy_issues.values()),
+    }
+    summary_path.write_text(json.dumps(summary_payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    rows: list[dict[str, str]] = []
+    for path in tif_paths:
+        issues = tif_issues[path.name]
+        rows.append(
+            {
+                "artifact_name": path.name,
+                "artifact_type": "tif",
+                "passes_alignment": str(not issues).lower(),
+                "issues": "|".join(issues),
+            }
+        )
+    for path in npy_paths:
+        issues = npy_issues[path.name]
+        rows.append(
+            {
+                "artifact_name": path.name,
+                "artifact_type": "npy",
+                "passes_alignment": str(not issues).lower(),
+                "issues": "|".join(issues),
+            }
+        )
+    with audit_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["artifact_name", "artifact_type", "passes_alignment", "issues"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return summary_path, audit_path
 
 
 class ZeroShiftStage(Stage):
@@ -80,12 +153,38 @@ class ZeroShiftStage(Stage):
         if not tif_paths:
             raise GridDriftError("No GeoTIFF outputs found for zero-shift validation.")
 
+        tif_issues: dict[str, list[str]] = {path.name: inspect_raster_alignment(path, self.grid_spec) for path in tif_paths}
+        npy_issues: dict[str, list[str]] = {path.name: inspect_array_alignment(path, self.grid_spec) for path in npy_paths}
+        summary_path, audit_path = write_zero_shift_reports(
+            context.run_dir,
+            tif_paths=tif_paths,
+            npy_paths=npy_paths,
+            tif_issues=tif_issues,
+            npy_issues=npy_issues,
+        )
+
         for tif_path in tif_paths:
             validate_raster_alignment(tif_path, self.grid_spec)
         for npy_path in npy_paths:
             validate_array_alignment(npy_path, self.grid_spec)
 
         return StageResult(
+            artifacts=[
+                build_stage_artifact(
+                    name="zero_shift_summary",
+                    relative_path=summary_path.relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=summary_path.stat().st_size,
+                    http_servable=False,
+                ),
+                build_stage_artifact(
+                    name="drift_audit",
+                    relative_path=audit_path.relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=audit_path.stat().st_size,
+                    http_servable=False,
+                ),
+            ],
             metadata={
                 "validated_tifs": len(tif_paths),
                 "validated_arrays": len(npy_paths),

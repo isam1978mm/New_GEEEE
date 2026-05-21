@@ -17,6 +17,7 @@ from app.services.storage import read_manifest
 ALIGNMENT_QA_JSON_NAME = "alignment_qa.json"
 ALIGNMENT_AUDIT_CSV_NAME = "alignment_audit.csv"
 ALIGNMENT_MASK_SELECTION_NAME = "alignment_mask_selection.json"
+ALIGNMENT_SUMMARY_REDACTED_NAME = "alignment_summary_redacted.json"
 ALIGNMENT_MAX_CENTER_OFFSET_PX = 0.25
 ALIGNMENT_EXCLUDED_NAMES = {"hypercube.tif"}
 
@@ -133,15 +134,30 @@ def write_alignment_outputs(
     audit_path = run_dir / ALIGNMENT_AUDIT_CSV_NAME
     summary_path = run_dir / ALIGNMENT_QA_JSON_NAME
     mask_selection_path = run_dir / ALIGNMENT_MASK_SELECTION_NAME
+    redacted_summary_path = run_dir / "qa" / "alignment" / ALIGNMENT_SUMMARY_REDACTED_NAME
+    redacted_summary_path.parent.mkdir(parents=True, exist_ok=True)
+
+    redacted_summary = {
+        "pass": bool(summary["pass"]),
+        "checked_raster_count": int(summary["checked_raster_count"]),
+        "failing_artifacts": list(summary["failing_artifacts"]),
+        "max_center_offset_px": float(summary["max_center_offset_px"]),
+        "threshold_px": float(summary["threshold_px"]),
+        "anchor_artifact": str(mask_selection["anchor_artifact"]),
+        "anchor_valid_fraction": float(mask_selection["anchor_valid_fraction"]),
+        "selection_rule": str(mask_selection["selection_rule"]),
+    }
 
     _write_csv(audit_path, list(audit_rows[0].keys()), audit_rows)
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     mask_selection_path.write_text(json.dumps(mask_selection, indent=2, sort_keys=True), encoding="utf-8")
+    redacted_summary_path.write_text(json.dumps(redacted_summary, indent=2, sort_keys=True), encoding="utf-8")
 
     return {
         "audit_csv": audit_path,
         "summary_json": summary_path,
         "mask_selection_json": mask_selection_path,
+        "redacted_summary_json": redacted_summary_path,
     }
 
 
@@ -174,6 +190,12 @@ class AlignmentQaStage(Stage):
                 relative_path=outputs["mask_selection_json"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.REDACTED_PUBLIC,
                 size_bytes=outputs["mask_selection_json"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="alignment_summary_redacted",
+                relative_path=outputs["redacted_summary_json"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["redacted_summary_json"].stat().st_size,
             ),
         ]
         if not bool(summary["pass"]):
