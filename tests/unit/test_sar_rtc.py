@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pytest
 
+from app.errors import StageError
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
@@ -15,6 +16,7 @@ from app.pipeline.stages.sar_rtc import (
     RADAR_BANDS,
     SarRtcStage,
     apply_local_dem_rtc,
+    build_final_radar_image,
     build_s1_base_collection,
     create_ee_radar_cube_fetcher,
     deterministic_radar_cube_fetcher,
@@ -164,6 +166,183 @@ def test_create_ee_radar_cube_fetcher_uses_sample_rectangle(monkeypatch: pytest.
     assert cube.shape == (640, 640, 3)
     assert cube.dtype == np.float32
     assert len(rectangle_calls) == 4
+
+
+def test_build_final_radar_image_fails_cleanly_for_empty_ascending_collection(monkeypatch: pytest.MonkeyPatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+
+    class FakeNumber:
+        def __init__(self, value: int):
+            self.value = value
+
+        def getInfo(self) -> int:
+            return self.value
+
+    class FakeCollection:
+        def __init__(self, direction: str):
+            self.direction = direction
+
+        def filter(self, predicate):
+            if predicate == ("eq", "orbitProperties_pass", "ASCENDING"):
+                return FakeCollection("ASCENDING")
+            if predicate == ("eq", "orbitProperties_pass", "DESCENDING"):
+                return FakeCollection("DESCENDING")
+            return self
+
+        def size(self):
+            return FakeNumber(0 if self.direction == "ASCENDING" else 2)
+
+    class FakeFilter:
+        @staticmethod
+        def eq(name, value):
+            return ("eq", name, value)
+
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.build_s1_base_collection", lambda *_args, **_kwargs: FakeCollection("BASE"))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Filter", FakeFilter)
+
+    with pytest.raises(StageError, match="non-empty Sentinel-1 ASCENDING collections"):
+        build_final_radar_image(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
+
+
+def test_build_final_radar_image_fails_cleanly_for_empty_descending_collection(monkeypatch: pytest.MonkeyPatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+
+    class FakeNumber:
+        def __init__(self, value: int):
+            self.value = value
+
+        def getInfo(self) -> int:
+            return self.value
+
+    class FakeFeature:
+        def __init__(self, _geometry, properties):
+            self.properties = properties
+
+        def get(self, key):
+            return self.properties[key]
+
+    class FakeList:
+        def __init__(self, values):
+            self.values = list(values)
+
+        def distinct(self):
+            return self
+
+        def map(self, fn):
+            return [fn(value) for value in self.values]
+
+    class FakeCollection:
+        def __init__(self, direction: str):
+            self.direction = direction
+
+        def filter(self, predicate):
+            if predicate == ("eq", "orbitProperties_pass", "ASCENDING"):
+                return FakeCollection("ASCENDING")
+            if predicate == ("eq", "orbitProperties_pass", "DESCENDING"):
+                return FakeCollection("DESCENDING")
+            return self
+
+        def size(self):
+            return FakeNumber(2 if self.direction == "ASCENDING" else 0)
+
+        def aggregate_array(self, _name):
+            return [7]
+
+    class FakeFilter:
+        @staticmethod
+        def eq(name, value):
+            return ("eq", name, value)
+
+    class FakeFeatureCollection:
+        def __init__(self, features):
+            self.features = list(features)
+
+        def sort(self, *_args, **_kwargs):
+            return self
+
+        def first(self):
+            return self.features[0]
+
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.build_s1_base_collection", lambda *_args, **_kwargs: FakeCollection("BASE"))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Filter", FakeFilter)
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.List", lambda values: FakeList(values))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Number", lambda value: value if isinstance(value, FakeNumber) else FakeNumber(value))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Feature", FakeFeature)
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.FeatureCollection", FakeFeatureCollection)
+
+    with pytest.raises(StageError, match="non-empty Sentinel-1 DESCENDING collections"):
+        build_final_radar_image(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
+
+
+def test_build_final_radar_image_keeps_stage_error_for_insufficient_pairs(monkeypatch: pytest.MonkeyPatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+
+    class FakeNumber:
+        def __init__(self, value):
+            self.value = value
+
+        def getInfo(self):
+            return self.value
+
+    class FakeFeature:
+        def __init__(self, _geometry, properties):
+            self.properties = properties
+
+        def get(self, key):
+            return self.properties[key]
+
+    class FakeList:
+        def __init__(self, values):
+            self.values = list(values)
+
+        def distinct(self):
+            return self
+
+        def map(self, fn):
+            return [fn(value) for value in self.values]
+
+    class FakeFeatureCollection:
+        def __init__(self, features):
+            self.features = list(features)
+
+        def sort(self, _key, _descending=False):
+            return self
+
+        def first(self):
+            return self.features[0]
+
+    class FakeCollection:
+        def __init__(self, direction: str):
+            self.direction = direction
+
+        def filter(self, predicate):
+            if predicate == ("eq", "orbitProperties_pass", "ASCENDING"):
+                return FakeCollection("ASCENDING")
+            if predicate == ("eq", "orbitProperties_pass", "DESCENDING"):
+                return FakeCollection("DESCENDING")
+            return self
+
+        def size(self):
+            return FakeNumber(2)
+
+        def aggregate_array(self, _name):
+            return [7]
+
+    class FakeFilter:
+        @staticmethod
+        def eq(name, value):
+            return ("eq", name, value)
+
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.build_s1_base_collection", lambda *_args, **_kwargs: FakeCollection("BASE"))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.fc_time_ids", lambda _collection: [{"ms": 1000, "id": "ONLY_ONE"}])
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Filter", FakeFilter)
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.List", lambda values: FakeList(values))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Number", lambda value: value if isinstance(value, FakeNumber) else FakeNumber(value))
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Feature", FakeFeature)
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.FeatureCollection", FakeFeatureCollection)
+
+    with pytest.raises(StageError, match="Not enough ASC/DESC SAR pairs"):
+        build_final_radar_image(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
 
 
 def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:

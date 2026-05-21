@@ -58,7 +58,22 @@ def build_s1_base_collection(grid_spec: GridSpec, *, start_date: str, end_date: 
     )
 
 
-def pick_best_track(collection):
+def ensure_non_empty_pass_collection(collection, *, pass_direction: str, start_date: str, end_date: str) -> None:
+    count = int(collection.size().getInfo())
+    if count < 1:
+        raise StageError(
+            f"SAR RTC requires non-empty Sentinel-1 {pass_direction} collections for the configured "
+            f"date window ({start_date} to {end_date})."
+        )
+
+
+def pick_best_track(collection, *, pass_direction: str, start_date: str, end_date: str):
+    ensure_non_empty_pass_collection(
+        collection,
+        pass_direction=pass_direction,
+        start_date=start_date,
+        end_date=end_date,
+    )
     tracks = ee.List(collection.aggregate_array("relativeOrbitNumber_start")).distinct()
 
     def _track_count(track):
@@ -172,8 +187,18 @@ def finalize_for_sample(image, grid_spec: GridSpec):
 
 def build_final_radar_image(grid_spec: GridSpec, *, start_date: str, end_date: str):
     base = build_s1_base_collection(grid_spec, start_date=start_date, end_date=end_date)
-    asc = pick_best_track(base.filter(ee.Filter.eq("orbitProperties_pass", "ASCENDING")))
-    desc = pick_best_track(base.filter(ee.Filter.eq("orbitProperties_pass", "DESCENDING")))
+    asc = pick_best_track(
+        base.filter(ee.Filter.eq("orbitProperties_pass", "ASCENDING")),
+        pass_direction="ASCENDING",
+        start_date=start_date,
+        end_date=end_date,
+    )
+    desc = pick_best_track(
+        base.filter(ee.Filter.eq("orbitProperties_pass", "DESCENDING")),
+        pass_direction="DESCENDING",
+        start_date=start_date,
+        end_date=end_date,
+    )
     pairs = select_pairs(fc_time_ids(asc), fc_time_ids(desc))
 
     pair_images = []
