@@ -915,6 +915,257 @@ Validation:
 pytest tests/unit/ tests/integration/ tests/notebook_parity/
 ```
 
+---
+
+# Notebook full-job parity phase
+
+The app must reproduce the notebook's full job work products where applicable, not only reduced core production artifacts.
+
+Source inventory and artifact classification:
+
+- `docs/NOTEBOOK_FULL_JOB_INVENTORY.md`
+- `docs/Notebook_Cells_E.md`
+
+Phase rules:
+
+- `FILESYSTEM_ONLY` is the default artifact class for notebook full-job outputs.
+- `LOCAL_SENSITIVE` may be used only for redacted local operator QA artifacts that contain no forbidden public content.
+- `REDACTED_PUBLIC` is allowed only for already-redacted summaries.
+- `PREVIEW_ONLY` is allowed only for safe previews.
+- Outputs classified as out-of-scope in `docs/NOTEBOOK_FULL_JOB_INVENTORY.md` remain out-of-scope unless a later explicit goal approves a redacted derivative.
+- Do not expose raw coordinates, geometry, WKT, bounds, CRS transforms, local or Drive paths, hashes/checksums, exact location outputs, or secrets.
+- Do not modify `notebooks/new.ipynb` unless a goal explicitly says so.
+- Do not start deployment `D0`-`D7` until the user explicitly accepts the N-phase stopping point.
+
+Official sequence:
+
+- `N0` -> `N1` -> `N2` -> `N3` -> `N4` -> `N5` -> `N6` -> `N7` -> `N8`
+
+---
+
+# Goal N0 — Accept full-job inventory baseline
+
+Create/update:
+
+- `docs/NOTEBOOK_FULL_JOB_INVENTORY.md` only if corrections are needed
+- `plan.md` only if corrections are needed
+
+Requirements:
+
+- Confirm the inventory document exists.
+- Confirm it records the full-job interpretation.
+- Confirm it preserves the artifact-class rules above.
+- Confirm it is documentation/inventory only and does not authorize implementation by itself.
+- Do not change app logic.
+- Do not change tests.
+- Do not change the notebook.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N1 — Full-job artifact contract and naming map
+
+Create/update:
+
+- `docs/NOTEBOOK_FULL_JOB_ARTIFACT_CONTRACT.md`
+- `docs/NOTEBOOK_FULL_JOB_INVENTORY.md` if corrections are needed
+
+Requirements:
+
+- Convert the inventory into an implementation contract.
+- Define the app run-directory layout for notebook-equivalent full-job outputs.
+- Define filename mappings where exact notebook names are unsafe or unstable.
+- Define which outputs are required app artifacts and which are internal QA artifacts.
+- Define artifact class for every required output family.
+- Keep `FILESYSTEM_ONLY` as the default.
+- Allow `LOCAL_SENSITIVE` only for explicitly redacted operator QA files.
+- Do not expose forbidden public content.
+- Do not change app logic.
+- Do not change tests except optional documentation-link checks.
+- Do not change the notebook.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N2 — SAR full-job artifacts
+
+Create/update:
+
+- `app/pipeline/stages/sar_rtc.py`
+- tests for SAR full-job artifacts
+- docs from N1 if mappings require clarification
+
+Requirements:
+
+- Add approved SAR full-job work products from the N1 contract.
+- Add safe non-public diagnostics where approved.
+- Add summary CSV/JSON outputs where approved.
+- Add per-band and stack outputs only as specified by the N1 contract.
+- Preserve existing core SAR outputs and parity behavior.
+- Preserve existing SAR pairing and RTC formulas unless already documented as `PARITY_CORRECTS`.
+- Do not expose SAR full-job outputs publicly.
+- Do not modify unrelated stages.
+
+Validation:
+
+```bash
+pytest tests/unit/test_sar_rtc.py
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N3 — GRID, DEM, zero-shift, and alignment QA full-job artifacts
+
+Create/update:
+
+- relevant GRID/DEM/zero-shift/alignment modules
+- tests for approved full-job GRID/DEM/alignment artifacts
+- docs from N1 if mappings require clarification
+
+Requirements:
+
+- Add approved RUN/GRID/DEM guard outputs from the N1 contract.
+- Add approved zero-shift and drift/audit outputs.
+- Add redacted alignment QA summaries where safe.
+- Preserve existing public redaction and artifact-serving policy.
+- Preserve existing GRID and DEM core parity behavior.
+- Do not modify unrelated stages.
+
+Validation:
+
+```bash
+pytest tests/unit/test_grid.py tests/unit/test_dem.py tests/unit/test_zero_shift.py tests/unit/test_alignment_qa.py
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N4 — Defensible feature-stack and science extras
+
+Create/update:
+
+- relevant pipeline stages for approved feature-stack outputs
+- tests for approved feature-stack outputs
+- docs from N1 if mappings require clarification
+
+Requirements:
+
+- Implement only approved science-core feature-stack outputs from the N1 contract.
+- Use `docs/NOTEBOOK_FULL_JOB_INVENTORY.md` to distinguish approved science outputs from duplicate or out-of-scope sections.
+- Keep out-of-scope sections out of scope unless separately approved.
+- Preserve existing core pipeline parity.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N5 — Hypercube, PCA, object, and tensor support outputs
+
+Create/update:
+
+- relevant hypercube/PCA/object modules
+- tests for approved full-job support outputs
+- docs from N1 if mappings require clarification
+
+Requirements:
+
+- Add approved support outputs from the N1 contract for hypercube, PCA, object extraction, and tensor/export support.
+- Keep object tables public only in redacted form.
+- Keep location-context side products non-public and governed by the N1 contract.
+- Preserve deterministic object ordering and clustering behavior.
+- Preserve existing public leakage tests.
+
+Validation:
+
+```bash
+pytest tests/unit/test_hypercube.py tests/unit/test_pca_anomaly.py tests/unit/test_object_extract.py
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N6 — DEM derivatives, S2, and thermal full-job extras
+
+Create/update:
+
+- relevant DEM-derivative/S2/thermal modules
+- tests for approved DEM/S2/thermal full-job extras
+- docs from N1 if mappings require clarification
+
+Requirements:
+
+- Add approved DEM derivative, selected S2, and thermal extras from the N1 contract.
+- Keep non-target science layers non-public unless explicitly redacted.
+- Preserve `IRON_SWIR` Option A decision and existing `PARITY_CORRECTS` handling.
+- Preserve existing public leakage tests.
+
+Validation:
+
+```bash
+pytest tests/unit/test_dem_derivatives.py tests/unit/test_s2_indices.py tests/unit/test_thermal.py
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N7 — Full-job artifact inventory tests
+
+Create/update:
+
+- tests for full-job artifact inventory and classification
+- docs from N1 if mappings require clarification
+
+Requirements:
+
+- Add tests that verify required full-job artifact families from the N1 contract are emitted by the app stages that own them.
+- Add tests that verify artifact classes follow the N1 contract.
+- Add tests that verify full-job outputs are not publicly listed unless explicitly redacted.
+- Add tests that verify `FILESYSTEM_ONLY` full-job outputs are never served over HTTP.
+- Preserve existing H5 reference-output tests and public leakage tests.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
+---
+
+# Goal N8 — Full-job runbook update
+
+Create/update:
+
+- `docs/RUNBOOK.md`
+- `docs/NOTEBOOK_FULL_JOB_ARTIFACT_CONTRACT.md` if needed
+
+Requirements:
+
+- Document how an operator retrieves/copies the full notebook-equivalent output set from the local run directory.
+- Document which outputs are public, local-sensitive, and filesystem-only.
+- Document that notebook Drive-first behavior maps to local app run directories unless explicit Drive integration is later approved.
+- Document that full-job outputs are local artifacts, not public API products.
+
+Validation:
+
+```bash
+pytest tests/unit/ tests/integration/ tests/notebook_parity/
+```
+
 At the end of the new section, use this command template:
 
-`/goal Read AGENTS.md and plan.md. Execute Goal H1 only. Stop after H1 and report files changed, commands run, test results, and blockers.`
+`/goal Read AGENTS.md and plan.md. Execute Goal N0 only. Stop after N0 and report files changed, commands run, test results, and blockers.`
