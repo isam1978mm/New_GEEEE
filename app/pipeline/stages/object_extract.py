@@ -19,7 +19,7 @@ from app.services.storage import read_manifest
 
 OBJECTS_INDEX_NAME = "objects_index.csv"
 CLUSTERS_SUMMARY_NAME = "clusters_summary.csv"
-OBJECT_PATCHES_DIRNAME = "object_patches"
+OBJECT_PATCHES_DIRNAME = "objects/object_patches"
 OBJECT_MASK_NAME = "object_mask.npy"
 MIN_OBJECT_PIXELS = 4
 ANOMALY_PERCENTILE = 90.0
@@ -264,9 +264,10 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
 
     objects_path = run_dir / OBJECTS_INDEX_NAME
     clusters_path = run_dir / CLUSTERS_SUMMARY_NAME
-    mask_path = run_dir / OBJECT_MASK_NAME
+    mask_path = run_dir / "objects" / OBJECT_MASK_NAME
     patches_dir = run_dir / OBJECT_PATCHES_DIRNAME
     patches_dir.mkdir(parents=True, exist_ok=True)
+    mask_path.parent.mkdir(parents=True, exist_ok=True)
 
     object_fields = [
         "object_id",
@@ -342,8 +343,9 @@ class ObjectExtractStage(Stage):
             build_stage_artifact(
                 name="object_mask",
                 relative_path=Path(outputs["mask_npy"]).relative_to(context.run_dir).as_posix(),
-                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=Path(outputs["mask_npy"]).stat().st_size,
+                http_servable=False,
             ),
         ]
         for patch_path in patch_paths:
@@ -351,7 +353,7 @@ class ObjectExtractStage(Stage):
                 build_stage_artifact(
                     name=f"object_patch_{patch_path.stem.split('_')[-1]}",
                     relative_path=patch_path.relative_to(context.run_dir).as_posix(),
-                    artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                     size_bytes=patch_path.stat().st_size,
                     http_servable=False,
                 )

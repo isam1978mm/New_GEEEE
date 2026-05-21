@@ -66,7 +66,8 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
         assert artifact_names[:3] == ["objects_index", "clusters_summary", "object_mask"]
         assert result.artifacts[0].artifact_class == ArtifactClass.REDACTED_PUBLIC
         assert result.artifacts[1].artifact_class == ArtifactClass.REDACTED_PUBLIC
-        assert result.artifacts[2].artifact_class == ArtifactClass.LOCAL_SENSITIVE
+        assert result.artifacts[2].artifact_class == ArtifactClass.FILESYSTEM_ONLY
+        assert all(artifact.http_servable is False for artifact in result.artifacts[2:])
         assert any(name.startswith("object_patch_") for name in artifact_names[3:])
 
         with (run_dir / "objects_index.csv").open("r", encoding="utf-8", newline="") as handle:
@@ -86,11 +87,12 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
             "max_anomaly",
         }
 
-        patch_paths = sorted((run_dir / "object_patches").glob("*.npy"))
+        patch_paths = sorted((run_dir / "objects" / "object_patches").glob("*.npy"))
         assert len(patch_paths) == 2
         patch = np.load(patch_paths[0])
         assert patch.ndim == 3
         assert patch.shape[-1] == 3
+        assert (run_dir / "objects" / "object_mask.npy").is_file()
 
 
 def test_object_extract_stage_raises_for_grid_drift() -> None:

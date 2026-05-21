@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -45,13 +46,21 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
 
         result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["pca_anomaly_tif", "pca_eigenvalues"]
-        assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
+        assert [artifact.name for artifact in result.artifacts] == ["pca_anomaly_tif", "pca_eigenvalues", "parity_qa_summary"]
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        assert artifact_classes == {
+            "pca_anomaly_tif": ArtifactClass.LOCAL_SENSITIVE,
+            "pca_eigenvalues": ArtifactClass.LOCAL_SENSITIVE,
+            "parity_qa_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
         sidecar = read_manifest(raster_sidecar_path(run_dir / "pca_anomaly.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
         report = read_manifest(run_dir / "pca_eigenvalues.json")
         assert report["seed"] == 0
         assert "eigenvalues" in report or "explained_variance" in report
+        qa_summary = json.loads((run_dir / "qa" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
+        assert qa_summary["seed"] == 0
+        assert qa_summary["components_count"] == 3
 
 
 def _settings(run_dir: Path):

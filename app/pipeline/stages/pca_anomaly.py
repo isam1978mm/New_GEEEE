@@ -15,6 +15,7 @@ from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
 
 PCA_ANOMALY_TIF_NAME = "pca_anomaly.tif"
 PCA_REPORT_NAME = "pca_eigenvalues.json"
+PCA_PARITY_QA_NAME = "parity_qa_summary.json"
 PCA_SAMPLE_SEED = 0
 PCA_MAX_FIT_PIXELS = 120000
 PCA_COMPONENTS = 3
@@ -115,6 +116,8 @@ def compute_pca_anomaly(
 def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, report: dict[str, object]) -> dict[str, Path]:
     tif_path = run_dir / PCA_ANOMALY_TIF_NAME
     report_path = run_dir / PCA_REPORT_NAME
+    qa_path = run_dir / "qa" / "parity" / PCA_PARITY_QA_NAME
+    qa_path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(anomaly.astype(np.float32)).save(tif_path, format="TIFF")
     write_raster_sidecar(
         tif_path,
@@ -124,7 +127,18 @@ def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, r
         shape=anomaly.shape,
     )
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
-    return {"pca_anomaly_tif": tif_path, "pca_report": report_path}
+    qa_payload = {
+        "stage": "pca_anomaly",
+        "seed": int(report["seed"]),
+        "sample_size": int(report["sample_size"]),
+        "components_count": int(report["components_count"]),
+        "pixel_count": int(report["pixel_count"]),
+        "anomaly_min": float(np.min(anomaly)),
+        "anomaly_max": float(np.max(anomaly)),
+        "anomaly_mean": float(np.mean(anomaly)),
+    }
+    qa_path.write_text(json.dumps(qa_payload, indent=2, sort_keys=True), encoding="utf-8")
+    return {"pca_anomaly_tif": tif_path, "pca_report": report_path, "parity_qa_summary": qa_path}
 
 
 class PcaAnomalyStage(Stage):
@@ -151,6 +165,13 @@ class PcaAnomalyStage(Stage):
                 relative_path=outputs["pca_report"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=outputs["pca_report"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="parity_qa_summary",
+                relative_path=outputs["parity_qa_summary"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["parity_qa_summary"].stat().st_size,
+                http_servable=False,
             ),
         ]
         return StageResult(

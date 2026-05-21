@@ -54,8 +54,17 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
             "hypercube_band_order",
             "hypercube_band_stats",
             "hypercube_norm_params",
+            "hypercube_audit",
         ]
-        assert all(artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE for artifact in result.artifacts)
+        artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
+        assert artifact_classes == {
+            "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,
+            "hypercube_npy": ArtifactClass.LOCAL_SENSITIVE,
+            "hypercube_band_order": ArtifactClass.LOCAL_SENSITIVE,
+            "hypercube_band_stats": ArtifactClass.LOCAL_SENSITIVE,
+            "hypercube_norm_params": ArtifactClass.LOCAL_SENSITIVE,
+            "hypercube_audit": ArtifactClass.FILESYSTEM_ONLY,
+        }
         cube = np.load(run_dir / "hypercube.npy")
         assert cube.shape == (grid_spec.size, grid_spec.size, 3)
         assert np.all(cube[:, :, -1] == 1.0)
@@ -64,6 +73,10 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         assert len(rows) == 3
         assert rows[-1]["band_name"] == "valid_mask"
         assert rows[-1]["source_file"] == "generated"
+        with (run_dir / "qa" / "parity" / "hypercube_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+            audit_rows = list(csv.DictReader(handle))
+        assert len(audit_rows) == 3
+        assert audit_rows[-1]["band_name"] == "valid_mask"
         sidecar = read_manifest(raster_sidecar_path(run_dir / "hypercube.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
 

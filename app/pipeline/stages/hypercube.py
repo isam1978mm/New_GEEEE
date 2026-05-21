@@ -19,6 +19,7 @@ HYPERCUBE_NPY_NAME = "hypercube.npy"
 HYPERCUBE_BAND_ORDER_NAME = "hypercube_band_order.csv"
 HYPERCUBE_STATS_NAME = "hypercube_band_stats.csv"
 HYPERCUBE_NORM_PARAMS_NAME = "hypercube_norm_params.csv"
+HYPERCUBE_AUDIT_NAME = "hypercube_audit.csv"
 EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}
 EPS = 1e-6
 
@@ -130,6 +131,8 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
     order_path = run_dir / HYPERCUBE_BAND_ORDER_NAME
     stats_path = run_dir / HYPERCUBE_STATS_NAME
     norm_params_path = run_dir / HYPERCUBE_NORM_PARAMS_NAME
+    audit_path = run_dir / "qa" / "parity" / HYPERCUBE_AUDIT_NAME
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
 
     _save_multipage_tiff(tif_path, cube_raw)
     np.save(npy_path, cube_raw)
@@ -194,12 +197,33 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
         ),
     )
 
+    cube_norm_plus_mask = products["cube_norm_plus_mask"]
+    assert isinstance(cube_norm_plus_mask, np.ndarray)
+    audit_rows = []
+    for index, name in enumerate(band_names):
+        channel = cube_norm_plus_mask[:, :, index]
+        finite = np.isfinite(channel)
+        values = channel[finite]
+        audit_rows.append(
+            {
+                "band_index": index,
+                "band_name": name,
+                "valid_fraction": float(finite.mean()) if finite.size else 0.0,
+                "min": float(values.min()) if values.size else "",
+                "max": float(values.max()) if values.size else "",
+                "mean": float(values.mean()) if values.size else "",
+                "std": float(values.std()) if values.size else "",
+            }
+        )
+    _write_csv(audit_path, ["band_index", "band_name", "valid_fraction", "min", "max", "mean", "std"], audit_rows)
+
     return {
         "hypercube_tif": tif_path,
         "hypercube_npy": npy_path,
         "band_order_csv": order_path,
         "band_stats_csv": stats_path,
         "norm_params_csv": norm_params_path,
+        "audit_csv": audit_path,
     }
 
 
@@ -252,6 +276,13 @@ class HypercubeStage(Stage):
                 relative_path=outputs["norm_params_csv"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=outputs["norm_params_csv"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="hypercube_audit",
+                relative_path=outputs["audit_csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["audit_csv"].stat().st_size,
+                http_servable=False,
             ),
         ]
         band_names = products["band_names"]
