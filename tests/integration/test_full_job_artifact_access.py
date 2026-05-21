@@ -47,6 +47,7 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
                 "grid_guard_summary",
                 "sar_summary",
                 "science_core_stack_npy",
+                "ai_ready_support_stack_npy",
                 "object_mask",
                 "parity_qa_summary",
                 "thermal_summary",
@@ -65,6 +66,7 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
         assert "grid_guard_summary" not in public_names
         assert "sar_summary" not in public_names
         assert "science_core_stack_npy" not in public_names
+        assert "ai_ready_support_stack_npy" not in public_names
         assert "object_mask" not in public_names
         assert "parity_qa_summary" not in public_names
         assert "thermal_summary" not in public_names
@@ -94,6 +96,7 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["grid_guard_summary"] == "qa/grid_dem/grid_guard_summary.json"
     assert name_to_path["sar_summary"] == "qa/sar/sar_summary.csv"
     assert name_to_path["science_core_stack_npy"] == "stacks/tensor_support/science_core_stack.npy"
+    assert name_to_path["ai_ready_support_stack_npy"] == "stacks/tensor_support/ai_ready_support_stack.npy"
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
     assert name_to_path["parity_qa_summary"] == "qa/parity/parity_qa_summary.json"
     assert name_to_path["thermal_summary"] == "qa/stacks/thermal_summary.json"

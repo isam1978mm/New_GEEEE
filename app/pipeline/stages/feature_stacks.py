@@ -38,12 +38,18 @@ SCIENCE_CORE_BANDS = (
 )
 SCIENCE_CORE_STACK_TIF = "science_core_stack.tif"
 SCIENCE_CORE_STACK_NPY = "science_core_stack.npy"
+RADAR_LINEAR_SUPPORT_STACK_TIF = "radar_linear_support_stack.tif"
+RADAR_LINEAR_SUPPORT_STACK_NPY = "radar_linear_support_stack.npy"
+AI_READY_SUPPORT_STACK_TIF = "ai_ready_support_stack.tif"
+AI_READY_SUPPORT_STACK_NPY = "ai_ready_support_stack.npy"
 S2_MASK_SUPPORT_TIF = "s2_mask_support_valid.tif"
 BAND_STATS_CSV = "band_stats.csv"
 STACK_PRESENCE_SUMMARY_JSON = "stack_presence_summary.json"
 TENSOR_AUDIT_SUMMARY_JSON = "tensor_audit_summary.json"
 GEOMETRY_CONSISTENCY_SUMMARY_JSON = "geometry_consistency_summary.json"
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
+RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
+EPS = 1e-6
 
 
 def _read_single_band_tif(path: Path) -> np.ndarray:
@@ -64,6 +70,34 @@ def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, objec
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
+
+
+def _db_to_linear(array: np.ndarray, *, nodata: float) -> np.ndarray:
+    linear = np.where(array == nodata, nodata, np.power(10.0, array / 10.0)).astype(np.float32)
+    return linear
+
+
+def _build_ai_ready_stack(cube: np.ndarray, *, nodata: float) -> np.ndarray:
+    channel_count = cube.shape[-1]
+    ready = np.zeros_like(cube, dtype=np.float32)
+    for index in range(channel_count):
+        channel = cube[:, :, index]
+        valid_mask = channel != nodata
+        valid_values = channel[valid_mask]
+        if valid_values.size < 100:
+            if valid_values.size:
+                low = float(valid_values.min())
+                high = float(valid_values.max())
+            else:
+                low = 0.0
+                high = 1.0
+        else:
+            low = float(np.percentile(valid_values, 2))
+            high = float(np.percentile(valid_values, 98))
+        span = max(high - low, EPS)
+        normalized = np.clip((channel - low) / span, 0.0, 1.0).astype(np.float32)
+        ready[:, :, index] = np.where(valid_mask, normalized, 0.0).astype(np.float32)
+    return ready
 
 
 def collect_science_core_layers(run_dir: Path, grid_spec: GridSpec) -> list[tuple[str, np.ndarray]]:
@@ -104,6 +138,21 @@ def build_feature_stack_products(
     mask_bands = [band_names.index(name) for name in S2_MASK_SUPPORT_BANDS]
     s2_mask = valid[:, :, mask_bands].all(axis=-1).astype(np.float32)
 
+    vv_db = cube[:, :, band_names.index("VV_dB")]
+    vh_db = cube[:, :, band_names.index("VH_dB")]
+    log_ratio_db = cube[:, :, band_names.index("logRatio_dB")]
+    incidence = cube[:, :, band_names.index("incidence")]
+    radar_linear_stack = np.stack(
+        [
+            _db_to_linear(vv_db, nodata=nodata),
+            _db_to_linear(vh_db, nodata=nodata),
+            _db_to_linear(log_ratio_db, nodata=nodata),
+            np.where(incidence == nodata, nodata, incidence).astype(np.float32),
+        ],
+        axis=-1,
+    ).astype(np.float32)
+    ai_ready_stack = _build_ai_ready_stack(cube, nodata=nodata)
+
     stats_rows: list[dict[str, object]] = []
     for band_index, band_name in enumerate(band_names):
         channel = cube[:, :, band_index]
@@ -128,6 +177,16 @@ def build_feature_stack_products(
         "band_names": band_names,
         "missing_expected_bands": [],
         "all_expected_bands_present": True,
+        "variant_families": [
+            {
+                "artifact_name": "radar_linear_support_stack",
+                "band_names": ["vv_sigma0_linear", "vh_sigma0_linear", "ratio_sigma0_linear", "incidence_angle"],
+            },
+            {
+                "artifact_name": "ai_ready_support_stack",
+                "band_names": band_names,
+            },
+        ],
     }
     tensor_audit_summary = {
         "stage": "feature_stacks",
@@ -148,6 +207,9 @@ def build_feature_stack_products(
         "band_names": band_names,
         "cube": cube,
         "s2_mask": s2_mask,
+        "radar_linear_band_names": ["vv_sigma0_linear", "vh_sigma0_linear", "ratio_sigma0_linear", "incidence_angle"],
+        "radar_linear_stack": radar_linear_stack,
+        "ai_ready_stack": ai_ready_stack,
         "band_stats_rows": stats_rows,
         "stack_presence_summary": stack_presence_summary,
         "tensor_audit_summary": tensor_audit_summary,
@@ -158,12 +220,16 @@ def build_feature_stack_products(
 def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     cube = products["cube"]
     s2_mask = products["s2_mask"]
+    radar_linear_stack = products["radar_linear_stack"]
+    ai_ready_stack = products["ai_ready_stack"]
     band_stats_rows = products["band_stats_rows"]
     stack_presence_summary = products["stack_presence_summary"]
     tensor_audit_summary = products["tensor_audit_summary"]
     geometry_consistency_summary = products["geometry_consistency_summary"]
     assert isinstance(cube, np.ndarray)
     assert isinstance(s2_mask, np.ndarray)
+    assert isinstance(radar_linear_stack, np.ndarray)
+    assert isinstance(ai_ready_stack, np.ndarray)
     assert isinstance(band_stats_rows, list)
     assert isinstance(stack_presence_summary, dict)
     assert isinstance(tensor_audit_summary, dict)
@@ -178,6 +244,10 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
 
     stack_tif_path = tensor_dir / SCIENCE_CORE_STACK_TIF
     stack_npy_path = tensor_dir / SCIENCE_CORE_STACK_NPY
+    radar_linear_tif_path = tensor_dir / RADAR_LINEAR_SUPPORT_STACK_TIF
+    radar_linear_npy_path = tensor_dir / RADAR_LINEAR_SUPPORT_STACK_NPY
+    ai_ready_tif_path = tensor_dir / AI_READY_SUPPORT_STACK_TIF
+    ai_ready_npy_path = tensor_dir / AI_READY_SUPPORT_STACK_NPY
     s2_mask_path = optical_dir / S2_MASK_SUPPORT_TIF
     band_stats_path = qa_dir / BAND_STATS_CSV
     stack_presence_path = qa_dir / STACK_PRESENCE_SUMMARY_JSON
@@ -186,6 +256,10 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
 
     _save_multipage_tiff(stack_tif_path, cube)
     np.save(stack_npy_path, cube)
+    _save_multipage_tiff(radar_linear_tif_path, radar_linear_stack)
+    np.save(radar_linear_npy_path, radar_linear_stack)
+    _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)
+    np.save(ai_ready_npy_path, ai_ready_stack)
     Image.fromarray(s2_mask.astype(np.float32)).save(s2_mask_path, format="TIFF")
     write_raster_sidecar(
         stack_tif_path,
@@ -193,6 +267,20 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         nodata=grid_spec.nodata,
         dtype="float32",
         shape=cube.shape[:2],
+    )
+    write_raster_sidecar(
+        radar_linear_tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=radar_linear_stack.shape[:2],
+    )
+    write_raster_sidecar(
+        ai_ready_tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=ai_ready_stack.shape[:2],
     )
     write_raster_sidecar(
         s2_mask_path,
@@ -214,6 +302,10 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     return {
         "stack_tif": stack_tif_path,
         "stack_npy": stack_npy_path,
+        "radar_linear_tif": radar_linear_tif_path,
+        "radar_linear_npy": radar_linear_npy_path,
+        "ai_ready_tif": ai_ready_tif_path,
+        "ai_ready_npy": ai_ready_npy_path,
         "s2_mask_tif": s2_mask_path,
         "band_stats_csv": band_stats_path,
         "stack_presence_summary_json": stack_presence_path,
@@ -246,6 +338,34 @@ class FeatureStacksStage(Stage):
                 relative_path=outputs["stack_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="radar_linear_support_stack_tif",
+                relative_path=outputs["radar_linear_tif"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["radar_linear_tif"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="radar_linear_support_stack_npy",
+                relative_path=outputs["radar_linear_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["radar_linear_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="ai_ready_support_stack_tif",
+                relative_path=outputs["ai_ready_tif"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["ai_ready_tif"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="ai_ready_support_stack_npy",
+                relative_path=outputs["ai_ready_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["ai_ready_npy"].stat().st_size,
                 http_servable=False,
             ),
             build_stage_artifact(

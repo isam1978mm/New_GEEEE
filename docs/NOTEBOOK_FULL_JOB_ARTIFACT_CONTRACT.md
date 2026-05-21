@@ -585,6 +585,10 @@ Suggested neutral names:
 Suggested neutral names:
 
 - `stacks/optical_support/s2_mask_support_<name>.tif`
+- `stacks/tensor_support/radar_linear_support_stack.tif`
+- `stacks/tensor_support/radar_linear_support_stack.npy`
+- `stacks/tensor_support/ai_ready_support_stack.tif`
+- `stacks/tensor_support/ai_ready_support_stack.npy`
 - `stacks/tensor_support/<neutral_tensor_name>.tif`
 - `stacks/tensor_support/<neutral_tensor_name>.npy`
 
@@ -593,6 +597,7 @@ Mapping rules:
 - avoid notebook marketing or operator-specific labels
 - avoid numbered cell-derived names
 - avoid unstable "vRUN", "MASTER", "Tesla", "Amer update", or similar notebook-specific names
+- use neutral replacements for notebook sigma0/master/tensor-export variants
 - prefer stable, neutral, domain-functional names
 
 ## Ownership by Existing or Future Stage Families

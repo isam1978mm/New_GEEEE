@@ -37,6 +37,10 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert [artifact.name for artifact in result.artifacts] == [
             "science_core_stack_tif",
             "science_core_stack_npy",
+            "radar_linear_support_stack_tif",
+            "radar_linear_support_stack_npy",
+            "ai_ready_support_stack_tif",
+            "ai_ready_support_stack_npy",
             "s2_mask_support_valid",
             "band_stats",
             "stack_presence_summary",
@@ -51,6 +55,21 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         stack_sidecar = read_manifest(raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "science_core_stack.tif"))
         assert stack_sidecar["transform"] == grid_spec.manifest.crs_transform
 
+        radar_linear_stack = np.load(run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.npy")
+        assert radar_linear_stack.shape == (grid_spec.size, grid_spec.size, 4)
+        assert float(radar_linear_stack[:, :, 0].min()) >= 0.0
+        radar_linear_sidecar = read_manifest(
+            raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.tif")
+        )
+        assert radar_linear_sidecar["transform"] == grid_spec.manifest.crs_transform
+
+        ai_ready_stack = np.load(run_dir / "stacks" / "tensor_support" / "ai_ready_support_stack.npy")
+        assert ai_ready_stack.shape == (grid_spec.size, grid_spec.size, len(SCIENCE_CORE_BANDS))
+        assert float(ai_ready_stack.min()) >= 0.0
+        assert float(ai_ready_stack.max()) <= 1.0
+        ai_ready_sidecar = read_manifest(raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "ai_ready_support_stack.tif"))
+        assert ai_ready_sidecar["transform"] == grid_spec.manifest.crs_transform
+
         with (run_dir / "qa" / "stacks" / "band_stats.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         assert len(rows) == len(SCIENCE_CORE_BANDS)
@@ -60,6 +79,10 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         presence_summary = json.loads((run_dir / "qa" / "stacks" / "stack_presence_summary.json").read_text(encoding="utf-8"))
         assert presence_summary["all_expected_bands_present"] is True
         assert presence_summary["missing_expected_bands"] == []
+        assert [entry["artifact_name"] for entry in presence_summary["variant_families"]] == [
+            "radar_linear_support_stack",
+            "ai_ready_support_stack",
+        ]
 
         tensor_audit = json.loads((run_dir / "qa" / "stacks" / "tensor_audit_summary.json").read_text(encoding="utf-8"))
         assert tensor_audit["shape"] == [grid_spec.size, grid_spec.size, len(SCIENCE_CORE_BANDS)]
