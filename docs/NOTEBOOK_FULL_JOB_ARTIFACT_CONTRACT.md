@@ -640,3 +640,119 @@ It does not:
 - authorize public exposure
 - authorize target-location outputs
 - override existing safety and redaction rules
+
+## F-Phase Local-Output Expansion Contract
+
+The N-phase contract covers the approved science-core notebook-equivalent workflow.
+
+The F-phase expands the app toward the user-approved full notebook local-output workflow, but keeps those additions local-first and non-public by default.
+
+### F-Phase scope already approved
+
+The following families are approved for future implementation in the F-phase:
+
+- safe map/manual pin UI for operator point selection
+- notebook stack-variant local outputs
+- `17 m` focus-mask and exact target-zone local analysis
+- exact-location GeoJSON and KMZ local outputs
+- hard classifiers and neutral target-label local outputs
+- field-operations KMZ and local report outputs
+- Drive/reference locator utilities
+- GPS point comparison reports
+- full notebook local-output comparison reports
+
+### F-Phase local-output rule
+
+Unless a later explicit goal changes access policy with tests:
+
+- F-phase outputs are local run-directory artifacts
+- F-phase outputs are not public API products
+- exact-location outputs are not publicly listed
+- exact-location outputs are not served over HTTP
+- notebook Drive-first behavior remains mapped to local run-directory outputs
+
+### F-Phase artifact classes
+
+Default rule:
+
+- new F-phase output families default to `FILESYSTEM_ONLY`
+
+This default is mandatory for:
+
+- exact lat/lon outputs
+- GeoJSON
+- KMZ
+- WKT
+- exact target-zone analysis
+- focus-mask outputs with exact target context
+- classifier target outputs
+- GPS comparison reports
+- field-operation deliverables with target context
+- local path or Drive path inventory reports
+
+`LOCAL_SENSITIVE` remains allowed only for explicitly redacted operator QA summaries that contain no forbidden public content.
+
+### F-Phase experimental local outputs
+
+The following families may be implemented as experimental local outputs only:
+
+- domain-specific or treasure-specific feature-stack variants
+- hard classifiers
+- neutral target-label outputs
+- exact-target operational deliverables
+
+External naming rules remain:
+
+- use neutral app-facing names
+- do not use archaeology, treasure, burial, gold, tunnel, chamber, sarcophagus, or target-claim names in app-facing filenames, API responses, or public UI
+- keep original/domain mappings only in approved documentation if needed
+
+### F-Phase on-hold families
+
+The following remain on hold and are not authorized by the F-phase baseline:
+
+- training scaffolding
+- CNN/Swin/YOLO/SegFormer inference
+- broken model-build cells
+- any rebuilt ML training workflow not separately approved
+
+These families remain excluded from implementation until a later explicit goal re-approves them.
+
+### F-Phase ownership guidance
+
+Future F-phase work should use these ownership boundaries:
+
+- safe map/manual pin workflow: frontend and run-submission path
+- exact-location and KMZ/GeoJSON exporters: dedicated local-only export modules
+- stack-variant families: stack/output stages only
+- classifier target logic: experimental local-only modules
+- GPS and reference comparison reports: dedicated local utilities or report modules
+
+### F-Phase public-surface rule
+
+Nothing in the F-phase approval changes the existing public redaction contract.
+
+Public API responses must still not expose:
+
+- exact coordinates
+- geometry
+- WKT
+- GeoJSON content
+- KMZ content
+- target-zone boundaries
+- filesystem paths
+- Drive paths
+- target labels
+- classifier outputs
+
+### F-Phase implementation guard
+
+The F-phase contract records user-approved local-output scope only.
+
+It does not by itself:
+
+- authorize notebook edits
+- authorize HTTP serving of exact-location artifacts
+- authorize public listing of local-only outputs
+- authorize training or deep-learning inference
+- override the existing N-phase contract for science-core outputs
