@@ -1463,3 +1463,57 @@ Validation:
 At the end of the F-phase section, use this command template:
 
 /goal Read AGENTS.md and plan.md. Execute Goal F0 only. Stop after F0 and report files changed, commands run, test results, and blockers.
+
+---
+
+# Goal F10 — Add notebook-style SAR NPY band exports
+
+Reason:
+
+The live notebook-vs-app family comparison showed one remaining notebook-only output family:
+
+- SAR NPY bands
+
+Notebook output family:
+
+- NPY_RADAR_BANDS/RADAR_VV_dB_*.npy
+- NPY_RADAR_BANDS/RADAR_VH_dB_*.npy
+- NPY_RADAR_BANDS/RADAR_logRatio_dB_*.npy
+- NPY_RADAR_BANDS/RADAR_angle_*.npy
+
+Current app output family:
+
+- VV_dB.tif
+- VH_dB.tif
+- logRatio_dB.tif
+- incidence.tif
+
+Requirements:
+
+- Add notebook-style SAR per-band NPY exports to the app.
+- Write outputs under the local run directory.
+- Use stable app filenames:
+  - npy_radar_bands/VV_dB.npy
+  - npy_radar_bands/VH_dB.npy
+  - npy_radar_bands/logRatio_dB.npy
+  - npy_radar_bands/incidence.npy
+- Register every SAR NPY export as FILESYSTEM_ONLY.
+- Set http_servable=False for every SAR NPY export.
+- Do not public-list SAR NPY exports.
+- Do not serve SAR NPY exports through normal artifact routes.
+- Preserve existing SAR GeoTIFF outputs.
+- Preserve existing SAR RTC parity tests.
+- Add or update tests proving:
+  - the NPY files are written
+  - artifact classes are FILESYSTEM_ONLY
+  - HTTP serving is disabled
+  - the full-job inventory/access tests include the new files
+- Do not change notebook code.
+- Do not add Drive behavior.
+- Do not expose coordinates, geometry, paths, hashes, or exact ROI context in public API responses.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+Stop after F10 and report files changed, commands run, test results, and blockers.
