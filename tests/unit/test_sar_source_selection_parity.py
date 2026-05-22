@@ -63,7 +63,60 @@ def test_sar_source_selection_report_writer_outputs_json_and_csv(tmp_path: Path)
     assert {row["check"] for row in rows} >= {"collection_id", "image_identity", "angle_incidence_mapping"}
 
 
-def _write_app_sar_metadata(app_run_dir: Path) -> None:
+def test_sar_source_selection_report_parses_qa_s1_master_units_json(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    _write_app_sar_metadata(
+        app_run_dir,
+        pairs=[
+            {"asc_id": "ASC_A", "desc_id": "DESC_A", "dt_hours": 1.0},
+            {"asc_id": "ASC_B", "desc_id": "DESC_B", "dt_hours": 2.0},
+        ],
+        source_filters={"max_orbit_dt_days": 9, "max_pair_dt_hours": 36},
+    )
+    _write_notebook_master_units(
+        notebook_root,
+        pairs_used=[
+            {"asc_id": "ASC_A", "desc_id": "DESC_A", "dt_hours": 1.0},
+            {"asc_id": "ASC_B", "desc_id": "DESC_B", "dt_hours": 2.0},
+        ],
+        orbit_window_days=9,
+        pair_cap_hours=36,
+        master_id="ASC_A",
+    )
+
+    report = build_sar_source_selection_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert report["notebook_metadata_files"] == [
+        {"root_label": "NOTEBOOK_RUN", "relative_path": "QA/QA_S1_MASTER_UNITS.json"}
+    ]
+    assert by_check["image_identity"]["status"] == "MATCH"
+    assert by_check["image_identity"]["notebook_value"] == "ASC_A>DESC_A|ASC_B>DESC_B"
+    assert by_check["image_identity"]["app_value"] == "ASC_A>DESC_A|ASC_B>DESC_B"
+    assert by_check["orbit_pairing"]["status"] == "MATCH"
+    assert by_check["orbit_pairing"]["notebook_value"] == "1|2"
+    assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
+    assert by_check["vv_vh_pair_count"]["notebook_value"] == "2"
+    assert by_check["source_parameters"]["status"] == "MISMATCH"
+    assert '"master_id":"ASC_A"' in by_check["source_parameters"]["notebook_value"]
+    assert '"orbit_window_days":"9"' in by_check["source_parameters"]["app_value"]
+    assert '"pair_cap_hours":"36"' in by_check["source_parameters"]["app_value"]
+
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "bounds" not in serialized
+    assert "coordinates" not in serialized
+
+
+def _write_app_sar_metadata(
+    app_run_dir: Path,
+    *,
+    pairs: list[dict[str, object]] | None = None,
+    source_filters: dict[str, object] | None = None,
+) -> None:
     path = app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -74,6 +127,7 @@ def _write_app_sar_metadata(app_run_dir: Path) -> None:
                 "local_only": True,
                 "collection_id": "COPERNICUS/S1_GRD",
                 "date_window": {"start_date": "2026-01-01", "end_date": "2026-03-01"},
+                "source_filters": source_filters or {},
                 "selected_band_list": ["VV", "VH", "angle"],
                 "output_band_list": ["VV_dB", "VH_dB", "logRatio_dB", "incidence"],
                 "angle_incidence_mapping": {"notebook_band": "angle", "app_output_band": "incidence"},
@@ -83,7 +137,7 @@ def _write_app_sar_metadata(app_run_dir: Path) -> None:
                     "db_to_linear_to_db": True,
                     "grid_sampling": "sampleRectangle",
                 },
-                "pairs": [{"asc_id": "ASC_1", "desc_id": "DESC_1", "dt_hours": 1.0}],
+                "pairs": pairs or [{"asc_id": "ASC_1", "desc_id": "DESC_1", "dt_hours": 1.0}],
             }
         ),
         encoding="utf-8",
@@ -117,3 +171,26 @@ def _write_notebook_summary(notebook_root: Path, *, asc_id: str, desc_id: str) -
                 "band_name": "angle",
             }
         )
+
+
+def _write_notebook_master_units(
+    notebook_root: Path,
+    *,
+    pairs_used: list[dict[str, object]],
+    orbit_window_days: int,
+    pair_cap_hours: int,
+    master_id: str,
+) -> None:
+    path = notebook_root / "QA" / "QA_S1_MASTER_UNITS.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "orbit_window_days": orbit_window_days,
+                "pair_cap_hours": pair_cap_hours,
+                "pairs_used": pairs_used,
+                "MASTER_ID": master_id,
+            }
+        ),
+        encoding="utf-8",
+    )

@@ -16,6 +16,8 @@ SAR_SOURCE_SELECTION_FIELDNAMES = [
     "recommended_next_action",
 ]
 NOTEBOOK_SAR_QA_PATTERNS = (
+    "QA/QA_S1_MASTER_UNITS.json",
+    "QA_S1_MASTER_UNITS.json",
     "SUMMARY_RADAR*.csv",
     "qa/sar/sar_pair_diagnostics.json",
     "*sar*selection*.json",
@@ -193,6 +195,13 @@ def build_sar_source_selection_rows(
                 missing_evidence="Notebook metadata does not expose comparable orbit directions.",
                 mismatch_action="Confirm both runs use the same ASC/DESC orbit-direction policy before changing SAR math.",
             ),
+            _compare_scalar(
+                check="source_parameters",
+                notebook_value=_source_parameters_value(notebook_payload),
+                app_value=_source_parameters_value(app_payload),
+                missing_evidence="Notebook metadata does not expose comparable SAR source parameters.",
+                mismatch_action="Reconcile orbit window, pair cap, and master image metadata before changing SAR formulas.",
+            ),
             _band_mapping_row(app_payload=app_payload, notebook_payload=notebook_payload),
             _processing_path_row(app_payload=app_payload, notebook_payload=notebook_payload),
             SarSourceSelectionRow(
@@ -217,13 +226,53 @@ def _load_app_sar_metadata(app_run_dir: Path) -> dict[str, Any] | None:
 
 def _load_notebook_metadata_payload(path: Path) -> dict[str, Any]:
     if path.suffix.lower() == ".json":
-        return json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if path.name == "QA_S1_MASTER_UNITS.json":
+            return _normalize_qa_s1_master_units_payload(payload)
+        return payload
     with path.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     payload: dict[str, Any] = {"rows": rows}
     if rows:
         payload.update(_collapse_csv_rows(rows))
     return payload
+
+
+def _normalize_qa_s1_master_units_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    pairs = _normalize_pairs_used(payload.get("pairs_used") or payload.get("PAIRS_USED") or [])
+    normalized: dict[str, Any] = {
+        "source_kind": "QA_S1_MASTER_UNITS",
+        "pairs": pairs,
+        "pair_count": len(pairs),
+    }
+    master_id = payload.get("MASTER_ID") or payload.get("master_id")
+    if master_id not in (None, ""):
+        normalized["master_id"] = str(master_id)
+    orbit_window_days = payload.get("orbit_window_days") or payload.get("ORBIT_WINDOW_DAYS")
+    if orbit_window_days not in (None, ""):
+        normalized["orbit_window_days"] = _normalize_number_string(orbit_window_days)
+    pair_cap_hours = payload.get("pair_cap_hours") or payload.get("PAIR_CAP_HOURS")
+    if pair_cap_hours not in (None, ""):
+        normalized["pair_cap_hours"] = _normalize_number_string(pair_cap_hours)
+    return normalized
+
+
+def _normalize_pairs_used(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    pairs: list[dict[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        asc_id = item.get("asc_id") or item.get("ASC_ID") or item.get("ascending_id") or item.get("ASCENDING_ID")
+        desc_id = item.get("desc_id") or item.get("DESC_ID") or item.get("descending_id") or item.get("DESCENDING_ID")
+        if asc_id and desc_id:
+            pair: dict[str, str] = {"asc_id": str(asc_id), "desc_id": str(desc_id)}
+            dt_hours = item.get("dt_hours") or item.get("DT_HOURS") or item.get("pair_dt_hours") or item.get("PAIR_DT_HOURS")
+            if dt_hours not in (None, ""):
+                pair["dt_hours"] = _normalize_number_string(dt_hours)
+            pairs.append(pair)
+    return pairs
 
 
 def _collapse_csv_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
@@ -367,10 +416,10 @@ def _pair_delta_value(payload: dict[str, Any]) -> str:
                 continue
             value = pair.get("dt_hours") or pair.get("pair_dt_hours")
             if value not in (None, ""):
-                values.append(str(value))
+                values.append(_normalize_number_string(value))
         return "|".join(values)
     value = payload.get("dt_hours") or payload.get("pair_dt_hours")
-    return str(value) if value not in (None, "") else ""
+    return _normalize_number_string(value) if value not in (None, "") else ""
 
 
 def _pair_count_value(payload: dict[str, Any]) -> str:
@@ -391,6 +440,41 @@ def _orbit_directions_value(payload: dict[str, Any]) -> str:
             return ",".join(directions)
     directions = _list_value(payload.get("orbit_directions") or payload.get("orbit_direction"))
     return ",".join(directions)
+
+
+def _source_parameters_value(payload: dict[str, Any]) -> str:
+    values: dict[str, str] = {}
+    orbit_window_days = payload.get("orbit_window_days")
+    if orbit_window_days in (None, ""):
+        source_filters = payload.get("source_filters")
+        if isinstance(source_filters, dict):
+            orbit_window_days = source_filters.get("max_orbit_dt_days")
+    if orbit_window_days not in (None, ""):
+        values["orbit_window_days"] = _normalize_number_string(orbit_window_days)
+    pair_cap_hours = payload.get("pair_cap_hours")
+    if pair_cap_hours in (None, ""):
+        source_filters = payload.get("source_filters")
+        if isinstance(source_filters, dict):
+            pair_cap_hours = source_filters.get("max_pair_dt_hours")
+    if pair_cap_hours not in (None, ""):
+        values["pair_cap_hours"] = _normalize_number_string(pair_cap_hours)
+    master_id = payload.get("master_id") or payload.get("MASTER_ID")
+    if master_id not in (None, ""):
+        values["master_id"] = str(master_id)
+    return _compact_json(values)
+
+
+def _normalize_number_string(value: Any) -> str:
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return str(int(value)) if value.is_integer() else f"{value:.6f}".rstrip("0").rstrip(".")
+    text = str(value)
+    try:
+        numeric = float(text)
+    except ValueError:
+        return text
+    return str(int(numeric)) if numeric.is_integer() else f"{numeric:.6f}".rstrip("0").rstrip(".")
 
 
 def _normalize_key(key: str) -> str:

@@ -17,7 +17,7 @@ def test_sar_source_selection_parity_script_writes_local_only_reports(
     notebook_root = tmp_path / "NOTEBOOK_RUN"
     output_dir = tmp_path / "reports"
     _write_app_sar_metadata(app_run_dir)
-    _write_notebook_summary(notebook_root)
+    _write_notebook_master_units(notebook_root)
 
     monkeypatch.setattr(
         sys,
@@ -43,12 +43,18 @@ def test_sar_source_selection_parity_script_writes_local_only_reports(
     serialized = json.dumps(payload, sort_keys=True)
     assert payload["artifact_class"] == "FILESYSTEM_ONLY"
     assert payload["local_only"] is True
+    assert payload["notebook_metadata_files"] == [
+        {"root_label": "NOTEBOOK_RUN", "relative_path": "QA/QA_S1_MASTER_UNITS.json"}
+    ]
     assert "C:\\" not in serialized
     assert "/Users/" not in serialized
     assert "/home/" not in serialized
     with csv_path.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
+    by_check = {row["check"]: row for row in rows}
     assert any(row["check"] == "angle_incidence_mapping" for row in rows)
+    assert by_check["image_identity"]["status"] == "MATCH"
+    assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
 
 
 def _write_app_sar_metadata(app_run_dir: Path) -> None:
@@ -59,6 +65,7 @@ def _write_app_sar_metadata(app_run_dir: Path) -> None:
             {
                 "collection_id": "COPERNICUS/S1_GRD",
                 "date_window": {"start_date": "2026-01-01", "end_date": "2026-03-01"},
+                "source_filters": {"max_orbit_dt_days": 9, "max_pair_dt_hours": 36},
                 "output_band_list": ["VV_dB", "VH_dB", "logRatio_dB", "incidence"],
                 "angle_incidence_mapping": {"notebook_band": "angle", "app_output_band": "incidence"},
                 "processing_path": {"local_dem_rtc": True, "speckle_refined_lee_filtering": False},
@@ -69,22 +76,17 @@ def _write_app_sar_metadata(app_run_dir: Path) -> None:
     )
 
 
-def _write_notebook_summary(notebook_root: Path) -> None:
-    notebook_root.mkdir(parents=True, exist_ok=True)
-    with (notebook_root / "SUMMARY_RADAR_demo.csv").open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(
-            handle,
-            fieldnames=["collection_id", "start_date", "end_date", "asc_id", "desc_id", "dt_hours", "band_name"],
-        )
-        writer.writeheader()
-        writer.writerow(
+def _write_notebook_master_units(notebook_root: Path) -> None:
+    path = notebook_root / "QA" / "QA_S1_MASTER_UNITS.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
             {
-                "collection_id": "COPERNICUS/S1_GRD",
-                "start_date": "2026-01-01",
-                "end_date": "2026-03-01",
-                "asc_id": "ASC_1",
-                "desc_id": "DESC_1",
-                "dt_hours": "1.0",
-                "band_name": "angle",
+                "orbit_window_days": 9,
+                "pair_cap_hours": 36,
+                "pairs_used": [{"asc_id": "ASC_1", "desc_id": "DESC_1", "dt_hours": 1.0}],
+                "MASTER_ID": "ASC_1",
             }
-        )
+        ),
+        encoding="utf-8",
+    )
