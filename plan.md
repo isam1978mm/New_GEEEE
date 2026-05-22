@@ -1,4 +1,4 @@
-# plan.md — Codex `/goal` Plan for GEE Screening App v1
+﻿# plan.md â€” Codex `/goal` Plan for GEE Screening App v1
 
 This file defines the implementation goals for Codex. Codex should use this file together with:
 
@@ -69,7 +69,7 @@ Hard prohibitions for v1:
 
 ---
 
-# Goal M0 — Repository skeleton and safety foundation
+# Goal M0 â€” Repository skeleton and safety foundation
 
 Create/update:
 
@@ -109,7 +109,7 @@ Stop after M0.
 
 ---
 
-# Goal M1 — SQLite persistence and migrations
+# Goal M1 â€” SQLite persistence and migrations
 
 Create/update:
 
@@ -145,7 +145,7 @@ Stop after M1.
 
 ---
 
-# Goal M2 — Redaction, public errors, and logging safety
+# Goal M2 â€” Redaction, public errors, and logging safety
 
 Create/update:
 
@@ -178,7 +178,7 @@ Stop after M2.
 
 ---
 
-# Goal M3 — Artifact taxonomy and serving guard
+# Goal M3 â€” Artifact taxonomy and serving guard
 
 Create/update:
 
@@ -214,7 +214,7 @@ Stop after M3.
 
 ---
 
-# Goal M4 — Earth Engine service-account session
+# Goal M4 â€” Earth Engine service-account session
 
 Create/update:
 
@@ -241,7 +241,7 @@ Stop after M4.
 
 ---
 
-# Goal M5 — GRID, storage, run manifest, and run state machine
+# Goal M5 â€” GRID, storage, run manifest, and run state machine
 
 Create/update:
 
@@ -273,7 +273,7 @@ Stop after M5.
 
 ---
 
-# Goal M6 — Stage protocol and orchestrator
+# Goal M6 â€” Stage protocol and orchestrator
 
 Create/update:
 
@@ -305,7 +305,7 @@ Stop after M6.
 
 ---
 
-# Goal M7 — DEM ingest and zero-shift gate
+# Goal M7 â€” DEM ingest and zero-shift gate
 
 Create/update:
 
@@ -335,7 +335,7 @@ Stop after M7.
 
 ---
 
-# Goal M8 — Sentinel-1 SAR RTC stage
+# Goal M8 â€” Sentinel-1 SAR RTC stage
 
 Create/update:
 
@@ -363,7 +363,7 @@ Stop after M8.
 
 ---
 
-# Goal M9 — Sentinel-2 indices with corrected IRON_SWIR
+# Goal M9 â€” Sentinel-2 indices with corrected IRON_SWIR
 
 Create/update:
 
@@ -392,7 +392,7 @@ Stop after M9.
 
 ---
 
-# Goal M10 — DEM derivatives and thermal LST
+# Goal M10 â€” DEM derivatives and thermal LST
 
 Create/update:
 
@@ -422,7 +422,7 @@ Stop after M10.
 
 ---
 
-# Goal M11 — Hypercube assembly and PCA anomaly
+# Goal M11 â€” Hypercube assembly and PCA anomaly
 
 Create/update:
 
@@ -454,7 +454,7 @@ Stop after M11.
 
 ---
 
-# Goal M12 — Object extraction and alignment QA
+# Goal M12 â€” Object extraction and alignment QA
 
 Create/update:
 
@@ -486,7 +486,7 @@ Stop after M12.
 
 ---
 
-# Goal M13 — Notebook parity suite and fixture protocol
+# Goal M13 â€” Notebook parity suite and fixture protocol
 
 Create/update:
 
@@ -516,7 +516,7 @@ Stop after M13.
 
 ---
 
-# Goal M14 — Experimental classifier neutralization
+# Goal M14 â€” Experimental classifier neutralization
 
 Create/update:
 
@@ -549,7 +549,7 @@ Stop after M14.
 
 ---
 
-# Goal M15 — Experimental CLI runner, input validation, and Class IV outputs
+# Goal M15 â€” Experimental CLI runner, input validation, and Class IV outputs
 
 Create/update:
 
@@ -585,7 +585,7 @@ Stop after M15.
 
 ---
 
-# Goal M16 — Frontend SPA
+# Goal M16 â€” Frontend SPA
 
 Create/update:
 
@@ -617,7 +617,7 @@ Stop after M16.
 
 ---
 
-# Goal M17 — Full integration, documentation, and release checklist
+# Goal M17 â€” Full integration, documentation, and release checklist
 
 Create/update:
 
@@ -668,7 +668,7 @@ Official sequence:
 
 ---
 
-# Goal H0 — Freeze accepted v1 baseline
+# Goal H0 â€” Freeze accepted v1 baseline
 
 Requirements:
 
@@ -689,7 +689,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H1 — Production parity contract
+# Goal H1 â€” Production parity contract
 
 Create/update:
 
@@ -715,7 +715,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H2 — Notebook safety scanner
+# Goal H2 â€” Notebook safety scanner
 
 Create/update:
 
@@ -746,7 +746,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H3 — GitHub Actions CI
+# Goal H3 â€” GitHub Actions CI
 
 Create/update:
 
@@ -774,7 +774,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H4 — Reference notebook fixture capture protocol
+# Goal H4 â€” Reference notebook fixture capture protocol
 
 Create/update:
 
@@ -801,7 +801,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H4.5 — IRON_SWIR provenance reconciliation
+# Goal H4.5 â€” IRON_SWIR provenance reconciliation
 
 Create/update:
 
@@ -834,7 +834,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H5 — Reference-output comparison tests
+# Goal H5 â€” Reference-output comparison tests
 
 Create/update:
 
@@ -864,7 +864,7 @@ pytest tests/notebook_parity/
 
 ---
 
-# Goal H6 — Production runbook
+# Goal H6 â€” Production runbook
 
 Create/update:
 
@@ -894,7 +894,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal H7 — Live EE validation checklist
+# Goal H7 â€” Live EE validation checklist
 
 Create/update:
 
@@ -943,7 +943,7 @@ Official sequence:
 
 ---
 
-# Goal N0 — Accept full-job inventory baseline
+# Goal N0 â€” Accept full-job inventory baseline
 
 Create/update:
 
@@ -968,7 +968,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N1 — Full-job artifact contract and naming map
+# Goal N1 â€” Full-job artifact contract and naming map
 
 Create/update:
 
@@ -997,7 +997,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N2 — SAR full-job artifacts
+# Goal N2 â€” SAR full-job artifacts
 
 Create/update:
 
@@ -1025,7 +1025,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N3 — GRID, DEM, zero-shift, and alignment QA full-job artifacts
+# Goal N3 â€” GRID, DEM, zero-shift, and alignment QA full-job artifacts
 
 Create/update:
 
@@ -1051,7 +1051,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N4 — Defensible feature-stack and science extras
+# Goal N4 â€” Defensible feature-stack and science extras
 
 Create/update:
 
@@ -1074,7 +1074,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N5 — Hypercube, PCA, object, and tensor support outputs
+# Goal N5 â€” Hypercube, PCA, object, and tensor support outputs
 
 Create/update:
 
@@ -1099,7 +1099,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N6 — DEM derivatives, S2, and thermal full-job extras
+# Goal N6 â€” DEM derivatives, S2, and thermal full-job extras
 
 Create/update:
 
@@ -1123,7 +1123,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N7 — Full-job artifact inventory tests
+# Goal N7 â€” Full-job artifact inventory tests
 
 Create/update:
 
@@ -1146,7 +1146,7 @@ pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 ---
 
-# Goal N8 — Full-job runbook update
+# Goal N8 â€” Full-job runbook update
 
 Create/update:
 
@@ -1221,7 +1221,7 @@ Official sequence:
 
 ---
 
-# Goal F0 � Record full notebook local-output expansion contract
+# Goal F0 — Record full notebook local-output expansion contract
 
 Create/update:
 
@@ -1249,7 +1249,7 @@ Validation:
 
 ---
 
-# Goal F1 � Safe map/manual pin UI
+# Goal F1 — Safe map/manual pin UI
 
 Create/update:
 
@@ -1273,7 +1273,7 @@ Validation:
 
 ---
 
-# Goal F2 � Notebook stack-variant local outputs
+# Goal F2 — Notebook stack-variant local outputs
 
 Create/update:
 
@@ -1297,7 +1297,7 @@ Validation:
 
 ---
 
-# Goal F3 � 17m focus-mask and exact target-zone local outputs
+# Goal F3 — 17m focus-mask and exact target-zone local outputs
 
 Create/update:
 
@@ -1319,7 +1319,7 @@ Validation:
 
 ---
 
-# Goal F4 � Exact-location GeoJSON and KMZ local outputs
+# Goal F4 — Exact-location GeoJSON and KMZ local outputs
 
 Create/update:
 
@@ -1343,7 +1343,7 @@ Validation:
 
 ---
 
-# Goal F5 � Hard classifiers and neutral target-label local outputs
+# Goal F5 — Hard classifiers and neutral target-label local outputs
 
 Create/update:
 
@@ -1368,7 +1368,7 @@ Validation:
 
 ---
 
-# Goal F6 � Field-operations KMZ and local report outputs
+# Goal F6 — Field-operations KMZ and local report outputs
 
 Create/update:
 
@@ -1390,7 +1390,7 @@ Validation:
 
 ---
 
-# Goal F7 � Drive/reference locator utilities
+# Goal F7 — Drive/reference locator utilities
 
 Create/update:
 
@@ -1413,7 +1413,7 @@ Validation:
 
 ---
 
-# Goal F8 � GPS point comparison reports
+# Goal F8 — GPS point comparison reports
 
 Create/update:
 
@@ -1435,7 +1435,7 @@ Validation:
 
 ---
 
-# Goal F9 � Full notebook local-output comparison report
+# Goal F9 — Full notebook local-output comparison report
 
 Create/update:
 
@@ -1466,7 +1466,7 @@ At the end of the F-phase section, use this command template:
 
 ---
 
-# Goal F10 � Add notebook-style SAR NPY band exports
+# Goal F10 - Add notebook-style SAR NPY band exports
 
 Reason:
 
@@ -1517,3 +1517,4 @@ Validation:
 - pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 Stop after F10 and report files changed, commands run, test results, and blockers.
+
