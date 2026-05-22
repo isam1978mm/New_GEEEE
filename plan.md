@@ -1221,7 +1221,7 @@ Official sequence:
 
 ---
 
-# Goal F0 — Record full notebook local-output expansion contract
+# Goal F0 â€” Record full notebook local-output expansion contract
 
 Create/update:
 
@@ -1249,7 +1249,7 @@ Validation:
 
 ---
 
-# Goal F1 — Safe map/manual pin UI
+# Goal F1 â€” Safe map/manual pin UI
 
 Create/update:
 
@@ -1273,7 +1273,7 @@ Validation:
 
 ---
 
-# Goal F2 — Notebook stack-variant local outputs
+# Goal F2 â€” Notebook stack-variant local outputs
 
 Create/update:
 
@@ -1297,7 +1297,7 @@ Validation:
 
 ---
 
-# Goal F3 — 17m focus-mask and exact target-zone local outputs
+# Goal F3 â€” 17m focus-mask and exact target-zone local outputs
 
 Create/update:
 
@@ -1319,7 +1319,7 @@ Validation:
 
 ---
 
-# Goal F4 — Exact-location GeoJSON and KMZ local outputs
+# Goal F4 â€” Exact-location GeoJSON and KMZ local outputs
 
 Create/update:
 
@@ -1343,7 +1343,7 @@ Validation:
 
 ---
 
-# Goal F5 — Hard classifiers and neutral target-label local outputs
+# Goal F5 â€” Hard classifiers and neutral target-label local outputs
 
 Create/update:
 
@@ -1368,7 +1368,7 @@ Validation:
 
 ---
 
-# Goal F6 — Field-operations KMZ and local report outputs
+# Goal F6 â€” Field-operations KMZ and local report outputs
 
 Create/update:
 
@@ -1390,7 +1390,7 @@ Validation:
 
 ---
 
-# Goal F7 — Drive/reference locator utilities
+# Goal F7 â€” Drive/reference locator utilities
 
 Create/update:
 
@@ -1413,7 +1413,7 @@ Validation:
 
 ---
 
-# Goal F8 — GPS point comparison reports
+# Goal F8 â€” GPS point comparison reports
 
 Create/update:
 
@@ -1435,7 +1435,7 @@ Validation:
 
 ---
 
-# Goal F9 — Full notebook local-output comparison report
+# Goal F9 â€” Full notebook local-output comparison report
 
 Create/update:
 
@@ -1466,7 +1466,7 @@ At the end of the F-phase section, use this command template:
 
 ---
 
-# Goal F10 — Add notebook-style SAR NPY band exports
+# Goal F10 - Add notebook-style SAR NPY band exports
 
 Reason:
 
