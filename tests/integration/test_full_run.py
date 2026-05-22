@@ -19,6 +19,7 @@ from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
+from app.pipeline.stages.gps_compare import GpsComparisonStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
@@ -112,6 +113,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             FocusMaskStage(grid_spec=grid_spec),
             LocationExportsStage(grid_spec=grid_spec),
             FieldOpsExportsStage(grid_spec=grid_spec),
+            GpsComparisonStage(input_lat=latitude, input_lon=longitude, grid_spec=grid_spec),
             HypercubeStage(grid_spec=grid_spec),
             PcaAnomalyStage(grid_spec=grid_spec),
             ObjectExtractStage(grid_spec=grid_spec),
@@ -120,7 +122,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
     )
     records = await orchestrator.run_run(run_id)
 
-    assert len(records) == 15
+    assert len(records) == 16
 
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))

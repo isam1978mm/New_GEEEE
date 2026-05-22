@@ -18,6 +18,7 @@ from app.pipeline.stages.dem import DemStage
 from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
+from app.pipeline.stages.gps_compare import GpsComparisonStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
@@ -133,6 +134,7 @@ async def run_core_pipeline_for_run(*, run_id: str, settings: Settings) -> None:
                 FocusMaskStage(grid_spec=grid_spec),
                 LocationExportsStage(grid_spec=grid_spec),
                 FieldOpsExportsStage(grid_spec=grid_spec),
+                GpsComparisonStage(input_lat=latitude, input_lon=longitude, grid_spec=grid_spec),
                 HypercubeStage(grid_spec=grid_spec),
                 PcaAnomalyStage(grid_spec=grid_spec),
                 ObjectExtractStage(grid_spec=grid_spec),

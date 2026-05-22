@@ -12,6 +12,7 @@ from app.pipeline.stages.dem_derivatives import OUTPUT_NAMES as DEM_DERIVATIVE_N
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
+from app.pipeline.stages.gps_compare import GpsComparisonStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
@@ -41,6 +42,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         focus_mask_result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         location_exports_result = asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
         field_ops_result = asyncio.run(FieldOpsExportsStage(grid_spec=grid_spec).run(context))
+        gps_compare_result = asyncio.run(GpsComparisonStage(input_lat=35.59499, input_lon=36.12694, grid_spec=grid_spec).run(context))
         hypercube_result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
         pca_result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
         object_result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
@@ -109,6 +111,10 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "field_ops_navigation_kmz": ArtifactClass.FILESYSTEM_ONLY,
             "field_ops_report": ArtifactClass.FILESYSTEM_ONLY,
             "field_ops_brief": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        assert _artifact_classes(gps_compare_result) == {
+            "gps_point_comparison_json": ArtifactClass.FILESYSTEM_ONLY,
+            "gps_point_comparison_csv": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(hypercube_result) == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,

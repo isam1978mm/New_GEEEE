@@ -19,6 +19,7 @@ from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
+from app.pipeline.stages.gps_compare import GpsComparisonStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
@@ -56,6 +57,8 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
                 "location_kmz",
                 "field_ops_navigation_kmz",
                 "field_ops_report",
+                "gps_point_comparison_json",
+                "gps_point_comparison_csv",
                 "object_mask",
                 "parity_qa_summary",
                 "thermal_summary",
@@ -80,6 +83,8 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
         assert "location_kmz" not in public_names
         assert "field_ops_navigation_kmz" not in public_names
         assert "field_ops_report" not in public_names
+        assert "gps_point_comparison_json" not in public_names
+        assert "gps_point_comparison_csv" not in public_names
         assert "object_mask" not in public_names
         assert "parity_qa_summary" not in public_names
         assert "thermal_summary" not in public_names
@@ -115,6 +120,8 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["location_kmz"] == "kmz/site_location.kmz"
     assert name_to_path["field_ops_navigation_kmz"] == "kmz/field_ops_navigation.kmz"
     assert name_to_path["field_ops_report"] == "full_job/field_ops/field_ops_report.json"
+    assert name_to_path["gps_point_comparison_json"] == "full_job/gps/gps_point_comparison.json"
+    assert name_to_path["gps_point_comparison_csv"] == "full_job/gps/gps_point_comparison.csv"
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
     assert name_to_path["parity_qa_summary"] == "qa/parity/parity_qa_summary.json"
     assert name_to_path["thermal_summary"] == "qa/stacks/thermal_summary.json"
@@ -161,6 +168,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             FocusMaskStage(grid_spec=grid_spec),
             LocationExportsStage(grid_spec=grid_spec),
             FieldOpsExportsStage(grid_spec=grid_spec),
+            GpsComparisonStage(input_lat=latitude, input_lon=longitude, grid_spec=grid_spec),
             HypercubeStage(grid_spec=grid_spec),
             PcaAnomalyStage(grid_spec=grid_spec),
             ObjectExtractStage(grid_spec=grid_spec),

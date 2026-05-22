@@ -789,6 +789,8 @@ Current neutral local output examples:
 - `experimental/summary.json`
 - `experimental/neutral_target_labels.json`
 - `full_job/reference/reference_locator_inventory.json`
+- `full_job/gps/gps_point_comparison.json`
+- `full_job/gps/gps_point_comparison.csv`
 
 External naming rules remain:
 
