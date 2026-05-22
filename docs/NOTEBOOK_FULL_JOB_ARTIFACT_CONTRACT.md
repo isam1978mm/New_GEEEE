@@ -788,6 +788,7 @@ Current neutral local output examples:
 - `experimental/classifications.csv`
 - `experimental/summary.json`
 - `experimental/neutral_target_labels.json`
+- `full_job/reference/reference_locator_inventory.json`
 
 External naming rules remain:
 
