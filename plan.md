@@ -1648,3 +1648,151 @@ Validation:
 
 Stop after F11 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F12 - Diagnose and reconcile numeric parity failures
+
+Reason:
+
+F11 created the numeric/content parity report tool and the first live report was generated against the downloaded notebook output and app run.
+
+The report showed:
+
+- 13 FAIL rows
+- 31 SKIP_MISSING_NOTEBOOK rows
+- 0 PASS rows
+
+F12 must diagnose the cause of these failures before changing science algorithms.
+
+Do not force parity by weakening tolerances.
+Do not mark failures as pass without evidence.
+Do not change the notebook.
+
+Primary observed failure types:
+
+- raster CRS/transform metadata missing or mismatched
+- nodata policy mismatch
+- SAR VV/VH/logRatio/incidence numeric mismatch
+- DEM derivative numeric mismatch
+- radar tensor stack numeric mismatch
+- focus mask near-match with only a few pixel differences
+- missing notebook mappings or notebook outputs stored outside the selected notebook root
+
+Scope:
+
+- Diagnose each F11 FAIL and SKIP row.
+- Produce a local-only diagnosis report explaining the likely cause of each mismatch.
+- Reconcile only safe/obvious issues, such as:
+  - notebook root discovery
+  - multi-root notebook search
+  - filename mapping gaps
+  - metadata extraction/reporting clarity
+  - nodata normalization comparison logic
+  - comparison report wording
+- Do not change core science formulas until the diagnosis proves the exact cause.
+- Do not hide or downgrade true numeric mismatches.
+- Do not change notebook code.
+- Do not expose coordinates, geometry, local paths, hashes, CRS transforms, or exact ROI context through public API responses.
+
+Required inputs:
+
+- F11 numeric parity JSON/CSV report
+- notebook output root
+- optional second notebook output root, such as the downloaded Radar_GRD_RTC folder
+- app run directory
+
+Create/update:
+
+- app/services/numeric_parity_diagnostics.py or equivalent
+- scripts/diagnose_numeric_parity_failures.py
+- tests/unit/test_numeric_parity_diagnostics.py
+- tests/integration/test_numeric_parity_diagnostics_script.py
+- docs/NUMERIC_PARITY_DIAGNOSIS.md if useful
+- app/services/numeric_parity_report.py only if needed for safe mapping/reporting fixes
+- scripts/compare_notebook_app_outputs.py only if needed for multi-root input support
+
+Requirements:
+
+- Add a local-only diagnostic report writer.
+- The script must accept:
+  - --parity-report
+  - --app-run-dir
+  - --output-dir
+  - --notebook-root
+  - optional repeated --notebook-root for multi-root notebook search
+- The diagnostic report must be written under a local output directory, for example:
+  - data/reports/numeric_parity_diagnosis_<run_id>.json
+  - data/reports/numeric_parity_diagnosis_<run_id>.csv
+- Reports are FILESYSTEM_ONLY local operator outputs.
+- Reports must not embed absolute local paths.
+- Reports must use root labels or relative paths only.
+
+Diagnostic categories:
+
+- PASS_CONFIRMED
+- FAIL_NUMERIC_MISMATCH
+- FAIL_METADATA_MISMATCH
+- FAIL_NODATA_POLICY_MISMATCH
+- FAIL_DTYPE_MISMATCH
+- FAIL_SHAPE_MISMATCH
+- FAIL_BAND_ORDER_OR_STACK_ORDER
+- FAIL_SOURCE_SELECTION_MISMATCH
+- FAIL_ALGORITHM_MISMATCH
+- SKIP_NOTEBOOK_FILE_NOT_FOUND
+- SKIP_APP_FILE_NOT_FOUND
+- SKIP_UNMAPPED_OUTPUT
+- SKIP_UNSUPPORTED_CONTAINER
+- NEEDS_MULTI_ROOT_SEARCH
+- NEEDS_MANUAL_REVIEW
+
+For each failed row, report:
+
+- family
+- notebook_file
+- app_file
+- original_status
+- diagnosis_category
+- evidence
+- max_abs_diff
+- mean_abs_diff
+- differing_count
+- matching_percent
+- metadata_flags
+- recommended_next_action
+- safe_to_auto_reconcile true/false
+
+Specific diagnosis rules:
+
+- If shape matches but CRS/transform missing from notebook raster, diagnose metadata issue separately from numeric issue.
+- If shape and dtype match but matching percent is near zero for SAR bands, diagnose likely SAR source-selection, orbit/pairing, RTC, filtering, or algorithm mismatch.
+- If logRatio mismatch mirrors VV/VH mismatch, diagnose it as downstream SAR mismatch, not independent bug unless evidence says otherwise.
+- If focus mask differs by fewer than 10 pixels, diagnose as near-match edge/boundary tolerance issue, not major algorithm mismatch.
+- If notebook output is missing from the selected root but the known second downloaded notebook folder may contain it, diagnose NEEDS_MULTI_ROOT_SEARCH.
+- If F11 cannot compare because a notebook filename is missing but the family was present in the family-level inventory, diagnose mapping/root issue.
+- If numeric mismatch appears caused by nodata handling, diagnose nodata policy mismatch and recommend nodata normalization comparison before algorithm changes.
+- If app-only outputs are not present in the downloaded notebook run, keep them as app-only and do not call them app failures.
+
+Allowed reconciliation in F12:
+
+- Add multi-root notebook search support to the F11 report script if needed.
+- Improve filename mappings where evidence is clear.
+- Improve raster comparison notes so metadata mismatch and numeric mismatch are reported separately.
+- Add nodata-normalized comparison metrics in addition to raw comparison metrics.
+- Add band-order diagnostics for stacks/hypercubes.
+
+Not allowed in F12:
+
+- Do not rewrite SAR RTC science logic.
+- Do not rewrite DEM derivative science logic.
+- Do not rewrite tensor/hypercube science logic.
+- Do not modify notebook code.
+- Do not weaken tolerances just to make failures pass.
+- Do not expose sensitive paths or coordinates in public API responses.
+- Do not serve F11/F12 reports over HTTP.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+Stop after F12 and report files changed, commands run, test results, and blockers.
+
