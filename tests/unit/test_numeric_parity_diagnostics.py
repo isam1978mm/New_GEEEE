@@ -43,7 +43,8 @@ def test_diagnosis_reports_multi_root_search_and_near_match_focus_mask(tmp_path:
     assert "near-match" in by_app_file["full_job/focus/focus_zone_17m.tif"]["evidence"]
 
     assert by_app_file["logRatio_dB.tif"]["diagnosis_category"] == "FAIL_SOURCE_SELECTION_MISMATCH"
-    assert "downstream SAR divergence" in by_app_file["logRatio_dB.tif"]["recommended_next_action"] or True
+    assert "downstream SAR divergence" in by_app_file["logRatio_dB.tif"]["evidence"]
+    assert "source selection" in by_app_file["logRatio_dB.tif"]["recommended_next_action"]
 
     assert by_app_file["dem.tif"]["diagnosis_category"] == "FAIL_NODATA_POLICY_MISMATCH"
     assert "Nodata-normalized overlap" in by_app_file["dem.tif"]["evidence"]
