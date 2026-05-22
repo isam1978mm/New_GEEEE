@@ -17,6 +17,7 @@ from app.pipeline.stages.alignment_qa import AlignmentQaStage
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
+from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
@@ -106,6 +107,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             DemDerivativesStage(grid_spec=grid_spec),
             ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher),
             FeatureStacksStage(grid_spec=grid_spec),
+            FocusMaskStage(grid_spec=grid_spec),
             HypercubeStage(grid_spec=grid_spec),
             PcaAnomalyStage(grid_spec=grid_spec),
             ObjectExtractStage(grid_spec=grid_spec),
@@ -114,7 +116,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
     )
     records = await orchestrator.run_run(run_id)
 
-    assert len(records) == 12
+    assert len(records) == 13
 
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))

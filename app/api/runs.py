@@ -16,6 +16,7 @@ from app.pipeline.stages.alignment_qa import AlignmentQaStage
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.dem import DemStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
+from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
@@ -127,6 +128,7 @@ async def run_core_pipeline_for_run(*, run_id: str, settings: Settings) -> None:
                 DemDerivativesStage(grid_spec=grid_spec),
                 ThermalStage(grid_spec=grid_spec),
                 FeatureStacksStage(grid_spec=grid_spec),
+                FocusMaskStage(grid_spec=grid_spec),
                 HypercubeStage(grid_spec=grid_spec),
                 PcaAnomalyStage(grid_spec=grid_spec),
                 ObjectExtractStage(grid_spec=grid_spec),

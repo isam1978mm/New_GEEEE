@@ -10,6 +10,7 @@ from app.pipeline.stages.alignment_qa import AlignmentQaStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.dem_derivatives import OUTPUT_NAMES as DEM_DERIVATIVE_NAMES, DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
+from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
@@ -35,6 +36,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         dem_derivatives_result = asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         thermal_result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
         feature_stacks_result = asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
+        focus_mask_result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         hypercube_result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
         pca_result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
         object_result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
@@ -87,6 +89,13 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "stack_presence_summary": ArtifactClass.FILESYSTEM_ONLY,
             "tensor_audit_summary": ArtifactClass.FILESYSTEM_ONLY,
             "geometry_consistency_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        assert _artifact_classes(focus_mask_result) == {
+            "focus_zone_17m_tif": ArtifactClass.FILESYSTEM_ONLY,
+            "focus_zone_17m_npy": ArtifactClass.FILESYSTEM_ONLY,
+            "focus_zone_ai_ready_window": ArtifactClass.FILESYSTEM_ONLY,
+            "focus_zone_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "focus_band_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(hypercube_result) == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,

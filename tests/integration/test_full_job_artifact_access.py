@@ -17,6 +17,7 @@ from app.pipeline.stages.alignment_qa import AlignmentQaStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
+from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
@@ -48,6 +49,7 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
                 "sar_summary",
                 "science_core_stack_npy",
                 "ai_ready_support_stack_npy",
+                "focus_zone_17m_npy",
                 "object_mask",
                 "parity_qa_summary",
                 "thermal_summary",
@@ -67,6 +69,7 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
         assert "sar_summary" not in public_names
         assert "science_core_stack_npy" not in public_names
         assert "ai_ready_support_stack_npy" not in public_names
+        assert "focus_zone_17m_npy" not in public_names
         assert "object_mask" not in public_names
         assert "parity_qa_summary" not in public_names
         assert "thermal_summary" not in public_names
@@ -97,6 +100,7 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["sar_summary"] == "qa/sar/sar_summary.csv"
     assert name_to_path["science_core_stack_npy"] == "stacks/tensor_support/science_core_stack.npy"
     assert name_to_path["ai_ready_support_stack_npy"] == "stacks/tensor_support/ai_ready_support_stack.npy"
+    assert name_to_path["focus_zone_17m_npy"] == "full_job/focus/focus_zone_17m.npy"
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
     assert name_to_path["parity_qa_summary"] == "qa/parity/parity_qa_summary.json"
     assert name_to_path["thermal_summary"] == "qa/stacks/thermal_summary.json"
@@ -140,6 +144,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             DemDerivativesStage(grid_spec=grid_spec),
             ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher),
             FeatureStacksStage(grid_spec=grid_spec),
+            FocusMaskStage(grid_spec=grid_spec),
             HypercubeStage(grid_spec=grid_spec),
             PcaAnomalyStage(grid_spec=grid_spec),
             ObjectExtractStage(grid_spec=grid_spec),

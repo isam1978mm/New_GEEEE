@@ -600,6 +600,22 @@ Mapping rules:
 - use neutral replacements for notebook sigma0/master/tensor-export variants
 - prefer stable, neutral, domain-functional names
 
+### Focus-mask and exact target-zone local outputs
+
+Suggested neutral names:
+
+- `full_job/focus/focus_zone_17m.tif`
+- `full_job/focus/focus_zone_17m.npy`
+- `full_job/focus/focus_zone_ai_ready_window.npy`
+- `full_job/focus/focus_zone_summary.json`
+- `full_job/focus/focus_zone_band_summary.csv`
+
+Mapping rules:
+
+- keep these outputs `FILESYSTEM_ONLY`
+- do not emit GeoJSON, WKT, KMZ, or target labels in F3
+- keep exact target-zone context out of public API responses and public artifact lists
+
 ### F2 stack-family coverage and deferrals
 
 The notebook stack-variant families approved for F2 are reconciled as follows.
