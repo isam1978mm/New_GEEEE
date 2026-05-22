@@ -25,6 +25,13 @@ MIN_PAIRS = 2
 MAX_PAIRS_TARGETS = (4, 3, 2)
 RADAR_BANDS = ("VV_dB", "VH_dB", "angle")
 OUTPUT_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
+SAR_NPY_OUTPUT_DIR = "npy_radar_bands"
+SAR_NPY_ARTIFACT_NAMES = {
+    "VV_dB": "sar_npy_VV_dB",
+    "VH_dB": "sar_npy_VH_dB",
+    "logRatio_dB": "sar_npy_logRatio_dB",
+    "incidence": "sar_npy_incidence",
+}
 
 
 class RadarCubeFetcher(Protocol):
@@ -369,6 +376,17 @@ def write_sar_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.
     return written_paths
 
 
+def write_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
+    output_dir = run_dir / SAR_NPY_OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written_paths: list[Path] = []
+    for name in OUTPUT_BANDS:
+        npy_path = output_dir / f"{name}.npy"
+        np.save(npy_path, outputs[name].astype(np.float32, copy=False))
+        written_paths.append(npy_path)
+    return written_paths
+
+
 def build_band_summary_rows(outputs: dict[str, np.ndarray], *, nodata: float) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for band_name in OUTPUT_BANDS:
@@ -544,6 +562,7 @@ class SarRtcStage(Stage):
             scale_m=float(self.grid_spec.manifest.scale_m),
         )
         written_paths = write_sar_outputs(context.run_dir, self.grid_spec, outputs)
+        npy_paths = write_sar_npy_outputs(context.run_dir, outputs)
         qa_paths = write_sar_qa_outputs(
             context.run_dir,
             outputs=outputs,
@@ -563,6 +582,16 @@ class SarRtcStage(Stage):
         ]
         artifacts.extend(
             build_stage_artifact(
+                name=SAR_NPY_ARTIFACT_NAMES[path.stem],
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=path.stat().st_size,
+                http_servable=False,
+            )
+            for path in npy_paths
+        )
+        artifacts.extend(
+            build_stage_artifact(
                 name=path.stem,
                 relative_path=path.relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
@@ -578,6 +607,7 @@ class SarRtcStage(Stage):
                 "sar_shape": list(outputs["VV_dB"].shape),
                 "start_date": self.start_date,
                 "end_date": self.end_date,
+                "sar_npy_artifact_names": [SAR_NPY_ARTIFACT_NAMES[path.stem] for path in npy_paths],
                 "qa_artifact_names": [path.stem for path in qa_paths],
             },
         )

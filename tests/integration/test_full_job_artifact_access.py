@@ -49,6 +49,10 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
 
             blocked_names = [
                 "grid_guard_summary",
+                "sar_npy_VV_dB",
+                "sar_npy_VH_dB",
+                "sar_npy_logRatio_dB",
+                "sar_npy_incidence",
                 "sar_summary",
                 "science_core_stack_npy",
                 "ai_ready_support_stack_npy",
@@ -75,6 +79,10 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
         public_names = {artifact["name"] for artifact in body["artifacts"]}
         assert {"objects_index", "clusters_summary", "alignment_qa", "alignment_audit", "alignment_mask_selection"} <= public_names
         assert "grid_guard_summary" not in public_names
+        assert "sar_npy_VV_dB" not in public_names
+        assert "sar_npy_VH_dB" not in public_names
+        assert "sar_npy_logRatio_dB" not in public_names
+        assert "sar_npy_incidence" not in public_names
         assert "sar_summary" not in public_names
         assert "science_core_stack_npy" not in public_names
         assert "ai_ready_support_stack_npy" not in public_names
@@ -112,6 +120,10 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
 
     name_to_path = {artifact.name: artifact.relative_path for artifact in artifacts}
     assert name_to_path["grid_guard_summary"] == "qa/grid_dem/grid_guard_summary.json"
+    assert name_to_path["sar_npy_VV_dB"] == "npy_radar_bands/VV_dB.npy"
+    assert name_to_path["sar_npy_VH_dB"] == "npy_radar_bands/VH_dB.npy"
+    assert name_to_path["sar_npy_logRatio_dB"] == "npy_radar_bands/logRatio_dB.npy"
+    assert name_to_path["sar_npy_incidence"] == "npy_radar_bands/incidence.npy"
     assert name_to_path["sar_summary"] == "qa/sar/sar_summary.csv"
     assert name_to_path["science_core_stack_npy"] == "stacks/tensor_support/science_core_stack.npy"
     assert name_to_path["ai_ready_support_stack_npy"] == "stacks/tensor_support/ai_ready_support_stack.npy"

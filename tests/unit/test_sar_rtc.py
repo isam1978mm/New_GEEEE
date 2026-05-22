@@ -16,6 +16,8 @@ from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sid
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.sar_rtc import (
     RADAR_BANDS,
+    SAR_NPY_ARTIFACT_NAMES,
+    SAR_NPY_OUTPUT_DIR,
     SarRtcStage,
     apply_local_dem_rtc,
     build_final_radar_image,
@@ -363,6 +365,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "VH_dB",
             "logRatio_dB",
             "incidence",
+            "sar_npy_VV_dB",
+            "sar_npy_VH_dB",
+            "sar_npy_logRatio_dB",
+            "sar_npy_incidence",
             "sar_pair_diagnostics",
             "sar_summary",
             "sar_nodata_audit",
@@ -374,17 +380,29 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "VH_dB": ArtifactClass.LOCAL_SENSITIVE,
             "logRatio_dB": ArtifactClass.LOCAL_SENSITIVE,
             "incidence": ArtifactClass.LOCAL_SENSITIVE,
+            "sar_npy_VV_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "sar_npy_VH_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "sar_npy_logRatio_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "sar_npy_incidence": ArtifactClass.FILESYSTEM_ONLY,
             "sar_pair_diagnostics": ArtifactClass.FILESYSTEM_ONLY,
             "sar_summary": ArtifactClass.FILESYSTEM_ONLY,
             "sar_nodata_audit": ArtifactClass.FILESYSTEM_ONLY,
             "sar_alignment_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
         artifact_http_flags = {artifact.name: artifact.http_servable for artifact in result.artifacts}
+        for artifact_name in SAR_NPY_ARTIFACT_NAMES.values():
+            assert artifact_http_flags[artifact_name] is False
         assert artifact_http_flags["sar_pair_diagnostics"] is False
         assert artifact_http_flags["sar_summary"] is False
         assert artifact_http_flags["sar_nodata_audit"] is False
         assert artifact_http_flags["sar_alignment_summary"] is False
         assert result.metadata["band_names"] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
+        assert result.metadata["sar_npy_artifact_names"] == [
+            "sar_npy_VV_dB",
+            "sar_npy_VH_dB",
+            "sar_npy_logRatio_dB",
+            "sar_npy_incidence",
+        ]
         assert result.metadata["qa_artifact_names"] == [
             "sar_pair_diagnostics",
             "sar_summary",
@@ -395,6 +413,11 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         for name in ("VV_dB", "VH_dB", "logRatio_dB", "incidence"):
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
+            npy_path = run_dir / SAR_NPY_OUTPUT_DIR / f"{name}.npy"
+            assert npy_path.is_file()
+            npy_array = np.load(npy_path)
+            assert npy_array.dtype == np.float32
+            assert npy_array.shape == (640, 640)
 
         pair_diagnostics = json.loads((run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
         assert pair_diagnostics["pair_diagnostics_available"] is False

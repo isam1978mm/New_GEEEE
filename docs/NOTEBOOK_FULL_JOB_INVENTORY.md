@@ -126,12 +126,14 @@ Outputs and classification:
 
 - notebook S1 collection selection and grid-lock logic: `A`
 - `VV_dB`, `VH_dB`, `logRatio_dB`, `incidence` rasters: `A`
+- notebook-style SAR per-band NPY exports: `C`
 - local DEM-assisted RTC processing outputs: `A`
 - raw Earth Engine auth-flow behavior and Colab-specific EE bootstrap: `D`
 
 Artifact-class guidance:
 
 - primary SAR rasters are app artifacts
+- notebook-style SAR per-band NPY exports remain `FILESYSTEM_ONLY`
 - any raw notebook-specific auth/runtime mirror remains `FILESYSTEM_ONLY`
 
 ### Drive-export waits and SAR QA/export

@@ -188,14 +188,20 @@ Expected outputs:
 - `VH_dB.tif`
 - `logRatio_dB.tif`
 - `incidence.tif`
+- `npy_radar_bands/VV_dB.npy`
+- `npy_radar_bands/VH_dB.npy`
+- `npy_radar_bands/logRatio_dB.npy`
+- `npy_radar_bands/incidence.npy`
 
 Artifact class:
 
 - existing core class rules remain authoritative
+- SAR NPY band exports are `FILESYSTEM_ONLY`
 
 Notes:
 
 - preserve current parity and RTC formula behavior
+- SAR NPY band exports are local run artifacts only; do not public-list or serve them over HTTP by default
 
 ### 3. DEM derivatives family
 

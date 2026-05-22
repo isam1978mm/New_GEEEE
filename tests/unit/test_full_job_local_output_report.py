@@ -49,4 +49,5 @@ def test_full_job_local_output_report_does_not_embed_local_paths_or_coordinates(
     assert "/home/" not in serialized
     assert "35.59499" not in serialized
     assert "36.12694" not in serialized
+    assert "npy_radar_bands/VV_dB.npy" in serialized
     assert "full_job/gps/gps_point_comparison.json" in serialized
