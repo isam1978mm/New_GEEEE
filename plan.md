@@ -1517,3 +1517,134 @@ Validation:
 - pytest tests/unit/ tests/integration/ tests/notebook_parity/
 
 Stop after F10 and report files changed, commands run, test results, and blockers.
+
+---
+
+# Goal F11 - Numeric and deterministic-content parity report
+
+Reason:
+
+The F10 live notebook-vs-app comparison proved output-family parity for the downloaded notebook run, with no remaining NOTEBOOK_ONLY output families.
+
+F11 must prove whether the actual numeric/content results match, not only whether files exist.
+
+Scope:
+
+- Compare matched notebook and app science outputs using numeric parity.
+- Compare deterministic report/content outputs using canonicalized content parity.
+- Do not require full folder byte-for-byte identity.
+- Do not compare on-hold training, CNN, Swin, YOLO, SegFormer, or broken model-build cells.
+- Do not change notebook code.
+- Do not expose coordinates, paths, geometry, hashes, or exact ROI context through public API responses.
+
+Required comparison families:
+
+- RUN/grid manifest
+- DEM core
+- DEM derivatives
+- SAR GeoTIFF bands
+- SAR NPY bands
+- Radar/tensor stack
+- Tesla/hypercube family where file mapping is available
+- Focus mask 17m
+- Exact-location GeoJSON/KMZ by canonical geometry/content comparison, not raw zip bytes
+- Final intelligence reports where deterministic mapping is available
+- Alignment/QA summaries after removing timestamps, local paths, run IDs, and other unstable fields
+
+Output:
+
+- Add a local-only parity report writer, for example:
+  - scripts/compare_notebook_app_outputs.py
+- The script must accept:
+  - --notebook-root
+  - --app-run-dir
+  - --output-dir
+- The report must be written under a local output directory, for example:
+  - data/reports/numeric_parity_<run_id>.json
+  - data/reports/numeric_parity_<run_id>.csv
+- Reports are FILESYSTEM_ONLY local operator outputs.
+
+Numeric comparison requirements:
+
+- For rasters:
+  - compare CRS
+  - compare width and height
+  - compare transform
+  - compare band count
+  - compare nodata policy where available
+  - compare dtype or record accepted dtype conversion
+  - compare values using exact equality where possible
+  - otherwise compare max absolute difference, mean absolute difference, count of differing pixels, and percent matching
+- For NPY:
+  - compare shape
+  - compare dtype
+  - compare finite/nodata masks where applicable
+  - compare values using exact equality where possible
+  - otherwise compare max absolute difference, mean absolute difference, count of differing cells, and percent matching
+- For CSV:
+  - canonicalize row order where a stable key exists
+  - canonicalize float formatting
+  - compare deterministic columns
+  - ignore unstable timestamps, absolute paths, run IDs, hashes, and local/Drive path fields
+- For JSON/GeoJSON:
+  - canonicalize key order
+  - canonicalize numeric precision
+  - ignore unstable timestamps, absolute paths, run IDs, hashes, and local/Drive path fields
+  - compare feature counts and geometry/content where safe
+- For KMZ:
+  - do not compare raw zip bytes
+  - inspect contained KML where possible
+  - compare canonical feature count, stable names, and coordinate precision only for local FILESYSTEM_ONLY reports
+
+Tolerance policy:
+
+- Default exact comparison for integer/mask arrays.
+- Default tolerance for float arrays:
+  - absolute tolerance 1e-5
+  - relative tolerance 1e-5
+- Allow per-family tolerance overrides only if documented in the report.
+- Any tolerance override must be visible in the output report.
+
+Report fields:
+
+- family
+- notebook_file
+- app_file
+- comparison_type
+- status
+- shape_match
+- crs_match
+- transform_match
+- dtype_match
+- exact_equal
+- max_abs_diff
+- mean_abs_diff
+- differing_count
+- matching_percent
+- tolerance_used
+- skipped_reason
+- notes
+
+Status values:
+
+- PASS
+- FAIL
+- SKIP_UNMAPPED
+- SKIP_MISSING_NOTEBOOK
+- SKIP_MISSING_APP
+- SKIP_UNSUPPORTED_CONTAINER
+
+Tests:
+
+- Add unit tests for numeric array comparison.
+- Add unit tests for raster metadata comparison using small synthetic rasters.
+- Add unit tests for CSV/JSON canonicalization.
+- Add integration or script tests proving the report is local-only and does not embed local absolute paths or exact coordinates in any public surface.
+- Existing tests must continue to pass.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+Stop after F11 and report files changed, commands run, test results, and blockers.
+
