@@ -329,13 +329,13 @@ def diagnose_fail_row(
         if "logRatio" in app_file:
             evidence = "logRatio mismatch mirrors the upstream SAR band mismatch and should be treated as downstream SAR divergence."
         elif "incidence" in app_file or "angle" in app_file:
-            evidence = "Incidence-angle mismatch tracks the same SAR source-selection path and is not yet evidence of an independent bug."
+            evidence = "Incidence-angle mismatch tracks the same SAR source-selection path; app incidence is the documented output mapping for the notebook angle band."
         return _build_row(
             row,
             diagnosis_category="FAIL_SOURCE_SELECTION_MISMATCH",
             metadata_flags=metadata_flags,
             evidence=_join_evidence(evidence, normalized_evidence),
-            recommended_next_action="Inspect notebook/app SAR source selection, orbit pairing, filtering, and RTC path before changing formulas.",
+            recommended_next_action="Generate the SAR source-selection parity report and inspect image ids, date window, orbit pairing, filtering, angle/incidence mapping, and RTC path before changing formulas.",
             safe=False,
         )
     if "dtype_mismatch" in notes and matching_percent is not None and matching_percent > 99.9:

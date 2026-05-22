@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -19,6 +20,7 @@ from app.services.ee_session import initialize_ee_session
 
 DEFAULT_START = "2026-01-01"
 DEFAULT_END = "2026-03-01"
+S1_COLLECTION_ID = "COPERNICUS/S1_GRD"
 MAX_ORBIT_DT_DAYS = 9
 MAX_PAIR_DT_HOURS = 36
 MIN_PAIRS = 2
@@ -43,6 +45,8 @@ class SarPair:
     asc_id: str
     desc_id: str
     dt_ms: int
+    asc_ms: int | None = None
+    desc_ms: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,7 +90,7 @@ def build_grid_region(grid_spec: GridSpec):
 def build_s1_base_collection(grid_spec: GridSpec, *, start_date: str, end_date: str):
     grid_region = build_grid_region(grid_spec)
     return (
-        ee.ImageCollection("COPERNICUS/S1_GRD")
+        ee.ImageCollection(S1_COLLECTION_ID)
         .filterBounds(grid_region)
         .filterDate(start_date, end_date)
         .filter(ee.Filter.eq("instrumentMode", "IW"))
@@ -165,7 +169,15 @@ def greedy_pairs_with_cap(
         if best_match is not None:
             asc_item, desc_item, dt_ms, desc_index = best_match
             used_desc.add(desc_index)
-            pairs.append(SarPair(asc_id=asc_item["id"], desc_id=desc_item["id"], dt_ms=dt_ms))
+            pairs.append(
+                SarPair(
+                    asc_id=asc_item["id"],
+                    desc_id=desc_item["id"],
+                    dt_ms=dt_ms,
+                    asc_ms=int(asc_item["ms"]),
+                    desc_ms=int(desc_item["ms"]),
+                )
+            )
         if len(pairs) >= max_pairs:
             break
     pairs.sort(key=lambda item: item.dt_ms)
@@ -438,8 +450,37 @@ def build_pair_diagnostics_payload(
     pairs = diagnostics.pairs if diagnostics is not None else []
     return {
         "stage": "sar_rtc",
+        "artifact_class": "FILESYSTEM_ONLY",
+        "local_only": True,
+        "collection_id": S1_COLLECTION_ID,
         "start_date": start_date,
         "end_date": end_date,
+        "date_window": {"start_date": start_date, "end_date": end_date},
+        "roi_grid_label": "run_grid",
+        "source_filters": {
+            "instrumentMode": "IW",
+            "resolution_meters": 10,
+            "polarizations": ["VV", "VH"],
+            "orbit_directions": ["ASCENDING", "DESCENDING"],
+            "max_orbit_dt_days": MAX_ORBIT_DT_DAYS,
+            "max_pair_dt_hours": MAX_PAIR_DT_HOURS,
+            "min_pairs": MIN_PAIRS,
+            "max_pairs_targets": list(MAX_PAIRS_TARGETS),
+        },
+        "selected_band_list": ["VV", "VH", "angle"],
+        "sampled_band_list": list(RADAR_BANDS),
+        "output_band_list": list(OUTPUT_BANDS),
+        "angle_incidence_mapping": {
+            "notebook_band": "angle",
+            "app_output_band": "incidence",
+            "relationship": "incidence stores the sampled Sentinel-1 angle band after local DEM RTC masking.",
+        },
+        "processing_path": {
+            "local_dem_rtc": True,
+            "speckle_refined_lee_filtering": False,
+            "db_to_linear_to_db": True,
+            "grid_sampling": "sampleRectangle",
+        },
         "pair_diagnostics_available": diagnostics is not None,
         "pair_count": len(pairs),
         "tile_request_count": diagnostics.tile_request_count if diagnostics is not None else None,
@@ -447,11 +488,19 @@ def build_pair_diagnostics_payload(
             {
                 "asc_id": pair.asc_id,
                 "desc_id": pair.desc_id,
+                "asc_date": _ms_to_iso_date(pair.asc_ms),
+                "desc_date": _ms_to_iso_date(pair.desc_ms),
                 "dt_hours": round(pair.dt_ms / (60.0 * 60.0 * 1000.0), 6),
             }
             for pair in pairs
         ],
     }
+
+
+def _ms_to_iso_date(value: int | None) -> str | None:
+    if value is None:
+        return None
+    return datetime.fromtimestamp(value / 1000.0, tz=UTC).date().isoformat()
 
 
 def build_alignment_summary_payload(

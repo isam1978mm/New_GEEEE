@@ -1,0 +1,419 @@
+from __future__ import annotations
+
+import csv
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+
+SAR_SOURCE_SELECTION_PARITY_PREFIX = "sar_source_selection_parity"
+SAR_SOURCE_SELECTION_FIELDNAMES = [
+    "check",
+    "status",
+    "notebook_value",
+    "app_value",
+    "evidence",
+    "recommended_next_action",
+]
+NOTEBOOK_SAR_QA_PATTERNS = (
+    "SUMMARY_RADAR*.csv",
+    "qa/sar/sar_pair_diagnostics.json",
+    "*sar*selection*.json",
+    "*SAR*selection*.json",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class SarSourceSelectionRow:
+    check: str
+    status: str
+    notebook_value: str
+    app_value: str
+    evidence: str
+    recommended_next_action: str
+
+    def to_report_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class NotebookSarMetadata:
+    root_label: str
+    relative_path: str
+    payload: dict[str, Any]
+
+
+def build_sar_source_selection_parity_report(
+    *,
+    app_run_dir: Path,
+    notebook_roots: list[Path],
+) -> dict[str, Any]:
+    app_payload = _load_app_sar_metadata(app_run_dir)
+    notebook_metadata = find_notebook_sar_metadata(notebook_roots)
+    rows = build_sar_source_selection_rows(app_payload=app_payload, notebook_metadata=notebook_metadata)
+    status_counts: dict[str, int] = {}
+    for row in rows:
+        status_counts[row.status] = status_counts.get(row.status, 0) + 1
+    return {
+        "report_type": "sar_source_selection_parity",
+        "artifact_class": "FILESYSTEM_ONLY",
+        "local_only": True,
+        "app_run_id": app_run_dir.name,
+        "notebook_root_labels": [root.name for root in notebook_roots],
+        "app_metadata_file": "qa/sar/sar_pair_diagnostics.json"
+        if (app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").is_file()
+        else "",
+        "notebook_metadata_files": [
+            {"root_label": item.root_label, "relative_path": item.relative_path} for item in notebook_metadata
+        ],
+        "rows": [row.to_report_dict() for row in rows],
+        "summary": {
+            "row_count": len(rows),
+            "status_counts": status_counts,
+        },
+    }
+
+
+def write_sar_source_selection_parity_report(
+    *,
+    app_run_dir: Path,
+    notebook_roots: list[Path],
+    output_dir: Path,
+) -> tuple[Path, Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report = build_sar_source_selection_parity_report(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
+    stem = f"{SAR_SOURCE_SELECTION_PARITY_PREFIX}_{app_run_dir.name}"
+    json_path = output_dir / f"{stem}.json"
+    csv_path = output_dir / f"{stem}.csv"
+    json_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=SAR_SOURCE_SELECTION_FIELDNAMES)
+        writer.writeheader()
+        for row in report["rows"]:
+            writer.writerow({field: row.get(field, "") for field in SAR_SOURCE_SELECTION_FIELDNAMES})
+    return json_path, csv_path
+
+
+def find_notebook_sar_metadata(notebook_roots: list[Path]) -> list[NotebookSarMetadata]:
+    matches: dict[tuple[str, str], NotebookSarMetadata] = {}
+    for root in notebook_roots:
+        for pattern in NOTEBOOK_SAR_QA_PATTERNS:
+            for path in root.rglob(pattern):
+                if not path.is_file():
+                    continue
+                relative_path = path.relative_to(root).as_posix()
+                payload = _load_notebook_metadata_payload(path)
+                matches[(root.name, relative_path)] = NotebookSarMetadata(
+                    root_label=root.name,
+                    relative_path=relative_path,
+                    payload=payload,
+                )
+    return list(matches.values())
+
+
+def build_sar_source_selection_rows(
+    *,
+    app_payload: dict[str, Any] | None,
+    notebook_metadata: list[NotebookSarMetadata],
+) -> list[SarSourceSelectionRow]:
+    notebook_payload = _merge_notebook_payloads(notebook_metadata)
+    notebook_files = ", ".join(f"{item.root_label}:{item.relative_path}" for item in notebook_metadata)
+    rows: list[SarSourceSelectionRow] = [
+        SarSourceSelectionRow(
+            check="notebook_qa_metadata",
+            status="FOUND" if notebook_metadata else "MISSING",
+            notebook_value=notebook_files,
+            app_value="qa/sar/sar_pair_diagnostics.json" if app_payload is not None else "",
+            evidence=(
+                "Notebook SAR QA metadata was found by root label and relative path."
+                if notebook_metadata
+                else "No notebook SAR QA metadata file was found in the provided roots."
+            ),
+            recommended_next_action=(
+                "Compare source-selection fields below before changing SAR formulas."
+                if notebook_metadata
+                else "Provide SUMMARY_RADAR*.csv or SAR selection JSON from the notebook run."
+            ),
+        )
+    ]
+    if app_payload is None:
+        rows.append(
+            SarSourceSelectionRow(
+                check="app_sar_metadata",
+                status="MISSING",
+                notebook_value="",
+                app_value="",
+                evidence="The app run does not contain qa/sar/sar_pair_diagnostics.json.",
+                recommended_next_action="Run the SAR RTC stage with F13 metadata capture enabled by default.",
+            )
+        )
+        return rows
+
+    rows.extend(
+        [
+            _compare_scalar(
+                check="collection_id",
+                notebook_value=_first_value(notebook_payload, "collection_id"),
+                app_value=str(app_payload.get("collection_id", "")),
+                missing_evidence="Notebook metadata does not declare the Sentinel-1 collection id.",
+                mismatch_action="Confirm both runs use the same Sentinel-1 collection before changing SAR math.",
+            ),
+            _compare_scalar(
+                check="date_window",
+                notebook_value=_date_window_value(notebook_payload),
+                app_value=_date_window_value(app_payload),
+                missing_evidence="Notebook metadata does not declare a comparable date window.",
+                mismatch_action="Reconcile notebook/app SAR date windows before comparing pixel values.",
+            ),
+            _compare_scalar(
+                check="image_identity",
+                notebook_value=_pair_identity_value(notebook_payload),
+                app_value=_pair_identity_value(app_payload),
+                missing_evidence="Notebook metadata does not expose selected ASC/DESC image ids.",
+                mismatch_action="Align selected Sentinel-1 image ids before changing RTC formulas.",
+            ),
+            _compare_scalar(
+                check="orbit_pairing",
+                notebook_value=_pair_delta_value(notebook_payload),
+                app_value=_pair_delta_value(app_payload),
+                missing_evidence="Notebook metadata does not expose comparable pair time deltas.",
+                mismatch_action="Reconcile orbit pair selection and pair time deltas before changing SAR math.",
+            ),
+            _compare_scalar(
+                check="vv_vh_pair_count",
+                notebook_value=_pair_count_value(notebook_payload),
+                app_value=_pair_count_value(app_payload),
+                missing_evidence="Notebook metadata does not expose a comparable VV/VH pair count.",
+                mismatch_action="Reconcile pair count before changing SAR math.",
+            ),
+            _compare_scalar(
+                check="orbit_directions",
+                notebook_value=_orbit_directions_value(notebook_payload),
+                app_value=_orbit_directions_value(app_payload),
+                missing_evidence="Notebook metadata does not expose comparable orbit directions.",
+                mismatch_action="Confirm both runs use the same ASC/DESC orbit-direction policy before changing SAR math.",
+            ),
+            _band_mapping_row(app_payload=app_payload, notebook_payload=notebook_payload),
+            _processing_path_row(app_payload=app_payload, notebook_payload=notebook_payload),
+            SarSourceSelectionRow(
+                check="radar_linear_support_stack",
+                status="DOWNSTREAM_DIAGNOSTIC",
+                notebook_value="",
+                app_value="",
+                evidence="Radar tensor stack parity should be evaluated after SAR source-selection identity is resolved.",
+                recommended_next_action="Do not rewrite stack logic until VV/VH/logRatio/incidence source parity is understood.",
+            ),
+        ]
+    )
+    return rows
+
+
+def _load_app_sar_metadata(app_run_dir: Path) -> dict[str, Any] | None:
+    path = app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_notebook_metadata_payload(path: Path) -> dict[str, Any]:
+    if path.suffix.lower() == ".json":
+        return json.loads(path.read_text(encoding="utf-8"))
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    payload: dict[str, Any] = {"rows": rows}
+    if rows:
+        payload.update(_collapse_csv_rows(rows))
+    return payload
+
+
+def _collapse_csv_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
+    collapsed: dict[str, Any] = {}
+    for row in rows:
+        normalized = {_normalize_key(key): value for key, value in row.items() if value not in (None, "")}
+        for key, value in normalized.items():
+            if key in {"band_name", "band"}:
+                collapsed.setdefault("selected_band_list", []).append(value)
+            elif key not in collapsed:
+                collapsed[key] = value
+    if "selected_band_list" in collapsed:
+        collapsed["selected_band_list"] = sorted(set(collapsed["selected_band_list"]))
+    return collapsed
+
+
+def _merge_notebook_payloads(metadata: list[NotebookSarMetadata]) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    for item in metadata:
+        for key, value in item.payload.items():
+            normalized_key = _normalize_key(key)
+            if normalized_key not in merged and value not in (None, "", []):
+                merged[normalized_key] = value
+    return merged
+
+
+def _compare_scalar(
+    *,
+    check: str,
+    notebook_value: str,
+    app_value: str,
+    missing_evidence: str,
+    mismatch_action: str,
+) -> SarSourceSelectionRow:
+    if not notebook_value:
+        return SarSourceSelectionRow(
+            check=check,
+            status="NEEDS_MANUAL_REVIEW",
+            notebook_value="",
+            app_value=app_value,
+            evidence=missing_evidence,
+            recommended_next_action="Capture this field from the notebook run if available.",
+        )
+    status = "MATCH" if notebook_value == app_value else "MISMATCH"
+    return SarSourceSelectionRow(
+        check=check,
+        status=status,
+        notebook_value=notebook_value,
+        app_value=app_value,
+        evidence=(
+            f"{check} matches between notebook and app metadata."
+            if status == "MATCH"
+            else f"{check} differs between notebook and app metadata."
+        ),
+        recommended_next_action="No action required." if status == "MATCH" else mismatch_action,
+    )
+
+
+def _band_mapping_row(*, app_payload: dict[str, Any], notebook_payload: dict[str, Any]) -> SarSourceSelectionRow:
+    mapping = app_payload.get("angle_incidence_mapping", {})
+    notebook_band = str(mapping.get("notebook_band", "angle"))
+    app_band = str(mapping.get("app_output_band", "incidence"))
+    notebook_bands = _list_value(notebook_payload.get("selected_band_list"))
+    app_bands = _list_value(app_payload.get("output_band_list"))
+    status = "DOCUMENTED" if notebook_band == "angle" and app_band == "incidence" else "NEEDS_MANUAL_REVIEW"
+    return SarSourceSelectionRow(
+        check="angle_incidence_mapping",
+        status=status,
+        notebook_value=",".join(notebook_bands),
+        app_value=",".join(app_bands),
+        evidence=f"Notebook angle band is mapped to app incidence output as local-only metadata: {notebook_band}->{app_band}.",
+        recommended_next_action="Treat angle/incidence naming as a mapping issue unless source metadata proves a numeric source mismatch.",
+    )
+
+
+def _processing_path_row(*, app_payload: dict[str, Any], notebook_payload: dict[str, Any]) -> SarSourceSelectionRow:
+    app_path = app_payload.get("processing_path", {})
+    notebook_path = notebook_payload.get("processing_path", {})
+    app_value = _compact_json(app_path)
+    notebook_value = _compact_json(notebook_path)
+    status = "NEEDS_MANUAL_REVIEW" if not notebook_value else ("MATCH" if notebook_value == app_value else "MISMATCH")
+    return SarSourceSelectionRow(
+        check="processing_path",
+        status=status,
+        notebook_value=notebook_value,
+        app_value=app_value,
+        evidence="Processing-path flags cover local DEM RTC, refined-Lee filtering, dB-linear-dB processing, and grid sampling.",
+        recommended_next_action=(
+            "Capture notebook processing-path flags if available."
+            if status == "NEEDS_MANUAL_REVIEW"
+            else "No action required."
+            if status == "MATCH"
+            else "Reconcile RTC/filtering/source processing before changing SAR formulas."
+        ),
+    )
+
+
+def _first_value(payload: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = payload.get(_normalize_key(key))
+        if value not in (None, "", []):
+            return _string_value(value)
+    return ""
+
+
+def _date_window_value(payload: dict[str, Any]) -> str:
+    date_window = payload.get("date_window")
+    if isinstance(date_window, dict):
+        start = date_window.get("start_date") or date_window.get("start")
+        end = date_window.get("end_date") or date_window.get("end")
+        if start and end:
+            return f"{start}..{end}"
+    start = payload.get("start_date") or payload.get("start")
+    end = payload.get("end_date") or payload.get("end")
+    return f"{start}..{end}" if start and end else ""
+
+
+def _pair_identity_value(payload: dict[str, Any]) -> str:
+    pairs = payload.get("pairs")
+    if isinstance(pairs, list):
+        values = []
+        for pair in pairs:
+            if not isinstance(pair, dict):
+                continue
+            asc_id = pair.get("asc_id") or pair.get("ascending_id")
+            desc_id = pair.get("desc_id") or pair.get("descending_id")
+            if asc_id and desc_id:
+                values.append(f"{asc_id}>{desc_id}")
+        return "|".join(values)
+    asc_id = payload.get("asc_id") or payload.get("ascending_id")
+    desc_id = payload.get("desc_id") or payload.get("descending_id")
+    return f"{asc_id}>{desc_id}" if asc_id and desc_id else ""
+
+
+def _pair_delta_value(payload: dict[str, Any]) -> str:
+    pairs = payload.get("pairs")
+    if isinstance(pairs, list):
+        values = []
+        for pair in pairs:
+            if not isinstance(pair, dict):
+                continue
+            value = pair.get("dt_hours") or pair.get("pair_dt_hours")
+            if value not in (None, ""):
+                values.append(str(value))
+        return "|".join(values)
+    value = payload.get("dt_hours") or payload.get("pair_dt_hours")
+    return str(value) if value not in (None, "") else ""
+
+
+def _pair_count_value(payload: dict[str, Any]) -> str:
+    value = payload.get("pair_count") or payload.get("vv_vh_pair_count")
+    if value not in (None, ""):
+        return str(value)
+    pairs = payload.get("pairs")
+    if isinstance(pairs, list):
+        return str(len(pairs))
+    return ""
+
+
+def _orbit_directions_value(payload: dict[str, Any]) -> str:
+    source_filters = payload.get("source_filters")
+    if isinstance(source_filters, dict):
+        directions = _list_value(source_filters.get("orbit_directions"))
+        if directions:
+            return ",".join(directions)
+    directions = _list_value(payload.get("orbit_directions") or payload.get("orbit_direction"))
+    return ",".join(directions)
+
+
+def _normalize_key(key: str) -> str:
+    return key.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _list_value(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if isinstance(value, tuple):
+        return [str(item) for item in value]
+    if isinstance(value, str) and value:
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return []
+
+
+def _string_value(value: Any) -> str:
+    if isinstance(value, (dict, list, tuple)):
+        return _compact_json(value)
+    return str(value)
+
+
+def _compact_json(value: Any) -> str:
+    if value in (None, "", [], {}):
+        return ""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))

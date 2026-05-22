@@ -18,8 +18,12 @@ from app.pipeline.stages.sar_rtc import (
     RADAR_BANDS,
     SAR_NPY_ARTIFACT_NAMES,
     SAR_NPY_OUTPUT_DIR,
+    S1_COLLECTION_ID,
+    SarFetchDiagnostics,
+    SarPair,
     SarRtcStage,
     apply_local_dem_rtc,
+    build_pair_diagnostics_payload,
     build_final_radar_image,
     build_s1_base_collection,
     create_ee_radar_cube_fetcher,
@@ -420,6 +424,17 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             assert npy_array.shape == (640, 640)
 
         pair_diagnostics = json.loads((run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
+        assert pair_diagnostics["artifact_class"] == "FILESYSTEM_ONLY"
+        assert pair_diagnostics["local_only"] is True
+        assert pair_diagnostics["collection_id"] == S1_COLLECTION_ID
+        assert pair_diagnostics["selected_band_list"] == ["VV", "VH", "angle"]
+        assert pair_diagnostics["sampled_band_list"] == ["VV_dB", "VH_dB", "angle"]
+        assert pair_diagnostics["output_band_list"] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
+        assert pair_diagnostics["angle_incidence_mapping"]["notebook_band"] == "angle"
+        assert pair_diagnostics["angle_incidence_mapping"]["app_output_band"] == "incidence"
+        assert pair_diagnostics["processing_path"]["local_dem_rtc"] is True
+        assert pair_diagnostics["processing_path"]["speckle_refined_lee_filtering"] is False
+        assert pair_diagnostics["processing_path"]["db_to_linear_to_db"] is True
         assert pair_diagnostics["pair_diagnostics_available"] is False
         assert pair_diagnostics["pair_count"] == 0
         assert "bounds" not in pair_diagnostics
@@ -440,6 +455,35 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert alignment_summary["all_float32"] is True
         assert alignment_summary["expected_shape"] == [640, 640]
         assert "crs_transform" not in alignment_summary
+
+
+def test_pair_diagnostics_payload_records_source_selection_without_public_grid_leakage() -> None:
+    payload = build_pair_diagnostics_payload(
+        start_date="2026-01-01",
+        end_date="2026-03-01",
+        diagnostics=SarFetchDiagnostics(
+            pairs=[SarPair(asc_id="ASC_1", desc_id="DESC_1", dt_ms=3_600_000, asc_ms=1_704_067_200_000, desc_ms=1_704_070_800_000)],
+            tile_request_count=4,
+        ),
+    )
+
+    assert payload["collection_id"] == S1_COLLECTION_ID
+    assert payload["date_window"] == {"start_date": "2026-01-01", "end_date": "2026-03-01"}
+    assert payload["source_filters"]["orbit_directions"] == ["ASCENDING", "DESCENDING"]
+    assert payload["pairs"] == [
+        {
+            "asc_id": "ASC_1",
+            "desc_id": "DESC_1",
+            "asc_date": "2024-01-01",
+            "desc_date": "2024-01-01",
+            "dt_hours": 1.0,
+        }
+    ]
+    serialized = json.dumps(payload, sort_keys=True)
+    assert "bounds" not in serialized
+    assert "transform" not in serialized
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
 
 
 def _settings(run_dir: Path):

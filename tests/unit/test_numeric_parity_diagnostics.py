@@ -46,7 +46,7 @@ def test_diagnosis_reports_multi_root_search_and_near_match_focus_mask(tmp_path:
 
     assert by_app_file["logRatio_dB.tif"]["diagnosis_category"] == "FAIL_SOURCE_SELECTION_MISMATCH"
     assert "downstream SAR divergence" in by_app_file["logRatio_dB.tif"]["evidence"]
-    assert "source selection" in by_app_file["logRatio_dB.tif"]["recommended_next_action"]
+    assert "SAR source-selection parity report" in by_app_file["logRatio_dB.tif"]["recommended_next_action"]
 
     assert by_app_file["dem.tif"]["diagnosis_category"] == "FAIL_NODATA_POLICY_MISMATCH"
     assert "Nodata-normalized overlap" in by_app_file["dem.tif"]["evidence"]
@@ -72,6 +72,65 @@ def test_normalized_evidence_skips_mismatched_raster_band_counts(tmp_path: Path)
     )
 
     assert evidence == "Nodata-normalized evidence skipped because raster shapes or band counts differ."
+
+
+def test_diagnosis_keeps_sar_source_selection_separate_from_generic_numeric_mismatch(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "app_run" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    report_path = tmp_path / "reports" / "numeric_parity_run-123.json"
+    app_run_dir.mkdir(parents=True, exist_ok=True)
+    notebook_root.mkdir(parents=True, exist_ok=True)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "family": "sar_geotiff_bands",
+                        "notebook_file": "GEOTIFF_RADAR_BANDS/RADAR_angle_640_demo.tif",
+                        "app_file": "incidence.tif",
+                        "comparison_type": "raster",
+                        "status": "FAIL",
+                        "shape_match": True,
+                        "dtype_match": True,
+                        "max_abs_diff": 8.0,
+                        "mean_abs_diff": 1.0,
+                        "differing_count": 4,
+                        "matching_percent": 0.0,
+                        "tolerance_used": {"abs_tol": 1e-4, "rel_tol": 1e-5},
+                        "notes": "",
+                    },
+                    {
+                        "family": "final_intelligence_reports",
+                        "notebook_file": "report.json",
+                        "app_file": "full_job/field_ops/field_ops_report.json",
+                        "comparison_type": "json",
+                        "status": "FAIL",
+                        "shape_match": None,
+                        "dtype_match": None,
+                        "max_abs_diff": None,
+                        "mean_abs_diff": None,
+                        "differing_count": None,
+                        "matching_percent": None,
+                        "tolerance_used": {},
+                        "notes": "",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_numeric_parity_diagnosis_report(
+        parity_report_path=report_path,
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+    )
+
+    by_app_file = {row["app_file"]: row for row in report["rows"]}
+    assert by_app_file["incidence.tif"]["diagnosis_category"] == "FAIL_SOURCE_SELECTION_MISMATCH"
+    assert "angle band" in by_app_file["incidence.tif"]["evidence"]
+    assert by_app_file["full_job/field_ops/field_ops_report.json"]["diagnosis_category"] == "FAIL_NUMERIC_MISMATCH"
 
 
 def _build_fixture_environment(tmp_path: Path) -> tuple[Path, Path, list[Path]]:
