@@ -13,6 +13,7 @@ from app.db.models import Artifact, ArtifactClass
 EXPERIMENTAL_DIRNAME = "experimental"
 CLASSIFICATIONS_CSV_NAME = "classifications.csv"
 SUMMARY_JSON_NAME = "summary.json"
+NEUTRAL_LABELS_JSON_NAME = "neutral_target_labels.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +21,7 @@ class ExperimentalOutputPaths:
     output_dir: Path
     classifications_csv: Path
     summary_json: Path
+    neutral_labels_json: Path
 
 
 async def write_experimental_outputs(
@@ -35,6 +37,7 @@ async def write_experimental_outputs(
 
     classifications_csv = output_dir / CLASSIFICATIONS_CSV_NAME
     summary_json = output_dir / SUMMARY_JSON_NAME
+    neutral_labels_json = output_dir / NEUTRAL_LABELS_JSON_NAME
 
     fieldnames = list(classifications[0].keys()) if classifications else ["object_id", "class_id", "class_score"]
     with classifications_csv.open("w", encoding="utf-8", newline="") as handle:
@@ -44,6 +47,10 @@ async def write_experimental_outputs(
             writer.writerow(row)
 
     summary_json.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    neutral_labels_json.write_text(
+        json.dumps(_build_neutral_labels_payload(classifications, summary), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
     async with session_factory() as session:
         await _upsert_artifact(
@@ -60,13 +67,58 @@ async def write_experimental_outputs(
             relative_path=summary_json.relative_to(run_dir).as_posix(),
             size_bytes=summary_json.stat().st_size,
         )
+        await _upsert_artifact(
+            session,
+            run_id=run_id,
+            name="experimental_neutral_labels",
+            relative_path=neutral_labels_json.relative_to(run_dir).as_posix(),
+            size_bytes=neutral_labels_json.stat().st_size,
+        )
         await session.commit()
 
     return ExperimentalOutputPaths(
         output_dir=output_dir,
         classifications_csv=classifications_csv,
         summary_json=summary_json,
+        neutral_labels_json=neutral_labels_json,
     )
+
+
+def _build_neutral_labels_payload(
+    classifications: list[dict[str, object]],
+    summary: dict[str, object],
+) -> dict[str, object]:
+    object_labels = [
+        {
+            "object_id": int(row["object_id"]),
+            "cluster_id": int(row["cluster_id"]),
+            "class_id": row["class_id"],
+            "class_family": row["class_family"],
+            "class_score": row["class_score"],
+        }
+        for row in classifications
+    ]
+    cluster_labels: list[dict[str, object]] = []
+    labels_by_cluster: dict[int, list[str]] = {}
+    for row in classifications:
+        cluster_id = int(row["cluster_id"])
+        labels_by_cluster.setdefault(cluster_id, []).append(str(row["class_id"]))
+    for cluster_id in sorted(labels_by_cluster):
+        class_ids = sorted(labels_by_cluster[cluster_id])
+        cluster_labels.append(
+            {
+                "cluster_id": cluster_id,
+                "dominant_class_id": class_ids[0],
+                "class_ids": class_ids,
+            }
+        )
+    return {
+        "classifier_version": summary.get("classifier_version", "experimental_v1"),
+        "object_count": int(summary.get("object_count", len(object_labels))),
+        "cluster_count": int(summary.get("cluster_count", len(cluster_labels))),
+        "object_labels": object_labels,
+        "cluster_labels": cluster_labels,
+    }
 
 
 async def _upsert_artifact(
@@ -96,4 +148,3 @@ async def _upsert_artifact(
     artifact.sha256 = None
     artifact.artifact_class = ArtifactClass.FILESYSTEM_ONLY
     artifact.http_servable = False
-

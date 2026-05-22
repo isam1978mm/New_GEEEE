@@ -15,4 +15,4 @@ This package is local-only, experimental, and env-gated.
 
 - `inputs.py` validates a completed core run, required artifacts, allowed artifact classes, and grid consistency before classification.
 - `classifier.py` produces neutral class assignments from validated core artifacts.
-- `outputs.py` writes local filesystem-only summaries under the run's `experimental/` directory.
+- `outputs.py` writes local filesystem-only summaries and neutral target-label outputs under the run's `experimental/` directory.

@@ -767,6 +767,12 @@ The following families may be implemented as experimental local outputs only:
 - neutral target-label outputs
 - exact-target operational deliverables
 
+Current neutral local output examples:
+
+- `experimental/classifications.csv`
+- `experimental/summary.json`
+- `experimental/neutral_target_labels.json`
+
 External naming rules remain:
 
 - use neutral app-facing names

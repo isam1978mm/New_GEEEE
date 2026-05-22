@@ -71,11 +71,16 @@ async def test_write_experimental_outputs_stays_under_run_experimental_and_marks
     assert output_paths.output_dir == run_dir / "experimental"
     assert output_paths.classifications_csv.is_file()
     assert output_paths.summary_json.is_file()
+    assert output_paths.neutral_labels_json.is_file()
     assert output_paths.classifications_csv.relative_to(run_dir).as_posix().startswith("experimental/")
     assert output_paths.summary_json.relative_to(run_dir).as_posix().startswith("experimental/")
+    assert output_paths.neutral_labels_json.relative_to(run_dir).as_posix().startswith("experimental/")
 
     summary_payload = json.loads(output_paths.summary_json.read_text(encoding="utf-8"))
     assert summary_payload["class_counts"] == {"Class_A": 1}
+    labels_payload = json.loads(output_paths.neutral_labels_json.read_text(encoding="utf-8"))
+    assert labels_payload["object_labels"][0]["class_id"] == "Class_A"
+    assert labels_payload["cluster_labels"][0]["dominant_class_id"] == "Class_A"
 
     async with session_factory() as session:
         artifacts = list(
@@ -85,7 +90,7 @@ async def test_write_experimental_outputs_stays_under_run_experimental_and_marks
         )
 
     indexed = {artifact.name: artifact for artifact in artifacts if artifact.name.startswith("experimental_")}
-    assert set(indexed) == {"experimental_classifications", "experimental_summary"}
+    assert set(indexed) == {"experimental_classifications", "experimental_neutral_labels", "experimental_summary"}
     for artifact in indexed.values():
         assert artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY
         assert artifact.http_servable is False

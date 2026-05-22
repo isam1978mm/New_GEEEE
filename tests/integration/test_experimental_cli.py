@@ -50,9 +50,11 @@ def test_experimental_cli_writes_deterministic_filesystem_only_outputs(tmp_path)
     output_dir = data_dir / "runs" / run_id / "experimental"
     classifications_path = output_dir / "classifications.csv"
     summary_path = output_dir / "summary.json"
+    neutral_labels_path = output_dir / "neutral_target_labels.json"
 
     assert classifications_path.is_file()
     assert summary_path.is_file()
+    assert neutral_labels_path.is_file()
 
     rows = list(csv.DictReader(classifications_path.open("r", encoding="utf-8", newline="")))
     assert len(rows) == 2
@@ -63,9 +65,13 @@ def test_experimental_cli_writes_deterministic_filesystem_only_outputs(tmp_path)
     assert summary["run_id"] == run_id
     assert summary["object_count"] == 2
     assert summary["cluster_count"] == 1
+    neutral_labels = json.loads(neutral_labels_path.read_text(encoding="utf-8"))
+    assert len(neutral_labels["object_labels"]) == 2
+    assert neutral_labels["object_labels"][0]["class_id"].startswith("Class_")
+    assert neutral_labels["cluster_labels"][0]["dominant_class_id"].startswith("Class_")
 
     artifacts = asyncio.run(_load_experimental_artifacts(data_dir=data_dir, db_path=db_path, run_id=run_id))
-    assert set(artifacts) == {"experimental_classifications", "experimental_summary"}
+    assert set(artifacts) == {"experimental_classifications", "experimental_neutral_labels", "experimental_summary"}
     for artifact in artifacts.values():
         assert artifact["artifact_class"] == ArtifactClass.FILESYSTEM_ONLY.value
         assert artifact["http_servable"] is False
