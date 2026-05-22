@@ -10,6 +10,7 @@ from app.pipeline.stages.alignment_qa import AlignmentQaStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.dem_derivatives import OUTPUT_NAMES as DEM_DERIVATIVE_NAMES, DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
+from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
@@ -39,6 +40,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         feature_stacks_result = asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
         focus_mask_result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         location_exports_result = asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
+        field_ops_result = asyncio.run(FieldOpsExportsStage(grid_spec=grid_spec).run(context))
         hypercube_result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
         pca_result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
         object_result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
@@ -102,6 +104,11 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(location_exports_result) == {
             "location_geojson": ArtifactClass.FILESYSTEM_ONLY,
             "location_kmz": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        assert _artifact_classes(field_ops_result) == {
+            "field_ops_navigation_kmz": ArtifactClass.FILESYSTEM_ONLY,
+            "field_ops_report": ArtifactClass.FILESYSTEM_ONLY,
+            "field_ops_brief": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(hypercube_result) == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,

@@ -631,6 +631,22 @@ Mapping rules:
 - do not serve them through the normal artifact route
 - keep any exact coordinates inside the file contents only, not in public DTOs or error payloads
 
+### Field-operations KMZ and local report outputs
+
+Suggested neutral names:
+
+- `kmz/field_ops_navigation.kmz`
+- `full_job/field_ops/field_ops_report.json`
+- `full_job/field_ops/field_ops_brief.txt`
+
+Mapping rules:
+
+- keep these outputs `FILESYSTEM_ONLY`
+- keep them under the local run directory only
+- do not public-list them
+- do not serve them through the normal artifact route
+- keep exact-location and target context inside local file contents only, never in public DTOs or error payloads
+
 ### F2 stack-family coverage and deferrals
 
 The notebook stack-variant families approved for F2 are reconciled as follows.
