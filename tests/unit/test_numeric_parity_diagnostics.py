@@ -8,6 +8,8 @@ import rasterio
 from rasterio.transform import from_origin
 
 from app.services.numeric_parity_diagnostics import (
+    NotebookMatch,
+    build_normalized_evidence,
     build_numeric_parity_diagnosis_report,
     parse_metadata_flags,
 )
@@ -48,6 +50,28 @@ def test_diagnosis_reports_multi_root_search_and_near_match_focus_mask(tmp_path:
 
     assert by_app_file["dem.tif"]["diagnosis_category"] == "FAIL_NODATA_POLICY_MISMATCH"
     assert "Nodata-normalized overlap" in by_app_file["dem.tif"]["evidence"]
+
+
+def test_normalized_evidence_skips_mismatched_raster_band_counts(tmp_path: Path) -> None:
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    app_run_dir = tmp_path / "app_run" / "run-123"
+    notebook_raster = notebook_root / "single_band.tif"
+    app_raster = app_run_dir / "multi_band.tif"
+    _write_raster(notebook_raster, nodata=-9999.0, fill_value=1.0, band_count=1)
+    _write_raster(app_raster, nodata=-9999.0, fill_value=1.0, band_count=3)
+
+    evidence = build_normalized_evidence(
+        row={
+            "comparison_type": "raster",
+            "app_file": "multi_band.tif",
+            "tolerance_used": {"abs_tol": 1e-5, "rel_tol": 1e-5},
+        },
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        notebook_matches=[NotebookMatch(root_label=notebook_root.name, relative_path="single_band.tif")],
+    )
+
+    assert evidence == "Nodata-normalized evidence skipped because raster shapes or band counts differ."
 
 
 def _build_fixture_environment(tmp_path: Path) -> tuple[Path, Path, list[Path]]:
@@ -166,9 +190,10 @@ def _write_raster(
     nodata: float,
     fill_value: float,
     changed_pixels: int = 0,
+    band_count: int = 1,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    array = np.full((2, 2), fill_value, dtype=np.float32)
+    array = np.full((band_count, 2, 2), fill_value, dtype=np.float32)
     if changed_pixels:
         flat = array.reshape(-1)
         for index in range(min(changed_pixels, flat.size)):
@@ -179,10 +204,10 @@ def _write_raster(
         driver="GTiff",
         height=2,
         width=2,
-        count=1,
+        count=band_count,
         dtype="float32",
         crs="EPSG:32637",
         transform=from_origin(500000.0, 4100000.0, 10.0, 10.0),
         nodata=nodata,
     ) as dataset:
-        dataset.write(array, 1)
+        dataset.write(array)

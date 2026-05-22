@@ -438,13 +438,17 @@ def build_normalized_evidence(
         app_raster = load_raster_snapshot(app_path)
     except Exception:
         return ""
-    notebook_mask = _valid_mask(notebook_raster.array, notebook_raster.nodata)
-    app_mask = _valid_mask(app_raster.array, app_raster.nodata)
+    prepared_arrays = _prepare_nodata_normalization_arrays(notebook_raster.array, app_raster.array)
+    if prepared_arrays is None:
+        return "Nodata-normalized evidence skipped because raster shapes or band counts differ."
+    notebook_array, app_array = prepared_arrays
+    notebook_mask = _valid_mask(notebook_array, notebook_raster.nodata)
+    app_mask = _valid_mask(app_array, app_raster.nodata)
     overlap_mask = notebook_mask & app_mask
     if not overlap_mask.any():
         return "No overlapping valid pixels remain after nodata normalization."
-    notebook_values = notebook_raster.array[overlap_mask]
-    app_values = app_raster.array[overlap_mask]
+    notebook_values = notebook_array[overlap_mask]
+    app_values = app_array[overlap_mask]
     normalized = compare_arrays(notebook_values, app_values, tolerance=spec_tolerance_for_row(row))
     return (
         f"Nodata-normalized overlap has matching_percent={normalized['matching_percent']:.6f} "
@@ -515,6 +519,27 @@ def _valid_mask(array: np.ndarray, nodata: float | None) -> np.ndarray:
     if nodata is not None:
         mask &= array != nodata
     return mask
+
+
+def _prepare_nodata_normalization_arrays(
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    if notebook_array.shape == app_array.shape:
+        return notebook_array, app_array
+    notebook_single = _squeeze_single_band_array(notebook_array)
+    app_single = _squeeze_single_band_array(app_array)
+    if notebook_single is not None and app_single is not None and notebook_single.shape == app_single.shape:
+        return notebook_single, app_single
+    return None
+
+
+def _squeeze_single_band_array(array: np.ndarray) -> np.ndarray | None:
+    if array.ndim == 2:
+        return array
+    if array.ndim == 3 and array.shape[0] == 1:
+        return array[0]
+    return None
 
 
 def _match_candidate(relative_path: str, candidate: str) -> bool:
