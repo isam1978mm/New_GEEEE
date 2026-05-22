@@ -263,6 +263,31 @@ This means:
 - the guarded artifact route does not override `FILESYSTEM_ONLY`
 - local operator review of the complete output set happens from the run directory, not from public HTTP responses
 
+## Full-Job Comparison Report
+
+Generate the local full-job inventory comparison report with:
+
+```bash
+python scripts/write_full_job_local_output_report.py --output-dir ./data/reports
+```
+
+This writes a local-only `FILESYSTEM_ONLY` report:
+
+- `./data/reports/full_job_local_output_comparison_report.json`
+
+Use it to review:
+
+- covered notebook-equivalent output families
+- missing approved output families
+- intentionally excluded output families
+- on-hold output families
+
+Operational rules:
+
+- treat the report as a local artifact, not a public API product
+- do not publish it without an explicit redaction step and approval
+- do not add local paths, exact coordinates, or raw target-location data to any redacted derivative
+
 ## Parity Tests
 
 Run the current local verification suite:

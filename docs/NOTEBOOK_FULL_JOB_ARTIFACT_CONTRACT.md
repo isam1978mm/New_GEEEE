@@ -791,6 +791,7 @@ Current neutral local output examples:
 - `full_job/reference/reference_locator_inventory.json`
 - `full_job/gps/gps_point_comparison.json`
 - `full_job/gps/gps_point_comparison.csv`
+- `full_job_local_output_comparison_report.json`
 
 External naming rules remain:
 
