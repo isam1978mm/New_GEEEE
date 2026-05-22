@@ -13,6 +13,7 @@ from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
+from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.s2_indices import INDEX_NAMES, S2IndicesStage, deterministic_s2_cube_fetcher
@@ -37,6 +38,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         thermal_result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
         feature_stacks_result = asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
         focus_mask_result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
+        location_exports_result = asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
         hypercube_result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
         pca_result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
         object_result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
@@ -96,6 +98,10 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "focus_zone_ai_ready_window": ArtifactClass.FILESYSTEM_ONLY,
             "focus_zone_summary": ArtifactClass.FILESYSTEM_ONLY,
             "focus_band_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        assert _artifact_classes(location_exports_result) == {
+            "location_geojson": ArtifactClass.FILESYSTEM_ONLY,
+            "location_kmz": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(hypercube_result) == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,

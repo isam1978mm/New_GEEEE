@@ -19,6 +19,7 @@ from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
+from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.s2_indices import S2IndicesStage
@@ -129,6 +130,7 @@ async def run_core_pipeline_for_run(*, run_id: str, settings: Settings) -> None:
                 ThermalStage(grid_spec=grid_spec),
                 FeatureStacksStage(grid_spec=grid_spec),
                 FocusMaskStage(grid_spec=grid_spec),
+                LocationExportsStage(grid_spec=grid_spec),
                 HypercubeStage(grid_spec=grid_spec),
                 PcaAnomalyStage(grid_spec=grid_spec),
                 ObjectExtractStage(grid_spec=grid_spec),

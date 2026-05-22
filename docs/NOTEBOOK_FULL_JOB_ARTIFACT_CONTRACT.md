@@ -616,6 +616,21 @@ Mapping rules:
 - do not emit GeoJSON, WKT, KMZ, or target labels in F3
 - keep exact target-zone context out of public API responses and public artifact lists
 
+### Exact-location GeoJSON and KMZ local outputs
+
+Suggested neutral names:
+
+- `full_job/location/site_location.geojson`
+- `kmz/site_location.kmz`
+
+Mapping rules:
+
+- keep these outputs `FILESYSTEM_ONLY`
+- write them only under the local run directory
+- do not public-list them
+- do not serve them through the normal artifact route
+- keep any exact coordinates inside the file contents only, not in public DTOs or error payloads
+
 ### F2 stack-family coverage and deferrals
 
 The notebook stack-variant families approved for F2 are reconciled as follows.
