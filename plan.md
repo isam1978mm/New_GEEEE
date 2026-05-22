@@ -1796,3 +1796,124 @@ Validation:
 
 Stop after F12 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F13 - Reconcile SAR source-selection and metadata parity
+
+Reason:
+
+F12 diagnosed the numeric parity failures. The main blocker is SAR mismatch:
+
+- SAR GeoTIFF VV/VH/logRatio/incidence rows diagnose as FAIL_SOURCE_SELECTION_MISMATCH
+- SAR NPY logRatio/incidence rows diagnose as FAIL_SOURCE_SELECTION_MISMATCH
+- radar tensor stack mismatch is likely downstream from SAR mismatch or stack band order
+- DEM and focus-mask issues are secondary and should not be mixed into this goal
+
+F13 must isolate why the notebook and app SAR outputs differ numerically before changing science logic.
+
+Do not force parity by weakening tolerances.
+Do not rewrite SAR formulas until the source-selection diagnosis proves the exact cause.
+Do not change notebook code.
+
+Scope:
+
+- Diagnose and reconcile SAR source-selection parity first.
+- Compare notebook SAR selection metadata against app SAR selection metadata.
+- Compare image/date/orbit/pair/filter/RTC inputs before changing calculations.
+- Improve app SAR metadata capture if needed.
+- Improve F11/F12 reports if needed to show SAR source identity clearly.
+- Do not work on DEM derivatives, hypercube, object extraction, field ops, GPS, or CNN/training in this goal.
+
+Required SAR families:
+
+- VV_dB
+- VH_dB
+- logRatio_dB
+- incidence / angle
+- SAR NPY equivalents
+- radar_linear_support_stack only as downstream diagnostic, not as primary fix
+
+Create/update:
+
+- app/pipeline/stages/sar_rtc.py if metadata capture or safe source-selection reconciliation is needed
+- app/services/numeric_parity_report.py if SAR comparison metadata needs clearer reporting
+- app/services/numeric_parity_diagnostics.py if SAR diagnosis needs clearer categories/evidence
+- scripts/compare_notebook_app_outputs.py only if needed
+- scripts/diagnose_numeric_parity_failures.py only if needed
+- tests/unit/test_sar_rtc.py
+- tests/unit/test_numeric_parity_report.py if needed
+- tests/unit/test_numeric_parity_diagnostics.py if needed
+- tests/notebook_parity/test_sar_parity.py if applicable
+- docs/SAR_SOURCE_SELECTION_PARITY.md
+
+Required diagnosis work:
+
+- Capture or report, where available:
+  - Sentinel-1 collection id
+  - selected image ids or stable image labels
+  - acquisition dates
+  - orbit direction
+  - relative orbit number if available
+  - VV/VH pair count
+  - pair time delta
+  - date window
+  - ROI/grid label only, not public coordinates
+  - selected band list
+  - whether angle/incidence came from notebook angle band or app incidence band
+  - whether local DEM RTC path was used
+  - whether speckle/refined-Lee filtering was used
+  - whether dB-to-linear-to-dB processing was used
+- Compare notebook QA selection files such as SUMMARY_RADAR*.csv or SAR selection JSON if available.
+- Compare app SAR stage metadata and manifests.
+- Explain whether mismatch is caused by:
+  - different Sentinel-1 source image selection
+  - different orbit/pair selection
+  - different date window
+  - different RTC/filtering path
+  - different angle/incidence source
+  - different nodata policy
+  - different band naming only
+  - comparison mapping issue
+
+Allowed reconciliation:
+
+- Make app SAR source-selection rules match the notebook if the notebook rule is clearly identified and safe.
+- Add missing SAR selection metadata to local-only manifests/reports.
+- Add deterministic source-selection tests with synthetic metadata.
+- Add diagnostics showing source-selection mismatch clearly.
+- Add nodata-normalized SAR comparison metrics.
+- Add angle/incidence mapping notes if notebook uses angle and app uses incidence.
+- Add local-only operator reports.
+
+Not allowed in F13:
+
+- Do not weaken numeric tolerance to hide SAR mismatch.
+- Do not mark mismatched SAR outputs as PASS.
+- Do not change notebook code.
+- Do not expose coordinates, geometry, paths, hashes, CRS transforms, or exact ROI context through public API responses.
+- Do not serve F11/F12/F13 reports over HTTP.
+- Do not rewrite DEM derivative, hypercube, tensor, object extraction, field ops, GPS, or experimental classifier logic.
+- Do not change SAR science formulas unless the diagnosis proves the app differs from the notebook and the change is narrowly scoped.
+
+Output:
+
+- Add or update a local-only SAR source-selection parity report, for example:
+  - data/reports/sar_source_selection_parity_<run_id>.json
+  - data/reports/sar_source_selection_parity_<run_id>.csv
+- Reports are FILESYSTEM_ONLY local operator outputs.
+- Reports must not embed absolute local paths or public coordinates.
+
+Tests:
+
+- Add tests proving SAR source-selection metadata is captured without public leakage.
+- Add tests proving SAR diagnosis distinguishes source-selection mismatch from pure numeric mismatch.
+- Add tests proving angle/incidence mapping is documented.
+- Add tests proving reports are local-only and do not expose coordinates/paths/hashes.
+- Existing tests must continue to pass.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+Stop after F13 and report files changed, commands run, test results, and blockers.
+
