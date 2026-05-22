@@ -180,11 +180,47 @@ def build_feature_stack_products(
         "variant_families": [
             {
                 "artifact_name": "radar_linear_support_stack",
+                "source_notebook_family": "SIGMA0_MASTER_640",
                 "band_names": ["vv_sigma0_linear", "vh_sigma0_linear", "ratio_sigma0_linear", "incidence_angle"],
             },
             {
                 "artifact_name": "ai_ready_support_stack",
+                "source_notebook_family": "TESLA_V7_2_TENSOR_EXPORT",
                 "band_names": band_names,
+            },
+        ],
+        "notebook_family_statuses": [
+            {
+                "family": "NANO_STACK",
+                "status": "deferred",
+                "reason": "Cells 36-37 are duplicate nano-scale variants with unstable internals and no single canonical formula yet.",
+            },
+            {
+                "family": "SIGMA0_MASTER_640",
+                "status": "implemented",
+                "artifact_name": "radar_linear_support_stack",
+                "reason": "Neutral linearized radar support stack captures the reproducible sigma0-style variant without notebook master naming.",
+            },
+            {
+                "family": "GPHYS_MASTER_640",
+                "status": "deferred",
+                "reason": "Geophysics master formulas remain domain-specific and need a canonical neutral formula capture before implementation.",
+            },
+            {
+                "family": "RAD_MASTER_CUBE_640",
+                "status": "deferred",
+                "reason": "The notebook radar master cube is a near-duplicate assembly of existing science-core radar layers without a distinct stable contract.",
+            },
+            {
+                "family": "ULTIMATE_GPHYS_SCAN_640",
+                "status": "deferred",
+                "reason": "The notebook averages multiple geophysics scans with unstable composition and needs a fixed reproducible definition.",
+            },
+            {
+                "family": "TESLA_V7_2_VARIANTS",
+                "status": "implemented_subset",
+                "artifact_name": "ai_ready_support_stack",
+                "reason": "F2 implements the useful grid-locked tensor-export subset only; Tesla inference and target-oriented variants remain out of scope.",
             },
         ],
     }

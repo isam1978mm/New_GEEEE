@@ -83,6 +83,15 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "radar_linear_support_stack",
             "ai_ready_support_stack",
         ]
+        family_statuses = {entry["family"]: entry for entry in presence_summary["notebook_family_statuses"]}
+        assert family_statuses["SIGMA0_MASTER_640"]["status"] == "implemented"
+        assert family_statuses["SIGMA0_MASTER_640"]["artifact_name"] == "radar_linear_support_stack"
+        assert family_statuses["TESLA_V7_2_VARIANTS"]["status"] == "implemented_subset"
+        assert family_statuses["TESLA_V7_2_VARIANTS"]["artifact_name"] == "ai_ready_support_stack"
+        assert family_statuses["NANO_STACK"]["status"] == "deferred"
+        assert family_statuses["GPHYS_MASTER_640"]["status"] == "deferred"
+        assert family_statuses["RAD_MASTER_CUBE_640"]["status"] == "deferred"
+        assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["status"] == "deferred"
 
         tensor_audit = json.loads((run_dir / "qa" / "stacks" / "tensor_audit_summary.json").read_text(encoding="utf-8"))
         assert tensor_audit["shape"] == [grid_spec.size, grid_spec.size, len(SCIENCE_CORE_BANDS)]

@@ -600,6 +600,36 @@ Mapping rules:
 - use neutral replacements for notebook sigma0/master/tensor-export variants
 - prefer stable, neutral, domain-functional names
 
+### F2 stack-family coverage and deferrals
+
+The notebook stack-variant families approved for F2 are reconciled as follows.
+
+- `NANO` stack family from cells 36-37:
+  deferred
+  reason: the notebook keeps duplicate nano-scale variants with different internals and no single canonical neutral formula has been captured yet.
+- `SIGMA0 MASTER` family from cells 49-50:
+  implemented
+  neutral app outputs:
+  `stacks/tensor_support/radar_linear_support_stack.tif`
+  `stacks/tensor_support/radar_linear_support_stack.npy`
+  reason: the reusable part is the linearized radar support stack; the notebook "master" naming is not copied.
+- `GPHYS MASTER` family from cell 51:
+  deferred
+  reason: the notebook geophysics master formulas remain domain-specific and need canonical neutral formula capture before implementation.
+- `RAD MASTER CUBE` family from cell 53:
+  deferred
+  reason: this is a near-duplicate radar-layer assembly over outputs the app already preserves; F2 does not duplicate it without a distinct stable contract.
+- `ULTIMATE GPHYS SCAN` family from cell 54:
+  deferred
+  reason: the notebook combines multiple geophysics scans with unstable composition and needs a reproducible fixed definition first.
+- `Tesla v7.2` tensor-export and grid-lock support variants from cells 74, 81, 83, 94:
+  implemented subset
+  neutral app outputs:
+  `stacks/tensor_support/ai_ready_support_stack.tif`
+  `stacks/tensor_support/ai_ready_support_stack.npy`
+  `stacks/optical_support/s2_mask_support_valid.tif`
+  reason: F2 implements the useful grid-locked tensor-export subset only. Tesla inference engines, target-oriented outputs, and target-claim variants remain outside F2.
+
 ## Ownership by Existing or Future Stage Families
 
 This contract does not reassign stage ownership at implementation time, but it does define the expected ownership domains for future N-goal work.
