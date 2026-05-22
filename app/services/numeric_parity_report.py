@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import csv
+import fnmatch
 import json
 import math
+import warnings
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -10,9 +12,8 @@ from typing import Any
 from xml.etree import ElementTree
 
 import numpy as np
-from PIL import Image
-
-from app.pipeline.stages.dem import raster_sidecar_path
+import rasterio
+from rasterio.errors import NotGeoreferencedWarning, RasterioIOError
 
 NUMERIC_PARITY_REPORT_PREFIX = "numeric_parity"
 DEFAULT_ABS_TOL = 1e-5
@@ -20,6 +21,7 @@ DEFAULT_REL_TOL = 1e-5
 KMZ_COORD_PRECISION = 6
 JSON_NUMERIC_PRECISION = 8
 CSV_FLOAT_PRECISION = 8
+NOTEBOOK_FOCUS_MASK_PATTERN = "QA/FOCUS_" "MASK_17m_inside_640.tif"
 UNSTABLE_KEY_PARTS = (
     "timestamp",
     "created_at",
@@ -53,6 +55,19 @@ REPORT_FIELDNAMES = [
     "skipped_reason",
     "notes",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class RasterSnapshot:
+    crs: str | None
+    transform: tuple[float, ...] | None
+    width: int
+    height: int
+    count: int
+    nodata: float | None
+    dtypes: tuple[str, ...]
+    array: np.ndarray
+    missing_metadata: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,16 +135,22 @@ class ComparisonRow:
 def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
     specs: list[ComparisonSpec] = [
         ComparisonSpec("run_grid_manifest", "json", "grid_manifest.json", ("grid_manifest.json",)),
-        ComparisonSpec("dem_core", "raster", "dem.tif", ("dem.tif",)),
+        ComparisonSpec("dem_core", "raster", "dem.tif", ("dem.tif", "DEM_GEO8_TIFS/DEM_640.tif")),
         ComparisonSpec("dem_core", "npy", "dem.npy", ("dem.npy",)),
     ]
     for name in ("VV_dB", "VH_dB", "logRatio_dB", "incidence"):
+        notebook_candidates = {
+            "VV_dB": ("VV_dB.tif", "GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640*.tif"),
+            "VH_dB": ("VH_dB.tif", "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640*.tif"),
+            "logRatio_dB": ("logRatio_dB.tif", "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640*.tif"),
+            "incidence": ("incidence.tif", "GEOTIFF_RADAR_BANDS/RADAR_angle_640*.tif"),
+        }[name]
         specs.append(
             ComparisonSpec(
                 "sar_geotiff_bands",
                 "raster",
                 f"{name}.tif",
-                (f"{name}.tif",),
+                notebook_candidates,
                 tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
             )
         )
@@ -139,46 +160,55 @@ def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
                 "sar_npy_bands",
                 "npy",
                 "npy_radar_bands/VV_dB.npy",
-                ("npy_radar_bands/VV_dB.npy", "NPY_RADAR_BANDS/*VV*.npy"),
+                ("npy_radar_bands/VV_dB.npy", "NPY_RADAR_BANDS/RADAR_VV_dB_640*.npy", "NPY_RADAR_BANDS/*VV*.npy"),
                 tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
             ),
             ComparisonSpec(
                 "sar_npy_bands",
                 "npy",
                 "npy_radar_bands/VH_dB.npy",
-                ("npy_radar_bands/VH_dB.npy", "NPY_RADAR_BANDS/*VH*.npy"),
+                ("npy_radar_bands/VH_dB.npy", "NPY_RADAR_BANDS/RADAR_VH_dB_640*.npy", "NPY_RADAR_BANDS/*VH*.npy"),
                 tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
             ),
             ComparisonSpec(
                 "sar_npy_bands",
                 "npy",
                 "npy_radar_bands/logRatio_dB.npy",
-                ("npy_radar_bands/logRatio_dB.npy", "NPY_RADAR_BANDS/*logRatio*.npy"),
+                ("npy_radar_bands/logRatio_dB.npy", "NPY_RADAR_BANDS/RADAR_logRatio_dB_640*.npy", "NPY_RADAR_BANDS/*logRatio*.npy"),
                 tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
             ),
             ComparisonSpec(
                 "sar_npy_bands",
                 "npy",
                 "npy_radar_bands/incidence.npy",
-                ("npy_radar_bands/incidence.npy", "NPY_RADAR_BANDS/*angle*.npy", "NPY_RADAR_BANDS/*incidence*.npy"),
+                ("npy_radar_bands/incidence.npy", "NPY_RADAR_BANDS/RADAR_angle_640*.npy", "NPY_RADAR_BANDS/*angle*.npy", "NPY_RADAR_BANDS/*incidence*.npy"),
                 tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
             ),
         )
     )
+    derivative_candidates = {
+        "slope": ("slope.tif", "DEM_GEO8_TIFS/slope*_640.tif"),
+        "aspect": ("aspect.tif", "DEM_GEO8_TIFS/aspect*_640.tif"),
+        "curvature": ("curvature.tif", "DEM_GEO8_TIFS/curvature*_640.tif"),
+        "TPI": ("TPI.tif", "DEM_GEO8_TIFS/tpi*_640.tif"),
+        "TRI": ("TRI.tif", "DEM_GEO8_TIFS/tri*_640.tif"),
+        "roughness": ("roughness.tif", "DEM_GEO8_TIFS/roughness*_640.tif"),
+        "TWI": ("TWI.tif", "DEM_GEO8_TIFS/twi*_640.tif"),
+    }
     for name in ("slope", "aspect", "curvature", "TPI", "TRI", "roughness", "TWI"):
         specs.append(
             ComparisonSpec(
                 "dem_derivatives",
                 "raster",
                 f"{name}.tif",
-                (f"{name}.tif",),
+                derivative_candidates[name],
                 tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
             )
         )
     specs.extend(
         (
             ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/radar_linear_support_stack.tif", ("stacks/tensor_support/radar_linear_support_stack.tif",)),
-            ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/radar_linear_support_stack.npy", ("stacks/tensor_support/radar_linear_support_stack.npy",)),
+            ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/radar_linear_support_stack.npy", ("stacks/tensor_support/radar_linear_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")),
             ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/science_core_stack.tif", ("stacks/tensor_support/science_core_stack.tif",)),
             ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/science_core_stack.npy", ("stacks/tensor_support/science_core_stack.npy",)),
             ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/ai_ready_support_stack.tif", ("stacks/tensor_support/ai_ready_support_stack.tif",)),
@@ -187,7 +217,7 @@ def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
     )
     specs.extend(
         (
-            ComparisonSpec("tesla_hypercube_family", "raster", "hypercube.tif", ("hypercube.tif",)),
+            ComparisonSpec("tesla_hypercube_family", "raster", "hypercube.tif", ("hypercube.tif", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE*.tif")),
             ComparisonSpec("tesla_hypercube_family", "npy", "hypercube.npy", ("hypercube.npy",)),
             ComparisonSpec("tesla_hypercube_family", "csv", "hypercube_band_order.csv", ("hypercube_band_order.csv",), tolerance=Tolerance(abs_tol=0.0, rel_tol=0.0)),
             ComparisonSpec("tesla_hypercube_family", "csv", "hypercube_band_stats.csv", ("hypercube_band_stats.csv",), tolerance=Tolerance(abs_tol=1e-6, rel_tol=1e-6)),
@@ -196,7 +226,7 @@ def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
     )
     specs.extend(
         (
-            ComparisonSpec("focus_zone_local", "raster", "full_job/focus/focus_zone_17m.tif", ("full_job/focus/focus_zone_17m.tif", "*focus*17*.tif")),
+            ComparisonSpec("focus_zone_local", "raster", "full_job/focus/focus_zone_17m.tif", ("full_job/focus/focus_zone_17m.tif", NOTEBOOK_FOCUS_MASK_PATTERN, "*focus*17*.tif")),
             ComparisonSpec("focus_zone_local", "npy", "full_job/focus/focus_zone_17m.npy", ("full_job/focus/focus_zone_17m.npy", "*focus*17*.npy")),
             ComparisonSpec("focus_zone_local", "json", "full_job/focus/focus_zone_summary.json", ("full_job/focus/focus_zone_summary.json", "*focus*summary*.json")),
             ComparisonSpec("focus_zone_local", "csv", "full_job/focus/focus_zone_band_summary.csv", ("full_job/focus/focus_zone_band_summary.csv", "*focus*band*summary*.csv")),
@@ -218,6 +248,7 @@ def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
     )
     specs.extend(
         (
+            ComparisonSpec("sar_geotiff_bands", "csv", "qa/sar/sar_summary.csv", ("qa/sar/sar_summary.csv", "SUMMARY_RADAR*.csv")),
             ComparisonSpec("alignment_qa_summaries", "json", "alignment_qa.json", ("alignment_qa.json",), tolerance=Tolerance(abs_tol=1e-6, rel_tol=1e-6)),
             ComparisonSpec("alignment_qa_summaries", "json", "alignment_mask_selection.json", ("alignment_mask_selection.json", "*mask*selection*.json")),
             ComparisonSpec("alignment_qa_summaries", "csv", "alignment_audit.csv", ("alignment_audit.csv", "*alignment*audit*.csv")),
@@ -341,8 +372,8 @@ def resolve_notebook_file(notebook_root: Path, candidates: tuple[str, ...]) -> t
         if exact_path.is_file():
             matches.add(candidate.replace("\\", "/"))
             continue
-        for path in notebook_root.rglob(candidate):
-            if path.is_file():
+        for path in notebook_root.rglob("*"):
+            if path.is_file() and fnmatch.fnmatch(path.relative_to(notebook_root).as_posix(), candidate):
                 matches.add(path.relative_to(notebook_root).as_posix())
     if not matches:
         return None, "missing"
@@ -359,17 +390,53 @@ def compare_raster_files(
     app_path: Path,
     notebook_file: str,
 ) -> ComparisonRow:
-    notebook_array = np.asarray(Image.open(notebook_path))
-    app_array = np.asarray(Image.open(app_path))
-    notebook_meta = load_raster_metadata(notebook_path)
-    app_meta = load_raster_metadata(app_path)
-    array_result = compare_arrays(notebook_array, app_array, tolerance=spec.tolerance)
-    crs_match = notebook_meta.get("crs") == app_meta.get("crs") if notebook_meta and app_meta else None
-    transform_match = notebook_meta.get("transform") == app_meta.get("transform") if notebook_meta and app_meta else None
-    dtype_match = str(notebook_array.dtype) == str(app_array.dtype)
-    band_count_match = _band_count(notebook_array) == _band_count(app_array)
-    shape_match = array_result["shape_match"] and band_count_match
-    metadata_ok = all(value is not False for value in (crs_match, transform_match, dtype_match, shape_match))
+    try:
+        notebook_raster = load_raster_snapshot(notebook_path)
+        app_raster = load_raster_snapshot(app_path)
+    except RasterioIOError:
+        return ComparisonRow(
+            family=spec.family,
+            notebook_file=notebook_file,
+            app_file=spec.app_file,
+            comparison_type=spec.comparison_type,
+            status="SKIP_UNSUPPORTED_CONTAINER",
+            skipped_reason="unsupported_raster_container",
+            notes=_append_note(spec.notes, "rasterio_open_failed"),
+        )
+
+    array_result = compare_arrays(notebook_raster.array, app_raster.array, tolerance=spec.tolerance)
+    shape_match = (
+        notebook_raster.width == app_raster.width
+        and notebook_raster.height == app_raster.height
+        and notebook_raster.count == app_raster.count
+        and array_result["shape_match"]
+    )
+    crs_match = notebook_raster.crs == app_raster.crs if notebook_raster.crs is not None and app_raster.crs is not None else False
+    transform_match = (
+        np.allclose(notebook_raster.transform, app_raster.transform, atol=1e-9, rtol=0.0)
+        if notebook_raster.transform is not None and app_raster.transform is not None
+        else False
+    )
+    dtype_match = notebook_raster.dtypes == app_raster.dtypes
+    notes = spec.notes
+    missing_metadata = [*notebook_raster.missing_metadata, *app_raster.missing_metadata]
+    if missing_metadata:
+        notes = _append_note(notes, ",".join(sorted(missing_metadata)))
+    if notebook_raster.count != app_raster.count:
+        notes = _append_note(notes, "band_count_mismatch")
+    if notebook_raster.nodata != app_raster.nodata:
+        notes = _append_note(notes, "nodata_policy_mismatch")
+    if not dtype_match:
+        notes = _append_note(notes, "dtype_mismatch")
+
+    metadata_ok = (
+        shape_match
+        and crs_match
+        and transform_match
+        and dtype_match
+        and not missing_metadata
+        and notebook_raster.nodata == app_raster.nodata
+    )
     status = "PASS" if metadata_ok and array_result["pass"] else "FAIL"
     return ComparisonRow(
         family=spec.family,
@@ -387,7 +454,7 @@ def compare_raster_files(
         differing_count=array_result["differing_count"],
         matching_percent=array_result["matching_percent"],
         tolerance_used=spec.tolerance.as_dict(),
-        notes=spec.notes,
+        notes=notes,
     )
 
 
@@ -601,11 +668,30 @@ def compare_arrays(notebook_array: np.ndarray, app_array: np.ndarray, *, toleran
     }
 
 
-def load_raster_metadata(path: Path) -> dict[str, Any]:
-    sidecar_path = raster_sidecar_path(path)
-    if not sidecar_path.is_file():
-        return {}
-    return json.loads(sidecar_path.read_text(encoding="utf-8"))
+def load_raster_snapshot(path: Path) -> RasterSnapshot:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", NotGeoreferencedWarning)
+        with rasterio.open(path) as dataset:
+            crs = dataset.crs.to_string() if dataset.crs else None
+            transform = None
+            if dataset.transform is not None and not dataset.transform.is_identity:
+                transform = tuple(float(value) for value in dataset.transform[:6])
+            missing_metadata: list[str] = []
+            if crs is None:
+                missing_metadata.append("missing_crs_metadata")
+            if transform is None:
+                missing_metadata.append("missing_transform_metadata")
+            return RasterSnapshot(
+                crs=crs,
+                transform=transform,
+                width=int(dataset.width),
+                height=int(dataset.height),
+                count=int(dataset.count),
+                nodata=dataset.nodata,
+                dtypes=tuple(str(value) for value in dataset.dtypes),
+                array=dataset.read(),
+                missing_metadata=tuple(missing_metadata),
+            )
 
 
 def canonicalize_csv_rows(path: Path) -> list[dict[str, Any]]:
@@ -678,12 +764,6 @@ def _row_dict_to_init_kwargs(row: dict[str, Any]) -> dict[str, Any]:
     payload["tolerance_used"] = payload.get("tolerance_used") or None
     payload["skipped_reason"] = payload.get("skipped_reason") or None
     return payload
-
-
-def _band_count(array: np.ndarray) -> int:
-    if array.ndim < 3:
-        return 1
-    return int(array.shape[2])
 
 
 def _matching_percent(total_count: int, differing_count: int) -> float:

@@ -5,9 +5,9 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+import rasterio
+from rasterio.transform import from_origin
 
-from app.pipeline.stages.dem import write_raster_sidecar
 from app.services.grid import build_grid_manifest
 from app.services.numeric_parity_report import NUMERIC_PARITY_REPORT_PREFIX, write_numeric_parity_report
 
@@ -18,10 +18,10 @@ def test_numeric_parity_report_script_writes_local_only_reports_without_absolute
     output_dir = tmp_path / "reports"
     notebook_root.mkdir(parents=True, exist_ok=True)
     app_run_dir.mkdir(parents=True, exist_ok=True)
-
     manifest = build_grid_manifest(35.0, -110.0)
-    _write_matching_raster(notebook_root / "dem.tif", manifest)
-    _write_matching_raster(app_run_dir / "dem.tif", manifest)
+
+    _write_matching_raster(notebook_root / "DEM_GEO8_TIFS" / "DEM_640.tif")
+    _write_matching_raster(app_run_dir / "dem.tif")
     np.save(notebook_root / "dem.npy", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
     np.save(app_run_dir / "dem.npy", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
     (notebook_root / "grid_manifest.json").write_text(
@@ -52,14 +52,26 @@ def test_numeric_parity_report_script_writes_local_only_reports_without_absolute
     assert any(row["status"] == "PASS" for row in report["rows"])
     assert any(row["status"] == "SKIP_MISSING_APP" for row in report["rows"])
     assert any(row["app_file"] == "dem.tif" for row in report["rows"])
+    assert any(row["app_file"] == "dem.tif" and row["notebook_file"] == "DEM_GEO8_TIFS/DEM_640.tif" for row in report["rows"])
 
     with csv_path.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     assert any(row["app_file"] == "dem.tif" and row["status"] == "PASS" for row in rows)
 
 
-def _write_matching_raster(path: Path, manifest) -> None:
+def _write_matching_raster(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
-    Image.fromarray(array).save(path, format="TIFF")
-    write_raster_sidecar(path, grid_manifest=manifest, nodata=-9999.0, dtype="float32", shape=array.shape)
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=2,
+        width=2,
+        count=1,
+        dtype="float32",
+        crs="EPSG:32612",
+        transform=from_origin(500000.0, 4100000.0, 10.0, 10.0),
+        nodata=-9999.0,
+    ) as dataset:
+        dataset.write(array, 1)
