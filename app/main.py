@@ -38,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await app.state.engine.dispose()
 
     app = FastAPI(openapi_url=None, docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.state.settings = settings
 
     @app.middleware("http")
     async def verify_public_json_responses(request, call_next):

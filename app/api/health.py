@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.config import get_settings
 from app.schemas.errors import ReadyPublic
@@ -15,7 +15,8 @@ async def healthz() -> dict[str, str]:
 
 
 @router.get("/readyz")
-async def readyz() -> ReadyPublic:
-    initialize_ee_session(get_settings())
+async def readyz(request: Request) -> ReadyPublic:
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    initialize_ee_session(settings)
     return ReadyPublic(status="ready")
 

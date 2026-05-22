@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.config import Settings
 from app.main import create_app
 
 
@@ -16,7 +17,15 @@ def test_app_starts_and_root_returns_ok() -> None:
 
 
 def test_health_and_ready_routes_are_registered() -> None:
-    client = TestClient(create_app(), raise_server_exceptions=False)
+    client = TestClient(
+        create_app(
+            Settings(
+                ee_service_account_email=None,
+                ee_service_account_key_path=None,
+            )
+        ),
+        raise_server_exceptions=False,
+    )
 
     health_response = client.get("/healthz")
     ready_response = client.get("/readyz")

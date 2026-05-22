@@ -25,6 +25,8 @@ def test_public_http_surface_does_not_leak_coordinates_hashes_or_paths() -> None
         settings = Settings(
             data_dir=Path(temp_dir) / "data",
             database_path=Path(temp_dir) / "data" / "gee_screening.db",
+            ee_service_account_email=None,
+            ee_service_account_key_path=None,
         )
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
