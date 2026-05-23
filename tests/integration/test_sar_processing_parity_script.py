@@ -54,9 +54,46 @@ def test_sar_processing_parity_script_writes_local_only_reports(tmp_path: Path, 
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
 
-def _write_fixture(*, app_run_dir: Path, notebook_root: Path) -> None:
+def test_sar_processing_parity_script_finds_qa_summary_layout(tmp_path: Path, monkeypatch) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-qa"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    output_dir = tmp_path / "reports"
+    _write_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root, summary_relative_path=Path("QA") / "SUMMARY_RADAR_demo.csv")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "report_sar_processing_parity.py",
+            "--app-run-dir",
+            str(app_run_dir),
+            "--notebook-root",
+            str(notebook_root),
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+
+    assert main() == 0
+
+    json_path = output_dir / f"{SAR_PROCESSING_PARITY_PREFIX}_run-qa.json"
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert {"root_label": "NOTEBOOK_RUN", "relative_path": "QA/SUMMARY_RADAR_demo.csv"} in payload["notebook_files"]
+    serialized = json.dumps(payload, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
+
+
+def _write_fixture(
+    *,
+    app_run_dir: Path,
+    notebook_root: Path,
+    summary_relative_path: Path = Path("SUMMARY_RADAR_demo.csv"),
+) -> None:
     _write_summary(
-        notebook_root / "SUMMARY_RADAR_demo.csv",
+        notebook_root / summary_relative_path,
         [
             {"band_name": "VV_dB", "min": "1.0", "max": "2.0", "mean": "1.5", "nodata_count": "0"},
             {"band_name": "VH_dB", "min": "1.0", "max": "2.0", "mean": "1.5", "nodata_count": "0"},

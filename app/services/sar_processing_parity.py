@@ -60,7 +60,7 @@ SAR_BAND_MAPPINGS = {
         "notebook_npy_candidates": ("npy_radar_bands/incidence.npy", "NPY_RADAR_BANDS/RADAR_angle_640*.npy", "NPY_RADAR_BANDS/*angle*.npy", "NPY_RADAR_BANDS/*incidence*.npy"),
     },
 }
-NOTEBOOK_SUMMARY_CANDIDATES = ("qa/sar/sar_summary.csv", "SUMMARY_RADAR*.csv")
+NOTEBOOK_SUMMARY_CANDIDATES = ("qa/sar/sar_summary.csv", "QA/SUMMARY_RADAR*.csv", "SUMMARY_RADAR*.csv")
 NOTEBOOK_STACK_CANDIDATES = ("stacks/tensor_support/radar_linear_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")
 
 

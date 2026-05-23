@@ -126,8 +126,31 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
     assert any(row["check"] == "VV_dB_raster" for row in rows)
 
 
-def _write_sar_fixture(*, app_run_dir: Path, notebook_root: Path) -> None:
-    notebook_summary_path = notebook_root / "SUMMARY_RADAR_demo.csv"
+def test_sar_processing_report_finds_notebook_summary_under_qa_directory(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-qa"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root, summary_relative_path=Path("QA") / "SUMMARY_RADAR_demo.csv")
+
+    report = build_sar_processing_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert {"root_label": "NOTEBOOK_RUN", "relative_path": "QA/SUMMARY_RADAR_demo.csv"} in report["notebook_files"]
+    assert by_check["sar_summary_VV_dB"]["notebook_file"] == "NOTEBOOK_RUN:QA/SUMMARY_RADAR_demo.csv"
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
+    assert "bounds" not in serialized
+
+
+def _write_sar_fixture(
+    *,
+    app_run_dir: Path,
+    notebook_root: Path,
+    summary_relative_path: Path = Path("SUMMARY_RADAR_demo.csv"),
+) -> None:
+    notebook_summary_path = notebook_root / summary_relative_path
     app_summary_path = app_run_dir / "qa" / "sar" / "sar_summary.csv"
     notebook_summary_path.parent.mkdir(parents=True, exist_ok=True)
     app_summary_path.parent.mkdir(parents=True, exist_ok=True)
