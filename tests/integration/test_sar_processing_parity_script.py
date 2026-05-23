@@ -59,6 +59,9 @@ def test_sar_processing_parity_script_writes_local_only_reports(tmp_path: Path, 
     assert by_check["f21_regression_residual_VV_dB_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["f23_large_residual_spatial_bins_VV_dB_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["f23_dtype_casting_profile_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f24_source_identity_gate"]["status"] == "MISSING"
+    assert by_check["intermediate_per_image_products_db"]["status"] == "MISSING_NOTEBOOK_INTERMEDIATE"
+    assert by_check["first_divergence_stage"]["status"] == "MISSING"
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
 

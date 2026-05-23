@@ -30,6 +30,24 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional previous local SAR processing parity JSON report for improvement/regression diagnostics.",
     )
+    parser.add_argument(
+        "--source-report",
+        type=Path,
+        default=None,
+        help="Optional local SAR source-selection parity JSON report used to gate F24 intermediate interpretation.",
+    )
+    parser.add_argument(
+        "--notebook-intermediate-manifest",
+        type=Path,
+        default=None,
+        help="Optional local notebook-side Cell 25 SAR intermediate manifest JSON.",
+    )
+    parser.add_argument(
+        "--app-intermediate-manifest",
+        type=Path,
+        default=None,
+        help="Optional local app-side Cell 25 SAR intermediate manifest JSON.",
+    )
     return parser.parse_args()
 
 
@@ -40,6 +58,9 @@ def main() -> int:
         notebook_roots=args.notebook_root,
         output_dir=args.output_dir,
         prior_report_path=args.prior_report,
+        source_report_path=args.source_report,
+        notebook_intermediate_manifest_path=args.notebook_intermediate_manifest,
+        app_intermediate_manifest_path=args.app_intermediate_manifest,
     )
     print("Wrote local-only SAR processing parity reports.")
     print(json_path)

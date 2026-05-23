@@ -100,6 +100,57 @@ F23 true-processing-delta diagnostics:
 - `f23_vv_vh_large_residual_overlap_*` rows count shared versus band-specific large residual pixels.
 - `f23_median_domain_profile` documents that median-domain/order proof requires per-image or per-pair Cell 25 intermediate captures; final arrays alone are insufficient to change SAR math.
 
+F24 Cell 25 intermediate parity diagnostics:
+
+- `report_sar_processing_parity.py` accepts optional local-only `--source-report`, `--notebook-intermediate-manifest`, and `--app-intermediate-manifest` inputs.
+- `f24_source_identity_gate` blocks intermediate interpretation unless F13/F22 proved `SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS` on the same run.
+- `intermediate_per_image_products_db`, `intermediate_pair_median`, `intermediate_final_median_pre_rtc`, `intermediate_post_sample_pre_rtc`, and `intermediate_post_rtc` compare local-only Cell 25 intermediate manifests when available.
+- `intermediate_post_rtc` reuses existing final notebook/app VV/VH/logRatio arrays plus notebook `angle` versus app `incidence`.
+- `first_divergence_stage` classifies:
+  - `SOURCE_ID_MATCHED_INTERMEDIATES_MISSING`
+  - `FIRST_DIVERGENCE_PER_IMAGE_FILTER`
+  - `FIRST_DIVERGENCE_PAIR_MEDIAN`
+  - `FIRST_DIVERGENCE_FINAL_MEDIAN_OR_REPROJECT`
+  - `FIRST_DIVERGENCE_LOCAL_RTC`
+  - `FIRST_DIVERGENCE_NOT_FOUND`
+- Missing notebook-side stages are reported as `MISSING_NOTEBOOK_INTERMEDIATE`; the report does not guess missing Cell 25 intermediates from final arrays alone.
+- `scripts/export_cell25_sar_intermediates.py` exports the feasible current app-side stage, `post_rtc`, into `qa/sar/intermediates/` or a caller-provided output directory.
+- Earlier notebook-side stages still require a local notebook export in the same manifest layout:
+
+```python
+manifest = {
+    "artifact_class": "FILESYSTEM_ONLY",
+    "local_only": True,
+    "source_profile": "cell25_pixel_export",
+    "stages": {
+        "per_image_products_db": {
+            "items": [
+                {
+                    "label": "pair0_asc",
+                    "bands": {
+                        "VV_dB": "per_image_products_db/pair0_asc_VV_dB.npy",
+                        "VH_dB": "per_image_products_db/pair0_asc_VH_dB.npy",
+                        "angle": "per_image_products_db/pair0_asc_angle.npy",
+                    },
+                },
+            ],
+        },
+        "pair_median": {"items": [...]},
+        "final_median_pre_rtc": {"items": [...]},
+        "post_sample_pre_rtc": {"items": [...]},
+        "post_rtc": {
+            "label": "final",
+            "bands": {
+                "VV_dB": "post_rtc/VV_dB.npy",
+                "VH_dB": "post_rtc/VH_dB.npy",
+                "logRatio_dB": "post_rtc/logRatio_dB.npy",
+                "angle": "post_rtc/angle.npy",
+            },
+        },
+    },
+}
+```
+
 F16 finding:
 
 - The notebook `NO-COP-DEM` path applies a dB-domain border mask first:

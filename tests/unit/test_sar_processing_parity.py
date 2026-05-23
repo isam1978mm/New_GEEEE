@@ -266,6 +266,201 @@ def test_f23_diagnostics_report_spatial_context_subset_and_dtype(tmp_path: Path)
     assert "coordinates" not in serialized
 
 
+def test_f24_report_marks_missing_notebook_intermediates(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-missing"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    _write_source_gate_report(source_report_path)
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["f24_source_identity_gate"]["status"] == "MATCH"
+    assert by_check["intermediate_per_image_products_db"]["status"] == "MISSING_NOTEBOOK_INTERMEDIATE"
+    assert by_check["first_divergence_stage"]["status"] == "MISSING_NOTEBOOK_INTERMEDIATE"
+    assert by_check["first_divergence_stage"]["likely_cause"] == "SOURCE_ID_MATCHED_INTERMEDIATES_MISSING"
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
+
+
+def test_f24_source_gate_accepts_f13_row_status_shape(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-source-row"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    source_report_path.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "check": "source_identity_classification",
+                        "status": "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+    assert by_check["f24_source_identity_gate"]["status"] == "MATCH"
+
+
+def test_f24_report_finds_pair_median_first_divergence(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-pair"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    _write_matching_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    _write_source_gate_report(source_report_path)
+    per_image = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    pair_notebook = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+    pair_app = pair_notebook + np.float32(0.2)
+    common_angle = np.array([[30.0, 31.0], [32.0, 33.0]], dtype=np.float32)
+    stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": per_image, "VH_dB": per_image + 10.0, "angle": common_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": pair_notebook, "VH_dB": pair_notebook + 10.0, "angle": common_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": pair_notebook, "VH_dB": pair_notebook + 10.0, "angle": common_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": pair_notebook, "VH_dB": pair_notebook + 10.0, "angle": common_angle},
+        },
+    }
+    app_stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": per_image, "VH_dB": per_image + 10.0, "angle": common_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": pair_app, "VH_dB": pair_app + 10.0, "angle": common_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": pair_notebook, "VH_dB": pair_notebook + 10.0, "angle": common_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": pair_notebook, "VH_dB": pair_notebook + 10.0, "angle": common_angle},
+        },
+    }
+    _write_intermediate_manifest(notebook_manifest, stage_arrays)
+    _write_intermediate_manifest(app_manifest, app_stage_arrays)
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_manifest,
+        app_intermediate_manifest_path=app_manifest,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["intermediate_per_image_products_db"]["status"] == "MATCH"
+    assert by_check["intermediate_pair_median"]["status"] == "MISMATCH"
+    assert by_check["first_divergence_stage"]["likely_cause"] == "FIRST_DIVERGENCE_PAIR_MEDIAN"
+
+
+def test_f24_report_finds_local_rtc_first_divergence(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-rtc"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    _write_source_gate_report(source_report_path)
+    match_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    common_angle = np.array([[30.0, 31.0], [32.0, 33.0]], dtype=np.float32)
+    stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+    }
+    _write_intermediate_manifest(notebook_manifest, stage_arrays)
+    _write_intermediate_manifest(app_manifest, stage_arrays)
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_manifest,
+        app_intermediate_manifest_path=app_manifest,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["intermediate_per_image_products_db"]["status"] == "MATCH"
+    assert by_check["intermediate_pair_median"]["status"] == "MATCH"
+    assert by_check["intermediate_final_median_pre_rtc"]["status"] == "MATCH"
+    assert by_check["intermediate_post_sample_pre_rtc"]["status"] == "MATCH"
+    assert by_check["intermediate_post_rtc"]["status"] == "MISMATCH"
+    assert by_check["first_divergence_stage"]["likely_cause"] == "FIRST_DIVERGENCE_LOCAL_RTC"
+
+
+def test_f24_report_reports_no_first_divergence_when_all_stages_match(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-match"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    _write_matching_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    _write_source_gate_report(source_report_path)
+    match_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    common_angle = np.array([[30.0, 31.0], [32.0, 33.0]], dtype=np.float32)
+    stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+    }
+    _write_intermediate_manifest(notebook_manifest, stage_arrays)
+    _write_intermediate_manifest(app_manifest, stage_arrays)
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_manifest,
+        app_intermediate_manifest_path=app_manifest,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["intermediate_post_rtc"]["status"] == "MATCH"
+    assert by_check["first_divergence_stage"]["status"] == "MATCH"
+    assert by_check["first_divergence_stage"]["likely_cause"] == "FIRST_DIVERGENCE_NOT_FOUND"
+
+
 def test_sar_processing_report_finds_notebook_summary_under_qa_directory(tmp_path: Path) -> None:
     app_run_dir = tmp_path / "data" / "runs" / "run-qa"
     notebook_root = tmp_path / "NOTEBOOK_RUN"
@@ -511,6 +706,87 @@ def _write_f23_processing_delta_fixture(*, app_run_dir: Path, notebook_root: Pat
     _write_raster(app_run_dir / "VH_dB.tif", app_vh, nodata=-9999.0)
     _write_raster(app_run_dir / "logRatio_dB.tif", app_vv - app_vh, nodata=-9999.0)
     _write_raster(app_run_dir / "incidence.tif", incidence, nodata=None)
+
+
+def _write_matching_sar_fixture(*, app_run_dir: Path, notebook_root: Path) -> None:
+    _write_summary_csv(
+        notebook_root / "SUMMARY_RADAR_demo.csv",
+        [
+            {"band_name": "VV_dB", "min": "1.0", "max": "4.0", "mean": "2.5", "nodata_count": "0"},
+            {"band_name": "VH_dB", "min": "1.0", "max": "4.0", "mean": "2.5", "nodata_count": "0"},
+            {"band_name": "logRatio_dB", "min": "0.0", "max": "0.0", "mean": "0.0", "nodata_count": "0"},
+            {"band_name": "angle", "min": "30.0", "max": "31.5", "mean": "30.75", "nodata_count": "0"},
+        ],
+    )
+    _write_summary_csv(
+        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        [
+            {"band_name": "VV_dB", "min": "1.0", "max": "4.0", "mean": "2.5", "nodata_count": "0"},
+            {"band_name": "VH_dB", "min": "1.0", "max": "4.0", "mean": "2.5", "nodata_count": "0"},
+            {"band_name": "logRatio_dB", "min": "0.0", "max": "0.0", "mean": "0.0", "nodata_count": "0"},
+            {"band_name": "incidence", "min": "30.0", "max": "31.5", "mean": "30.75", "nodata_count": "0"},
+        ],
+    )
+    vv = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    vh = vv.copy()
+    log_ratio = vv - vh
+    angle = np.array([[30.0, 30.5], [31.0, 31.5]], dtype=np.float32)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_VV_dB_640_demo.tif", vv, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_VH_dB_640_demo.tif", vh, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_logRatio_dB_640_demo.tif", log_ratio, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_angle_640_demo.tif", angle, nodata=-9999.0)
+    _write_raster(app_run_dir / "VV_dB.tif", vv, nodata=-9999.0)
+    _write_raster(app_run_dir / "VH_dB.tif", vh, nodata=-9999.0)
+    _write_raster(app_run_dir / "logRatio_dB.tif", log_ratio, nodata=-9999.0)
+    _write_raster(app_run_dir / "incidence.tif", angle, nodata=None)
+    (notebook_root / "NPY_RADAR_BANDS").mkdir(parents=True, exist_ok=True)
+    (app_run_dir / "npy_radar_bands").mkdir(parents=True, exist_ok=True)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_VV_dB_640_demo.npy", vv)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_VH_dB_640_demo.npy", vh)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_logRatio_dB_640_demo.npy", log_ratio)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_angle_640_demo.npy", angle)
+    np.save(app_run_dir / "npy_radar_bands" / "VV_dB.npy", vv)
+    np.save(app_run_dir / "npy_radar_bands" / "VH_dB.npy", vh)
+    np.save(app_run_dir / "npy_radar_bands" / "logRatio_dB.npy", log_ratio)
+    np.save(app_run_dir / "npy_radar_bands" / "incidence.npy", angle)
+    _write_radar_meta(notebook_root)
+    (notebook_root / "NPY_STACKS").mkdir(parents=True, exist_ok=True)
+    (app_run_dir / "stacks" / "tensor_support").mkdir(parents=True, exist_ok=True)
+    np.save(notebook_root / "NPY_STACKS" / "RADAR_STACK_HWC_640_demo.npy", np.stack([vv, vh, log_ratio, angle], axis=-1))
+    np.save(app_run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.npy", np.stack([vv, vh, log_ratio, angle], axis=-1))
+
+
+def _write_source_gate_report(path: Path) -> None:
+    path.write_text(
+        json.dumps({"source_identity_classification": "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"}),
+        encoding="utf-8",
+    )
+
+
+def _write_intermediate_manifest(path: Path, stage_arrays: dict[str, dict[str, dict[str, np.ndarray]]]) -> None:
+    manifest: dict[str, object] = {
+        "artifact_class": "FILESYSTEM_ONLY",
+        "local_only": True,
+        "source_profile": "cell25_pixel_export",
+        "stages": {},
+    }
+    base_dir = path.parent
+    stages_payload: dict[str, object] = {}
+    for stage_name, items in stage_arrays.items():
+        item_payloads: list[dict[str, object]] = []
+        for label, bands in items.items():
+            bands_payload: dict[str, str] = {}
+            for band_name, array in bands.items():
+                relative = Path(stage_name) / f"{label}_{band_name}.npy"
+                npy_path = base_dir / relative
+                npy_path.parent.mkdir(parents=True, exist_ok=True)
+                np.save(npy_path, array.astype(np.float32))
+                bands_payload[band_name] = relative.as_posix()
+            item_payloads.append({"label": label, "bands": bands_payload})
+        stages_payload[stage_name] = {"items": item_payloads}
+    manifest["stages"] = stages_payload
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
 
 
 def _write_summary_csv(path: Path, rows: list[dict[str, str]]) -> None:

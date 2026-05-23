@@ -66,6 +66,41 @@ SAR_BAND_MAPPINGS = {
 NOTEBOOK_SUMMARY_CANDIDATES = ("qa/sar/sar_summary.csv", "QA/SUMMARY_RADAR*.csv", "SUMMARY_RADAR*.csv")
 NOTEBOOK_STACK_CANDIDATES = ("stacks/tensor_support/radar_linear_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")
 NOTEBOOK_RADAR_META_CANDIDATES = ("QA/QA_RADAR_META*.json", "QA_RADAR_META*.json")
+NOTEBOOK_INTERMEDIATE_MANIFEST_CANDIDATES = (
+    "qa/sar/intermediates/sar_intermediate_manifest.json",
+    "QA/sar/intermediates/sar_intermediate_manifest.json",
+    "QA/SAR_INTERMEDIATE_MANIFEST*.json",
+)
+APP_INTERMEDIATE_MANIFEST = "qa/sar/intermediates/sar_intermediate_manifest.json"
+F24_STAGE_ORDER = (
+    "per_image_products_db",
+    "pair_median",
+    "final_median_pre_rtc",
+    "post_sample_pre_rtc",
+    "post_rtc",
+)
+F24_STAGE_CHECKS = {
+    "per_image_products_db": "intermediate_per_image_products_db",
+    "pair_median": "intermediate_pair_median",
+    "final_median_pre_rtc": "intermediate_final_median_pre_rtc",
+    "post_sample_pre_rtc": "intermediate_post_sample_pre_rtc",
+    "post_rtc": "intermediate_post_rtc",
+}
+F24_STAGE_LABELS = {
+    "per_image_products_db": "per_image_products_db",
+    "pair_median": "pair_median",
+    "final_median_pre_rtc": "final_median_pre_rtc",
+    "post_sample_pre_rtc": "post_sample_pre_rtc",
+    "post_rtc": "post_rtc",
+}
+F24_STAGE_BANDS = {
+    "per_image_products_db": ("VV_dB", "VH_dB", "angle"),
+    "pair_median": ("VV_dB", "VH_dB", "angle"),
+    "final_median_pre_rtc": ("VV_dB", "VH_dB", "angle"),
+    "post_sample_pre_rtc": ("VV_dB", "VH_dB", "angle"),
+    "post_rtc": ("VV_dB", "VH_dB", "logRatio_dB", "angle"),
+}
+F24_SOURCE_GATE_REQUIRED = "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +161,9 @@ def build_sar_processing_parity_report(
     app_run_dir: Path,
     notebook_roots: list[Path],
     prior_report_path: Path | None = None,
+    source_report_path: Path | None = None,
+    notebook_intermediate_manifest_path: Path | None = None,
+    app_intermediate_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     rows: list[SarProcessingRow] = []
     referenced_notebook_files: dict[tuple[str, str], NotebookRelativeFile] = {}
@@ -183,6 +221,19 @@ def build_sar_processing_parity_report(
     rows.extend(_build_f20_delta_diagnostic_rows(band_arrays))
     rows.extend(_build_f21_vv_vh_residual_rows(band_arrays))
     rows.extend(_build_f23_processing_delta_rows(band_arrays, app_run_dir=app_run_dir))
+    f24_rows, f24_notebook_files, f24_app_files = _build_f24_intermediate_rows(
+        band_arrays=band_arrays,
+        app_run_dir=app_run_dir,
+        notebook_roots=notebook_roots,
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_intermediate_manifest_path,
+        app_intermediate_manifest_path=app_intermediate_manifest_path,
+    )
+    rows.extend(f24_rows)
+    for item in f24_notebook_files:
+        referenced_notebook_files[(item.root_label, item.relative_path)] = item
+    for item in f24_app_files:
+        referenced_app_files.add(item)
     rows.extend(_build_log_ratio_rows(band_arrays))
     stack_row, notebook_stack = _build_stack_row(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
     rows.append(stack_row)
@@ -226,12 +277,18 @@ def write_sar_processing_parity_report(
     notebook_roots: list[Path],
     output_dir: Path,
     prior_report_path: Path | None = None,
+    source_report_path: Path | None = None,
+    notebook_intermediate_manifest_path: Path | None = None,
+    app_intermediate_manifest_path: Path | None = None,
 ) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     report = build_sar_processing_parity_report(
         app_run_dir=app_run_dir,
         notebook_roots=notebook_roots,
         prior_report_path=prior_report_path,
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_intermediate_manifest_path,
+        app_intermediate_manifest_path=app_intermediate_manifest_path,
     )
     stem = f"{SAR_PROCESSING_PARITY_PREFIX}_{app_run_dir.name}"
     json_path = output_dir / f"{stem}.json"
@@ -1018,6 +1075,500 @@ def _build_f23_processing_delta_rows(
             rows.append(overlap_row)
     rows.append(_build_f23_median_domain_row())
     return rows
+
+
+def _build_f24_intermediate_rows(
+    *,
+    band_arrays: dict[str, dict[str, Any]],
+    app_run_dir: Path,
+    notebook_roots: list[Path],
+    source_report_path: Path | None,
+    notebook_intermediate_manifest_path: Path | None,
+    app_intermediate_manifest_path: Path | None,
+) -> tuple[list[SarProcessingRow], list[NotebookRelativeFile], set[str]]:
+    rows: list[SarProcessingRow] = []
+    notebook_files: list[NotebookRelativeFile] = []
+    app_files: set[str] = set()
+    notebook_manifest_base: Path | None = None
+
+    source_gate_row = _build_f24_source_gate_row(source_report_path=source_report_path)
+    rows.append(source_gate_row)
+
+    notebook_manifest_relative: NotebookRelativeFile | None = None
+    notebook_manifest_payload: dict[str, Any] | None = None
+    if notebook_intermediate_manifest_path is not None:
+        notebook_manifest_relative = NotebookRelativeFile(
+            root_label=notebook_intermediate_manifest_path.parent.name,
+            relative_path=notebook_intermediate_manifest_path.name,
+        )
+        notebook_manifest_payload = _load_intermediate_manifest(notebook_intermediate_manifest_path)
+        notebook_manifest_base = notebook_intermediate_manifest_path.parent
+    else:
+        notebook_manifest_relative = _resolve_notebook_relative_file(notebook_roots, NOTEBOOK_INTERMEDIATE_MANIFEST_CANDIDATES)
+        if notebook_manifest_relative is not None:
+            notebook_manifest_payload = _load_intermediate_manifest(_notebook_path(notebook_roots, notebook_manifest_relative))
+            notebook_files.append(notebook_manifest_relative)
+            notebook_manifest_base = _notebook_path(notebook_roots, notebook_manifest_relative).parent
+
+    app_manifest_path = app_intermediate_manifest_path or (app_run_dir / APP_INTERMEDIATE_MANIFEST)
+    app_manifest_payload = _load_intermediate_manifest(app_manifest_path) if app_manifest_path.is_file() else None
+    if app_manifest_payload is not None:
+        app_files.add(APP_INTERMEDIATE_MANIFEST if app_intermediate_manifest_path is None else app_intermediate_manifest_path.name)
+
+    stage_rows: list[SarProcessingRow] = []
+    for stage_name in F24_STAGE_ORDER:
+        row = _build_f24_stage_row(
+            stage_name=stage_name,
+            band_arrays=band_arrays,
+            app_run_dir=app_run_dir,
+            notebook_roots=notebook_roots,
+            notebook_manifest=notebook_manifest_payload,
+            notebook_manifest_relative=notebook_manifest_relative,
+            notebook_manifest_base=notebook_manifest_base,
+            app_manifest=app_manifest_payload,
+            app_manifest_path=app_manifest_path if app_manifest_payload is not None else None,
+        )
+        stage_rows.append(row)
+    rows.extend(stage_rows)
+    rows.append(_build_f24_first_divergence_row(source_gate_row=source_gate_row, stage_rows=stage_rows))
+    return rows, notebook_files, app_files
+
+
+def _build_f24_source_gate_row(*, source_report_path: Path | None) -> SarProcessingRow:
+    if source_report_path is None or not source_report_path.is_file():
+        return SarProcessingRow(
+            check="f24_source_identity_gate",
+            status="MISSING",
+            band_name="",
+            notebook_file="",
+            app_file="",
+            likely_cause="SOURCE_ID_PREREQUISITE_MISSING",
+            raw_matching_percent=None,
+            common_valid_matching_percent=None,
+            mask_overlap_percent=None,
+            mean_diff=None,
+            median_diff=None,
+            correlation=None,
+            linear_slope=None,
+            linear_intercept=None,
+            evidence="F24 requires an F13/F22 source-selection parity report proving SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS before interpreting intermediate deltas.",
+            recommended_next_action="Rerun SAR source-selection parity with the Cell 25 sidecar, then pass that local-only report to the SAR processing parity CLI.",
+        )
+    payload = json.loads(source_report_path.read_text(encoding="utf-8"))
+    classification = str(payload.get("source_identity_classification", ""))
+    if not classification:
+        for row in payload.get("rows", []):
+            if isinstance(row, dict) and row.get("check") == "source_identity_classification":
+                classification = str(row.get("status", ""))
+                break
+    if classification == F24_SOURCE_GATE_REQUIRED:
+        return SarProcessingRow(
+            check="f24_source_identity_gate",
+            status="MATCH",
+            band_name="",
+            notebook_file="",
+            app_file=source_report_path.name,
+            likely_cause=classification,
+            raw_matching_percent=None,
+            common_valid_matching_percent=None,
+            mask_overlap_percent=None,
+            mean_diff=None,
+            median_diff=None,
+            correlation=None,
+            linear_slope=None,
+            linear_intercept=None,
+            evidence=f"Source identity gate passed with source_identity_classification={classification}.",
+            recommended_next_action="Intermediate parity may be interpreted as a true processing-delta investigation.",
+        )
+    return SarProcessingRow(
+        check="f24_source_identity_gate",
+        status="BLOCKED",
+        band_name="",
+        notebook_file="",
+        app_file=source_report_path.name,
+        likely_cause=classification or "SOURCE_ID_PREREQUISITE_MISSING",
+        raw_matching_percent=None,
+        common_valid_matching_percent=None,
+        mask_overlap_percent=None,
+        mean_diff=None,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=f"Source identity gate did not pass. Expected {F24_SOURCE_GATE_REQUIRED}; found {classification or 'missing'}.",
+        recommended_next_action="Do not interpret intermediate deltas until F13/F22 proves source identity on the same run.",
+    )
+
+
+def _build_f24_stage_row(
+    *,
+    stage_name: str,
+    band_arrays: dict[str, dict[str, Any]],
+    app_run_dir: Path,
+    notebook_roots: list[Path],
+    notebook_manifest: dict[str, Any] | None,
+    notebook_manifest_relative: NotebookRelativeFile | None,
+    notebook_manifest_base: Path | None,
+    app_manifest: dict[str, Any] | None,
+    app_manifest_path: Path | None,
+) -> SarProcessingRow:
+    check = F24_STAGE_CHECKS[stage_name]
+    band_name = ",".join(F24_STAGE_BANDS[stage_name])
+    if stage_name == "post_rtc":
+        comparison = _compare_f24_post_rtc_stage(band_arrays)
+        notebook_file = ",".join(_f24_post_rtc_notebook_files(band_arrays))
+        app_file = ",".join(_f24_post_rtc_app_files(app_run_dir, band_arrays))
+    else:
+        notebook_stage = _extract_manifest_stage(notebook_manifest, stage_name)
+        app_stage = _extract_manifest_stage(app_manifest, stage_name)
+        notebook_file = "" if notebook_manifest_relative is None else f"{notebook_manifest_relative.root_label}:{notebook_manifest_relative.relative_path}"
+        app_file = "" if app_manifest_path is None else (
+            APP_INTERMEDIATE_MANIFEST if app_manifest_path.name == Path(APP_INTERMEDIATE_MANIFEST).name else app_manifest_path.name
+        )
+        comparison = _compare_f24_manifest_stage(
+            stage_name=stage_name,
+            notebook_stage=notebook_stage,
+            app_stage=app_stage,
+            notebook_manifest=notebook_manifest,
+            app_manifest=app_manifest,
+            notebook_base=notebook_manifest_base,
+            app_base=None if app_manifest_path is None else app_manifest_path.parent,
+        )
+    return SarProcessingRow(
+        check=check,
+        status=str(comparison["status"]),
+        band_name=band_name,
+        notebook_file=notebook_file,
+        app_file=app_file,
+        likely_cause=str(comparison["likely_cause"]),
+        raw_matching_percent=_as_float(comparison.get("matching_percent")),
+        common_valid_matching_percent=_as_float(comparison.get("matching_percent")),
+        mask_overlap_percent=None,
+        mean_diff=_as_float(comparison.get("mean_abs_diff")),
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=str(comparison["evidence"]),
+        recommended_next_action=str(comparison["recommended_next_action"]),
+    )
+
+
+def _build_f24_first_divergence_row(
+    *,
+    source_gate_row: SarProcessingRow,
+    stage_rows: list[SarProcessingRow],
+) -> SarProcessingRow:
+    if source_gate_row.status != "MATCH":
+        return SarProcessingRow(
+            check="first_divergence_stage",
+            status=source_gate_row.status,
+            band_name="",
+            notebook_file="",
+            app_file="",
+            likely_cause="SOURCE_ID_PREREQUISITE_MISSING",
+            raw_matching_percent=None,
+            common_valid_matching_percent=None,
+            mask_overlap_percent=None,
+            mean_diff=None,
+            median_diff=None,
+            correlation=None,
+            linear_slope=None,
+            linear_intercept=None,
+            evidence="Intermediate first-divergence classification is blocked until source identity is proven on the same run.",
+            recommended_next_action="Pass a source-selection parity report with SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS.",
+        )
+
+    stage_by_check = {row.check: row for row in stage_rows}
+    missing_rows = [row for row in stage_rows if row.status == "MISSING_NOTEBOOK_INTERMEDIATE"]
+    if missing_rows:
+        needed = ", ".join(row.check for row in missing_rows)
+        return SarProcessingRow(
+            check="first_divergence_stage",
+            status="MISSING_NOTEBOOK_INTERMEDIATE",
+            band_name="",
+            notebook_file="",
+            app_file="",
+            likely_cause="SOURCE_ID_MATCHED_INTERMEDIATES_MISSING",
+            raw_matching_percent=None,
+            common_valid_matching_percent=None,
+            mask_overlap_percent=None,
+            mean_diff=None,
+            median_diff=None,
+            correlation=None,
+            linear_slope=None,
+            linear_intercept=None,
+            evidence=f"Source identity matches, but notebook intermediate capture is missing for {needed}.",
+            recommended_next_action="Export the missing notebook Cell 25 intermediates in the documented local-only manifest layout, then rerun the report.",
+        )
+
+    first_map = (
+        ("intermediate_per_image_products_db", "FIRST_DIVERGENCE_PER_IMAGE_FILTER"),
+        ("intermediate_pair_median", "FIRST_DIVERGENCE_PAIR_MEDIAN"),
+        ("intermediate_final_median_pre_rtc", "FIRST_DIVERGENCE_FINAL_MEDIAN_OR_REPROJECT"),
+        ("intermediate_post_sample_pre_rtc", "FIRST_DIVERGENCE_FINAL_MEDIAN_OR_REPROJECT"),
+        ("intermediate_post_rtc", "FIRST_DIVERGENCE_LOCAL_RTC"),
+    )
+    for check, likely_cause in first_map:
+        row = stage_by_check.get(check)
+        if row is not None and row.status == "MISMATCH":
+            return SarProcessingRow(
+                check="first_divergence_stage",
+                status="DIAGNOSTIC",
+                band_name="",
+                notebook_file="",
+                app_file="",
+                likely_cause=likely_cause,
+                raw_matching_percent=row.raw_matching_percent,
+                common_valid_matching_percent=row.common_valid_matching_percent,
+                mask_overlap_percent=None,
+                mean_diff=row.mean_diff,
+                median_diff=None,
+                correlation=None,
+                linear_slope=None,
+                linear_intercept=None,
+                evidence=f"First intermediate mismatch appears at {check}. {row.evidence}",
+                recommended_next_action=row.recommended_next_action,
+            )
+
+    return SarProcessingRow(
+        check="first_divergence_stage",
+        status="MATCH",
+        band_name="",
+        notebook_file="",
+        app_file="",
+        likely_cause="FIRST_DIVERGENCE_NOT_FOUND",
+        raw_matching_percent=100.0,
+        common_valid_matching_percent=100.0,
+        mask_overlap_percent=None,
+        mean_diff=0.0,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence="All supplied intermediate stages match within tolerance; no first divergence was found.",
+        recommended_next_action="If final numeric parity still fails elsewhere, capture additional notebook-side intermediates or verify the supplied manifest contents.",
+    )
+
+
+def _compare_f24_post_rtc_stage(band_arrays: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    component_checks = (
+        ("VV_dB", "VV_dB"),
+        ("VH_dB", "VH_dB"),
+        ("logRatio_dB", "logRatio_dB"),
+        ("angle", "incidence"),
+    )
+    matching_percents: list[float] = []
+    mean_abs_diffs: list[float] = []
+    evidence_parts: list[str] = []
+    for notebook_band, app_band in component_checks:
+        payload = band_arrays.get(app_band, {}).get("npy") or band_arrays.get(app_band, {}).get("raster")
+        if payload is None:
+            return {
+                "status": "MISSING_APP_INTERMEDIATE",
+                "likely_cause": "APP_POST_RTC_INTERMEDIATE_MISSING",
+                "matching_percent": None,
+                "mean_abs_diff": None,
+                "evidence": f"App post-RTC band {app_band} is missing from the current run outputs.",
+                "recommended_next_action": "Capture app post-RTC outputs before comparing intermediate parity.",
+            }
+        analysis = analyze_array_pair(
+            band_name=app_band,
+            notebook_array=payload["array"],
+            app_array=payload["app_array"],
+            notebook_nodata=payload["notebook_nodata"],
+            app_nodata=payload["app_nodata"],
+        )
+        match_percent = analysis["common_valid_matching_percent"] or analysis["raw_matching_percent"]
+        if match_percent is not None:
+            matching_percents.append(float(match_percent))
+        if analysis["mean_diff"] is not None:
+            mean_abs_diffs.append(abs(float(analysis["mean_diff"])))
+        evidence_parts.append(f"{notebook_band}->{app_band}:{analysis['status']}")
+        if analysis["status"] == "MISMATCH":
+            return {
+                "status": "MISMATCH",
+                "likely_cause": "POST_RTC_NUMERIC_DELTA",
+                "matching_percent": min(matching_percents) if matching_percents else None,
+                "mean_abs_diff": max(mean_abs_diffs) if mean_abs_diffs else None,
+                "evidence": (
+                    "Post-RTC comparison reuses final notebook/app arrays. "
+                    f"Component statuses={','.join(evidence_parts)}."
+                ),
+                "recommended_next_action": "If earlier intermediate stages match, inspect local NumPy RTC as the first divergence candidate.",
+            }
+    return {
+        "status": "MATCH",
+        "likely_cause": "POST_RTC_MATCH",
+        "matching_percent": min(matching_percents) if matching_percents else 100.0,
+        "mean_abs_diff": max(mean_abs_diffs) if mean_abs_diffs else 0.0,
+        "evidence": f"Post-RTC comparison reuses final notebook/app arrays. Component statuses={','.join(evidence_parts)}.",
+        "recommended_next_action": "No action required.",
+    }
+
+
+def _compare_f24_manifest_stage(
+    *,
+    stage_name: str,
+    notebook_stage: dict[str, Any] | None,
+    app_stage: dict[str, Any] | None,
+    notebook_manifest: dict[str, Any] | None,
+    app_manifest: dict[str, Any] | None,
+    notebook_base: Path | None,
+    app_base: Path | None,
+) -> dict[str, Any]:
+    if notebook_manifest is None or notebook_stage is None:
+        return {
+            "status": "MISSING_NOTEBOOK_INTERMEDIATE",
+            "likely_cause": "NOTEBOOK_INTERMEDIATE_MISSING",
+            "matching_percent": None,
+            "mean_abs_diff": None,
+            "evidence": f"Notebook intermediate stage {stage_name} is not available in a local-only manifest.",
+            "recommended_next_action": f"Export notebook Cell 25 stage {stage_name} into the documented manifest layout.",
+        }
+    if app_manifest is None or app_stage is None or app_base is None:
+        return {
+            "status": "MISSING_APP_INTERMEDIATE",
+            "likely_cause": "APP_INTERMEDIATE_MISSING",
+            "matching_percent": None,
+            "mean_abs_diff": None,
+            "evidence": f"App intermediate stage {stage_name} is not available in a local-only manifest.",
+            "recommended_next_action": f"Export app-side stage {stage_name} locally before comparing intermediate parity.",
+        }
+    if notebook_base is None:
+        return {
+            "status": "MISSING_NOTEBOOK_INTERMEDIATE",
+            "likely_cause": "NOTEBOOK_INTERMEDIATE_MISSING",
+            "matching_percent": None,
+            "mean_abs_diff": None,
+            "evidence": f"Notebook manifest base path for stage {stage_name} could not be resolved.",
+            "recommended_next_action": f"Provide a notebook intermediate manifest path for stage {stage_name}.",
+        }
+
+    notebook_items = _normalize_stage_items(notebook_stage)
+    app_items = _normalize_stage_items(app_stage)
+    notebook_by_label = {item["label"]: item for item in notebook_items}
+    app_by_label = {item["label"]: item for item in app_items}
+
+    missing_app_labels = sorted(set(notebook_by_label) - set(app_by_label))
+    if missing_app_labels:
+        return {
+            "status": "MISSING_APP_INTERMEDIATE",
+            "likely_cause": "APP_INTERMEDIATE_MISSING",
+            "matching_percent": None,
+            "mean_abs_diff": None,
+            "evidence": f"App intermediate stage {stage_name} is missing labels {missing_app_labels}.",
+            "recommended_next_action": f"Export matching app intermediate labels for stage {stage_name}.",
+        }
+
+    matching_percents: list[float] = []
+    mean_abs_diffs: list[float] = []
+    evidence_parts: list[str] = []
+    for label in sorted(notebook_by_label):
+        notebook_item = notebook_by_label[label]
+        app_item = app_by_label[label]
+        for band_name in F24_STAGE_BANDS[stage_name]:
+            notebook_band_name = band_name
+            app_band_name = "incidence" if stage_name == "post_rtc" and band_name == "angle" else band_name
+            notebook_rel = notebook_item["bands"].get(notebook_band_name)
+            app_rel = app_item["bands"].get(app_band_name)
+            if notebook_rel is None:
+                return {
+                    "status": "MISSING_NOTEBOOK_INTERMEDIATE",
+                    "likely_cause": "NOTEBOOK_INTERMEDIATE_MISSING",
+                    "matching_percent": None,
+                    "mean_abs_diff": None,
+                    "evidence": f"Notebook stage {stage_name} label {label} is missing band {notebook_band_name}.",
+                    "recommended_next_action": f"Re-export notebook stage {stage_name} with band {notebook_band_name}.",
+                }
+            if app_rel is None:
+                return {
+                    "status": "MISSING_APP_INTERMEDIATE",
+                    "likely_cause": "APP_INTERMEDIATE_MISSING",
+                    "matching_percent": None,
+                    "mean_abs_diff": None,
+                    "evidence": f"App stage {stage_name} label {label} is missing band {app_band_name}.",
+                    "recommended_next_action": f"Re-export app stage {stage_name} with band {app_band_name}.",
+                }
+            notebook_array = _squeeze_array(np.load(notebook_base / notebook_rel))
+            app_array = _squeeze_array(np.load(app_base / app_rel))
+            analysis = analyze_array_pair(
+                band_name=app_band_name,
+                notebook_array=notebook_array,
+                app_array=app_array,
+                notebook_nodata=None,
+                app_nodata=None,
+            )
+            match_percent = analysis["common_valid_matching_percent"] or analysis["raw_matching_percent"]
+            if match_percent is not None:
+                matching_percents.append(float(match_percent))
+            if analysis["mean_diff"] is not None:
+                mean_abs_diffs.append(abs(float(analysis["mean_diff"])))
+            evidence_parts.append(f"{label}:{notebook_band_name}->{app_band_name}:{analysis['status']}")
+            if analysis["status"] == "MISMATCH":
+                return {
+                    "status": "MISMATCH",
+                    "likely_cause": f"{stage_name.upper()}_NUMERIC_DELTA",
+                    "matching_percent": min(matching_percents) if matching_percents else None,
+                    "mean_abs_diff": max(mean_abs_diffs) if mean_abs_diffs else None,
+                    "evidence": f"Intermediate stage {stage_name} mismatch detected. Component statuses={','.join(evidence_parts)}.",
+                    "recommended_next_action": f"Treat {stage_name} as the first divergent intermediate candidate before changing downstream SAR logic.",
+                }
+
+    return {
+        "status": "MATCH",
+        "likely_cause": f"{stage_name.upper()}_MATCH",
+        "matching_percent": min(matching_percents) if matching_percents else 100.0,
+        "mean_abs_diff": max(mean_abs_diffs) if mean_abs_diffs else 0.0,
+        "evidence": f"Intermediate stage {stage_name} matches for labels {sorted(notebook_by_label)}.",
+        "recommended_next_action": "No action required.",
+    }
+
+
+def _load_intermediate_manifest(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Intermediate manifest must be a JSON object: {path}")
+    return payload
+
+
+def _extract_manifest_stage(manifest: dict[str, Any] | None, stage_name: str) -> dict[str, Any] | None:
+    if manifest is None:
+        return None
+    stages = manifest.get("stages")
+    if not isinstance(stages, dict):
+        return None
+    stage = stages.get(stage_name)
+    return stage if isinstance(stage, dict) else None
+
+
+def _normalize_stage_items(stage_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    items = stage_payload.get("items")
+    if isinstance(items, list):
+        return [item for item in items if isinstance(item, dict) and isinstance(item.get("bands"), dict) and item.get("label")]
+    if isinstance(stage_payload.get("bands"), dict):
+        return [{"label": str(stage_payload.get("label", "final")), "bands": stage_payload["bands"]}]
+    return []
+
+
+def _f24_post_rtc_notebook_files(band_arrays: dict[str, dict[str, Any]]) -> list[str]:
+    files: list[str] = []
+    for band_name in ("VV_dB", "VH_dB", "logRatio_dB", "incidence"):
+        if band_arrays.get(band_name, {}).get("npy") is not None:
+            files.append(f"{band_name}_npy")
+        elif band_arrays.get(band_name, {}).get("raster") is not None:
+            files.append(f"{band_name}_raster")
+    return files
+
+
+def _f24_post_rtc_app_files(app_run_dir: Path, band_arrays: dict[str, dict[str, Any]]) -> list[str]:
+    files: list[str] = []
+    for band_name, mapping in SAR_BAND_MAPPINGS.items():
+        if band_arrays.get(band_name, {}).get("npy") is not None and (app_run_dir / str(mapping["app_npy"])).is_file():
+            files.append(str(mapping["app_npy"]))
+        elif band_arrays.get(band_name, {}).get("raster") is not None and (app_run_dir / str(mapping["app_raster"])).is_file():
+            files.append(str(mapping["app_raster"]))
+    return files
 
 
 def _build_f23_spatial_bin_row(
