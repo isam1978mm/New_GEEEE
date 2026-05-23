@@ -112,6 +112,10 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
     assert "row=0; col=0" in by_check["pixel_probe_VV_dB_raster_top_left"]["evidence"]
     assert by_check["pixel_probe_VV_dB_raster_bottom_right"]["status"] == "MATCH"
     assert "notebook_value=nodata" in by_check["pixel_probe_VV_dB_raster_bottom_right"]["evidence"]
+    assert by_check["f20_edge_interior_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f20_nodata_edge_overlap_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f20_angle_delta_distribution_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f20_VV_dB_excluding_angle_delta_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
     json_path, csv_path = write_sar_processing_parity_report(
@@ -133,6 +137,43 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
         rows = list(csv.DictReader(handle))
     assert any(row["check"] == "VV_dB_raster" for row in rows)
     assert any(row["check"] == "pixel_probe_VV_dB_raster_center" for row in rows)
+    assert any(row["check"] == "f20_angle_delta_distribution_raster" for row in rows)
+
+
+def test_f20_diagnostics_report_edge_angle_delta_and_filtered_vv_residual(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f20"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    _write_f20_edge_angle_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+
+    report = build_sar_processing_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    angle_row = by_check["f20_angle_delta_distribution_raster"]
+    assert angle_row["likely_cause"] == "ANGLE_EDGE_OR_BORDER_DELTA"
+    assert angle_row["raw_matching_percent"] == pytest.approx(66.666667)
+    assert angle_row["common_valid_matching_percent"] == 100.0
+    assert "large_delta_count=3" in angle_row["evidence"]
+    assert "edge_large_delta_count=3" in angle_row["evidence"]
+
+    edge_row = by_check["f20_edge_interior_VV_dB_raster"]
+    assert edge_row["raw_matching_percent"] == pytest.approx(62.5)
+    assert edge_row["common_valid_matching_percent"] == 100.0
+    assert "edge_count=8" in edge_row["evidence"]
+    assert "interior_count=1" in edge_row["evidence"]
+
+    filtered_vv_row = by_check["f20_VV_dB_excluding_angle_delta_raster"]
+    assert filtered_vv_row["raw_matching_percent"] == 100.0
+    assert filtered_vv_row["mask_overlap_percent"] == pytest.approx(66.666667)
+    assert "comparison_count=6" in filtered_vv_row["evidence"]
+
+    nodata_row = by_check["f20_nodata_edge_overlap_incidence_raster"]
+    assert nodata_row["status"] == "DIAGNOSTIC"
+    assert "notebook_invalid_count=0" in nodata_row["evidence"]
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
 
 
 def test_sar_processing_report_finds_notebook_summary_under_qa_directory(tmp_path: Path) -> None:
@@ -265,7 +306,45 @@ def _write_sar_fixture(
     np.save(app_run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.npy", np.stack([app_vv, app_vh, app_log_ratio, app_incidence], axis=-1))
 
 
+def _write_f20_edge_angle_fixture(*, app_run_dir: Path, notebook_root: Path) -> None:
+    _write_summary_csv(
+        notebook_root / "SUMMARY_RADAR_demo.csv",
+        [
+            {"band_name": "VV_dB", "min": "10.0", "max": "20.0", "mean": "11.111", "nodata_count": "0"},
+            {"band_name": "VH_dB", "min": "5.0", "max": "10.0", "mean": "5.555", "nodata_count": "0"},
+            {"band_name": "logRatio_dB", "min": "5.0", "max": "10.0", "mean": "5.555", "nodata_count": "0"},
+            {"band_name": "angle", "min": "35.0", "max": "35.0", "mean": "35.0", "nodata_count": "0"},
+        ],
+    )
+    _write_summary_csv(
+        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        [
+            {"band_name": "VV_dB", "min": "10.0", "max": "20.0", "mean": "11.278", "nodata_count": "0"},
+            {"band_name": "VH_dB", "min": "5.0", "max": "10.0", "mean": "5.555", "nodata_count": "0"},
+            {"band_name": "logRatio_dB", "min": "5.0", "max": "10.5", "mean": "5.722", "nodata_count": "0"},
+            {"band_name": "incidence", "min": "35.0", "max": "37.0", "mean": "35.667", "nodata_count": "0"},
+        ],
+    )
+    notebook_vv = np.array([[10.0, 10.0, 10.0], [10.0, 20.0, 10.0], [10.0, 10.0, 10.0]], dtype=np.float32)
+    notebook_vh = np.array([[5.0, 5.0, 5.0], [5.0, 10.0, 5.0], [5.0, 5.0, 5.0]], dtype=np.float32)
+    notebook_angle = np.full((3, 3), 35.0, dtype=np.float32)
+    app_vv = notebook_vv.copy()
+    app_vv[0, :] += 0.5
+    app_vh = notebook_vh.copy()
+    app_incidence = notebook_angle.copy()
+    app_incidence[0, :] += 2.0
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_VV_dB_640_demo.tif", notebook_vv, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_VH_dB_640_demo.tif", notebook_vh, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_logRatio_dB_640_demo.tif", notebook_vv - notebook_vh, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_angle_640_demo.tif", notebook_angle, nodata=-9999.0)
+    _write_raster(app_run_dir / "VV_dB.tif", app_vv, nodata=-9999.0)
+    _write_raster(app_run_dir / "VH_dB.tif", app_vh, nodata=-9999.0)
+    _write_raster(app_run_dir / "logRatio_dB.tif", app_vv - app_vh, nodata=-9999.0)
+    _write_raster(app_run_dir / "incidence.tif", app_incidence, nodata=None)
+
+
 def _write_summary_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["band_name", "min", "max", "mean", "nodata_count"])
         writer.writeheader()

@@ -72,6 +72,14 @@ F19 SAR NPY mapping:
 - Notebook `outputs.npys.angle` maps to the app `npy_radar_bands/incidence.npy` output.
 - Absolute notebook paths embedded in `QA_RADAR_META` are normalized to repository-local relative artifact paths before report rows are written.
 
+F20 SAR numeric delta diagnostics:
+
+- `f20_edge_interior_*` rows compare edge pixels against interior pixels for each SAR band/container.
+- `f20_nodata_edge_overlap_*` rows summarize invalid-mask overlap and edge-skewed nodata counts.
+- `f20_angle_delta_distribution_*` rows count large angle/incidence deltas and report whether they are edge-localized.
+- `f20_*_excluding_angle_delta_*` rows recompute VV/VH/logRatio deltas after excluding pixels with large angle/incidence deltas.
+- These rows use counts, percentages, relative row/column diagnostics, and relative artifact labels only. They do not change SAR science logic, source selection, notebook code, or tolerances.
+
 F16 finding:
 
 - The notebook `NO-COP-DEM` path applies a dB-domain border mask first:

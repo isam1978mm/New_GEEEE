@@ -51,6 +51,9 @@ def test_sar_processing_parity_script_writes_local_only_reports(tmp_path: Path, 
         rows = list(csv.DictReader(handle))
     by_check = {row["check"]: row for row in rows}
     assert by_check["logratio_formula_app_raster"]["status"] == "MATCH"
+    assert by_check["f20_edge_interior_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f20_nodata_edge_overlap_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f20_angle_delta_distribution_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
 

@@ -30,6 +30,8 @@ SAR_PROCESSING_FIELDNAMES = [
     "recommended_next_action",
 ]
 SAR_BAND_TOLERANCE = Tolerance(abs_tol=1e-4, rel_tol=1e-5)
+ANGLE_LARGE_DELTA_DEGREES = 0.01
+ANGLE_EDGE_DELTA_DEGREES = 1.0
 SAR_BAND_MAPPINGS = {
     "VV_dB": {
         "notebook_band_name": "VV_dB",
@@ -177,6 +179,7 @@ def build_sar_processing_parity_report(
             band_arrays.setdefault(band_name, {})["npy"] = npy_payload
 
     rows.extend(_build_pixel_probe_rows(band_arrays))
+    rows.extend(_build_f20_delta_diagnostic_rows(band_arrays))
     rows.extend(_build_log_ratio_rows(band_arrays))
     stack_row, notebook_stack = _build_stack_row(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
     rows.append(stack_row)
@@ -759,6 +762,265 @@ def _build_pixel_probe_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarP
                 )
             )
     return rows
+
+
+def _build_f20_delta_diagnostic_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    rows.extend(_build_edge_interior_rows(band_arrays))
+    rows.extend(_build_nodata_edge_overlap_rows(band_arrays))
+    rows.extend(_build_angle_delta_rows(band_arrays))
+    rows.extend(_build_vv_vh_without_angle_delta_rows(band_arrays))
+    return rows
+
+
+def _build_edge_interior_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    for band_name, containers in band_arrays.items():
+        for container, payload in containers.items():
+            notebook_array = _squeeze_array(payload["array"])
+            app_array = _squeeze_array(payload["app_array"])
+            if notebook_array.shape != app_array.shape or notebook_array.ndim != 2:
+                continue
+            notebook_valid = _valid_mask(notebook_array, payload["notebook_nodata"])
+            app_valid = _valid_mask(app_array, payload["app_nodata"])
+            common_valid = notebook_valid & app_valid
+            edge_mask = _edge_mask(notebook_array.shape) & common_valid
+            interior_mask = (~_edge_mask(notebook_array.shape)) & common_valid
+            edge_stats = _masked_delta_stats(notebook_array, app_array, edge_mask)
+            interior_stats = _masked_delta_stats(notebook_array, app_array, interior_mask)
+            edge_metrics = _masked_compare_metrics(notebook_array, app_array, edge_mask)
+            interior_metrics = _masked_compare_metrics(notebook_array, app_array, interior_mask)
+            rows.append(
+                SarProcessingRow(
+                    check=f"f20_edge_interior_{band_name}_{container}",
+                    status="DIAGNOSTIC",
+                    band_name=band_name,
+                    notebook_file="",
+                    app_file="",
+                    likely_cause="EDGE_INTERIOR_DELTA_DIAGNOSTIC",
+                    raw_matching_percent=edge_metrics.get("matching_percent"),
+                    common_valid_matching_percent=interior_metrics.get("matching_percent"),
+                    mask_overlap_percent=_mask_percent(edge_mask, common_valid),
+                    mean_diff=edge_stats.get("mean_abs_diff"),
+                    median_diff=interior_stats.get("median_abs_diff"),
+                    correlation=None,
+                    linear_slope=None,
+                    linear_intercept=None,
+                    evidence=(
+                        f"Edge/interior delta diagnostic; edge_count={edge_stats['count']}; "
+                        f"edge_mean_abs_diff={edge_stats['mean_abs_diff_text']}; edge_max_abs_diff={edge_stats['max_abs_diff_text']}; "
+                        f"interior_count={interior_stats['count']}; interior_mean_abs_diff={interior_stats['mean_abs_diff_text']}; "
+                        f"interior_max_abs_diff={interior_stats['max_abs_diff_text']}."
+                    ),
+                    recommended_next_action="If edge deltas dominate, inspect border masking, unmask, clip, and tile sampling before changing SAR math.",
+                )
+            )
+    return rows
+
+
+def _build_nodata_edge_overlap_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    for band_name, containers in band_arrays.items():
+        for container, payload in containers.items():
+            notebook_array = _squeeze_array(payload["array"])
+            app_array = _squeeze_array(payload["app_array"])
+            if notebook_array.shape != app_array.shape or notebook_array.ndim != 2:
+                continue
+            notebook_valid = _valid_mask(notebook_array, payload["notebook_nodata"])
+            app_valid = _valid_mask(app_array, payload["app_nodata"])
+            notebook_invalid = ~notebook_valid
+            app_invalid = ~app_valid
+            invalid_union = notebook_invalid | app_invalid
+            invalid_overlap = notebook_invalid & app_invalid
+            edge = _edge_mask(notebook_array.shape)
+            rows.append(
+                SarProcessingRow(
+                    check=f"f20_nodata_edge_overlap_{band_name}_{container}",
+                    status="DIAGNOSTIC",
+                    band_name=band_name,
+                    notebook_file="",
+                    app_file="",
+                    likely_cause="NODATA_EDGE_BORDER_MASK_DIAGNOSTIC",
+                    raw_matching_percent=_mask_percent(notebook_valid == app_valid, np.ones(notebook_valid.shape, dtype=bool)),
+                    common_valid_matching_percent=_mask_percent(notebook_valid & app_valid, np.ones(notebook_valid.shape, dtype=bool)),
+                    mask_overlap_percent=_mask_percent(invalid_overlap, invalid_union),
+                    mean_diff=None,
+                    median_diff=None,
+                    correlation=None,
+                    linear_slope=None,
+                    linear_intercept=None,
+                    evidence=(
+                        f"Nodata-edge overlap diagnostic; notebook_invalid_count={int(np.count_nonzero(notebook_invalid))}; "
+                        f"app_invalid_count={int(np.count_nonzero(app_invalid))}; invalid_union_count={int(np.count_nonzero(invalid_union))}; "
+                        f"invalid_overlap_count={int(np.count_nonzero(invalid_overlap))}; "
+                        f"notebook_edge_invalid_count={int(np.count_nonzero(notebook_invalid & edge))}; "
+                        f"app_edge_invalid_count={int(np.count_nonzero(app_invalid & edge))}; "
+                        f"edge_invalid_overlap_count={int(np.count_nonzero(invalid_overlap & edge))}."
+                    ),
+                    recommended_next_action="If invalid pixels are edge-skewed or non-overlapping, inspect border masking, unmask, clip, and sample order.",
+                )
+            )
+    return rows
+
+
+def _build_angle_delta_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    for container, payload in band_arrays.get("incidence", {}).items():
+        notebook_angle = _squeeze_array(payload["array"])
+        app_incidence = _squeeze_array(payload["app_array"])
+        if notebook_angle.shape != app_incidence.shape or notebook_angle.ndim != 2:
+            continue
+        common_valid = _valid_mask(notebook_angle, payload["notebook_nodata"]) & _valid_mask(app_incidence, payload["app_nodata"])
+        deltas = np.abs(app_incidence.astype(np.float64, copy=False) - notebook_angle.astype(np.float64, copy=False))
+        large_mask = common_valid & (deltas > ANGLE_LARGE_DELTA_DEGREES)
+        edge_large_mask = large_mask & _edge_mask(notebook_angle.shape)
+        stats = _masked_delta_stats(notebook_angle, app_incidence, common_valid)
+        large_count = int(np.count_nonzero(large_mask))
+        edge_large_count = int(np.count_nonzero(edge_large_mask))
+        likely_cause = (
+            "ANGLE_EDGE_OR_BORDER_DELTA"
+            if large_count > 0 and large_count == edge_large_count
+            else "ANGLE_DELTA_DISTRIBUTION"
+        )
+        rows.append(
+            SarProcessingRow(
+                check=f"f20_angle_delta_distribution_{container}",
+                status="DIAGNOSTIC",
+                band_name="incidence",
+                notebook_file="",
+                app_file="",
+                likely_cause=likely_cause,
+                raw_matching_percent=_mask_percent(common_valid & (deltas <= ANGLE_LARGE_DELTA_DEGREES), common_valid),
+                common_valid_matching_percent=_mask_percent(edge_large_mask, large_mask),
+                mask_overlap_percent=_mask_percent(common_valid, np.ones(common_valid.shape, dtype=bool)),
+                mean_diff=stats.get("mean_abs_diff"),
+                median_diff=stats.get("median_abs_diff"),
+                correlation=None,
+                linear_slope=None,
+                linear_intercept=None,
+                evidence=(
+                    f"Angle delta distribution; common_valid_count={stats['count']}; "
+                    f"large_delta_threshold_degrees={ANGLE_LARGE_DELTA_DEGREES}; "
+                    f"large_delta_count={large_count}; "
+                    f"edge_large_delta_count={edge_large_count}; "
+                    f"delta_gt_{ANGLE_EDGE_DELTA_DEGREES:g}_count={int(np.count_nonzero(common_valid & (deltas > ANGLE_EDGE_DELTA_DEGREES)))}; "
+                    f"mean_abs_diff={stats['mean_abs_diff_text']}; max_abs_diff={stats['max_abs_diff_text']}."
+                ),
+                recommended_next_action="If large angle deltas are edge-localized, inspect angle border mask and sampling/finalization order.",
+            )
+        )
+    return rows
+
+
+def _build_vv_vh_without_angle_delta_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    for container, angle_payload in band_arrays.get("incidence", {}).items():
+        notebook_angle = _squeeze_array(angle_payload["array"])
+        app_incidence = _squeeze_array(angle_payload["app_array"])
+        if notebook_angle.shape != app_incidence.shape or notebook_angle.ndim != 2:
+            continue
+        angle_valid = _valid_mask(notebook_angle, angle_payload["notebook_nodata"]) & _valid_mask(app_incidence, angle_payload["app_nodata"])
+        angle_delta = np.abs(app_incidence.astype(np.float64, copy=False) - notebook_angle.astype(np.float64, copy=False))
+        low_angle_delta_mask = angle_valid & (angle_delta <= ANGLE_LARGE_DELTA_DEGREES)
+        for band_name in ("VV_dB", "VH_dB", "logRatio_dB"):
+            payload = band_arrays.get(band_name, {}).get(container)
+            if payload is None:
+                continue
+            notebook_array = _squeeze_array(payload["array"])
+            app_array = _squeeze_array(payload["app_array"])
+            if notebook_array.shape != app_array.shape or notebook_array.shape != low_angle_delta_mask.shape:
+                continue
+            common_valid = (
+                low_angle_delta_mask
+                & _valid_mask(notebook_array, payload["notebook_nodata"])
+                & _valid_mask(app_array, payload["app_nodata"])
+            )
+            metrics = _masked_compare_metrics(notebook_array, app_array, common_valid)
+            stats = _masked_delta_stats(notebook_array, app_array, common_valid)
+            rows.append(
+                SarProcessingRow(
+                    check=f"f20_{band_name}_excluding_angle_delta_{container}",
+                    status="DIAGNOSTIC",
+                    band_name=band_name,
+                    notebook_file="",
+                    app_file="",
+                    likely_cause="SAR_DELTA_EXCLUDING_ANGLE_MISMATCH",
+                    raw_matching_percent=metrics.get("matching_percent"),
+                    common_valid_matching_percent=metrics.get("matching_percent"),
+                    mask_overlap_percent=_mask_percent(common_valid, _valid_mask(notebook_array, payload["notebook_nodata"])),
+                    mean_diff=stats.get("mean_abs_diff"),
+                    median_diff=stats.get("median_abs_diff"),
+                    correlation=None,
+                    linear_slope=None,
+                    linear_intercept=None,
+                    evidence=(
+                        f"{band_name} delta after excluding large angle-delta pixels; "
+                        f"angle_delta_threshold_degrees={ANGLE_LARGE_DELTA_DEGREES}; "
+                        f"comparison_count={stats['count']}; mean_abs_diff={stats['mean_abs_diff_text']}; "
+                        f"max_abs_diff={stats['max_abs_diff_text']}; matching_percent={_stringify_number(metrics.get('matching_percent')) or 'n/a'}."
+                    ),
+                    recommended_next_action="If VV/VH deltas remain after excluding angle-delta pixels, inspect speckle filtering, border mask, aggregation, or sampling order.",
+                )
+            )
+    return rows
+
+
+def _edge_mask(shape: tuple[int, ...]) -> np.ndarray:
+    height, width = int(shape[0]), int(shape[1])
+    mask = np.zeros((height, width), dtype=bool)
+    if height == 0 or width == 0:
+        return mask
+    mask[0, :] = True
+    mask[-1, :] = True
+    mask[:, 0] = True
+    mask[:, -1] = True
+    return mask
+
+
+def _masked_compare_metrics(notebook_array: np.ndarray, app_array: np.ndarray, mask: np.ndarray) -> dict[str, Any]:
+    if not np.any(mask):
+        return {"pass": False, "matching_percent": None, "differing_count": None}
+    return compare_arrays(
+        notebook_array.astype(np.float64, copy=False)[mask],
+        app_array.astype(np.float64, copy=False)[mask],
+        tolerance=SAR_BAND_TOLERANCE,
+    )
+
+
+def _masked_delta_stats(notebook_array: np.ndarray, app_array: np.ndarray, mask: np.ndarray) -> dict[str, Any]:
+    if not np.any(mask):
+        return {
+            "count": 0,
+            "mean_abs_diff": None,
+            "median_abs_diff": None,
+            "max_abs_diff": None,
+            "mean_abs_diff_text": "n/a",
+            "median_abs_diff_text": "n/a",
+            "max_abs_diff_text": "n/a",
+        }
+    delta = np.abs(
+        app_array.astype(np.float64, copy=False)[mask]
+        - notebook_array.astype(np.float64, copy=False)[mask]
+    )
+    mean_abs_diff = float(np.mean(delta))
+    median_abs_diff = float(np.median(delta))
+    max_abs_diff = float(np.max(delta))
+    return {
+        "count": int(delta.size),
+        "mean_abs_diff": mean_abs_diff,
+        "median_abs_diff": median_abs_diff,
+        "max_abs_diff": max_abs_diff,
+        "mean_abs_diff_text": f"{mean_abs_diff:.8f}",
+        "median_abs_diff_text": f"{median_abs_diff:.8f}",
+        "max_abs_diff_text": f"{max_abs_diff:.8f}",
+    }
+
+
+def _mask_percent(mask: np.ndarray, denominator_mask: np.ndarray) -> float | None:
+    denominator = int(np.count_nonzero(denominator_mask))
+    if denominator == 0:
+        return None
+    return round((int(np.count_nonzero(mask)) / denominator) * 100.0, 6)
 
 
 def _pixel_probe_rows_for_array(
