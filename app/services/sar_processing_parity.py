@@ -182,6 +182,7 @@ def build_sar_processing_parity_report(
     rows.extend(_build_pixel_probe_rows(band_arrays))
     rows.extend(_build_f20_delta_diagnostic_rows(band_arrays))
     rows.extend(_build_f21_vv_vh_residual_rows(band_arrays))
+    rows.extend(_build_f23_processing_delta_rows(band_arrays, app_run_dir=app_run_dir))
     rows.extend(_build_log_ratio_rows(band_arrays))
     stack_row, notebook_stack = _build_stack_row(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
     rows.append(stack_row)
@@ -988,6 +989,303 @@ def _build_f21_vv_vh_residual_rows(band_arrays: dict[str, dict[str, Any]]) -> li
     return rows
 
 
+def _build_f23_processing_delta_rows(
+    band_arrays: dict[str, dict[str, Any]],
+    *,
+    app_run_dir: Path,
+) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    dem_slope = _load_dem_slope(app_run_dir)
+    containers = sorted({name for band in ("VV_dB", "VH_dB") for name in band_arrays.get(band, {})})
+    for container in containers:
+        for band_name in ("VV_dB", "VH_dB"):
+            payload = band_arrays.get(band_name, {}).get(container)
+            if payload is None:
+                continue
+            notebook_array = _squeeze_array(payload["array"])
+            app_array = _squeeze_array(payload["app_array"])
+            if notebook_array.shape != app_array.shape or notebook_array.ndim != 2:
+                continue
+            mask = _valid_mask(notebook_array, payload["notebook_nodata"]) & _valid_mask(app_array, payload["app_nodata"])
+            incidence_payload = band_arrays.get("incidence", {}).get(container)
+            incidence_array = None if incidence_payload is None else _squeeze_array(incidence_payload["app_array"])
+            rows.append(_build_f23_spatial_bin_row(band_name, container, notebook_array, app_array, mask))
+            rows.append(_build_f23_context_row(band_name, container, notebook_array, app_array, mask, incidence_array, dem_slope))
+            rows.append(_build_f23_subset_row(band_name, container, notebook_array, app_array, mask, incidence_array, dem_slope))
+            rows.append(_build_f23_dtype_row(band_name, container, notebook_array, app_array, mask))
+        overlap_row = _build_f23_vv_vh_large_overlap_row(band_arrays, container)
+        if overlap_row is not None:
+            rows.append(overlap_row)
+    rows.append(_build_f23_median_domain_row())
+    return rows
+
+
+def _build_f23_spatial_bin_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+) -> SarProcessingRow:
+    large_mask = _large_residual_mask(notebook_array, app_array, mask)
+    row_counts = _axis_bin_counts(large_mask, axis=0, bins=4)
+    col_counts = _axis_bin_counts(large_mask, axis=1, bins=4)
+    tile_boundary_mask = _tile_boundary_mask(large_mask.shape)
+    large_count = int(np.count_nonzero(large_mask))
+    boundary_count = int(np.count_nonzero(large_mask & tile_boundary_mask))
+    max_bin_count = max(row_counts + col_counts) if row_counts or col_counts else 0
+    max_bin_percent = round((max_bin_count / large_count) * 100.0, 6) if large_count else None
+    likely_cause = (
+        "F23_LARGE_RESIDUAL_SPATIALLY_CLUSTERED"
+        if max_bin_percent is not None and max_bin_percent >= 60.0
+        else "F23_LARGE_RESIDUAL_DISTRIBUTED"
+    )
+    return SarProcessingRow(
+        check=f"f23_large_residual_spatial_bins_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=_mask_percent(large_mask, mask),
+        common_valid_matching_percent=_mask_percent(large_mask & tile_boundary_mask, large_mask),
+        mask_overlap_percent=None,
+        mean_diff=None,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F23 large-residual spatial bins; threshold_dB=0.1; large_count={large_count}; "
+            f"row_bin_counts={_compact_json(row_counts)}; col_bin_counts={_compact_json(col_counts)}; "
+            f"tile_boundary_large_count={boundary_count}; max_bin_percent={_stringify_number(max_bin_percent)}."
+        ),
+        recommended_next_action="If large residuals cluster by row/col or tile boundary, inspect sampleRectangle assembly, reproject timing, and tile-edge behavior.",
+    )
+
+
+def _build_f23_context_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+    incidence_array: np.ndarray | None,
+    dem_slope: np.ndarray | None,
+) -> SarProcessingRow:
+    large_mask = _large_residual_mask(notebook_array, app_array, mask)
+    large_count = int(np.count_nonzero(large_mask))
+    context = _context_counts(
+        notebook_array=notebook_array,
+        mask=mask,
+        large_mask=large_mask,
+        incidence_array=incidence_array,
+        dem_slope=dem_slope,
+    )
+    likely_cause = _f23_context_likely_cause(context)
+    return SarProcessingRow(
+        check=f"f23_large_residual_context_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=_mask_percent(large_mask, mask),
+        common_valid_matching_percent=context.get("large_high_slope_percent"),
+        mask_overlap_percent=context.get("large_high_incidence_percent"),
+        mean_diff=None,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F23 large-residual context counts; threshold_dB=0.1; large_count={large_count}; "
+            f"slope_available={str(dem_slope is not None).lower()}; incidence_available={str(incidence_array is not None).lower()}; "
+            f"large_high_slope_count={context['large_high_slope_count']}; "
+            f"large_mid_incidence_count={context['large_mid_incidence_count']}; "
+            f"large_high_incidence_count={context['large_high_incidence_count']}; "
+            f"large_low_backscatter_count={context['large_low_backscatter_count']}; "
+            f"large_high_backscatter_count={context['large_high_backscatter_count']}."
+        ),
+        recommended_next_action="Use context counts to prioritize slope/RTC, incidence, backscatter, or filter-threshold follow-up diagnostics.",
+    )
+
+
+def _build_f23_subset_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+    incidence_array: np.ndarray | None,
+    dem_slope: np.ndarray | None,
+) -> SarProcessingRow:
+    baseline = _masked_delta_stats(notebook_array, app_array, mask)
+    subset_mask = mask.copy()
+    subset_parts: list[str] = []
+    if dem_slope is not None and dem_slope.shape == mask.shape:
+        slope_valid = np.isfinite(dem_slope) & mask
+        if np.any(slope_valid):
+            low_slope_limit = float(np.percentile(dem_slope[slope_valid], 50))
+            subset_mask &= np.isfinite(dem_slope) & (dem_slope <= low_slope_limit)
+            subset_parts.append(f"low_slope_lte_p50={low_slope_limit:.8f}")
+    if incidence_array is not None and incidence_array.shape == mask.shape:
+        incidence_valid = np.isfinite(incidence_array) & mask
+        if np.any(incidence_valid):
+            low_incidence = float(np.percentile(incidence_array[incidence_valid], 25))
+            high_incidence = float(np.percentile(incidence_array[incidence_valid], 75))
+            subset_mask &= np.isfinite(incidence_array) & (incidence_array >= low_incidence) & (incidence_array <= high_incidence)
+            subset_parts.append(f"mid_incidence_p25_p75={low_incidence:.8f}..{high_incidence:.8f}")
+    subset = _masked_delta_stats(notebook_array, app_array, subset_mask)
+    improvement = None
+    if baseline.get("mean_abs_diff") not in (None, 0) and subset.get("mean_abs_diff") is not None:
+        improvement = ((float(baseline["mean_abs_diff"]) - float(subset["mean_abs_diff"])) / float(baseline["mean_abs_diff"])) * 100.0
+    likely_cause = (
+        "F23_LOW_SLOPE_MID_INCIDENCE_REDUCES_RESIDUAL"
+        if improvement is not None and improvement >= 25.0
+        else "F23_RESIDUAL_PERSISTS_IN_FILTERED_SUBSET"
+    )
+    return SarProcessingRow(
+        check=f"f23_low_slope_mid_incidence_subset_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=_mask_percent(subset_mask, mask),
+        common_valid_matching_percent=None if improvement is None else round(improvement, 6),
+        mask_overlap_percent=None,
+        mean_diff=subset.get("mean_abs_diff"),
+        median_diff=subset.get("median_abs_diff"),
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F23 filtered subset residual; baseline_count={baseline['count']}; baseline_mean_abs_diff={baseline['mean_abs_diff_text']}; "
+            f"subset_count={subset['count']}; subset_mean_abs_diff={subset['mean_abs_diff_text']}; "
+            f"subset_definition={'/'.join(subset_parts) if subset_parts else 'all_common_valid'}; "
+            f"mean_abs_improvement_percent={_stringify_number(improvement)}."
+        ),
+        recommended_next_action="If residual persists in low-slope/mid-incidence pixels, prioritize filter, median/order, or sample semantics over terrain-only RTC explanations.",
+    )
+
+
+def _build_f23_dtype_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+) -> SarProcessingRow:
+    baseline = _masked_delta_stats(notebook_array, app_array, mask)
+    notebook32 = notebook_array.astype(np.float32).astype(np.float64)
+    app32 = app_array.astype(np.float32).astype(np.float64)
+    cast_stats = _masked_delta_stats(notebook32, app32, mask)
+    app_cast_delta = np.abs(app_array.astype(np.float64, copy=False) - app32)
+    cast_max = float(np.max(app_cast_delta[mask])) if np.any(mask) else None
+    likely_cause = (
+        "F23_DTYPE_CASTING_NOT_EXPLANATORY"
+        if baseline.get("mean_abs_diff") == cast_stats.get("mean_abs_diff")
+        else "F23_DTYPE_CASTING_CHANGES_RESIDUAL"
+    )
+    return SarProcessingRow(
+        check=f"f23_dtype_casting_profile_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=None,
+        common_valid_matching_percent=None,
+        mask_overlap_percent=None,
+        mean_diff=cast_stats.get("mean_abs_diff"),
+        median_diff=cast_stats.get("median_abs_diff"),
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F23 dtype casting diagnostic; baseline_mean_abs_diff={baseline['mean_abs_diff_text']}; "
+            f"float32_pair_mean_abs_diff={cast_stats['mean_abs_diff_text']}; "
+            f"app_cast_to_float32_max_abs_delta={_stringify_number(cast_max)}."
+        ),
+        recommended_next_action="If float32 casting does not materially change residuals, do not change output dtype or tolerances.",
+    )
+
+
+def _build_f23_vv_vh_large_overlap_row(band_arrays: dict[str, dict[str, Any]], container: str) -> SarProcessingRow | None:
+    vv_payload = band_arrays.get("VV_dB", {}).get(container)
+    vh_payload = band_arrays.get("VH_dB", {}).get(container)
+    if vv_payload is None or vh_payload is None:
+        return None
+    vv_notebook = _squeeze_array(vv_payload["array"])
+    vv_app = _squeeze_array(vv_payload["app_array"])
+    vh_notebook = _squeeze_array(vh_payload["array"])
+    vh_app = _squeeze_array(vh_payload["app_array"])
+    if vv_notebook.shape != vv_app.shape or vh_notebook.shape != vh_app.shape or vv_notebook.shape != vh_notebook.shape:
+        return None
+    mask = (
+        _valid_mask(vv_notebook, vv_payload["notebook_nodata"])
+        & _valid_mask(vv_app, vv_payload["app_nodata"])
+        & _valid_mask(vh_notebook, vh_payload["notebook_nodata"])
+        & _valid_mask(vh_app, vh_payload["app_nodata"])
+    )
+    vv_large = _large_residual_mask(vv_notebook, vv_app, mask)
+    vh_large = _large_residual_mask(vh_notebook, vh_app, mask)
+    overlap = vv_large & vh_large
+    vv_only = vv_large & ~vh_large
+    vh_only = vh_large & ~vv_large
+    union = vv_large | vh_large
+    overlap_percent = _mask_percent(overlap, union)
+    likely_cause = (
+        "F23_VV_VH_LARGE_RESIDUAL_SHARED"
+        if overlap_percent is not None and overlap_percent >= 60.0
+        else "F23_VV_VH_LARGE_RESIDUAL_BAND_ASYMMETRIC"
+    )
+    return SarProcessingRow(
+        check=f"f23_vv_vh_large_residual_overlap_{container}",
+        status="DIAGNOSTIC",
+        band_name="VV_dB,VH_dB",
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=overlap_percent,
+        common_valid_matching_percent=_mask_percent(vv_only, union),
+        mask_overlap_percent=_mask_percent(vh_only, union),
+        mean_diff=None,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F23 VV/VH large-residual overlap; threshold_dB=0.1; vv_large_count={int(np.count_nonzero(vv_large))}; "
+            f"vh_large_count={int(np.count_nonzero(vh_large))}; overlap_count={int(np.count_nonzero(overlap))}; "
+            f"vv_only_count={int(np.count_nonzero(vv_only))}; vh_only_count={int(np.count_nonzero(vh_only))}."
+        ),
+        recommended_next_action="Band-asymmetric large residuals point toward band-specific filter behavior; shared residuals point toward sample, median, source, or terrain context.",
+    )
+
+
+def _build_f23_median_domain_row() -> SarProcessingRow:
+    return SarProcessingRow(
+        check="f23_median_domain_profile",
+        status="DIAGNOSTIC",
+        band_name="VV_dB,VH_dB",
+        notebook_file="",
+        app_file="",
+        likely_cause="F23_INTERMEDIATE_CAPTURE_REQUIRED",
+        raw_matching_percent=None,
+        common_valid_matching_percent=None,
+        mask_overlap_percent=None,
+        mean_diff=None,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence="F23 median-domain/order diagnostics require per-image or per-pair intermediate captures; final VV/VH arrays alone cannot prove linear-domain versus dB-domain median behavior.",
+        recommended_next_action="Capture local-only per-image/per-pair Cell 25 intermediates before changing median domain, reproject timing, or filter order.",
+    )
+
+
 def _build_f21_distribution_row(
     band_name: str,
     container: str,
@@ -1323,6 +1621,115 @@ def _f21_distribution_likely_cause(stats: dict[str, Any]) -> str:
     if gt_large_percent > 5.0:
         return "F21_SPARSE_OR_LARGE_OUTLIER_EFFECT"
     return "F21_MIXED_RESIDUAL_DISTRIBUTION"
+
+
+def _large_residual_mask(
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+    *,
+    threshold: float = 0.1,
+) -> np.ndarray:
+    return mask & (np.abs(app_array.astype(np.float64, copy=False) - notebook_array.astype(np.float64, copy=False)) > threshold)
+
+
+def _axis_bin_counts(mask: np.ndarray, *, axis: int, bins: int) -> list[int]:
+    if mask.ndim != 2 or bins <= 0:
+        return []
+    size = mask.shape[axis]
+    edges = np.linspace(0, size, bins + 1, dtype=int)
+    counts: list[int] = []
+    for start, end in zip(edges[:-1], edges[1:]):
+        if axis == 0:
+            counts.append(int(np.count_nonzero(mask[start:end, :])))
+        else:
+            counts.append(int(np.count_nonzero(mask[:, start:end])))
+    return counts
+
+
+def _tile_boundary_mask(shape: tuple[int, ...]) -> np.ndarray:
+    height, width = int(shape[0]), int(shape[1])
+    mask = np.zeros((height, width), dtype=bool)
+    if height < 2 or width < 2:
+        return mask
+    mid_row = height // 2
+    mid_col = width // 2
+    for row in (mid_row - 1, mid_row, mid_row + 1):
+        if 0 <= row < height:
+            mask[row, :] = True
+    for col in (mid_col - 1, mid_col, mid_col + 1):
+        if 0 <= col < width:
+            mask[:, col] = True
+    return mask
+
+
+def _context_counts(
+    *,
+    notebook_array: np.ndarray,
+    mask: np.ndarray,
+    large_mask: np.ndarray,
+    incidence_array: np.ndarray | None,
+    dem_slope: np.ndarray | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "large_high_slope_count": 0,
+        "large_high_slope_percent": None,
+        "large_mid_incidence_count": 0,
+        "large_mid_incidence_percent": None,
+        "large_high_incidence_count": 0,
+        "large_high_incidence_percent": None,
+        "large_low_backscatter_count": 0,
+        "large_high_backscatter_count": 0,
+    }
+    if dem_slope is not None and dem_slope.shape == mask.shape:
+        slope_valid = np.isfinite(dem_slope) & mask
+        if np.any(slope_valid):
+            high_slope = np.isfinite(dem_slope) & (dem_slope >= float(np.percentile(dem_slope[slope_valid], 75)))
+            context["large_high_slope_count"] = int(np.count_nonzero(large_mask & high_slope))
+            context["large_high_slope_percent"] = _mask_percent(large_mask & high_slope, large_mask)
+    if incidence_array is not None and incidence_array.shape == mask.shape:
+        incidence_valid = np.isfinite(incidence_array) & mask
+        if np.any(incidence_valid):
+            low_incidence = float(np.percentile(incidence_array[incidence_valid], 25))
+            high_incidence = float(np.percentile(incidence_array[incidence_valid], 75))
+            mid_incidence = np.isfinite(incidence_array) & (incidence_array >= low_incidence) & (incidence_array <= high_incidence)
+            high_incidence_mask = np.isfinite(incidence_array) & (incidence_array >= high_incidence)
+            context["large_mid_incidence_count"] = int(np.count_nonzero(large_mask & mid_incidence))
+            context["large_mid_incidence_percent"] = _mask_percent(large_mask & mid_incidence, large_mask)
+            context["large_high_incidence_count"] = int(np.count_nonzero(large_mask & high_incidence_mask))
+            context["large_high_incidence_percent"] = _mask_percent(large_mask & high_incidence_mask, large_mask)
+    backscatter_valid = np.isfinite(notebook_array) & mask
+    if np.any(backscatter_valid):
+        low_backscatter = float(np.percentile(notebook_array[backscatter_valid], 25))
+        high_backscatter = float(np.percentile(notebook_array[backscatter_valid], 75))
+        context["large_low_backscatter_count"] = int(np.count_nonzero(large_mask & (notebook_array <= low_backscatter)))
+        context["large_high_backscatter_count"] = int(np.count_nonzero(large_mask & (notebook_array >= high_backscatter)))
+    return context
+
+
+def _f23_context_likely_cause(context: dict[str, Any]) -> str:
+    high_slope_percent = context.get("large_high_slope_percent")
+    high_incidence_percent = context.get("large_high_incidence_percent")
+    if high_slope_percent is not None and float(high_slope_percent) >= 60.0:
+        return "F23_LARGE_RESIDUAL_HIGH_SLOPE_ASSOCIATED"
+    if high_incidence_percent is not None and float(high_incidence_percent) >= 60.0:
+        return "F23_LARGE_RESIDUAL_HIGH_INCIDENCE_ASSOCIATED"
+    return "F23_LARGE_RESIDUAL_CONTEXT_MIXED"
+
+
+def _load_dem_slope(app_run_dir: Path) -> np.ndarray | None:
+    dem_path = app_run_dir / "dem.npy"
+    if not dem_path.is_file():
+        return None
+    try:
+        dem = np.load(dem_path).astype(np.float32, copy=False)
+    except (OSError, ValueError):
+        return None
+    dem = np.where(np.isfinite(dem), dem, np.nan)
+    if dem.ndim != 2:
+        return None
+    dz_dy, dz_dx = np.gradient(dem.astype(np.float64, copy=False), 10.0, 10.0)
+    return np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
 
 
 def _mask_percent(mask: np.ndarray, denominator_mask: np.ndarray) -> float | None:

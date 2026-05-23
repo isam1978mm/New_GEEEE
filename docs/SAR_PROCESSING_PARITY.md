@@ -90,6 +90,16 @@ F21 VV/VH residual isolation:
 - `f21_regression_residual_*` rows compare original VV/VH residuals to local report-only linear-fit-adjusted residuals.
 - `f21_vv_vh_residual_symmetry_*` rows compare VV and VH residual deltas to distinguish band-specific behavior from shared filter, aggregation, source-ID, or sampling behavior.
 
+F23 true-processing-delta diagnostics:
+
+- F23 assumes source identity is proven separately by F13 with a true Cell 25 pair sidecar and `SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS`.
+- `f23_large_residual_spatial_bins_*` rows count `>0.1 dB` residuals by row/column quartile bins and tile-boundary bands. They store counts only, not coordinates.
+- `f23_large_residual_context_*` rows count large residuals in high-slope, mid/high-incidence, and low/high-backscatter groups when the required local arrays are available.
+- `f23_low_slope_mid_incidence_subset_*` rows recompute residual stats on low-slope and mid-incidence pixels to test whether terrain/incidence explains the delta.
+- `f23_dtype_casting_profile_*` rows compare final-array residuals after report-only float32 casting checks.
+- `f23_vv_vh_large_residual_overlap_*` rows count shared versus band-specific large residual pixels.
+- `f23_median_domain_profile` documents that median-domain/order proof requires per-image or per-pair Cell 25 intermediate captures; final arrays alone are insufficient to change SAR math.
+
 F16 finding:
 
 - The notebook `NO-COP-DEM` path applies a dB-domain border mask first:
