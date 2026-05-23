@@ -62,6 +62,7 @@ SAR_BAND_MAPPINGS = {
 }
 NOTEBOOK_SUMMARY_CANDIDATES = ("qa/sar/sar_summary.csv", "QA/SUMMARY_RADAR*.csv", "SUMMARY_RADAR*.csv")
 NOTEBOOK_STACK_CANDIDATES = ("stacks/tensor_support/radar_linear_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")
+NOTEBOOK_RADAR_META_CANDIDATES = ("QA/QA_RADAR_META*.json", "QA_RADAR_META*.json")
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +122,7 @@ def build_sar_processing_parity_report(
     *,
     app_run_dir: Path,
     notebook_roots: list[Path],
+    prior_report_path: Path | None = None,
 ) -> dict[str, Any]:
     rows: list[SarProcessingRow] = []
     referenced_notebook_files: dict[tuple[str, str], NotebookRelativeFile] = {}
@@ -132,6 +134,11 @@ def build_sar_processing_parity_report(
         referenced_notebook_files[(item.root_label, item.relative_path)] = item
     if (app_run_dir / "qa" / "sar" / "sar_summary.csv").is_file():
         referenced_app_files.add("qa/sar/sar_summary.csv")
+
+    metadata_rows, metadata_npy_candidates, metadata_files = _build_notebook_metadata_rows(notebook_roots)
+    rows.extend(metadata_rows)
+    for item in metadata_files:
+        referenced_notebook_files[(item.root_label, item.relative_path)] = item
 
     band_arrays: dict[str, dict[str, Any]] = {}
     for band_name, mapping in SAR_BAND_MAPPINGS.items():
@@ -158,7 +165,7 @@ def build_sar_processing_parity_report(
             app_run_dir=app_run_dir,
             notebook_roots=notebook_roots,
             app_file=str(mapping["app_npy"]),
-            notebook_candidates=tuple(mapping["notebook_npy_candidates"]),
+            notebook_candidates=metadata_npy_candidates.get(band_name) or tuple(mapping["notebook_npy_candidates"]),
             loader="npy",
         )
         rows.append(npy_row)
@@ -169,6 +176,7 @@ def build_sar_processing_parity_report(
         if npy_payload is not None:
             band_arrays.setdefault(band_name, {})["npy"] = npy_payload
 
+    rows.extend(_build_pixel_probe_rows(band_arrays))
     rows.extend(_build_log_ratio_rows(band_arrays))
     stack_row, notebook_stack = _build_stack_row(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
     rows.append(stack_row)
@@ -176,6 +184,9 @@ def build_sar_processing_parity_report(
         referenced_notebook_files[(notebook_stack.root_label, notebook_stack.relative_path)] = notebook_stack
     if (app_run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.npy").is_file():
         referenced_app_files.add("stacks/tensor_support/radar_linear_support_stack.npy")
+
+    if prior_report_path is not None:
+        rows.extend(_build_prior_comparison_rows(current_rows=rows, prior_report_path=prior_report_path))
 
     status_counts: dict[str, int] = {}
     likely_cause_counts: dict[str, int] = {}
@@ -208,9 +219,14 @@ def write_sar_processing_parity_report(
     app_run_dir: Path,
     notebook_roots: list[Path],
     output_dir: Path,
+    prior_report_path: Path | None = None,
 ) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    report = build_sar_processing_parity_report(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=notebook_roots,
+        prior_report_path=prior_report_path,
+    )
     stem = f"{SAR_PROCESSING_PARITY_PREFIX}_{app_run_dir.name}"
     json_path = output_dir / f"{stem}.json"
     csv_path = output_dir / f"{stem}.csv"
@@ -252,7 +268,7 @@ def compare_sar_summary_rows(
                 continue
             if _numeric_close(notebook_value, app_value):
                 continue
-            diffs.append(field)
+            diffs.append(_summary_delta(field, notebook_value, app_value))
         if diffs:
             rows.append(
                 SarSummaryDiff(
@@ -260,7 +276,7 @@ def compare_sar_summary_rows(
                     status="MISMATCH",
                     notebook_value={field: notebook_row.get(field, "") for field in ("min", "max", "mean", "nodata_count")},
                     app_value={field: app_row.get(field, "") for field in ("min", "max", "mean", "nodata_count")},
-                    evidence=f"SAR summary statistics differ for {', '.join(diffs)}.",
+                    evidence=f"SAR summary statistics differ: {'; '.join(diffs)}.",
                 )
             )
             continue
@@ -454,6 +470,90 @@ def _build_summary_rows(
     return rows, referenced_files
 
 
+def _build_notebook_metadata_rows(
+    notebook_roots: list[Path],
+) -> tuple[list[SarProcessingRow], dict[str, tuple[str, ...]], list[NotebookRelativeFile]]:
+    metadata_file = _resolve_notebook_relative_file(notebook_roots, NOTEBOOK_RADAR_META_CANDIDATES)
+    if metadata_file is None:
+        return [], {}, []
+    payload = json.loads(_notebook_path(notebook_roots, metadata_file).read_text(encoding="utf-8"))
+    npy_candidates = _metadata_npy_candidates(payload=payload, notebook_roots=notebook_roots)
+    metadata_value = {
+        "local_dem_rtc": bool(payload.get("LOCAL_DEM_RTC")),
+        "pairs_used": payload.get("pairs_used"),
+        "npy_outputs": sorted(npy_candidates),
+        "stack_output": _metadata_output_available(payload, "stack"),
+    }
+    row = SarProcessingRow(
+        check="notebook_radar_metadata",
+        status="FOUND",
+        band_name="",
+        notebook_file=f"{metadata_file.root_label}:{metadata_file.relative_path}",
+        app_file="",
+        likely_cause="NOTEBOOK_PROCESSING_METADATA",
+        raw_matching_percent=None,
+        common_valid_matching_percent=None,
+        mask_overlap_percent=None,
+        mean_diff=None,
+        median_diff=None,
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            "Notebook QA_RADAR_META was parsed as local-only processing provenance: "
+            f"{_compact_json(metadata_value)}."
+        ),
+        recommended_next_action=(
+            "Use QA_RADAR_META output keys to avoid ambiguous SAR NPY wildcard mapping before changing SAR math."
+        ),
+    )
+    return [row], npy_candidates, [metadata_file]
+
+
+def _metadata_npy_candidates(*, payload: dict[str, Any], notebook_roots: list[Path]) -> dict[str, tuple[str, ...]]:
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, dict):
+        return {}
+    npys = outputs.get("npys")
+    if not isinstance(npys, dict):
+        return {}
+    band_key_map = {
+        "VV_dB": "VV_dB",
+        "VH_dB": "VH_dB",
+        "logRatio_dB": "logRatio_dB",
+        "angle": "incidence",
+        "incidence": "incidence",
+    }
+    candidates: dict[str, list[str]] = {}
+    for metadata_key, band_name in band_key_map.items():
+        value = npys.get(metadata_key)
+        if not isinstance(value, str) or not value:
+            continue
+        relative_path = _resolve_output_basename(notebook_roots=notebook_roots, output_value=value)
+        if relative_path is not None:
+            candidates.setdefault(band_name, []).append(relative_path)
+    return {band_name: tuple(paths) for band_name, paths in candidates.items()}
+
+
+def _metadata_output_available(payload: dict[str, Any], output_key: str) -> bool:
+    outputs = payload.get("outputs")
+    return isinstance(outputs, dict) and bool(outputs.get(output_key))
+
+
+def _resolve_output_basename(*, notebook_roots: list[Path], output_value: str) -> str | None:
+    output_name = output_value.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
+    if not output_name:
+        return None
+    matches: list[str] = []
+    for root in notebook_roots:
+        for path in root.rglob(output_name):
+            if path.is_file() and path.name == output_name:
+                matches.append(path.relative_to(root).as_posix())
+    if not matches:
+        return None
+    return sorted(set(matches))[0]
+
+
 def _build_array_row(
     *,
     check: str,
@@ -617,6 +717,182 @@ def _build_log_ratio_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarPro
     return rows
 
 
+def _build_pixel_probe_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    for band_name, containers in band_arrays.items():
+        for container, payload in containers.items():
+            notebook_array = _squeeze_array(payload["array"])
+            app_array = _squeeze_array(payload["app_array"])
+            if notebook_array.shape != app_array.shape or notebook_array.ndim != 2:
+                rows.append(
+                    SarProcessingRow(
+                        check=f"pixel_probe_{band_name}_{container}",
+                        status="NEEDS_MANUAL_REVIEW",
+                        band_name=band_name,
+                        notebook_file="",
+                        app_file="",
+                        likely_cause="PIXEL_PROBE_SHAPE_MISMATCH",
+                        raw_matching_percent=None,
+                        common_valid_matching_percent=None,
+                        mask_overlap_percent=None,
+                        mean_diff=None,
+                        median_diff=None,
+                        correlation=None,
+                        linear_slope=None,
+                        linear_intercept=None,
+                        evidence=(
+                            "Pixel probes require matching two-dimensional arrays; "
+                            f"notebook_shape={list(notebook_array.shape)}; app_shape={list(app_array.shape)}."
+                        ),
+                        recommended_next_action="Inspect artifact shape and band mapping before interpreting pixel probes.",
+                    )
+                )
+                continue
+            rows.extend(
+                _pixel_probe_rows_for_array(
+                    band_name=band_name,
+                    container=container,
+                    notebook_array=notebook_array,
+                    app_array=app_array,
+                    notebook_nodata=payload["notebook_nodata"],
+                    app_nodata=payload["app_nodata"],
+                )
+            )
+    return rows
+
+
+def _pixel_probe_rows_for_array(
+    *,
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    notebook_nodata: float | None,
+    app_nodata: float | None,
+) -> list[SarProcessingRow]:
+    height, width = notebook_array.shape
+    probe_points = {
+        "top_left": (0, 0),
+        "top_right": (0, width - 1),
+        "center": (height // 2, width // 2),
+        "bottom_left": (height - 1, 0),
+        "bottom_right": (height - 1, width - 1),
+    }
+    rows: list[SarProcessingRow] = []
+    for label, (row_index, col_index) in probe_points.items():
+        notebook_value = float(notebook_array[row_index, col_index])
+        app_value = float(app_array[row_index, col_index])
+        diff = app_value - notebook_value
+        status = (
+            "MATCH"
+            if _values_match(notebook_value, app_value, notebook_nodata=notebook_nodata, app_nodata=app_nodata)
+            else "DIAGNOSTIC"
+        )
+        rows.append(
+            SarProcessingRow(
+                check=f"pixel_probe_{band_name}_{container}_{label}",
+                status=status,
+                band_name=band_name,
+                notebook_file="",
+                app_file="",
+                likely_cause="PIXEL_PROBE",
+                raw_matching_percent=None,
+                common_valid_matching_percent=None,
+                mask_overlap_percent=None,
+                mean_diff=diff,
+                median_diff=None,
+                correlation=None,
+                linear_slope=None,
+                linear_intercept=None,
+                evidence=(
+                    f"Relative pixel probe label={label}; row={row_index}; col={col_index}; "
+                    f"notebook_value={_probe_value(notebook_value, notebook_nodata)}; "
+                    f"app_value={_probe_value(app_value, app_nodata)}; diff={diff:.8f}."
+                ),
+                recommended_next_action="Use row/col probes to inspect center, edge, and corner deltas without spatial fields.",
+            )
+        )
+    return rows
+
+
+def _build_prior_comparison_rows(
+    *,
+    current_rows: list[SarProcessingRow],
+    prior_report_path: Path,
+) -> list[SarProcessingRow]:
+    if not prior_report_path.is_file():
+        return [
+            SarProcessingRow(
+                check="prior_report_comparison",
+                status="MISSING",
+                band_name="",
+                notebook_file="",
+                app_file="",
+                likely_cause="MISSING_PRIOR_REPORT",
+                raw_matching_percent=None,
+                common_valid_matching_percent=None,
+                mask_overlap_percent=None,
+                mean_diff=None,
+                median_diff=None,
+                correlation=None,
+                linear_slope=None,
+                linear_intercept=None,
+                evidence="Prior SAR processing report was requested but was not found.",
+                recommended_next_action="Provide a previous local-only SAR processing report to assess improvement or regression.",
+            )
+        ]
+    prior_payload = json.loads(prior_report_path.read_text(encoding="utf-8"))
+    prior_rows = {
+        str(row.get("check", "")): row
+        for row in prior_payload.get("rows", [])
+        if isinstance(row, dict) and row.get("check")
+    }
+    rows: list[SarProcessingRow] = []
+    for current in current_rows:
+        if current.check.startswith(("prior_", "pixel_probe_")):
+            continue
+        if current.raw_matching_percent is None and current.common_valid_matching_percent is None:
+            continue
+        prior = prior_rows.get(current.check)
+        if prior is None:
+            continue
+        prior_score = _comparison_score(prior)
+        current_score = _comparison_score(current.to_report_dict())
+        if prior_score is None or current_score is None:
+            status = "NEEDS_MANUAL_REVIEW"
+            evidence = f"Prior/current numeric scores are not comparable for {current.check}."
+        elif current_score > prior_score:
+            status = "IMPROVED"
+            evidence = f"{current.check} improved versus prior report: prior={prior_score:.8f}; current={current_score:.8f}."
+        elif current_score < prior_score:
+            status = "REGRESSED"
+            evidence = f"{current.check} regressed versus prior report: prior={prior_score:.8f}; current={current_score:.8f}."
+        else:
+            status = "UNCHANGED"
+            evidence = f"{current.check} is unchanged versus prior report: score={current_score:.8f}."
+        rows.append(
+            SarProcessingRow(
+                check=f"prior_comparison_{current.check}",
+                status=status,
+                band_name=current.band_name,
+                notebook_file="",
+                app_file="",
+                likely_cause="PRIOR_REPORT_COMPARISON",
+                raw_matching_percent=current.raw_matching_percent,
+                common_valid_matching_percent=current.common_valid_matching_percent,
+                mask_overlap_percent=current.mask_overlap_percent,
+                mean_diff=current.mean_diff,
+                median_diff=current.median_diff,
+                correlation=current.correlation,
+                linear_slope=current.linear_slope,
+                linear_intercept=current.linear_intercept,
+                evidence=evidence,
+                recommended_next_action="Use this trend only as diagnostic evidence; do not treat improvement as numeric parity.",
+            )
+        )
+    return rows
+
+
 def _build_stack_row(
     *,
     app_run_dir: Path,
@@ -762,6 +1038,48 @@ def _recommended_next_action(likely_cause: str) -> str:
         "PROCESSING_ALGORITHM_MISMATCH": "Inspect SAR aggregation and local DEM RTC processing; do not change tolerances.",
     }
     return actions.get(likely_cause, "Inspect SAR processing parity before changing science logic.")
+
+
+def _summary_delta(field: str, notebook_value: str, app_value: str) -> str:
+    try:
+        delta = float(app_value) - float(notebook_value)
+    except ValueError:
+        return f"{field}: notebook={notebook_value}, app={app_value}"
+    return f"{field}: notebook={notebook_value}, app={app_value}, delta={delta:.8f}"
+
+
+def _values_match(
+    notebook_value: float,
+    app_value: float,
+    *,
+    notebook_nodata: float | None,
+    app_nodata: float | None,
+) -> bool:
+    notebook_is_nodata = notebook_nodata is not None and notebook_value == notebook_nodata
+    app_is_nodata = app_nodata is not None and app_value == app_nodata
+    if notebook_is_nodata or app_is_nodata:
+        return notebook_is_nodata and app_is_nodata
+    return bool(np.isclose(notebook_value, app_value, atol=SAR_BAND_TOLERANCE.abs_tol, rtol=SAR_BAND_TOLERANCE.rel_tol))
+
+
+def _probe_value(value: float, nodata: float | None) -> str:
+    if nodata is not None and value == nodata:
+        return "nodata"
+    return f"{value:.8f}"
+
+
+def _comparison_score(row: dict[str, Any]) -> float | None:
+    common_valid = row.get("common_valid_matching_percent")
+    if common_valid not in (None, ""):
+        return float(common_valid)
+    raw = row.get("raw_matching_percent")
+    if raw not in (None, ""):
+        return float(raw)
+    return None
+
+
+def _compact_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
 def _numeric_close(left: str, right: str) -> bool:

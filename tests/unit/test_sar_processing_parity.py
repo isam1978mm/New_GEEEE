@@ -38,6 +38,7 @@ def test_compare_sar_summary_rows_reports_band_mismatch() -> None:
     by_band = {item.band_name: item for item in diffs}
     assert by_band["VV_dB"].status == "MISMATCH"
     assert "min" in by_band["VV_dB"].evidence
+    assert "delta=1.00000000" in by_band["VV_dB"].evidence
     assert by_band["incidence"].status == "MATCH"
 
 
@@ -101,9 +102,16 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
     assert report["artifact_class"] == "FILESYSTEM_ONLY"
     assert report["local_only"] is True
     assert by_check["sar_summary_VV_dB"]["status"] == "MISMATCH"
+    assert by_check["notebook_radar_metadata"]["status"] == "FOUND"
+    assert by_check["VV_dB_npy"]["status"] == "MISMATCH"
+    assert by_check["VH_dB_npy"]["status"] == "MATCH"
     assert by_check["incidence_raster"]["status"] == "MATCH_COMMON_VALID_MASK"
     assert by_check["incidence_raster"]["likely_cause"] == "ANGLE_MAPPING_OR_MASKING"
     assert by_check["logratio_formula_notebook_raster"]["status"] == "MATCH"
+    assert by_check["pixel_probe_VV_dB_raster_top_left"]["status"] == "DIAGNOSTIC"
+    assert "row=0; col=0" in by_check["pixel_probe_VV_dB_raster_top_left"]["evidence"]
+    assert by_check["pixel_probe_VV_dB_raster_bottom_right"]["status"] == "MATCH"
+    assert "notebook_value=nodata" in by_check["pixel_probe_VV_dB_raster_bottom_right"]["evidence"]
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
     json_path, csv_path = write_sar_processing_parity_report(
@@ -124,6 +132,7 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
     with csv_path.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     assert any(row["check"] == "VV_dB_raster" for row in rows)
+    assert any(row["check"] == "pixel_probe_VV_dB_raster_center" for row in rows)
 
 
 def test_sar_processing_report_finds_notebook_summary_under_qa_directory(tmp_path: Path) -> None:
@@ -142,6 +151,51 @@ def test_sar_processing_report_finds_notebook_summary_under_qa_directory(tmp_pat
     assert "/home/" not in serialized
     assert "coordinates" not in serialized
     assert "bounds" not in serialized
+
+
+def test_sar_processing_report_compares_prior_report_when_provided(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-prior"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    prior_report_path = tmp_path / "prior_sar_processing.json"
+    _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    prior_report_path.write_text(
+        json.dumps(
+            {
+                "report_type": "sar_processing_parity",
+                "artifact_class": "FILESYSTEM_ONLY",
+                "local_only": True,
+                "rows": [
+                    {
+                        "check": "VH_dB_raster",
+                        "raw_matching_percent": 50.0,
+                        "common_valid_matching_percent": 50.0,
+                    },
+                    {
+                        "check": "VV_dB_raster",
+                        "raw_matching_percent": 0.0,
+                        "common_valid_matching_percent": 25.0,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        prior_report_path=prior_report_path,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["prior_comparison_VH_dB_raster"]["status"] == "IMPROVED"
+    assert "prior=50.00000000; current=100.00000000" in by_check["prior_comparison_VH_dB_raster"]["evidence"]
+    assert by_check["prior_comparison_VV_dB_raster"]["status"] == "REGRESSED"
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
 
 
 def _write_sar_fixture(
@@ -197,10 +251,13 @@ def _write_sar_fixture(
     np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_VH_dB_640_demo.npy", notebook_vh)
     np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_logRatio_dB_640_demo.npy", notebook_log_ratio)
     np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_angle_640_demo.npy", notebook_angle)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "S1_ASC_VV_Filtered_640.npy", notebook_vv + 10.0)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "S1_ASC_VH_Filtered_640.npy", notebook_vh + 10.0)
     np.save(app_run_dir / "npy_radar_bands" / "VV_dB.npy", app_vv)
     np.save(app_run_dir / "npy_radar_bands" / "VH_dB.npy", app_vh)
     np.save(app_run_dir / "npy_radar_bands" / "logRatio_dB.npy", app_log_ratio)
     np.save(app_run_dir / "npy_radar_bands" / "incidence.npy", app_incidence)
+    _write_radar_meta(notebook_root)
 
     (notebook_root / "NPY_STACKS").mkdir(parents=True, exist_ok=True)
     (app_run_dir / "stacks" / "tensor_support").mkdir(parents=True, exist_ok=True)
@@ -230,3 +287,26 @@ def _write_raster(path: Path, array: np.ndarray, *, nodata: float | None) -> Non
         write_kwargs["nodata"] = nodata
     with rasterio.open(path, "w", **write_kwargs) as dataset:
         dataset.write(array.astype(np.float32), 1)
+
+
+def _write_radar_meta(notebook_root: Path) -> None:
+    path = notebook_root / "QA" / "QA_RADAR_META_demo.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "pairs_used": 2,
+                "LOCAL_DEM_RTC": True,
+                "outputs": {
+                    "npys": {
+                        "VV_dB": "/content/run/NPY_RADAR_BANDS/RADAR_VV_dB_640_demo.npy",
+                        "VH_dB": "/content/run/NPY_RADAR_BANDS/RADAR_VH_dB_640_demo.npy",
+                        "logRatio_dB": "/content/run/NPY_RADAR_BANDS/RADAR_logRatio_dB_640_demo.npy",
+                        "angle": "/content/run/NPY_RADAR_BANDS/RADAR_angle_640_demo.npy",
+                    },
+                    "stack": "/content/run/NPY_STACKS/RADAR_STACK_HWC_640_demo.npy",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )

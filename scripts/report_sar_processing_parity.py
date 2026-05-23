@@ -24,6 +24,12 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Local directory where SAR processing parity JSON and CSV reports will be written.",
     )
+    parser.add_argument(
+        "--prior-report",
+        type=Path,
+        default=None,
+        help="Optional previous local SAR processing parity JSON report for improvement/regression diagnostics.",
+    )
     return parser.parse_args()
 
 
@@ -33,6 +39,7 @@ def main() -> int:
         app_run_dir=args.app_run_dir,
         notebook_roots=args.notebook_root,
         output_dir=args.output_dir,
+        prior_report_path=args.prior_report,
     )
     print("Wrote local-only SAR processing parity reports.")
     print(json_path)

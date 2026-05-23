@@ -86,6 +86,59 @@ def test_sar_processing_parity_script_finds_qa_summary_layout(tmp_path: Path, mo
     assert "coordinates" not in serialized
 
 
+def test_sar_processing_parity_script_accepts_prior_report(tmp_path: Path, monkeypatch) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-prior"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    output_dir = tmp_path / "reports"
+    prior_report = tmp_path / "prior.json"
+    _write_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    prior_report.write_text(
+        json.dumps(
+            {
+                "report_type": "sar_processing_parity",
+                "artifact_class": "FILESYSTEM_ONLY",
+                "local_only": True,
+                "rows": [
+                    {
+                        "check": "VV_dB_raster",
+                        "raw_matching_percent": 50.0,
+                        "common_valid_matching_percent": 50.0,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "report_sar_processing_parity.py",
+            "--app-run-dir",
+            str(app_run_dir),
+            "--notebook-root",
+            str(notebook_root),
+            "--output-dir",
+            str(output_dir),
+            "--prior-report",
+            str(prior_report),
+        ],
+    )
+
+    assert main() == 0
+
+    json_path = output_dir / f"{SAR_PROCESSING_PARITY_PREFIX}_run-prior.json"
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    by_check = {row["check"]: row for row in payload["rows"]}
+    assert by_check["prior_comparison_VV_dB_raster"]["status"] == "IMPROVED"
+    serialized = json.dumps(payload, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
+
+
 def _write_fixture(
     *,
     app_run_dir: Path,

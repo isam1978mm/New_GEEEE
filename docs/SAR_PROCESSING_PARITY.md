@@ -28,6 +28,16 @@ python -m scripts.report_sar_processing_parity \
 
 Repeat `--notebook-root` to search multiple notebook roots.
 
+For F17 trend diagnostics, pass a previous local report:
+
+```bash
+python -m scripts.report_sar_processing_parity \
+  --app-run-dir data/runs/<run_id> \
+  --notebook-root <notebook_root> \
+  --output-dir data/reports \
+  --prior-report data/reports/<previous_sar_processing_report>.json
+```
+
 Key diagnostics:
 
 - raw match percent
@@ -36,7 +46,18 @@ Key diagnostics:
 - mean and median difference
 - correlation
 - linear fit `app ≈ slope * notebook + intercept`
+- exact notebook/app summary deltas by band
+- notebook `QA_RADAR_META*.json` parsing for `LOCAL_DEM_RTC`, pair count, and exact RADAR NPY output keys
+- relative row/column pixel probes at center and corners for each available SAR array
+- optional prior-report improvement/regression rows when `--prior-report` is provided
 - likely cause categories such as masking, constant offset, RTC/scale difference, or downstream stack divergence
+
+F17 diagnostic scope:
+
+- Pixel probes use relative labels plus row/column indexes only; they do not store coordinates.
+- `QA_RADAR_META` absolute notebook paths are never copied into the report; only root labels, relative files, and sanitized processing flags are reported.
+- Prior-report comparisons are trend evidence only and must not be treated as numeric parity.
+- No SAR science formula, source-selection rule, notebook code, or tolerance is changed by these diagnostics.
 
 F16 finding:
 
