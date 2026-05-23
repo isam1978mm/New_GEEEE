@@ -2216,3 +2216,118 @@ Validation:
 
 Stop after F15 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F16 - Reconcile SAR processing math after F15 diagnosis
+
+Reason:
+
+F15 ran successfully after F14 source-selection parity was fixed.
+
+F15 proved:
+
+- notebook and app now use the same SAR source image pairs
+- mask_overlap_percent is 100% for VV/VH/logRatio/incidence
+- notebook logRatio equals VV_dB - VH_dB
+- app logRatio also equals VV_dB - VH_dB
+- logRatio mismatch is downstream from VV/VH mismatch
+- radar_linear_support_stack mismatch is downstream from SAR band mismatch
+- the remaining root mismatch is SAR VV/VH/angle-incidence processing
+
+F15 reported:
+
+- VV_dB_raster: PROCESSING_ALGORITHM_MISMATCH
+- VH_dB_raster: PROCESSING_ALGORITHM_MISMATCH
+- logRatio_dB: UPSTREAM_VV_VH_PROCESSING_MISMATCH
+- incidence/angle: PROCESSING_ALGORITHM_MISMATCH
+- radar stack: DOWNSTREAM_FROM_SAR_BANDS
+
+F16 must reconcile the SAR processing math/path after source-selection identity has already been proven.
+
+Do not change SAR pair-selection unless a test proves F14 regressed.
+Do not change notebook code.
+Do not weaken tolerances.
+Do not mark mismatched SAR outputs as PASS.
+Do not work on downstream stacks until VV/VH/angle processing is resolved.
+
+Scope:
+
+- SAR processing math/path only.
+- Focus on VV_dB, VH_dB, angle/incidence, and logRatio construction.
+- Use F15 report as the starting evidence.
+- Keep radar_linear_support_stack as downstream diagnostic only.
+- Do not work on DEM derivatives, hypercube, object extraction, field ops, GPS, or classifier logic.
+
+Required investigation:
+
+- Inspect notebook SAR processing code or exported metadata to determine exact processing path:
+  - DBONLY_LOCALDEM meaning
+  - local DEM RTC correction formula
+  - whether VV/VH are processed in dB or linear units
+  - whether aggregation is mean/median/mosaic/qualityMosaic
+  - whether aggregation occurs before or after dB conversion
+  - whether angle is taken from master image, averaged image, first pair, or final composite
+  - whether masking is applied before/after aggregation
+  - whether clip/sample order differs
+- Compare app implementation in app/pipeline/stages/sar_rtc.py against notebook behavior.
+- Add narrow diagnostics if current metadata is insufficient.
+
+Create/update:
+
+- app/pipeline/stages/sar_rtc.py only for proven SAR processing mismatch fixes
+- app/services/sar_processing_parity.py if more evidence fields are needed
+- scripts/report_sar_processing_parity.py only if CLI support is needed
+- tests/unit/test_sar_rtc.py
+- tests/unit/test_sar_processing_parity.py
+- tests/integration/test_sar_processing_parity_script.py if reporting changes
+- docs/SAR_PROCESSING_PARITY.md
+
+Required F16 diagnosis outputs:
+
+- Document which processing difference is proven:
+  - aggregation order
+  - dB/linear conversion order
+  - local DEM RTC correction path
+  - angle source
+  - mask/nodata order
+  - raster sampling/order
+- Add tests showing the proven mismatch and the corrected behavior.
+- Preserve F13 pair-selection MATCH behavior.
+
+Allowed reconciliation:
+
+- Add a SAR processing profile such as notebook_parity if needed.
+- Change VV/VH processing order only if notebook evidence proves it.
+- Change logRatio construction only if notebook evidence proves it, but F15 currently shows both sides use VV - VH correctly.
+- Change angle/incidence source or aggregation only if notebook evidence proves it.
+- Change nodata/masking order only if F15/F16 evidence proves it.
+- Add local-only diagnostics explaining any remaining mismatch.
+
+Not allowed in F16:
+
+- Do not change SAR pair-selection rules except for proven regression.
+- Do not change DEM derivative, hypercube, tensor, object extraction, field ops, GPS, or classifier logic.
+- Do not weaken tolerances.
+- Do not change notebook code.
+- Do not expose coordinates, geometry, local paths, CRS transforms, hashes, or exact ROI context through public API responses.
+- Do not serve F11/F13/F15/F16 reports over HTTP.
+- Do not claim numeric parity unless F11/F15 proves it.
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_rtc.py
+  - pytest tests/unit/test_sar_processing_parity.py
+  - pytest tests/integration/test_sar_processing_parity_script.py
+- If SAR processing logic changes, run a fresh app job.
+- Run F13 source-selection report and confirm:
+  - image_identity MATCH
+  - orbit_pairing MATCH
+  - vv_vh_pair_count MATCH
+  - source_parameters MATCH
+- Run F15 processing parity report.
+- Run F11 numeric parity for SAR families or full report.
+- If numeric parity still fails, report exact remaining cause and next action.
+
+Stop after F16 and report files changed, commands run, test results, and blockers.
+
