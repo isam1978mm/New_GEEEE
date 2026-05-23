@@ -2729,3 +2729,131 @@ Expected validation:
 
 Stop after F19 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F20 - Diagnose final small SAR numeric delta after Cell 25 alignment
+
+Reason:
+
+F18 aligned the app to the actual notebook Cell 25 SAR pixel-output profile.
+F19 fixed SAR provenance reporting and SAR NPY mapping.
+
+Post-F19 report refresh shows:
+
+- cell25_pixel_export_profile MATCH
+- cell21_master_units_qa_profile AUXILIARY_QA
+- source_parameters MATCH
+- vv_vh_pair_count MATCH
+- image_identity MISSING_CELL25_PAIR_IDS
+- orbit_pairing MISSING_CELL25_PAIR_IDS
+- SAR NPY VV_dB and VH_dB now compare instead of SKIP_MISSING_NOTEBOOK
+
+Remaining SAR numeric deltas are real numeric differences, not missing-file confusion:
+
+- VV_dB mean_abs_diff about 0.03712405, matching_percent about 15.737061
+- VH_dB mean_abs_diff about 0.03753032, matching_percent about 16.813477
+- logRatio_dB mean_abs_diff about 0.02408621, matching_percent about 11.816650
+- angle/incidence mean_abs_diff about 0.00020737, matching_percent about 99.986328
+
+F20 must diagnose the final small SAR numeric delta after Cell 25 alignment.
+
+Scope:
+
+- Diagnostic-first SAR numeric delta only.
+- Focus on VV_dB, VH_dB, logRatio_dB, and angle/incidence.
+- Do not change SAR pair-selection.
+- Do not change SAR formulas unless the exact notebook-code-backed mismatch is proven.
+- Do not change notebook code.
+- Do not weaken tolerances.
+- Do not mark mismatched SAR pixels as PASS.
+- Do not touch DEM derivatives, hypercube, object extraction, field ops, GPS, classifier, or non-SAR stack logic.
+
+Required investigation:
+
+Prove or rule out each candidate:
+
+- angle/incidence:
+  - why matching_percent is about 99.986 but max_abs_diff is about 1.5758
+  - whether the difference is isolated to edges/nodata/border pixels
+  - whether the angle mismatch drives any VV/VH RTC delta
+- speckle filtering:
+  - whether notebook uses ee.Kernel.square or another kernel shape
+  - whether notebook kernel radius is interpreted as meters or pixels
+  - whether sigma Lee order is exactly:
+    - mean/std window
+    - low/high threshold
+    - where/replace behavior
+    - Lee fallback behavior
+  - whether app `where(within, lee)` matches notebook or is reversed
+- border mask:
+  - verify exact VV/VH/angle thresholds from notebook Cell 22
+  - verify mask is applied before linear conversion
+  - verify angle mask is carried into output exactly as notebook
+- aggregation:
+  - verify median ASC/DESC per pair then median across pairs
+  - verify no accidental sort/order/collection behavior changes the median
+- grid/finalize/sample:
+  - verify `to_grid`, `finalize_for_sample`, `unmask`, `reproject`, `clip`, and `sampleRectangle` order against Cell 24/25
+  - verify tile assembly orientation and row/column placement
+- local DEM RTC:
+  - verify DEM source, nodata handling, gradient order, SCALE, slope, corr clamp, cos_inc clamp
+  - verify RTC is after sampling, not before
+  - verify angle output remains raw sampled angle, not DEM-corrected local incidence
+
+Required diagnostics:
+
+- Extend SAR processing parity diagnostics with:
+  - edge-vs-interior metrics
+  - nodata-edge/border mask overlap metrics
+  - angle delta distribution and count of large-angle-delta pixels
+  - VV/VH delta distribution excluding angle-delta pixels
+  - optional per-band histogram summary using counts only, no coordinates
+  - optional diagnostic comparison of exact alternative filter profile only if it is local/test-only
+- Any pixel probes must use row/col or relative labels only.
+- Do not print or store coordinates, geometry, CRS transform, local paths, hashes, or exact ROI context in public/API responses.
+
+Allowed code changes:
+
+- Add local-only diagnostic helpers.
+- Add report rows to app/services/sar_processing_parity.py.
+- Add tests for diagnostic calculations.
+- If and only if evidence proves an exact notebook-code-backed bug, make a narrow fix in app/pipeline/stages/sar_rtc.py.
+
+Not allowed:
+
+- Do not guess another SAR formula.
+- Do not change pair-selection constants or selected image IDs.
+- Do not use Cell 21 pair IDs as Cell 25 truth.
+- Do not weaken tolerances.
+- Do not change notebook code.
+- Do not alter non-SAR outputs.
+- Do not serve F20 reports over HTTP.
+- Do not claim numeric parity unless F11/F15 proves it.
+
+Create/update:
+
+- app/services/sar_processing_parity.py
+- scripts/report_sar_processing_parity.py only if CLI options are needed
+- app/pipeline/stages/sar_rtc.py only for a proven narrow fix
+- tests/unit/test_sar_processing_parity.py
+- tests/integration/test_sar_processing_parity_script.py if reporting changes
+- tests/unit/test_sar_rtc.py if SAR logic changes
+- docs/SAR_PROCESSING_PARITY.md
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_processing_parity.py
+  - pytest tests/integration/test_sar_processing_parity_script.py
+  - pytest tests/unit/test_sar_rtc.py if SAR logic changes
+- Rerun F15/F17/F20 SAR processing report on latest F18 app run:
+  - run id 68ec6b07-1842-4957-88cc-1b259b09dfdb
+- Rerun F11 numeric parity if SAR logic changes.
+- Report:
+  - whether F20 is diagnostic-only or includes a proven narrow fix
+  - exact remaining likely cause
+  - whether angle edge/border pixels explain the max angle diff
+  - whether VV/VH residual is filter, border mask, aggregation, grid/finalize/sample, RTC, or unresolved
+
+Stop after F20 and report files changed, commands run, test results, and blockers.
+
