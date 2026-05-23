@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,9 @@ SAR_SOURCE_SELECTION_FIELDNAMES = [
 ]
 NOTEBOOK_SAR_QA_PATTERNS = (
     "QA/QA_S1_MASTER_UNITS.json",
+    "QA/QA_RADAR_META*.json",
     "QA_S1_MASTER_UNITS.json",
+    "QA_RADAR_META*.json",
     "SUMMARY_RADAR*.csv",
     "qa/sar/sar_pair_diagnostics.json",
     "*sar*selection*.json",
@@ -153,6 +156,13 @@ def build_sar_source_selection_rows(
 
     rows.extend(
         [
+            _profile_row(
+                check="cell25_pixel_export_profile",
+                notebook_payload=notebook_payload,
+                app_payload=app_payload,
+                expected_profile="cell25_pixel_export",
+            ),
+            _cell21_auxiliary_row(notebook_metadata),
             _compare_scalar(
                 check="collection_id",
                 notebook_value=_first_value(notebook_payload, "collection_id"),
@@ -230,12 +240,17 @@ def _load_notebook_metadata_payload(path: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
         if path.name == "QA_S1_MASTER_UNITS.json":
             return _normalize_qa_s1_master_units_payload(payload)
+        if path.name.startswith("QA_RADAR_META"):
+            return _normalize_qa_radar_meta_payload(payload, path.name)
         return payload
     with path.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     payload: dict[str, Any] = {"rows": rows}
     if rows:
         payload.update(_collapse_csv_rows(rows))
+        profile = _profile_from_text(path.name)
+        if profile:
+            payload.update(profile)
     return payload
 
 
@@ -256,6 +271,44 @@ def _normalize_qa_s1_master_units_payload(payload: dict[str, Any]) -> dict[str, 
     if pair_cap_hours not in (None, ""):
         normalized["pair_cap_hours"] = _normalize_number_string(pair_cap_hours)
     return normalized
+
+
+def _normalize_qa_radar_meta_payload(payload: dict[str, Any], filename: str) -> dict[str, Any]:
+    profile = _profile_from_text(filename)
+    normalized: dict[str, Any] = {
+        "source_kind": "QA_RADAR_META",
+        "selection_profile": "cell25_pixel_export",
+        "processing_path": {
+            "local_dem_rtc": bool(payload.get("LOCAL_DEM_RTC")),
+            "grid_sampling": "sampleRectangle",
+        },
+    }
+    pair_count = payload.get("pairs_used")
+    if pair_count not in (None, ""):
+        normalized["pair_count"] = _normalize_number_string(pair_count)
+    start = payload.get("START")
+    end = payload.get("END")
+    if start and end:
+        normalized["date_window"] = {"start_date": str(start), "end_date": str(end)}
+    if profile:
+        normalized.update(profile)
+    return normalized
+
+
+def _profile_from_text(value: str) -> dict[str, str]:
+    profile: dict[str, str] = {}
+    pair_match = re.search(r"pairdt(?P<hours>\d+)h", value)
+    orbit_match = re.search(r"orbitpm(?P<days>\d+)d", value)
+    pairs_match = re.search(r"pairs(?P<count>\d+)", value)
+    if pair_match:
+        profile["pair_cap_hours"] = _normalize_number_string(pair_match.group("hours"))
+    if orbit_match:
+        profile["orbit_window_days"] = _normalize_number_string(orbit_match.group("days"))
+    if pairs_match:
+        profile["pair_count"] = _normalize_number_string(pairs_match.group("count"))
+    if profile:
+        profile["selection_profile"] = "cell25_pixel_export"
+    return profile
 
 
 def _normalize_pairs_used(value: Any) -> list[dict[str, str]]:
@@ -292,12 +345,59 @@ def _collapse_csv_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
 
 def _merge_notebook_payloads(metadata: list[NotebookSarMetadata]) -> dict[str, Any]:
     merged: dict[str, Any] = {}
-    for item in metadata:
+    for item in sorted(metadata, key=_metadata_priority):
         for key, value in item.payload.items():
             normalized_key = _normalize_key(key)
             if normalized_key not in merged and value not in (None, "", []):
                 merged[normalized_key] = value
     return merged
+
+
+def _metadata_priority(item: NotebookSarMetadata) -> int:
+    if item.payload.get("selection_profile") == "cell25_pixel_export":
+        return 0
+    if item.payload.get("source_kind") == "QA_S1_MASTER_UNITS":
+        return 2
+    return 1
+
+
+def _profile_row(
+    *,
+    check: str,
+    notebook_payload: dict[str, Any],
+    app_payload: dict[str, Any],
+    expected_profile: str,
+) -> SarSourceSelectionRow:
+    notebook_value = str(notebook_payload.get("selection_profile") or "")
+    source_filters = app_payload.get("source_filters")
+    app_value = ""
+    if isinstance(source_filters, dict):
+        app_value = str(source_filters.get("selection_profile") or "")
+    status = "MATCH" if notebook_value == expected_profile and app_value == expected_profile else "MISMATCH"
+    return SarSourceSelectionRow(
+        check=check,
+        status=status,
+        notebook_value=notebook_value,
+        app_value=app_value,
+        evidence="SAR pixel parity compares the Cell 25 pixel-export profile, not the Cell 21 master-units QA profile.",
+        recommended_next_action=(
+            "No action required."
+            if status == "MATCH"
+            else "Use Cell 25 QA_RADAR_META/SUMMARY metadata for SAR pixel-output parity."
+        ),
+    )
+
+
+def _cell21_auxiliary_row(metadata: list[NotebookSarMetadata]) -> SarSourceSelectionRow:
+    found = any(item.payload.get("source_kind") == "QA_S1_MASTER_UNITS" for item in metadata)
+    return SarSourceSelectionRow(
+        check="cell21_master_units_qa_profile",
+        status="AUXILIARY_QA" if found else "MISSING",
+        notebook_value="cell21_master_units_qa_auxiliary" if found else "",
+        app_value="auxiliary_only",
+        evidence="QA_S1_MASTER_UNITS is reported as auxiliary QA and does not drive SAR pixel-output source selection.",
+        recommended_next_action="Do not use Cell 21 pair parameters for pixel outputs unless Cell 25 imports them.",
+    )
 
 
 def _compare_scalar(

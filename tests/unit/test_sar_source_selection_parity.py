@@ -112,6 +112,47 @@ def test_sar_source_selection_report_parses_qa_s1_master_units_json(tmp_path: Pa
     assert "coordinates" not in serialized
 
 
+def test_sar_source_selection_report_distinguishes_cell25_pixel_profile_from_cell21_qa(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    _write_app_sar_metadata(
+        app_run_dir,
+        pairs=[{"asc_id": "ASC_CELL25", "desc_id": "DESC_CELL25", "dt_hours": 12.0}],
+        source_filters={
+            "selection_profile": "cell25_pixel_export",
+            "max_orbit_dt_days": 9,
+            "max_pair_dt_hours": 36,
+        },
+    )
+    _write_notebook_master_units(
+        notebook_root,
+        pairs_used=[{"asc_id": "ASC_CELL21", "desc_id": "DESC_CELL21", "dt_hours": 42.0}],
+        orbit_window_days=12,
+        pair_cap_hours=48,
+        master_id="ASC_CELL21",
+    )
+    _write_notebook_radar_meta(notebook_root)
+
+    report = build_sar_source_selection_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert {"root_label": "NOTEBOOK_RUN", "relative_path": "QA/QA_RADAR_META_pairs4_pairdt36h_orbitpm9d.json"} in report[
+        "notebook_metadata_files"
+    ]
+    assert by_check["cell25_pixel_export_profile"]["status"] == "MATCH"
+    assert by_check["cell21_master_units_qa_profile"]["status"] == "AUXILIARY_QA"
+    assert by_check["source_parameters"]["status"] == "MATCH"
+    assert by_check["source_parameters"]["notebook_value"] == '{"orbit_window_days":"9","pair_cap_hours":"36"}'
+    assert by_check["source_parameters"]["app_value"] == '{"orbit_window_days":"9","pair_cap_hours":"36"}'
+    assert by_check["vv_vh_pair_count"]["status"] == "MISMATCH"
+    assert by_check["vv_vh_pair_count"]["notebook_value"] == "4"
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/content/" not in serialized
+    assert "bounds" not in serialized
+    assert "coordinates" not in serialized
+
+
 def _write_app_sar_metadata(
     app_run_dir: Path,
     *,
@@ -191,6 +232,25 @@ def _write_notebook_master_units(
                 "pair_cap_hours": pair_cap_hours,
                 "pairs_used": pairs_used,
                 "MASTER_ID": master_id,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_notebook_radar_meta(notebook_root: Path) -> None:
+    path = notebook_root / "QA" / "QA_RADAR_META_pairs4_pairdt36h_orbitpm9d.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "START": "2026-01-01",
+                "END": "2026-03-01",
+                "pairs_used": 4,
+                "LOCAL_DEM_RTC": True,
+                "outputs": {
+                    "summary_csv": "/content/run/QA/SUMMARY_RADAR_pairs4_pairdt36h_orbitpm9d.csv",
+                },
             }
         ),
         encoding="utf-8",
