@@ -1917,3 +1917,131 @@ Validation:
 
 Stop after F13 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F14 - Reconcile SAR pair-selection rules with notebook QA_S1_MASTER_UNITS
+
+Reason:
+
+F13 live validation proved the SAR numeric mismatch is caused by source-selection mismatch, not yet by raster math.
+
+The notebook SAR provenance exists in:
+
+- QA/QA_S1_MASTER_UNITS.json
+
+It contains:
+
+- pairs_used
+- asc_id
+- desc_id
+- dt_hours
+- MASTER_ID
+- orbit_window_days
+- pair_cap_hours
+
+The F13 live report showed:
+
+- notebook SAR metadata FOUND
+- pair count MATCH: 4 vs 4
+- image_identity MISMATCH
+- orbit_pairing MISMATCH
+- source_parameters MISMATCH
+- notebook source parameters: orbit_window_days=12, pair_cap_hours=48, master_id present
+- app source parameters: orbit_window_days=9, pair_cap_hours=36
+- one selected Sentinel-1 pair differs: notebook uses a 2026-01-18 pair, app uses a 2026-02-05 pair
+
+F14 must reconcile app SAR pair-selection rules with the notebook QA_S1_MASTER_UNITS provenance before any SAR formula changes.
+
+Do not change SAR RTC formulas yet.
+Do not weaken tolerances.
+Do not change notebook code.
+Do not mark mismatched SAR numeric outputs as PASS.
+
+Scope:
+
+- Update app SAR source-selection behavior so it can reproduce notebook pair selection when notebook-style rules are requested.
+- Use QA_S1_MASTER_UNITS as the reference provenance for this run.
+- Reconcile pair_cap_hours and orbit_window_days behavior.
+- Reconcile pair ranking and selected-pair ordering.
+- Preserve existing deterministic tests and local-only metadata.
+- Do not work on DEM derivatives, hypercube, object extraction, field ops, GPS, or CNN/training in this goal.
+
+Primary target:
+
+For the validation site/run, the app should select the same four SAR pairs as notebook QA_S1_MASTER_UNITS:
+
+- S1C_IW_GRDH_1SDV_20260118T153231_20260118T153256_005960_00BF44_900B
+  paired with
+  S1A_IW_GRDH_1SDV_20260118T034301_20260118T034326_062816_07E10A_BAF5
+
+- S1C_IW_GRDH_1SDV_20260130T153231_20260130T153256_006135_00C4FC_B136
+  paired with
+  S1A_IW_GRDH_1SDV_20260130T034301_20260130T034326_062991_07E753_7321
+
+- S1A_IW_GRDH_1SDV_20260124T153322_20260124T153347_062911_07E445_5A03
+  paired with
+  S1C_IW_GRDH_1SDV_20260124T034219_20260124T034244_006040_00C1BF_D131
+
+- S1A_IW_GRDH_1SDV_20260124T153347_20260124T153412_062911_07E445_CC8F
+  paired with
+  S1C_IW_GRDH_1SDV_20260124T034154_20260124T034219_006040_00C1BF_56CA
+
+Required changes:
+
+- Add a notebook-style SAR selection configuration or constants matching:
+  - orbit_window_days = 12
+  - pair_cap_hours = 48
+  - max_pairs = 4
+- Ensure app SAR metadata clearly records the active selection profile.
+- Update app SAR pair selection so F13 source-selection report can show:
+  - image_identity MATCH
+  - orbit_pairing MATCH
+  - vv_vh_pair_count MATCH
+  - source_parameters MATCH or clearly documented expected difference if MASTER_ID is notebook-only
+- Keep SAR output reports FILESYSTEM_ONLY/local-only.
+- Do not expose exact coordinates, geometry, local paths, CRS transforms, or hashes through public API responses.
+
+Allowed reconciliation:
+
+- Change SAR pair-selection constants/profile if the change matches notebook QA evidence.
+- Add a notebook-style profile and make it the default only if tests show it is the intended notebook parity behavior.
+- Add source-selection tests using synthetic ASC/DESC image metadata.
+- Add exact pair identity tests using the known F13 live pair list as fixture data.
+- Update F13 report comparison logic only if needed to avoid false mismatches around notebook-only MASTER_ID.
+
+Not allowed in F14:
+
+- Do not change local DEM RTC math.
+- Do not change dB/linear conversion math.
+- Do not change raster writing math.
+- Do not change SAR numeric tolerances.
+- Do not rewrite DEM derivative, hypercube, tensor, object extraction, field ops, GPS, or classifier logic.
+- Do not change notebook code.
+- Do not serve F13/F14 reports over HTTP.
+
+Expected validation after implementation:
+
+- Run a fresh app job.
+- Run F13 source-selection report against both notebook roots.
+- Expected F13 live report:
+  - image_identity MATCH
+  - orbit_pairing MATCH
+  - vv_vh_pair_count MATCH
+  - source_parameters MATCH or only MASTER_ID noted as notebook-only
+- Then rerun F11 numeric parity for SAR bands only or full F11 report.
+- SAR numeric differences may remain if RTC math differs, but source-selection mismatch must be resolved first.
+
+Tests:
+
+- Add unit tests for notebook-style SAR pair selection.
+- Add unit tests for pair_cap_hours=48 and orbit_window_days=12 behavior.
+- Add tests proving the 2026-01-18 pair is retained instead of the 2026-02-05 pair under notebook-style selection.
+- Add tests proving reports remain local-only and do not expose coordinates/paths/hashes.
+- Existing tests must continue to pass.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+Stop after F14 and report files changed, commands run, test results, and blockers.
+
