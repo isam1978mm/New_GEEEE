@@ -3009,3 +3009,124 @@ Expected validation:
 
 Stop after F21 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F22 - Capture true Cell 25 SAR pair provenance and separate source-ID delta from processing delta
+
+Reason:
+
+F18 aligned the app to the notebook Cell 25 SAR pixel-output profile.
+F19 fixed Cell 25 provenance reporting so missing Cell 25 pair IDs are no longer falsely compared against Cell 21 QA_S1_MASTER_UNITS.
+F20 ruled out nodata, edge-only behavior, and angle-driven RTC as the main cause of the remaining SAR delta.
+F21 showed the remaining VV/VH residual is balanced, nonlinear, partly outlier-driven, and VV/VH asymmetric.
+
+F21 did not find an exact notebook-code-backed SAR math bug.
+
+The largest remaining blocker is that old notebook QA_RADAR_META proves the Cell 25 pixel-export profile but does not store the actual selected ASC/DESC pair IDs or pair time deltas.
+
+Therefore F22 must capture or reconstruct true Cell 25 SAR pair provenance for the exact notebook output being compared, then rerun source and processing parity with real Cell 25 image identity.
+
+Scope:
+
+- SAR provenance and diagnostic separation only.
+- Do not change SAR pair-selection constants.
+- Do not change SAR math.
+- Do not change notebook output arrays.
+- Do not weaken tolerances.
+- Do not mark mismatched outputs as PASS.
+- Do not use Cell 21 pair IDs as Cell 25 truth.
+- Do not invent Cell 25 pair IDs.
+
+Required outcomes:
+
+- Add a local-only way to capture true Cell 25 selected pair provenance:
+  - ASC image ID
+  - DESC image ID
+  - ASC timestamp
+  - DESC timestamp
+  - pair dt hours
+  - selected ASC track
+  - selected DESC track
+  - source profile: cell25_pixel_export
+  - pairdt36h/orbitpm9d/pairs4 filename profile
+- The preferred path is to provide a small helper script or notebook-cell patch snippet that can be run locally against `notebooks/new.ipynb` or the same GEE logic and writes a local JSON file.
+- The helper must not upload data, call public APIs beyond the existing Earth Engine notebook/app path, or expose coordinates through the app API.
+- The helper output should be local-only and suitable as an extra notebook-root QA file for F13/F15/F11 validation.
+
+Allowed approaches:
+
+1. Add a local script that replays Cell 25 source-selection only and writes:
+   - QA/QA_RADAR_CELL25_PAIR_IDS_<run_id>_pairs4_pairdt36h_orbitpm9d.json
+2. Or add a notebook-cell snippet in docs that users can run inside the notebook to write the same JSON.
+3. Or update local F13 tooling to accept an explicit `--cell25-pairs-json` sidecar file.
+
+Required F13 behavior:
+
+- If a Cell 25 pair-provenance sidecar exists:
+  - compare app image_identity against true Cell 25 image IDs
+  - compare app orbit_pairing against true Cell 25 pair dt values
+  - report MATCH/MISMATCH based only on Cell 25 pair IDs
+- If the sidecar is absent:
+  - keep image_identity/orbit_pairing as MISSING_CELL25_PAIR_IDS
+- Do not fall back to Cell 21 pair IDs for Cell 25.
+
+Required diagnostic separation:
+
+- Add a report row or summary flag that classifies the SAR parity state as:
+  - SOURCE_ID_UNPROVEN if Cell 25 pair IDs are missing
+  - SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS if Cell 25 pair IDs match but VV/VH still mismatch
+  - SOURCE_ID_MISMATCH if Cell 25 pair IDs differ
+- If SOURCE_ID_MISMATCH, do not change processing math until source identity is reconciled.
+- If SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS, then the next goal may target the true processing residual.
+
+Required tests:
+
+- Test F13 with no Cell 25 pair sidecar:
+  - image_identity = MISSING_CELL25_PAIR_IDS
+  - orbit_pairing = MISSING_CELL25_PAIR_IDS
+  - classification = SOURCE_ID_UNPROVEN
+- Test F13 with matching Cell 25 pair sidecar:
+  - image_identity = MATCH
+  - orbit_pairing = MATCH
+  - classification = SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS or equivalent when numeric mismatch still exists
+- Test F13 with nonmatching Cell 25 pair sidecar:
+  - image_identity = MISMATCH
+  - classification = SOURCE_ID_MISMATCH
+- Test that Cell 21 pair IDs are never used as fallback Cell 25 truth.
+- Test no coordinates, CRS transforms, bounds, local paths, hashes, or exact ROI context leak through public API responses.
+
+Create/update:
+
+- app/services/sar_source_selection_parity.py
+- scripts/report_sar_source_selection_parity.py if a sidecar CLI arg is needed
+- scripts/export_cell25_sar_pair_provenance.py or docs notebook snippet
+- tests/unit/test_sar_source_selection_parity.py
+- tests/integration/test_sar_source_selection_parity_script.py if CLI changes
+- docs/SAR_SOURCE_SELECTION_PARITY.md
+- docs/SAR_PROCESSING_PARITY.md if needed
+
+Not allowed:
+
+- Do not change app SAR processing math.
+- Do not change app pair-selection constants.
+- Do not change notebook output arrays.
+- Do not weaken thresholds or tolerances.
+- Do not mark source-identity-missing rows as MATCH.
+- Do not use Cell 21 QA_S1_MASTER_UNITS pair IDs as Cell 25 truth.
+- Do not expose coordinates, geometry, bounds, CRS transforms, hashes, local paths, or exact ROI context through public API responses.
+- Do not serve local parity reports over HTTP.
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_source_selection_parity.py
+  - pytest tests/integration/test_sar_source_selection_parity_script.py if changed
+  - pytest tests/unit/test_sar_processing_parity.py
+- If helper script is added, run its help command and at least one offline/unit fixture test.
+- Rerun F13 against latest F18 app run:
+  - run id 68ec6b07-1842-4957-88cc-1b259b09dfdb
+- If true Cell 25 pair sidecar is available, rerun F13 with it and report whether source identity matches.
+- Do not rerun F11 unless source identity is proven or SAR logic changes.
+
+Stop after F22 and report files changed, commands run, test results, and blockers.
+
