@@ -17,8 +17,10 @@ SAR_SOURCE_SELECTION_FIELDNAMES = [
     "recommended_next_action",
 ]
 NOTEBOOK_SAR_QA_PATTERNS = (
+    "QA/QA_RADAR_CELL25_PAIR_IDS*.json",
     "QA/QA_S1_MASTER_UNITS.json",
     "QA/QA_RADAR_META*.json",
+    "QA_RADAR_CELL25_PAIR_IDS*.json",
     "QA_S1_MASTER_UNITS.json",
     "QA_RADAR_META*.json",
     "SUMMARY_RADAR*.csv",
@@ -52,9 +54,11 @@ def build_sar_source_selection_parity_report(
     *,
     app_run_dir: Path,
     notebook_roots: list[Path],
+    cell25_pairs_json: list[Path] | None = None,
 ) -> dict[str, Any]:
     app_payload = _load_app_sar_metadata(app_run_dir)
     notebook_metadata = find_notebook_sar_metadata(notebook_roots)
+    notebook_metadata.extend(load_cell25_pair_sidecars(cell25_pairs_json or []))
     rows = build_sar_source_selection_rows(app_payload=app_payload, notebook_metadata=notebook_metadata)
     status_counts: dict[str, int] = {}
     for row in rows:
@@ -84,9 +88,14 @@ def write_sar_source_selection_parity_report(
     app_run_dir: Path,
     notebook_roots: list[Path],
     output_dir: Path,
+    cell25_pairs_json: list[Path] | None = None,
 ) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    report = build_sar_source_selection_parity_report(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
+    report = build_sar_source_selection_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=notebook_roots,
+        cell25_pairs_json=cell25_pairs_json,
+    )
     stem = f"{SAR_SOURCE_SELECTION_PARITY_PREFIX}_{app_run_dir.name}"
     json_path = output_dir / f"{stem}.json"
     csv_path = output_dir / f"{stem}.csv"
@@ -114,6 +123,21 @@ def find_notebook_sar_metadata(notebook_roots: list[Path]) -> list[NotebookSarMe
                     payload=payload,
                 )
     return list(matches.values())
+
+
+def load_cell25_pair_sidecars(paths: list[Path]) -> list[NotebookSarMetadata]:
+    metadata: list[NotebookSarMetadata] = []
+    for path in paths:
+        if not path.is_file():
+            continue
+        metadata.append(
+            NotebookSarMetadata(
+                root_label=path.parent.name or "cell25_pair_sidecar",
+                relative_path=path.name,
+                payload=_load_notebook_metadata_payload(path),
+            )
+        )
+    return metadata
 
 
 def build_sar_source_selection_rows(
@@ -202,6 +226,7 @@ def build_sar_source_selection_rows(
                 missing_status=_missing_cell25_pair_status(cell25_payload),
                 missing_action=_missing_cell25_pair_action(cell25_payload),
             ),
+            _source_identity_classification_row(app_payload=app_payload, cell25_payload=cell25_payload),
             _compare_scalar(
                 check="vv_vh_pair_count",
                 notebook_value=_pair_count_value(notebook_payload),
@@ -249,6 +274,8 @@ def _load_app_sar_metadata(app_run_dir: Path) -> dict[str, Any] | None:
 def _load_notebook_metadata_payload(path: Path) -> dict[str, Any]:
     if path.suffix.lower() == ".json":
         payload = json.loads(path.read_text(encoding="utf-8"))
+        if path.name.startswith("QA_RADAR_CELL25_PAIR_IDS"):
+            return _normalize_cell25_pair_sidecar_payload(payload, path.name)
         if path.name == "QA_S1_MASTER_UNITS.json":
             return _normalize_qa_s1_master_units_payload(payload)
         if path.name.startswith("QA_RADAR_META"):
@@ -263,6 +290,31 @@ def _load_notebook_metadata_payload(path: Path) -> dict[str, Any]:
         if profile:
             payload.update(profile)
     return payload
+
+
+def _normalize_cell25_pair_sidecar_payload(payload: dict[str, Any], filename: str) -> dict[str, Any]:
+    profile = _profile_from_text(filename)
+    pairs = _normalize_pairs_used(payload.get("pairs") or payload.get("pairs_used") or [])
+    normalized: dict[str, Any] = {
+        "source_kind": "QA_RADAR_CELL25_PAIR_IDS",
+        "selection_profile": "cell25_pixel_export",
+        "pairs": pairs,
+        "pair_count": len(pairs),
+    }
+    if profile:
+        normalized.update(profile)
+    source_profile = payload.get("source_profile") or payload.get("selection_profile")
+    if source_profile not in (None, ""):
+        normalized["selection_profile"] = str(source_profile)
+    for key in ("orbit_window_days", "pair_cap_hours", "selected_asc_track", "selected_desc_track"):
+        value = payload.get(key) or payload.get(key.upper())
+        if value not in (None, ""):
+            normalized[key] = _normalize_number_string(value) if key.endswith(("days", "hours", "track")) else str(value)
+    start = payload.get("start_date") or payload.get("START")
+    end = payload.get("end_date") or payload.get("END")
+    if start and end:
+        normalized["date_window"] = {"start_date": str(start), "end_date": str(end)}
+    return normalized
 
 
 def _normalize_qa_s1_master_units_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -370,11 +422,13 @@ def _merge_notebook_payloads(metadata: list[NotebookSarMetadata]) -> dict[str, A
 
 
 def _metadata_priority(item: NotebookSarMetadata) -> int:
-    if item.payload.get("selection_profile") == "cell25_pixel_export":
+    if item.payload.get("source_kind") == "QA_RADAR_CELL25_PAIR_IDS":
         return 0
+    if item.payload.get("selection_profile") == "cell25_pixel_export":
+        return 1
     if item.payload.get("source_kind") == "QA_S1_MASTER_UNITS":
-        return 2
-    return 1
+        return 3
+    return 2
 
 
 def _cell25_payload(metadata: list[NotebookSarMetadata]) -> dict[str, Any] | None:
@@ -459,32 +513,67 @@ def _compare_scalar(
 
 def _cell25_pair_identity_value(cell25_payload: dict[str, Any] | None, merged_payload: dict[str, Any]) -> str:
     if cell25_payload is None:
-        return _pair_identity_value(merged_payload)
+        return ""
     return _pair_identity_value(cell25_payload)
 
 
 def _cell25_pair_delta_value(cell25_payload: dict[str, Any] | None, merged_payload: dict[str, Any]) -> str:
     if cell25_payload is None:
-        return _pair_delta_value(merged_payload)
+        return ""
     return _pair_delta_value(cell25_payload)
 
 
 def _missing_cell25_pair_status(cell25_payload: dict[str, Any] | None) -> str:
     if cell25_payload is None:
-        return "NEEDS_MANUAL_REVIEW"
+        return "MISSING_CELL25_PAIR_IDS"
     return "MISSING_CELL25_PAIR_IDS"
 
 
 def _missing_cell25_pair_action(cell25_payload: dict[str, Any] | None) -> str:
     if cell25_payload is None:
-        return "Capture this field from the notebook run if available."
+        return "Provide a true Cell 25 QA_RADAR_CELL25_PAIR_IDS sidecar; do not use Cell 21 pair IDs as fallback truth."
     return "Cell 25 QA_RADAR_META lacks per-pair ASC/DESC IDs; do not compare against Cell 21 auxiliary pair IDs."
 
 
 def _missing_cell25_pair_evidence(cell25_payload: dict[str, Any] | None, *, fallback: str) -> str:
     if cell25_payload is None:
-        return fallback
+        return f"{fallback} Cell 21 QA_S1_MASTER_UNITS pair IDs are auxiliary and are not used as Cell 25 truth."
     return "Cell 25 QA_RADAR_META proves the pixel-export profile but lacks per-pair ASC/DESC IDs and pair time deltas."
+
+
+def _source_identity_classification_row(
+    *,
+    app_payload: dict[str, Any],
+    cell25_payload: dict[str, Any] | None,
+) -> SarSourceSelectionRow:
+    app_identity = _pair_identity_value(app_payload)
+    app_deltas = _pair_delta_value(app_payload)
+    notebook_identity = "" if cell25_payload is None else _pair_identity_value(cell25_payload)
+    notebook_deltas = "" if cell25_payload is None else _pair_delta_value(cell25_payload)
+    if not notebook_identity:
+        status = "SOURCE_ID_UNPROVEN"
+        evidence = "True Cell 25 pair IDs are missing; source identity remains unproven and Cell 21 IDs are not used as fallback."
+        action = "Capture QA_RADAR_CELL25_PAIR_IDS from Cell 25 before attributing residuals to processing math."
+    elif notebook_identity != app_identity:
+        status = "SOURCE_ID_MISMATCH"
+        evidence = "True Cell 25 pair IDs differ from app SAR pair diagnostics."
+        action = "Reconcile source identity before changing SAR processing math."
+    elif notebook_deltas and app_deltas and notebook_deltas != app_deltas:
+        status = "SOURCE_ID_MISMATCH"
+        evidence = "True Cell 25 pair IDs match but pair time deltas differ from app SAR pair diagnostics."
+        action = "Reconcile orbit pairing before changing SAR processing math."
+    else:
+        status = "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"
+        evidence = "True Cell 25 pair IDs match the app pair diagnostics; remaining numeric residuals should be diagnosed as processing deltas."
+        action = "Use SAR processing parity diagnostics for the remaining VV/VH residual."
+    return SarSourceSelectionRow(
+        check="source_identity_classification",
+        status=status,
+        notebook_value=notebook_identity,
+        app_value=app_identity,
+        evidence=evidence,
+        recommended_next_action=action,
+    )
 
 
 def _band_mapping_row(*, app_payload: dict[str, Any], notebook_payload: dict[str, Any]) -> SarSourceSelectionRow:

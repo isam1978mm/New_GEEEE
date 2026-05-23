@@ -24,6 +24,13 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Local directory where SAR source-selection JSON and CSV reports will be written.",
     )
+    parser.add_argument(
+        "--cell25-pairs-json",
+        type=Path,
+        action="append",
+        default=[],
+        help="Optional local QA_RADAR_CELL25_PAIR_IDS*.json sidecar with true Cell 25 ASC/DESC pair IDs.",
+    )
     return parser.parse_args()
 
 
@@ -33,6 +40,7 @@ def main() -> int:
         app_run_dir=args.app_run_dir,
         notebook_roots=args.notebook_root,
         output_dir=args.output_dir,
+        cell25_pairs_json=args.cell25_pairs_json,
     )
     print("Wrote local-only SAR source-selection parity reports.")
     print(json_path)

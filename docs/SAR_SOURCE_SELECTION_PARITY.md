@@ -52,3 +52,17 @@ F19 provenance rule:
 - If Cell 25 metadata proves `pairs4_pairdt36h_orbitpm9d` but does not include per-pair ASC/DESC image IDs, `image_identity` and `orbit_pairing` report `MISSING_CELL25_PAIR_IDS` rather than a mismatch.
 - Cell 21 `QA_S1_MASTER_UNITS.json` pair IDs remain auxiliary and must not be compared as if they were Cell 25 pixel-export pair IDs.
 - If a future Cell 25 metadata file includes true per-pair ASC/DESC IDs and pair deltas, the report compares app pair provenance against those Cell 25 IDs directly.
+
+F22 Cell 25 pair sidecar:
+
+- True Cell 25 pair provenance can be supplied as `QA/QA_RADAR_CELL25_PAIR_IDS_<run_id>_pairs4_pairdt36h_orbitpm9d.json` under a notebook root, or by passing `--cell25-pairs-json <path>` to `scripts/report_sar_source_selection_parity.py`.
+- The sidecar is `FILESYSTEM_ONLY` and should contain `source_profile = cell25_pixel_export`, `orbit_window_days = 9`, `pair_cap_hours = 36`, selected ASC/DESC tracks, and `pairs` entries with `asc_id`, `desc_id`, `asc_timestamp`, `desc_timestamp`, and `dt_hours`.
+- `scripts/export_cell25_sar_pair_provenance.py` can export that sidecar from an app run grid using the same Earth Engine service-account path and Cell 25 source-selection logic as the app:
+
+```bash
+python scripts/export_cell25_sar_pair_provenance.py \
+  --app-run-dir data/runs/<run_id> \
+  --output-dir <notebook-output-root>/QA
+```
+
+- `source_identity_classification` reports `SOURCE_ID_UNPROVEN` when true Cell 25 pair IDs are absent, `SOURCE_ID_MISMATCH` when sidecar IDs differ from app diagnostics, and `SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS` when true Cell 25 source identity matches and SAR numeric residuals should be diagnosed as processing deltas.

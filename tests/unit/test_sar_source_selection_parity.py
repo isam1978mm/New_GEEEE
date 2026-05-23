@@ -28,8 +28,10 @@ def test_sar_source_selection_report_compares_metadata_and_stays_local_only(tmp_
     ]
     assert by_check["collection_id"]["status"] == "MATCH"
     assert by_check["date_window"]["status"] == "MATCH"
-    assert by_check["image_identity"]["status"] == "MISMATCH"
-    assert "selected Sentinel-1 image ids" in by_check["image_identity"]["recommended_next_action"]
+    assert by_check["image_identity"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert by_check["orbit_pairing"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_UNPROVEN"
+    assert "Cell 21" in by_check["source_identity_classification"]["evidence"]
     assert by_check["angle_incidence_mapping"]["status"] == "DOCUMENTED"
     assert "angle->incidence" in by_check["angle_incidence_mapping"]["evidence"]
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
@@ -91,11 +93,12 @@ def test_sar_source_selection_report_parses_qa_s1_master_units_json(tmp_path: Pa
     assert report["notebook_metadata_files"] == [
         {"root_label": "NOTEBOOK_RUN", "relative_path": "QA/QA_S1_MASTER_UNITS.json"}
     ]
-    assert by_check["image_identity"]["status"] == "MATCH"
-    assert by_check["image_identity"]["notebook_value"] == "ASC_A>DESC_A|ASC_B>DESC_B"
+    assert by_check["image_identity"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert by_check["image_identity"]["notebook_value"] == ""
     assert by_check["image_identity"]["app_value"] == "ASC_A>DESC_A|ASC_B>DESC_B"
-    assert by_check["orbit_pairing"]["status"] == "MATCH"
-    assert by_check["orbit_pairing"]["notebook_value"] == "1|2"
+    assert by_check["orbit_pairing"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert by_check["orbit_pairing"]["notebook_value"] == ""
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_UNPROVEN"
     assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
     assert by_check["vv_vh_pair_count"]["notebook_value"] == "2"
     assert by_check["source_parameters"]["status"] == "MATCH"
@@ -188,7 +191,94 @@ def test_sar_source_selection_report_compares_true_cell25_pair_ids_when_present(
     assert by_check["image_identity"]["notebook_value"] == "ASC_CELL25_A>DESC_CELL25_A|ASC_CELL25_B>DESC_CELL25_B"
     assert by_check["orbit_pairing"]["status"] == "MATCH"
     assert by_check["orbit_pairing"]["notebook_value"] == "11.5|12.25"
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"
     assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
+
+
+def test_sar_source_selection_report_compares_explicit_cell25_sidecar(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    sidecar_path = tmp_path / "QA_RADAR_CELL25_PAIR_IDS_run-123_pairs4_pairdt36h_orbitpm9d.json"
+    cell25_pairs = [
+        {
+            "asc_id": "ASC_CELL25_A",
+            "desc_id": "DESC_CELL25_A",
+            "asc_timestamp": "2026-01-01T00:00:00+00:00",
+            "desc_timestamp": "2026-01-01T11:30:00+00:00",
+            "dt_hours": 11.5,
+        }
+    ]
+    _write_app_sar_metadata(
+        app_run_dir,
+        pairs=[{"asc_id": "ASC_CELL25_A", "desc_id": "DESC_CELL25_A", "dt_hours": 11.5}],
+        source_filters={
+            "selection_profile": "cell25_pixel_export",
+            "max_orbit_dt_days": 9,
+            "max_pair_dt_hours": 36,
+        },
+    )
+    _write_notebook_master_units(
+        notebook_root,
+        pairs_used=[{"asc_id": "ASC_CELL21", "desc_id": "DESC_CELL21", "dt_hours": 42.0}],
+        orbit_window_days=12,
+        pair_cap_hours=48,
+        master_id="ASC_CELL21",
+    )
+    sidecar_path.write_text(
+        json.dumps(
+            {
+                "artifact_class": "FILESYSTEM_ONLY",
+                "local_only": True,
+                "source_profile": "cell25_pixel_export",
+                "filename_profile": "pairs4_pairdt36h_orbitpm9d",
+                "orbit_window_days": 9,
+                "pair_cap_hours": 36,
+                "selected_asc_track": 1,
+                "selected_desc_track": 2,
+                "pairs": cell25_pairs,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_sar_source_selection_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        cell25_pairs_json=[sidecar_path],
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert {"root_label": str(tmp_path.name), "relative_path": sidecar_path.name} in report["notebook_metadata_files"]
+    assert by_check["image_identity"]["status"] == "MATCH"
+    assert by_check["orbit_pairing"]["status"] == "MATCH"
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"
+    assert by_check["source_parameters"]["status"] == "MATCH"
+    assert by_check["image_identity"]["notebook_value"] == "ASC_CELL25_A>DESC_CELL25_A"
+
+
+def test_sar_source_selection_report_classifies_nonmatching_cell25_sidecar(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    _write_app_sar_metadata(
+        app_run_dir,
+        pairs=[{"asc_id": "APP_ASC", "desc_id": "APP_DESC", "dt_hours": 1.0}],
+        source_filters={
+            "selection_profile": "cell25_pixel_export",
+            "max_orbit_dt_days": 9,
+            "max_pair_dt_hours": 36,
+        },
+    )
+    _write_notebook_radar_meta(
+        notebook_root,
+        pairs_used=[{"asc_id": "NB_ASC", "desc_id": "NB_DESC", "dt_hours": 1.0}],
+    )
+
+    report = build_sar_source_selection_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["image_identity"]["status"] == "MISMATCH"
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_MISMATCH"
+    assert "Reconcile source identity" in by_check["source_identity_classification"]["recommended_next_action"]
 
 
 def _write_app_sar_metadata(

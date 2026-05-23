@@ -53,8 +53,63 @@ def test_sar_source_selection_parity_script_writes_local_only_reports(
         rows = list(csv.DictReader(handle))
     by_check = {row["check"]: row for row in rows}
     assert any(row["check"] == "angle_incidence_mapping" for row in rows)
-    assert by_check["image_identity"]["status"] == "MATCH"
+    assert by_check["image_identity"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_UNPROVEN"
     assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
+
+
+def test_sar_source_selection_parity_script_accepts_cell25_sidecar(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    output_dir = tmp_path / "reports"
+    sidecar_path = tmp_path / "QA_RADAR_CELL25_PAIR_IDS_run-123_pairs4_pairdt36h_orbitpm9d.json"
+    _write_app_sar_metadata(app_run_dir)
+    _write_notebook_master_units(notebook_root)
+    sidecar_path.write_text(
+        json.dumps(
+            {
+                "artifact_class": "FILESYSTEM_ONLY",
+                "local_only": True,
+                "source_profile": "cell25_pixel_export",
+                "orbit_window_days": 12,
+                "pair_cap_hours": 48,
+                "pairs": [{"asc_id": "ASC_1", "desc_id": "DESC_1", "dt_hours": 1.0}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "report_sar_source_selection_parity.py",
+            "--app-run-dir",
+            str(app_run_dir),
+            "--notebook-root",
+            str(notebook_root),
+            "--output-dir",
+            str(output_dir),
+            "--cell25-pairs-json",
+            str(sidecar_path),
+        ],
+    )
+
+    assert main() == 0
+
+    json_path = output_dir / f"{SAR_SOURCE_SELECTION_PARITY_PREFIX}_run-123.json"
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    by_check = {row["check"]: row for row in payload["rows"]}
+    assert by_check["image_identity"]["status"] == "MATCH"
+    assert by_check["orbit_pairing"]["status"] == "MATCH"
+    assert by_check["source_identity_classification"]["status"] == "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"
+    serialized = json.dumps(payload, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
 
 
 def _write_app_sar_metadata(app_run_dir: Path) -> None:
