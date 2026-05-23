@@ -2591,3 +2591,141 @@ Expected validation:
 
 Stop after F18 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F19 - Fix Cell 25 SAR provenance reporting and false image-identity mismatch
+
+Reason:
+
+F18 live validation proved the app now uses the Cell 25 SAR pixel-output profile:
+
+- cell25_pixel_export_profile MATCH
+- cell21_master_units_qa_profile AUXILIARY_QA
+- source_parameters MATCH with pairdt36h/orbitpm9d
+- vv_vh_pair_count MATCH
+
+F18 also made SAR pixels much closer, but numeric parity is still not complete.
+
+After inspecting the current downloaded notebook QA_RADAR_META file, Cell 25 metadata contains:
+
+- START / END
+- asc_track
+- desc_track
+- pairs_used
+- LOCAL_DEM_RTC
+- output file paths
+- filename provenance including pairs4_pairdt36h_orbitpm9d_DBONLY_LOCALDEM
+
+But current QA_RADAR_META does not contain:
+
+- selected ASC image IDs
+- selected DESC image IDs
+- pair dt values
+- per-pair ASC/DESC mapping
+
+Therefore F13 must not report image_identity or orbit_pairing as MISMATCH for Cell 25 when the only available pair IDs come from Cell 21 QA_S1_MASTER_UNITS.
+
+Cell 21 is auxiliary QA only.
+Cell 25 is the SAR pixel-output source of truth.
+If Cell 25 pair IDs are missing, the report must say missing/unavailable, not mismatch.
+
+Scope:
+
+- SAR provenance/reporting only, plus notebook NPY mapping fix.
+- Do not change SAR pair-selection logic.
+- Do not change SAR math.
+- Do not change notebook code.
+- Do not weaken tolerances.
+- Do not mark mismatched SAR pixels as PASS.
+- Do not touch DEM derivatives, hypercube, object extraction, field ops, GPS, classifier, or downstream stack logic except report mapping.
+
+Required F13 behavior:
+
+- Parse QA_RADAR_META as Cell 25 pixel-export metadata.
+- Parse QA_S1_MASTER_UNITS as Cell 21 auxiliary metadata.
+- If QA_RADAR_META has no pair IDs:
+  - cell25_image_identity status must be MISSING_CELL25_PAIR_IDS or equivalent non-failing status
+  - cell25_orbit_pairing status must be MISSING_CELL25_PAIR_IDS or equivalent non-failing status
+  - do not compare app Cell 25 pair IDs against Cell 21 pair IDs
+- If future QA_RADAR_META contains true Cell 25 pair IDs:
+  - compare app selected pairs against those Cell 25 pair IDs
+  - only then may image_identity/orbit_pairing be MATCH or MISMATCH
+- Keep source_parameters MATCH for pairdt36h/orbitpm9d when filename/metadata prove it.
+- Keep cell21_master_units_qa_profile as AUXILIARY_QA.
+- Add report evidence explaining that old notebook outputs lack Cell 25 pair-id provenance.
+
+Required app provenance behavior:
+
+- Ensure app qa/sar/sar_pair_diagnostics.json records Cell 25-style pair provenance:
+  - selection_profile
+  - pair count
+  - pair dt hours
+  - ASC/DESC image IDs
+  - asc_track/desc_track if available
+  - source parameters pairdt36h/orbitpm9d
+- Do not expose coordinates, bounds, transforms, local paths, or ROI geometry in public responses.
+
+Required F11 mapping fix:
+
+- The current F11 report still skips notebook SAR NPY VV_dB and VH_dB even though QA_RADAR_META outputs.npys contains:
+  - VV_dB
+  - VH_dB
+  - logRatio_dB
+  - angle
+- Update numeric parity mapping so QA_RADAR_META outputs.npys can resolve notebook SAR NPY bands.
+- Map notebook angle to app incidence.
+- Keep local-only filesystem report behavior.
+- Do not claim numeric parity unless arrays pass.
+
+Create/update:
+
+- app/services/sar_source_selection_parity.py
+- app/services/numeric_parity_report.py
+- tests/unit/test_sar_source_selection_parity.py
+- tests/unit/test_numeric_parity_report.py or existing numeric parity tests
+- tests/integration/test_sar_source_selection_parity_script.py if needed
+- docs/SAR_SOURCE_SELECTION_PARITY.md
+- docs/SAR_PROCESSING_PARITY.md if needed
+
+Not allowed:
+
+- Do not change app SAR pair selection.
+- Do not change app SAR processing math.
+- Do not change notebook code.
+- Do not weaken numeric thresholds.
+- Do not convert missing Cell 25 pair IDs into a fake MATCH.
+- Do not compare Cell 21 pair IDs as if they were Cell 25 pair IDs.
+- Do not expose coordinates, geometry, local paths, CRS transforms, hashes, or exact ROI context through public API responses.
+- Do not serve parity reports over HTTP.
+
+Tests:
+
+- Add a test where QA_RADAR_META has Cell 25 profile but no pair IDs and QA_S1_MASTER_UNITS has different pair IDs:
+  - cell25 profile must MATCH
+  - source_parameters must MATCH
+  - Cell 21 must be AUXILIARY_QA
+  - image_identity/orbit_pairing must be MISSING_CELL25_PAIR_IDS, not MISMATCH
+- Add a test where QA_RADAR_META includes true Cell 25 pair IDs:
+  - image_identity/orbit_pairing compare against Cell 25
+- Add a test proving F11 maps SAR NPY VV_dB and VH_dB from QA_RADAR_META outputs.npys.
+- Add a test proving notebook angle maps to app incidence.
+- Existing tests must continue to pass.
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_source_selection_parity.py
+  - pytest tests/unit/test_numeric_parity_report.py
+  - pytest tests/integration/test_sar_source_selection_parity_script.py
+  - pytest tests/unit/test_sar_processing_parity.py
+- Rerun F13 on the latest F18 app run:
+  - cell25_pixel_export_profile MATCH
+  - cell21_master_units_qa_profile AUXILIARY_QA
+  - source_parameters MATCH
+  - image_identity/orbit_pairing should be MISSING_CELL25_PAIR_IDS unless real Cell 25 IDs exist
+- Rerun F11 numeric parity on the latest F18 app run:
+  - SAR NPY VV_dB and VH_dB should no longer be SKIP_MISSING_NOTEBOOK if QA_RADAR_META outputs.npys is available
+- Report remaining true SAR numeric deltas separately from missing provenance.
+
+Stop after F19 and report files changed, commands run, test results, and blockers.
+
