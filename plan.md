@@ -2045,3 +2045,174 @@ Validation:
 
 Stop after F14 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F15 - Reconcile SAR processing parity after pair-selection match
+
+Reason:
+
+F14 live validation proved SAR source-selection parity is now fixed:
+
+- image_identity MATCH
+- orbit_pairing MATCH
+- vv_vh_pair_count MATCH
+- source_parameters MATCH
+- MASTER_ID is notebook-only provenance
+- angle/incidence mapping is documented
+
+After F14, F11 numeric parity was rerun against the fresh app run.
+
+The SAR source image pairs now match, but SAR pixel values still fail:
+
+- VV_dB.tif FAIL
+- VH_dB.tif FAIL
+- logRatio_dB.tif FAIL
+- notebook angle vs app incidence FAIL
+- SAR NPY logRatio_dB FAIL
+- SAR NPY incidence FAIL
+- radar_linear_support_stack.npy FAIL downstream
+
+This means the remaining SAR mismatch is no longer source-selection. It is likely processing parity:
+
+- raw sampled VV/VH/angle values
+- pair aggregation method
+- dB-only versus local DEM RTC behavior
+- DEM RTC correction formula
+- dB-to-linear-to-dB path
+- angle/incidence handling
+- nodata/masking
+- raster metadata/nodata policy
+- band construction/order
+
+F15 must diagnose and reconcile SAR processing parity step by step after pair-selection identity has been proven.
+
+Do not change SAR source-selection again unless a test proves F14 introduced a regression.
+Do not change notebook code.
+Do not weaken tolerances.
+Do not mark mismatched outputs as PASS.
+
+Scope:
+
+- SAR processing only.
+- Compare app and notebook SAR processing after matched pair selection.
+- Do not work on DEM derivatives, hypercube, object extraction, field ops, GPS, or classifier logic.
+- Radar tensor stack may be inspected only as downstream evidence, not as the primary fix.
+
+Required inputs/evidence:
+
+- F13 source-selection report showing pair identity MATCH.
+- F11 numeric parity report after F14.
+- Notebook QA files:
+  - QA/QA_S1_MASTER_UNITS.json
+  - QA/QA_RADAR_META*.json
+  - QA/SUMMARY_RADAR*.csv
+  - GEOTIFF_RADAR_BANDS/RADAR_*.tif
+  - NPY_RADAR_BANDS/RADAR_*.npy
+  - NPY_STACKS/RADAR_STACK_HWC_*.npy
+- App files:
+  - qa/sar/sar_pair_diagnostics.json
+  - qa/sar/sar_summary.csv
+  - VV_dB.tif
+  - VH_dB.tif
+  - logRatio_dB.tif
+  - incidence.tif
+  - npy_radar_bands/*.npy
+  - stacks/tensor_support/radar_linear_support_stack.npy
+
+Create/update:
+
+- app/services/sar_processing_parity.py or equivalent
+- scripts/report_sar_processing_parity.py
+- app/pipeline/stages/sar_rtc.py only if diagnosis proves a narrow processing mismatch
+- app/services/numeric_parity_report.py only if SAR NPY mappings or nodata-normalized metrics need safe fixes
+- app/services/numeric_parity_diagnostics.py only if F15 diagnosis categories need clearer evidence
+- tests/unit/test_sar_processing_parity.py
+- tests/integration/test_sar_processing_parity_script.py
+- tests/unit/test_sar_rtc.py if SAR processing logic changes
+- docs/SAR_PROCESSING_PARITY.md
+
+Required diagnosis work:
+
+- Compare notebook and app SAR band summaries:
+  - min
+  - max
+  - mean
+  - nodata count
+- Compare notebook and app arrays:
+  - VV_dB
+  - VH_dB
+  - logRatio_dB
+  - angle/incidence
+- Compare whether logRatio equals VV_dB - VH_dB in both notebook and app.
+- Compare notebook angle to app incidence before and after nodata masking.
+- Compare nodata masks for each SAR band.
+- Compare finite-pixel masks.
+- Compare raw, nodata-normalized, and common-valid-mask metrics.
+- Compare possible constant offset or scale transform:
+  - mean difference
+  - median difference
+  - correlation
+  - linear fit y = ax + b
+- Detect whether mismatch is caused by:
+  - pair aggregation method
+  - RTC correction formula
+  - dB-only versus DEM RTC behavior
+  - dB/linear conversion order
+  - angle/incidence source or masking
+  - nodata policy
+  - band mapping/order
+  - raster metadata only
+  - true algorithm mismatch
+
+Allowed reconciliation:
+
+- If evidence proves notebook SAR bands are DBONLY_LOCALDEM and app applies a different correction, add a narrowly scoped notebook-parity processing profile.
+- If evidence proves notebook logRatio is simply VV_dB - VH_dB after aggregation, make app follow that exact order under notebook-parity profile.
+- If evidence proves nodata policy differs, add nodata-normalized comparison and fix app nodata policy if safe.
+- If evidence proves angle/incidence values differ only by naming or mask, fix mapping/masking only.
+- If F11 skipped notebook VV/VH NPY despite files existing, fix F11 notebook SAR NPY mappings.
+- Add local-only processing parity reports.
+
+Not allowed in F15:
+
+- Do not change SAR pair-selection rules except to fix a proven F14 regression.
+- Do not change DEM derivative, hypercube, tensor, object extraction, field ops, GPS, or classifier logic.
+- Do not weaken numeric tolerance to hide mismatch.
+- Do not change notebook code.
+- Do not expose coordinates, geometry, local paths, CRS transforms, hashes, or exact ROI context through public API responses.
+- Do not serve F11/F13/F15 reports over HTTP.
+
+Output:
+
+- Add local-only SAR processing parity reports, for example:
+  - data/reports/sar_processing_parity_<run_id>.json
+  - data/reports/sar_processing_parity_<run_id>.csv
+- Reports are FILESYSTEM_ONLY local operator outputs.
+- Reports must use root labels or relative paths only.
+- Reports must not embed absolute local paths or public coordinates.
+
+Expected validation after implementation:
+
+- Run fresh app job if SAR processing logic changes.
+- Run F13 source-selection report:
+  - image_identity MATCH must remain true.
+- Run F15 processing parity report.
+- Run F11 numeric parity for SAR families or full F11 report.
+- If SAR numeric parity still fails, F15 report must clearly identify the remaining processing cause and next action.
+
+Tests:
+
+- Add tests for SAR summary comparison.
+- Add tests for logRatio = VV - VH validation.
+- Add tests for nodata/common-mask metrics.
+- Add tests for linear offset/scale detection.
+- Add tests for notebook angle to app incidence mapping.
+- Add tests proving local-only report behavior with no path/coordinate leakage.
+- Existing tests must continue to pass.
+
+Validation:
+
+- pytest tests/unit/ tests/integration/ tests/notebook_parity/
+
+Stop after F15 and report files changed, commands run, test results, and blockers.
+
