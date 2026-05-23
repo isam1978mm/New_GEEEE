@@ -144,6 +144,9 @@ def test_sar_source_selection_report_distinguishes_cell25_pixel_profile_from_cel
     assert by_check["source_parameters"]["status"] == "MATCH"
     assert by_check["source_parameters"]["notebook_value"] == '{"orbit_window_days":"9","pair_cap_hours":"36"}'
     assert by_check["source_parameters"]["app_value"] == '{"orbit_window_days":"9","pair_cap_hours":"36"}'
+    assert by_check["image_identity"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert by_check["orbit_pairing"]["status"] == "MISSING_CELL25_PAIR_IDS"
+    assert "lacks per-pair ASC/DESC IDs" in by_check["image_identity"]["evidence"]
     assert by_check["vv_vh_pair_count"]["status"] == "MISMATCH"
     assert by_check["vv_vh_pair_count"]["notebook_value"] == "4"
     serialized = json.dumps(report, sort_keys=True)
@@ -151,6 +154,41 @@ def test_sar_source_selection_report_distinguishes_cell25_pixel_profile_from_cel
     assert "/content/" not in serialized
     assert "bounds" not in serialized
     assert "coordinates" not in serialized
+
+
+def test_sar_source_selection_report_compares_true_cell25_pair_ids_when_present(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-123"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    cell25_pairs = [
+        {"asc_id": "ASC_CELL25_A", "desc_id": "DESC_CELL25_A", "dt_hours": 11.5},
+        {"asc_id": "ASC_CELL25_B", "desc_id": "DESC_CELL25_B", "dt_hours": 12.25},
+    ]
+    _write_app_sar_metadata(
+        app_run_dir,
+        pairs=cell25_pairs,
+        source_filters={
+            "selection_profile": "cell25_pixel_export",
+            "max_orbit_dt_days": 9,
+            "max_pair_dt_hours": 36,
+        },
+    )
+    _write_notebook_master_units(
+        notebook_root,
+        pairs_used=[{"asc_id": "ASC_CELL21", "desc_id": "DESC_CELL21", "dt_hours": 42.0}],
+        orbit_window_days=12,
+        pair_cap_hours=48,
+        master_id="ASC_CELL21",
+    )
+    _write_notebook_radar_meta(notebook_root, pairs_used=cell25_pairs)
+
+    report = build_sar_source_selection_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["image_identity"]["status"] == "MATCH"
+    assert by_check["image_identity"]["notebook_value"] == "ASC_CELL25_A>DESC_CELL25_A|ASC_CELL25_B>DESC_CELL25_B"
+    assert by_check["orbit_pairing"]["status"] == "MATCH"
+    assert by_check["orbit_pairing"]["notebook_value"] == "11.5|12.25"
+    assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
 
 
 def _write_app_sar_metadata(
@@ -238,7 +276,7 @@ def _write_notebook_master_units(
     )
 
 
-def _write_notebook_radar_meta(notebook_root: Path) -> None:
+def _write_notebook_radar_meta(notebook_root: Path, *, pairs_used: int | list[dict[str, object]] = 4) -> None:
     path = notebook_root / "QA" / "QA_RADAR_META_pairs4_pairdt36h_orbitpm9d.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -246,7 +284,7 @@ def _write_notebook_radar_meta(notebook_root: Path) -> None:
             {
                 "START": "2026-01-01",
                 "END": "2026-03-01",
-                "pairs_used": 4,
+                "pairs_used": pairs_used,
                 "LOCAL_DEM_RTC": True,
                 "outputs": {
                     "summary_csv": "/content/run/QA/SUMMARY_RADAR_pairs4_pairdt36h_orbitpm9d.csv",

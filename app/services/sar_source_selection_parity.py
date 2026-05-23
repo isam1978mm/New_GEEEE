@@ -122,6 +122,7 @@ def build_sar_source_selection_rows(
     notebook_metadata: list[NotebookSarMetadata],
 ) -> list[SarSourceSelectionRow]:
     notebook_payload = _merge_notebook_payloads(notebook_metadata)
+    cell25_payload = _cell25_payload(notebook_metadata)
     notebook_files = ", ".join(f"{item.root_label}:{item.relative_path}" for item in notebook_metadata)
     rows: list[SarSourceSelectionRow] = [
         SarSourceSelectionRow(
@@ -179,17 +180,27 @@ def build_sar_source_selection_rows(
             ),
             _compare_scalar(
                 check="image_identity",
-                notebook_value=_pair_identity_value(notebook_payload),
+                notebook_value=_cell25_pair_identity_value(cell25_payload, notebook_payload),
                 app_value=_pair_identity_value(app_payload),
-                missing_evidence="Notebook metadata does not expose selected ASC/DESC image ids.",
+                missing_evidence=_missing_cell25_pair_evidence(
+                    cell25_payload,
+                    fallback="Notebook metadata does not expose selected ASC/DESC image ids.",
+                ),
                 mismatch_action="Align selected Sentinel-1 image ids before changing RTC formulas.",
+                missing_status=_missing_cell25_pair_status(cell25_payload),
+                missing_action=_missing_cell25_pair_action(cell25_payload),
             ),
             _compare_scalar(
                 check="orbit_pairing",
-                notebook_value=_pair_delta_value(notebook_payload),
+                notebook_value=_cell25_pair_delta_value(cell25_payload, notebook_payload),
                 app_value=_pair_delta_value(app_payload),
-                missing_evidence="Notebook metadata does not expose comparable pair time deltas.",
+                missing_evidence=_missing_cell25_pair_evidence(
+                    cell25_payload,
+                    fallback="Notebook metadata does not expose comparable pair time deltas.",
+                ),
                 mismatch_action="Reconcile orbit pair selection and pair time deltas before changing SAR math.",
+                missing_status=_missing_cell25_pair_status(cell25_payload),
+                missing_action=_missing_cell25_pair_action(cell25_payload),
             ),
             _compare_scalar(
                 check="vv_vh_pair_count",
@@ -283,15 +294,20 @@ def _normalize_qa_radar_meta_payload(payload: dict[str, Any], filename: str) -> 
             "grid_sampling": "sampleRectangle",
         },
     }
+    if profile:
+        normalized.update(profile)
     pair_count = payload.get("pairs_used")
-    if pair_count not in (None, ""):
+    if isinstance(pair_count, list):
+        pairs = _normalize_pairs_used(pair_count)
+        if pairs:
+            normalized["pairs"] = pairs
+            normalized["pair_count"] = len(pairs)
+    elif pair_count not in (None, ""):
         normalized["pair_count"] = _normalize_number_string(pair_count)
     start = payload.get("START")
     end = payload.get("END")
     if start and end:
         normalized["date_window"] = {"start_date": str(start), "end_date": str(end)}
-    if profile:
-        normalized.update(profile)
     return normalized
 
 
@@ -361,6 +377,13 @@ def _metadata_priority(item: NotebookSarMetadata) -> int:
     return 1
 
 
+def _cell25_payload(metadata: list[NotebookSarMetadata]) -> dict[str, Any] | None:
+    for item in sorted(metadata, key=_metadata_priority):
+        if item.payload.get("selection_profile") == "cell25_pixel_export":
+            return item.payload
+    return None
+
+
 def _profile_row(
     *,
     check: str,
@@ -407,15 +430,17 @@ def _compare_scalar(
     app_value: str,
     missing_evidence: str,
     mismatch_action: str,
+    missing_status: str = "NEEDS_MANUAL_REVIEW",
+    missing_action: str = "Capture this field from the notebook run if available.",
 ) -> SarSourceSelectionRow:
     if not notebook_value:
         return SarSourceSelectionRow(
             check=check,
-            status="NEEDS_MANUAL_REVIEW",
+            status=missing_status,
             notebook_value="",
             app_value=app_value,
             evidence=missing_evidence,
-            recommended_next_action="Capture this field from the notebook run if available.",
+            recommended_next_action=missing_action,
         )
     status = "MATCH" if notebook_value == app_value else "MISMATCH"
     return SarSourceSelectionRow(
@@ -430,6 +455,36 @@ def _compare_scalar(
         ),
         recommended_next_action="No action required." if status == "MATCH" else mismatch_action,
     )
+
+
+def _cell25_pair_identity_value(cell25_payload: dict[str, Any] | None, merged_payload: dict[str, Any]) -> str:
+    if cell25_payload is None:
+        return _pair_identity_value(merged_payload)
+    return _pair_identity_value(cell25_payload)
+
+
+def _cell25_pair_delta_value(cell25_payload: dict[str, Any] | None, merged_payload: dict[str, Any]) -> str:
+    if cell25_payload is None:
+        return _pair_delta_value(merged_payload)
+    return _pair_delta_value(cell25_payload)
+
+
+def _missing_cell25_pair_status(cell25_payload: dict[str, Any] | None) -> str:
+    if cell25_payload is None:
+        return "NEEDS_MANUAL_REVIEW"
+    return "MISSING_CELL25_PAIR_IDS"
+
+
+def _missing_cell25_pair_action(cell25_payload: dict[str, Any] | None) -> str:
+    if cell25_payload is None:
+        return "Capture this field from the notebook run if available."
+    return "Cell 25 QA_RADAR_META lacks per-pair ASC/DESC IDs; do not compare against Cell 21 auxiliary pair IDs."
+
+
+def _missing_cell25_pair_evidence(cell25_payload: dict[str, Any] | None, *, fallback: str) -> str:
+    if cell25_payload is None:
+        return fallback
+    return "Cell 25 QA_RADAR_META proves the pixel-export profile but lacks per-pair ASC/DESC IDs and pair time deltas."
 
 
 def _band_mapping_row(*, app_payload: dict[str, Any], notebook_payload: dict[str, Any]) -> SarSourceSelectionRow:

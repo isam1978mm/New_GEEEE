@@ -66,6 +66,12 @@ F18 pixel-output source of truth:
 - Cell 21 `QA_S1_MASTER_UNITS` remains auxiliary QA only; its `48h/12d` parameters are not used to drive app SAR pixel outputs.
 - The local DEM RTC valid mask follows Cell 25: VV/VH must be non-nodata, while `corr` and `cos_inc` must be finite. The output `incidence` file stores the sampled raw Sentinel-1 `angle` band where angle is not nodata.
 
+F19 SAR NPY mapping:
+
+- Numeric parity resolves notebook SAR NPYs from `QA_RADAR_META*.json` `outputs.npys` when present.
+- Notebook `outputs.npys.angle` maps to the app `npy_radar_bands/incidence.npy` output.
+- Absolute notebook paths embedded in `QA_RADAR_META` are normalized to repository-local relative artifact paths before report rows are written.
+
 F16 finding:
 
 - The notebook `NO-COP-DEM` path applies a dB-domain border mask first:

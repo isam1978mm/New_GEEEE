@@ -4,6 +4,7 @@ import csv
 import fnmatch
 import json
 import math
+import re
 import warnings
 import zipfile
 from dataclasses import asdict, dataclass
@@ -307,7 +308,7 @@ def write_numeric_parity_report(
 def compare_spec(spec: ComparisonSpec, *, notebook_root: Path, app_run_dir: Path) -> ComparisonRow:
     app_path = app_run_dir / spec.app_file
     app_file = spec.app_file
-    notebook_match = resolve_notebook_file(notebook_root, spec.notebook_candidates)
+    notebook_match = resolve_notebook_file_for_spec(notebook_root, spec)
     notebook_file = notebook_match[0]
 
     if not app_path.is_file():
@@ -363,6 +364,65 @@ def compare_spec(spec: ComparisonSpec, *, notebook_root: Path, app_run_dir: Path
         skipped_reason="unsupported_comparison_type",
         notes=spec.notes,
     )
+
+
+def resolve_notebook_file_for_spec(notebook_root: Path, spec: ComparisonSpec) -> tuple[str | None, str]:
+    metadata_match = resolve_sar_npy_from_radar_meta(notebook_root, spec)
+    if metadata_match[0] is not None or metadata_match[1] != "missing":
+        return metadata_match
+    return resolve_notebook_file(notebook_root, spec.notebook_candidates)
+
+
+def resolve_sar_npy_from_radar_meta(notebook_root: Path, spec: ComparisonSpec) -> tuple[str | None, str]:
+    if spec.family != "sar_npy_bands" or spec.comparison_type != "npy":
+        return None, "missing"
+    band_key = _sar_npy_band_key(spec.app_file)
+    if band_key is None:
+        return None, "missing"
+
+    matches: set[str] = set()
+    for meta_path in sorted(notebook_root.rglob("QA_RADAR_META*.json")):
+        try:
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        npys = payload.get("outputs", {}).get("npys", {})
+        if not isinstance(npys, dict):
+            continue
+        raw_value = npys.get(band_key)
+        if raw_value in (None, ""):
+            continue
+        relative_path = _notebook_relative_path_from_metadata_value(str(raw_value))
+        if relative_path is not None and (notebook_root / relative_path).is_file():
+            matches.add(relative_path)
+
+    if not matches:
+        return None, "missing"
+    sorted_matches = sorted(matches)
+    if len(sorted_matches) > 1:
+        return None, "ambiguous"
+    return sorted_matches[0], "ok"
+
+
+def _sar_npy_band_key(app_file: str) -> str | None:
+    name = Path(app_file).name
+    return {
+        "VV_dB.npy": "VV_dB",
+        "VH_dB.npy": "VH_dB",
+        "logRatio_dB.npy": "logRatio_dB",
+        "incidence.npy": "angle",
+    }.get(name)
+
+
+def _notebook_relative_path_from_metadata_value(value: str) -> str | None:
+    normalized = value.replace("\\", "/")
+    for marker in ("NPY_RADAR_BANDS/", "NPY_STACKS/"):
+        marker_index = normalized.find(marker)
+        if marker_index >= 0:
+            return normalized[marker_index:]
+    if normalized.startswith("/") or re.match(r"^[A-Za-z]:/", normalized):
+        return None
+    return normalized
 
 
 def resolve_notebook_file(notebook_root: Path, candidates: tuple[str, ...]) -> tuple[str | None, str]:

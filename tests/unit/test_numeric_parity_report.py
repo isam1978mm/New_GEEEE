@@ -16,6 +16,7 @@ from app.services.numeric_parity_report import (
     canonicalize_json_payload,
     canonicalize_kmz_payload,
     compare_arrays,
+    compare_spec,
     compare_raster_files,
     resolve_notebook_file,
 )
@@ -178,6 +179,80 @@ def test_notebook_mapping_patterns_cover_requested_downloaded_names(tmp_path: Pa
         resolved_path, status = resolve_notebook_file(tmp_path, spec.notebook_candidates)
         assert status == "ok"
         assert resolved_path == notebook_path
+
+
+def test_sar_npy_mapping_uses_qa_radar_meta_outputs_npys(tmp_path: Path) -> None:
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    app_run_dir = tmp_path / "app_run"
+    (notebook_root / "QA").mkdir(parents=True, exist_ok=True)
+    (notebook_root / "NPY_RADAR_BANDS").mkdir(parents=True, exist_ok=True)
+    (app_run_dir / "npy_radar_bands").mkdir(parents=True, exist_ok=True)
+
+    vv = np.array([[1.0, 2.0]], dtype=np.float32)
+    vh = np.array([[3.0, 4.0]], dtype=np.float32)
+    angle = np.array([[35.0, 36.0]], dtype=np.float32)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_VV_dB_640_cell25.npy", vv)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_VH_dB_640_cell25.npy", vh)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "RADAR_angle_640_cell25.npy", angle)
+    np.save(notebook_root / "NPY_RADAR_BANDS" / "S1_ASC_VV_Filtered_640.npy", vv + 100.0)
+    np.save(app_run_dir / "npy_radar_bands" / "VV_dB.npy", vv)
+    np.save(app_run_dir / "npy_radar_bands" / "VH_dB.npy", vh)
+    np.save(app_run_dir / "npy_radar_bands" / "incidence.npy", angle)
+    (notebook_root / "QA" / "QA_RADAR_META_pairs4_pairdt36h_orbitpm9d_DBONLY_LOCALDEM.json").write_text(
+        json.dumps(
+            {
+                "outputs": {
+                    "npys": {
+                        "VV_dB": "/content/run/NPY_RADAR_BANDS/RADAR_VV_dB_640_cell25.npy",
+                        "VH_dB": "/content/run/NPY_RADAR_BANDS/RADAR_VH_dB_640_cell25.npy",
+                        "angle": "/content/run/NPY_RADAR_BANDS/RADAR_angle_640_cell25.npy",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    vv_row = compare_spec(
+        ComparisonSpec(
+            "sar_npy_bands",
+            "npy",
+            "npy_radar_bands/VV_dB.npy",
+            ("NPY_RADAR_BANDS/*VV*.npy",),
+            tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
+        ),
+        notebook_root=notebook_root,
+        app_run_dir=app_run_dir,
+    )
+    vh_row = compare_spec(
+        ComparisonSpec(
+            "sar_npy_bands",
+            "npy",
+            "npy_radar_bands/VH_dB.npy",
+            ("NPY_RADAR_BANDS/*VH*.npy",),
+            tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
+        ),
+        notebook_root=notebook_root,
+        app_run_dir=app_run_dir,
+    )
+    incidence_row = compare_spec(
+        ComparisonSpec(
+            "sar_npy_bands",
+            "npy",
+            "npy_radar_bands/incidence.npy",
+            ("NPY_RADAR_BANDS/*incidence*.npy",),
+            tolerance=Tolerance(abs_tol=1e-4, rel_tol=1e-5),
+        ),
+        notebook_root=notebook_root,
+        app_run_dir=app_run_dir,
+    )
+
+    assert vv_row.status == "PASS"
+    assert vv_row.notebook_file == "NPY_RADAR_BANDS/RADAR_VV_dB_640_cell25.npy"
+    assert vh_row.status == "PASS"
+    assert vh_row.notebook_file == "NPY_RADAR_BANDS/RADAR_VH_dB_640_cell25.npy"
+    assert incidence_row.status == "PASS"
+    assert incidence_row.notebook_file == "NPY_RADAR_BANDS/RADAR_angle_640_cell25.npy"
 
 
 def _write_geotiff(

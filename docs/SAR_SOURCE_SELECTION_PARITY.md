@@ -45,3 +45,10 @@ F18 profile distinction:
 
 - `cell25_pixel_export_profile` compares app SAR pixel-output metadata against `QA_RADAR_META*.json` or `SUMMARY_RADAR*` filename provenance.
 - `cell21_master_units_qa_profile` reports `QA_S1_MASTER_UNITS.json` as auxiliary metadata so its `48h/12d` values are not confused with the actual Cell 25 `36h/9d` pixel-export profile.
+
+F19 provenance rule:
+
+- Cell 25 `QA_RADAR_META*.json` is the source of truth for SAR pixel-output provenance.
+- If Cell 25 metadata proves `pairs4_pairdt36h_orbitpm9d` but does not include per-pair ASC/DESC image IDs, `image_identity` and `orbit_pairing` report `MISSING_CELL25_PAIR_IDS` rather than a mismatch.
+- Cell 21 `QA_S1_MASTER_UNITS.json` pair IDs remain auxiliary and must not be compared as if they were Cell 25 pixel-export pair IDs.
+- If a future Cell 25 metadata file includes true per-pair ASC/DESC IDs and pair deltas, the report compares app pair provenance against those Cell 25 IDs directly.
