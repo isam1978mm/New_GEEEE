@@ -3278,3 +3278,188 @@ Expected validation:
 
 Stop after F23 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F24 - Capture Cell 25 SAR processing intermediates and localize first divergence
+
+Reason:
+
+F22 proved true Cell 25 source identity can be captured with a sidecar.
+F23 validation proved source identity matches the app:
+
+- image_identity MATCH
+- orbit_pairing MATCH
+- source_parameters MATCH
+- vv_vh_pair_count MATCH
+- source_identity_classification SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS
+
+F23 also showed:
+
+- dtype/float32 casting is not explanatory.
+- tile-boundary/sampleRectangle edge behavior is unlikely as the primary cause.
+- low-slope/mid-incidence subsets reduce VV/VH residual by about 35-36 percent but do not eliminate it.
+- large residuals are distributed, not tile-boundary clustered.
+- VV/VH large residuals are partly band-asymmetric.
+- final arrays alone cannot prove median domain, reproject timing, filter order, or per-pair intermediate behavior.
+
+Therefore F24 must capture or compare SAR processing intermediates so the first divergence stage can be localized.
+
+Scope:
+
+- SAR intermediate diagnostics only.
+- Do not change pair-selection constants.
+- Do not change selected image IDs.
+- Do not change notebook code or existing notebook output arrays.
+- Do not weaken tolerances.
+- Do not mark mismatched outputs as PASS.
+- Do not change SAR math unless an exact notebook-code-backed first-divergence bug is proven.
+
+Required setup:
+
+- Use latest validation run:
+  - run id 68ec6b07-1842-4957-88cc-1b259b09dfdb
+- Use the F22 Cell 25 pair sidecar:
+  - QA_RADAR_CELL25_PAIR_IDS_68ec6b07-1842-4957-88cc-1b259b09dfdb_pairs4_pairdt36h_orbitpm9d.json
+- Require F13 source_identity_classification to be SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS before interpreting intermediate deltas.
+
+Required intermediate stages:
+
+Add local-only capture/compare support for these Cell 25 stages where feasible:
+
+1. per_image_products_db output for each selected ASC/DESC image:
+   - VV_dB
+   - VH_dB
+   - angle
+2. per-pair ASC/DESC median output before final pair-stack median:
+   - pair index
+   - VV_dB
+   - VH_dB
+   - angle
+3. final median before local NumPy RTC:
+   - VV_dB pre-RTC
+   - VH_dB pre-RTC
+   - angle pre-RTC
+4. post-sample pre-RTC arrays:
+   - VV_dB
+   - VH_dB
+   - angle
+5. post-RTC arrays:
+   - VV_dB
+   - VH_dB
+   - logRatio_dB
+   - angle
+
+Important:
+
+- If a stage cannot be reconstructed from existing downloaded notebook outputs, report MISSING_NOTEBOOK_INTERMEDIATE rather than guessing.
+- Provide a notebook-cell snippet or local helper path to export the missing Cell 25 intermediates.
+- Intermediate outputs must be local-only diagnostic artifacts.
+- Do not expose coordinates, bounds, CRS transforms, local paths, hashes, or exact ROI context through public API responses.
+
+Required app behavior:
+
+- Add optional local-only SAR intermediate export/diagnostic mode.
+- Normal app runs should not emit extra heavy intermediates unless explicitly enabled by local scripts/settings.
+- Intermediate artifacts should be written under a local-only diagnostics directory, for example:
+  - qa/sar/intermediates/
+  - data/reports/sar_intermediates_<run_id>/
+- Public API responses must not list local-only intermediate paths.
+
+Required report behavior:
+
+- Add a local-only intermediate parity report or extend SAR processing parity with rows such as:
+  - intermediate_per_image_products_db
+  - intermediate_pair_median
+  - intermediate_final_median_pre_rtc
+  - intermediate_post_sample_pre_rtc
+  - intermediate_post_rtc
+  - first_divergence_stage
+- The report must classify:
+  - SOURCE_ID_MATCHED_INTERMEDIATES_MISSING
+  - FIRST_DIVERGENCE_PER_IMAGE_FILTER
+  - FIRST_DIVERGENCE_PAIR_MEDIAN
+  - FIRST_DIVERGENCE_FINAL_MEDIAN_OR_REPROJECT
+  - FIRST_DIVERGENCE_LOCAL_RTC
+  - FIRST_DIVERGENCE_NOT_FOUND
+- If notebook intermediates are missing, the report should say exactly which notebook-side intermediate is needed next.
+
+Allowed helper/script options:
+
+- scripts/export_cell25_sar_intermediates.py
+  - exports app-side and/or Earth Engine-side Cell 25 intermediate rasters/NPYs locally.
+- scripts/report_sar_intermediate_parity.py
+  - compares available notebook/app intermediates and writes local-only JSON/CSV.
+- docs snippet for adding a notebook cell that exports Cell 25 intermediates into QA or NPY_INTERMEDIATES.
+
+Required tests:
+
+- Test report behavior when notebook intermediates are missing:
+  - status = MISSING_NOTEBOOK_INTERMEDIATE
+  - first_divergence_stage = SOURCE_ID_MATCHED_INTERMEDIATES_MISSING
+- Test report behavior when per-image intermediates match but pair median differs:
+  - first_divergence_stage = FIRST_DIVERGENCE_PAIR_MEDIAN
+- Test report behavior when pair median matches but post-RTC differs:
+  - first_divergence_stage = FIRST_DIVERGENCE_LOCAL_RTC
+- Test report behavior when all supplied intermediates match:
+  - first_divergence_stage = FIRST_DIVERGENCE_NOT_FOUND
+- Test no public API leakage of local paths, coordinates, bounds, transforms, or ROI context.
+- Existing tests must continue to pass.
+
+Potential narrow fix:
+
+Only if F24 proves an exact first-divergence bug that is backed by notebook Cell 22/24/25 code, make one narrow change in app/pipeline/stages/sar_rtc.py.
+
+Examples of acceptable fixes if proven:
+
+- wrong per-image filter stage
+- wrong per-pair median stage
+- wrong final median/reproject stage
+- wrong post-sample pre-RTC handling
+- wrong local NumPy RTC stage
+
+If no exact bug is proven, F24 must remain diagnostic-only.
+
+Not allowed:
+
+- Do not change pair-selection constants or selected image IDs.
+- Do not use Cell 21 pair IDs as Cell 25 truth.
+- Do not tune formulas to improve matching percentage.
+- Do not weaken tolerances.
+- Do not change notebook output arrays.
+- Do not expose coordinates, geometry, bounds, CRS transforms, hashes, local paths, or exact ROI context through public API responses.
+- Do not serve parity reports or intermediates over HTTP.
+- Do not claim parity unless F11/F15/F24 proves it.
+
+Create/update:
+
+- app/services/sar_processing_parity.py or new app/services/sar_intermediate_parity.py
+- scripts/report_sar_processing_parity.py only if extending existing report
+- scripts/report_sar_intermediate_parity.py if creating a new report
+- scripts/export_cell25_sar_intermediates.py or docs notebook export snippet
+- app/pipeline/stages/sar_rtc.py only for optional local-only intermediate export or a proven narrow fix
+- tests/unit/test_sar_processing_parity.py or new tests/unit/test_sar_intermediate_parity.py
+- tests/integration/test_sar_processing_parity_script.py or new integration script test
+- tests/unit/test_sar_rtc.py if SAR logic/intermediate export changes
+- docs/SAR_PROCESSING_PARITY.md
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_processing_parity.py
+  - pytest tests/unit/test_sar_intermediate_parity.py if created
+  - pytest tests/integration/test_sar_processing_parity_script.py
+  - pytest tests/integration/test_sar_intermediate_parity_script.py if created
+  - pytest tests/unit/test_sar_rtc.py if SAR logic/intermediate export changes
+- Rerun F13 with the F22 Cell 25 sidecar and confirm:
+  - source_identity_classification SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS
+- Run the F24 intermediate report on latest validation run:
+  - run id 68ec6b07-1842-4957-88cc-1b259b09dfdb
+- Report:
+  - whether F24 is diagnostic-only or includes a proven narrow fix
+  - which intermediates are available
+  - which notebook-side intermediate is missing, if any
+  - first divergence stage if proven
+  - exact next action
+
+Stop after F24 and report files changed, commands run, test results, and blockers.
+
