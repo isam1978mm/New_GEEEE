@@ -21,10 +21,12 @@ from app.services.ee_session import initialize_ee_session
 DEFAULT_START = "2026-01-01"
 DEFAULT_END = "2026-03-01"
 S1_COLLECTION_ID = "COPERNICUS/S1_GRD"
-MAX_ORBIT_DT_DAYS = 9
-MAX_PAIR_DT_HOURS = 36
+SAR_SELECTION_PROFILE = "notebook_qa_s1_master_units"
+MAX_ORBIT_DT_DAYS = 12
+MAX_PAIR_DT_HOURS = 48
+MAX_PAIRS = 4
 MIN_PAIRS = 2
-MAX_PAIRS_TARGETS = (4, 3, 2)
+MAX_PAIRS_TARGETS = (MAX_PAIRS, 3, 2)
 RADAR_BANDS = ("VV_dB", "VH_dB", "angle")
 OUTPUT_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 SAR_NPY_OUTPUT_DIR = "npy_radar_bands"
@@ -458,12 +460,14 @@ def build_pair_diagnostics_payload(
         "date_window": {"start_date": start_date, "end_date": end_date},
         "roi_grid_label": "run_grid",
         "source_filters": {
+            "selection_profile": SAR_SELECTION_PROFILE,
             "instrumentMode": "IW",
             "resolution_meters": 10,
             "polarizations": ["VV", "VH"],
             "orbit_directions": ["ASCENDING", "DESCENDING"],
             "max_orbit_dt_days": MAX_ORBIT_DT_DAYS,
             "max_pair_dt_hours": MAX_PAIR_DT_HOURS,
+            "max_pairs": MAX_PAIRS,
             "min_pairs": MIN_PAIRS,
             "max_pairs_targets": list(MAX_PAIRS_TARGETS),
         },

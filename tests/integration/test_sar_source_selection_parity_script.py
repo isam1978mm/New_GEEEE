@@ -65,7 +65,7 @@ def _write_app_sar_metadata(app_run_dir: Path) -> None:
             {
                 "collection_id": "COPERNICUS/S1_GRD",
                 "date_window": {"start_date": "2026-01-01", "end_date": "2026-03-01"},
-                "source_filters": {"max_orbit_dt_days": 9, "max_pair_dt_hours": 36},
+                "source_filters": {"max_orbit_dt_days": 12, "max_pair_dt_hours": 48},
                 "output_band_list": ["VV_dB", "VH_dB", "logRatio_dB", "incidence"],
                 "angle_incidence_mapping": {"notebook_band": "angle", "app_output_band": "incidence"},
                 "processing_path": {"local_dem_rtc": True, "speckle_refined_lee_filtering": False},
@@ -82,8 +82,8 @@ def _write_notebook_master_units(notebook_root: Path) -> None:
     path.write_text(
         json.dumps(
             {
-                "orbit_window_days": 9,
-                "pair_cap_hours": 36,
+                "orbit_window_days": 12,
+                "pair_cap_hours": 48,
                 "pairs_used": [{"asc_id": "ASC_1", "desc_id": "DESC_1", "dt_hours": 1.0}],
                 "MASTER_ID": "ASC_1",
             }

@@ -72,7 +72,7 @@ def test_sar_source_selection_report_parses_qa_s1_master_units_json(tmp_path: Pa
             {"asc_id": "ASC_A", "desc_id": "DESC_A", "dt_hours": 1.0},
             {"asc_id": "ASC_B", "desc_id": "DESC_B", "dt_hours": 2.0},
         ],
-        source_filters={"max_orbit_dt_days": 9, "max_pair_dt_hours": 36},
+        source_filters={"max_orbit_dt_days": 12, "max_pair_dt_hours": 48},
     )
     _write_notebook_master_units(
         notebook_root,
@@ -80,8 +80,8 @@ def test_sar_source_selection_report_parses_qa_s1_master_units_json(tmp_path: Pa
             {"asc_id": "ASC_A", "desc_id": "DESC_A", "dt_hours": 1.0},
             {"asc_id": "ASC_B", "desc_id": "DESC_B", "dt_hours": 2.0},
         ],
-        orbit_window_days=9,
-        pair_cap_hours=36,
+        orbit_window_days=12,
+        pair_cap_hours=48,
         master_id="ASC_A",
     )
 
@@ -98,10 +98,11 @@ def test_sar_source_selection_report_parses_qa_s1_master_units_json(tmp_path: Pa
     assert by_check["orbit_pairing"]["notebook_value"] == "1|2"
     assert by_check["vv_vh_pair_count"]["status"] == "MATCH"
     assert by_check["vv_vh_pair_count"]["notebook_value"] == "2"
-    assert by_check["source_parameters"]["status"] == "MISMATCH"
-    assert '"master_id":"ASC_A"' in by_check["source_parameters"]["notebook_value"]
-    assert '"orbit_window_days":"9"' in by_check["source_parameters"]["app_value"]
-    assert '"pair_cap_hours":"36"' in by_check["source_parameters"]["app_value"]
+    assert by_check["source_parameters"]["status"] == "MATCH"
+    assert by_check["source_parameters"]["notebook_value"] == '{"orbit_window_days":"12","pair_cap_hours":"48"}'
+    assert by_check["source_parameters"]["app_value"] == '{"orbit_window_days":"12","pair_cap_hours":"48"}'
+    assert by_check["master_id"]["status"] == "NOTEBOOK_ONLY"
+    assert by_check["master_id"]["notebook_value"] == "ASC_A"
 
     serialized = json.dumps(report, sort_keys=True)
     assert "C:\\" not in serialized

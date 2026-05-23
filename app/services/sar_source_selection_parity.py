@@ -202,6 +202,7 @@ def build_sar_source_selection_rows(
                 missing_evidence="Notebook metadata does not expose comparable SAR source parameters.",
                 mismatch_action="Reconcile orbit window, pair cap, and master image metadata before changing SAR formulas.",
             ),
+            _master_id_row(notebook_payload=notebook_payload, app_payload=app_payload),
             _band_mapping_row(app_payload=app_payload, notebook_payload=notebook_payload),
             _processing_path_row(app_payload=app_payload, notebook_payload=notebook_payload),
             SarSourceSelectionRow(
@@ -370,6 +371,29 @@ def _processing_path_row(*, app_payload: dict[str, Any], notebook_payload: dict[
     )
 
 
+def _master_id_row(*, notebook_payload: dict[str, Any], app_payload: dict[str, Any]) -> SarSourceSelectionRow:
+    notebook_value = str(notebook_payload.get("master_id") or notebook_payload.get("MASTER_ID") or "")
+    app_value = str(app_payload.get("master_id") or app_payload.get("MASTER_ID") or "")
+    if notebook_value and not app_value:
+        return SarSourceSelectionRow(
+            check="master_id",
+            status="NOTEBOOK_ONLY",
+            notebook_value=notebook_value,
+            app_value="",
+            evidence="Notebook QA_S1_MASTER_UNITS records MASTER_ID, while app pair selection is driven by selected ASC/DESC pairs.",
+            recommended_next_action="Treat MASTER_ID as notebook-only provenance unless app selection starts using it explicitly.",
+        )
+    status = "MATCH" if notebook_value == app_value else "MISMATCH"
+    return SarSourceSelectionRow(
+        check="master_id",
+        status=status,
+        notebook_value=notebook_value,
+        app_value=app_value,
+        evidence="MASTER_ID comparison is provenance-only and does not change SAR formulas.",
+        recommended_next_action="No action required." if status == "MATCH" else "Inspect master-image provenance if pair identities still differ.",
+    )
+
+
 def _first_value(payload: dict[str, Any], *keys: str) -> str:
     for key in keys:
         value = payload.get(_normalize_key(key))
@@ -458,9 +482,6 @@ def _source_parameters_value(payload: dict[str, Any]) -> str:
             pair_cap_hours = source_filters.get("max_pair_dt_hours")
     if pair_cap_hours not in (None, ""):
         values["pair_cap_hours"] = _normalize_number_string(pair_cap_hours)
-    master_id = payload.get("master_id") or payload.get("MASTER_ID")
-    if master_id not in (None, ""):
-        values["master_id"] = str(master_id)
     return _compact_json(values)
 
 

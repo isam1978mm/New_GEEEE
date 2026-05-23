@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -18,7 +19,11 @@ from app.pipeline.stages.sar_rtc import (
     RADAR_BANDS,
     SAR_NPY_ARTIFACT_NAMES,
     SAR_NPY_OUTPUT_DIR,
+    MAX_ORBIT_DT_DAYS,
+    MAX_PAIR_DT_HOURS,
+    MAX_PAIRS,
     S1_COLLECTION_ID,
+    SAR_SELECTION_PROFILE,
     SarFetchDiagnostics,
     SarPair,
     SarRtcStage,
@@ -28,6 +33,7 @@ from app.pipeline.stages.sar_rtc import (
     build_s1_base_collection,
     create_ee_radar_cube_fetcher,
     deterministic_radar_cube_fetcher,
+    select_pairs,
 )
 from app.services.storage import read_manifest
 
@@ -355,6 +361,61 @@ def test_build_final_radar_image_keeps_stage_error_for_insufficient_pairs(monkey
         build_final_radar_image(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
 
 
+def test_select_pairs_uses_notebook_style_orbit_window_and_retains_january_18_pair() -> None:
+    asc_items = [
+        _sar_item("S1C_IW_GRDH_1SDV_20260118T153231_20260118T153256_005960_00BF44_900B", "2026-01-18T15:32:31"),
+        _sar_item("S1A_IW_GRDH_1SDV_20260124T153322_20260124T153347_062911_07E445_5A03", "2026-01-24T15:33:22"),
+        _sar_item("S1A_IW_GRDH_1SDV_20260124T153347_20260124T153412_062911_07E445_CC8F", "2026-01-24T15:33:47"),
+        _sar_item("S1C_IW_GRDH_1SDV_20260130T153231_20260130T153256_006135_00C4FC_B136", "2026-01-30T15:32:31"),
+        _sar_item("APP_ONLY_20260205_ASC", "2026-02-05T15:32:31"),
+        _sar_item("APP_ONLY_20260206_ASC", "2026-02-06T15:32:31"),
+    ]
+    desc_items = [
+        _sar_item("S1A_IW_GRDH_1SDV_20260118T034301_20260118T034326_062816_07E10A_BAF5", "2026-01-18T05:32:31"),
+        _sar_item("S1C_IW_GRDH_1SDV_20260124T034219_20260124T034244_006040_00C1BF_D131", "2026-01-24T04:33:22"),
+        _sar_item("S1C_IW_GRDH_1SDV_20260124T034154_20260124T034219_006040_00C1BF_56CA", "2026-01-24T03:33:47"),
+        _sar_item("S1A_IW_GRDH_1SDV_20260130T034301_20260130T034326_062991_07E753_7321", "2026-01-30T05:32:31"),
+        _sar_item("APP_ONLY_20260205_DESC", "2026-02-05T05:32:31"),
+        _sar_item("APP_ONLY_20260206_DESC", "2026-02-06T05:32:31"),
+    ]
+
+    selected = select_pairs(asc_items, desc_items)
+
+    assert MAX_ORBIT_DT_DAYS == 12
+    assert MAX_PAIR_DT_HOURS == 48
+    assert MAX_PAIRS == 4
+    assert [(pair.asc_id, pair.desc_id) for pair in selected] == [
+        (
+            "S1C_IW_GRDH_1SDV_20260118T153231_20260118T153256_005960_00BF44_900B",
+            "S1A_IW_GRDH_1SDV_20260118T034301_20260118T034326_062816_07E10A_BAF5",
+        ),
+        (
+            "S1C_IW_GRDH_1SDV_20260130T153231_20260130T153256_006135_00C4FC_B136",
+            "S1A_IW_GRDH_1SDV_20260130T034301_20260130T034326_062991_07E753_7321",
+        ),
+        (
+            "S1A_IW_GRDH_1SDV_20260124T153322_20260124T153347_062911_07E445_5A03",
+            "S1C_IW_GRDH_1SDV_20260124T034219_20260124T034244_006040_00C1BF_D131",
+        ),
+        (
+            "S1A_IW_GRDH_1SDV_20260124T153347_20260124T153412_062911_07E445_CC8F",
+            "S1C_IW_GRDH_1SDV_20260124T034154_20260124T034219_006040_00C1BF_56CA",
+        ),
+    ]
+    assert all("20260205" not in pair.asc_id for pair in selected)
+
+
+def test_select_pairs_uses_48_hour_pair_cap() -> None:
+    asc_items = [_sar_item("ASC_42H", "2026-01-24T12:00:00")]
+    desc_items = [_sar_item("DESC_42H", "2026-01-22T18:00:00")]
+
+    selected = select_pairs(asc_items, desc_items, min_pairs=1)
+    old_profile_selected = select_pairs(asc_items, desc_items, max_pair_dt_hours=36, min_pairs=0)
+
+    assert [(pair.asc_id, pair.desc_id) for pair in selected] == [("ASC_42H", "DESC_42H")]
+    assert [(pair.asc_id, pair.desc_id) for pair in old_profile_selected] == []
+
+
 def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
@@ -427,6 +488,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert pair_diagnostics["artifact_class"] == "FILESYSTEM_ONLY"
         assert pair_diagnostics["local_only"] is True
         assert pair_diagnostics["collection_id"] == S1_COLLECTION_ID
+        assert pair_diagnostics["source_filters"]["selection_profile"] == SAR_SELECTION_PROFILE
+        assert pair_diagnostics["source_filters"]["max_orbit_dt_days"] == 12
+        assert pair_diagnostics["source_filters"]["max_pair_dt_hours"] == 48
+        assert pair_diagnostics["source_filters"]["max_pairs"] == 4
         assert pair_diagnostics["selected_band_list"] == ["VV", "VH", "angle"]
         assert pair_diagnostics["sampled_band_list"] == ["VV_dB", "VH_dB", "angle"]
         assert pair_diagnostics["output_band_list"] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
@@ -491,3 +556,8 @@ def _settings(run_dir: Path):
 
     data_dir = run_dir / "data"
     return Settings(data_dir=data_dir, database_path=data_dir / "db.sqlite")
+
+
+def _sar_item(image_id: str, iso_timestamp: str) -> dict[str, object]:
+    timestamp = datetime.fromisoformat(iso_timestamp).replace(tzinfo=UTC)
+    return {"id": image_id, "ms": int(timestamp.timestamp() * 1000)}

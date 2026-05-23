@@ -24,6 +24,8 @@ The app-side SAR metadata is `qa/sar/sar_pair_diagnostics.json`. It records:
 
 - Sentinel-1 collection id.
 - Date window and notebook-style filters.
+- Active selection profile: `notebook_qa_s1_master_units`.
+- Notebook-style source parameters: `orbit_window_days = 12`, `pair_cap_hours = 48`, `max_pairs = 4`.
 - Selected VV/VH/angle input bands and VV/VH/logRatio/incidence output bands.
 - ASC/DESC selected image ids and pair time deltas when Earth Engine diagnostics are available.
 - The `angle -> incidence` output mapping.
