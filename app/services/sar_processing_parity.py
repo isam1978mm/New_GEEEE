@@ -32,6 +32,7 @@ SAR_PROCESSING_FIELDNAMES = [
 SAR_BAND_TOLERANCE = Tolerance(abs_tol=1e-4, rel_tol=1e-5)
 ANGLE_LARGE_DELTA_DEGREES = 0.01
 ANGLE_EDGE_DELTA_DEGREES = 1.0
+F21_RESIDUAL_BIN_THRESHOLDS = (1e-4, 1e-3, 1e-2, 5e-2, 1e-1)
 SAR_BAND_MAPPINGS = {
     "VV_dB": {
         "notebook_band_name": "VV_dB",
@@ -180,6 +181,7 @@ def build_sar_processing_parity_report(
 
     rows.extend(_build_pixel_probe_rows(band_arrays))
     rows.extend(_build_f20_delta_diagnostic_rows(band_arrays))
+    rows.extend(_build_f21_vv_vh_residual_rows(band_arrays))
     rows.extend(_build_log_ratio_rows(band_arrays))
     stack_row, notebook_stack = _build_stack_row(app_run_dir=app_run_dir, notebook_roots=notebook_roots)
     rows.append(stack_row)
@@ -965,6 +967,222 @@ def _build_vv_vh_without_angle_delta_rows(band_arrays: dict[str, dict[str, Any]]
     return rows
 
 
+def _build_f21_vv_vh_residual_rows(band_arrays: dict[str, dict[str, Any]]) -> list[SarProcessingRow]:
+    rows: list[SarProcessingRow] = []
+    for container in sorted({name for band in ("VV_dB", "VH_dB") for name in band_arrays.get(band, {})}):
+        for band_name in ("VV_dB", "VH_dB"):
+            payload = band_arrays.get(band_name, {}).get(container)
+            if payload is None:
+                continue
+            notebook_array = _squeeze_array(payload["array"])
+            app_array = _squeeze_array(payload["app_array"])
+            if notebook_array.shape != app_array.shape or notebook_array.ndim != 2:
+                continue
+            mask = _valid_mask(notebook_array, payload["notebook_nodata"]) & _valid_mask(app_array, payload["app_nodata"])
+            rows.append(_build_f21_distribution_row(band_name, container, notebook_array, app_array, mask))
+            rows.append(_build_f21_sign_balance_row(band_name, container, notebook_array, app_array, mask))
+            rows.append(_build_f21_regression_residual_row(band_name, container, notebook_array, app_array, mask))
+        symmetry_row = _build_f21_vv_vh_symmetry_row(band_arrays, container)
+        if symmetry_row is not None:
+            rows.append(symmetry_row)
+    return rows
+
+
+def _build_f21_distribution_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+) -> SarProcessingRow:
+    stats = _signed_delta_stats(notebook_array, app_array, mask)
+    likely_cause = _f21_distribution_likely_cause(stats)
+    return SarProcessingRow(
+        check=f"f21_residual_distribution_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=stats.get("le_0.0001_percent"),
+        common_valid_matching_percent=stats.get("le_0.001_percent"),
+        mask_overlap_percent=stats.get("gt_0.1_percent"),
+        mean_diff=stats.get("mean_abs_diff"),
+        median_diff=stats.get("median_abs_diff"),
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F21 absolute residual distribution; count={stats['count']}; "
+            f"count_le_1e-4={stats['le_0.0001_count']}; count_le_1e-3={stats['le_0.001_count']}; "
+            f"count_le_1e-2={stats['le_0.01_count']}; count_le_5e-2={stats['le_0.05_count']}; "
+            f"count_le_1e-1={stats['le_0.1_count']}; count_gt_1e-1={stats['gt_0.1_count']}; "
+            f"mean_abs_diff={stats['mean_abs_diff_text']}; median_abs_diff={stats['median_abs_diff_text']}; "
+            f"p90_abs_diff={stats['p90_abs_diff_text']}; p99_abs_diff={stats['p99_abs_diff_text']}; "
+            f"max_abs_diff={stats['max_abs_diff_text']}."
+        ),
+        recommended_next_action="Use residual distribution to separate broad low-amplitude drift from sparse outliers before changing SAR code.",
+    )
+
+
+def _build_f21_sign_balance_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+) -> SarProcessingRow:
+    stats = _signed_delta_stats(notebook_array, app_array, mask)
+    return SarProcessingRow(
+        check=f"f21_sign_balance_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause="F21_SIGN_BALANCE_DIAGNOSTIC",
+        raw_matching_percent=stats.get("positive_percent"),
+        common_valid_matching_percent=stats.get("negative_percent"),
+        mask_overlap_percent=stats.get("near_zero_percent"),
+        mean_diff=stats.get("mean_signed_diff"),
+        median_diff=stats.get("median_signed_diff"),
+        correlation=None,
+        linear_slope=None,
+        linear_intercept=None,
+        evidence=(
+            f"F21 sign-balance diagnostic; count={stats['count']}; positive_delta_count={stats['positive_count']}; "
+            f"negative_delta_count={stats['negative_count']}; near_zero_delta_count={stats['near_zero_count']}; "
+            f"mean_signed_diff={stats['mean_signed_diff_text']}; median_signed_diff={stats['median_signed_diff_text']}."
+        ),
+        recommended_next_action="Strong one-sided deltas suggest offset/scale behavior; balanced signs suggest filter, aggregation, or sampling residual.",
+    )
+
+
+def _build_f21_regression_residual_row(
+    band_name: str,
+    container: str,
+    notebook_array: np.ndarray,
+    app_array: np.ndarray,
+    mask: np.ndarray,
+) -> SarProcessingRow:
+    if not np.any(mask):
+        return SarProcessingRow(
+            check=f"f21_regression_residual_{band_name}_{container}",
+            status="DIAGNOSTIC",
+            band_name=band_name,
+            notebook_file="",
+            app_file="",
+            likely_cause="F21_NO_COMMON_VALID_PIXELS",
+            raw_matching_percent=None,
+            common_valid_matching_percent=None,
+            mask_overlap_percent=None,
+            mean_diff=None,
+            median_diff=None,
+            correlation=None,
+            linear_slope=None,
+            linear_intercept=None,
+            evidence="F21 regression residual diagnostic skipped because no common valid pixels remain.",
+            recommended_next_action="Resolve missing inputs or masks before interpreting regression residual diagnostics.",
+        )
+    notebook_values = notebook_array.astype(np.float64, copy=False)[mask]
+    app_values = app_array.astype(np.float64, copy=False)[mask]
+    original_abs = np.abs(app_values - notebook_values)
+    correlation, slope, intercept = _linear_fit(notebook_values, app_values)
+    if slope is None or intercept is None:
+        adjusted_abs = original_abs
+        likely_cause = "F21_REGRESSION_NOT_IDENTIFIABLE"
+    else:
+        adjusted_abs = np.abs(app_values - ((slope * notebook_values) + intercept))
+        likely_cause = (
+            "F21_LINEAR_TREND_EXPLAINS_RESIDUAL"
+            if float(np.mean(adjusted_abs)) < float(np.mean(original_abs)) * 0.5
+            else "F21_NONLINEAR_OR_SPATIAL_RESIDUAL"
+        )
+    original_mean = float(np.mean(original_abs))
+    adjusted_mean = float(np.mean(adjusted_abs))
+    original_median = float(np.median(original_abs))
+    adjusted_median = float(np.median(adjusted_abs))
+    improvement_percent = ((original_mean - adjusted_mean) / original_mean * 100.0) if original_mean else 0.0
+    return SarProcessingRow(
+        check=f"f21_regression_residual_{band_name}_{container}",
+        status="DIAGNOSTIC",
+        band_name=band_name,
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=round(improvement_percent, 6),
+        common_valid_matching_percent=None,
+        mask_overlap_percent=None,
+        mean_diff=adjusted_mean,
+        median_diff=adjusted_median,
+        correlation=correlation,
+        linear_slope=slope,
+        linear_intercept=intercept,
+        evidence=(
+            f"F21 regression residual diagnostic; count={int(original_abs.size)}; "
+            f"original_mean_abs_diff={original_mean:.8f}; adjusted_mean_abs_diff={adjusted_mean:.8f}; "
+            f"original_median_abs_diff={original_median:.8f}; adjusted_median_abs_diff={adjusted_median:.8f}; "
+            f"mean_abs_improvement_percent={improvement_percent:.6f}."
+        ),
+        recommended_next_action="If linear-fit adjustment barely helps, prioritize filter/aggregation/sample semantics over offset-only fixes.",
+    )
+
+
+def _build_f21_vv_vh_symmetry_row(band_arrays: dict[str, dict[str, Any]], container: str) -> SarProcessingRow | None:
+    vv_payload = band_arrays.get("VV_dB", {}).get(container)
+    vh_payload = band_arrays.get("VH_dB", {}).get(container)
+    if vv_payload is None or vh_payload is None:
+        return None
+    vv_notebook = _squeeze_array(vv_payload["array"])
+    vv_app = _squeeze_array(vv_payload["app_array"])
+    vh_notebook = _squeeze_array(vh_payload["array"])
+    vh_app = _squeeze_array(vh_payload["app_array"])
+    if vv_notebook.shape != vv_app.shape or vh_notebook.shape != vh_app.shape or vv_notebook.shape != vh_notebook.shape:
+        return None
+    mask = (
+        _valid_mask(vv_notebook, vv_payload["notebook_nodata"])
+        & _valid_mask(vv_app, vv_payload["app_nodata"])
+        & _valid_mask(vh_notebook, vh_payload["notebook_nodata"])
+        & _valid_mask(vh_app, vh_payload["app_nodata"])
+    )
+    if not np.any(mask):
+        return None
+    vv_delta = vv_app.astype(np.float64, copy=False)[mask] - vv_notebook.astype(np.float64, copy=False)[mask]
+    vh_delta = vh_app.astype(np.float64, copy=False)[mask] - vh_notebook.astype(np.float64, copy=False)[mask]
+    delta_gap = vv_delta - vh_delta
+    correlation, slope, intercept = _linear_fit(vv_delta, vh_delta)
+    same_sign = int(np.count_nonzero(np.sign(vv_delta) == np.sign(vh_delta)))
+    same_sign_percent = round((same_sign / int(vv_delta.size)) * 100.0, 6)
+    mean_abs_gap = float(np.mean(np.abs(delta_gap)))
+    likely_cause = (
+        "F21_VV_VH_SYMMETRIC_RESIDUAL"
+        if mean_abs_gap <= 0.02 and (same_sign_percent >= 90.0 or (correlation is not None and correlation >= 0.9))
+        else "F21_VV_VH_ASYMMETRIC_RESIDUAL"
+    )
+    return SarProcessingRow(
+        check=f"f21_vv_vh_residual_symmetry_{container}",
+        status="DIAGNOSTIC",
+        band_name="VV_dB,VH_dB",
+        notebook_file="",
+        app_file="",
+        likely_cause=likely_cause,
+        raw_matching_percent=same_sign_percent,
+        common_valid_matching_percent=None,
+        mask_overlap_percent=None,
+        mean_diff=mean_abs_gap,
+        median_diff=float(np.median(np.abs(delta_gap))),
+        correlation=correlation,
+        linear_slope=slope,
+        linear_intercept=intercept,
+        evidence=(
+            f"F21 VV/VH residual symmetry diagnostic; count={int(vv_delta.size)}; "
+            f"same_sign_count={same_sign}; same_sign_percent={same_sign_percent:.6f}; "
+            f"mean_abs_vv_minus_vh_delta={mean_abs_gap:.8f}; "
+            f"median_abs_vv_minus_vh_delta={float(np.median(np.abs(delta_gap))):.8f}."
+        ),
+        recommended_next_action="Symmetric VV/VH deltas point toward shared filtering, aggregation, source-ID, or sampling behavior; asymmetric deltas point toward band-specific filtering behavior.",
+    )
+
+
 def _edge_mask(shape: tuple[int, ...]) -> np.ndarray:
     height, width = int(shape[0]), int(shape[1])
     mask = np.zeros((height, width), dtype=bool)
@@ -1014,6 +1232,97 @@ def _masked_delta_stats(notebook_array: np.ndarray, app_array: np.ndarray, mask:
         "median_abs_diff_text": f"{median_abs_diff:.8f}",
         "max_abs_diff_text": f"{max_abs_diff:.8f}",
     }
+
+
+def _signed_delta_stats(notebook_array: np.ndarray, app_array: np.ndarray, mask: np.ndarray) -> dict[str, Any]:
+    if not np.any(mask):
+        empty: dict[str, Any] = {
+            "count": 0,
+            "mean_abs_diff": None,
+            "median_abs_diff": None,
+            "max_abs_diff": None,
+            "p90_abs_diff": None,
+            "p99_abs_diff": None,
+            "mean_signed_diff": None,
+            "median_signed_diff": None,
+            "positive_count": 0,
+            "negative_count": 0,
+            "near_zero_count": 0,
+            "positive_percent": None,
+            "negative_percent": None,
+            "near_zero_percent": None,
+            "gt_0.1_count": 0,
+            "gt_0.1_percent": None,
+            "mean_abs_diff_text": "n/a",
+            "median_abs_diff_text": "n/a",
+            "max_abs_diff_text": "n/a",
+            "p90_abs_diff_text": "n/a",
+            "p99_abs_diff_text": "n/a",
+            "mean_signed_diff_text": "n/a",
+            "median_signed_diff_text": "n/a",
+        }
+        for threshold in F21_RESIDUAL_BIN_THRESHOLDS:
+            key = _threshold_key(threshold)
+            empty[f"le_{key}_count"] = 0
+            empty[f"le_{key}_percent"] = None
+        return empty
+    delta = (
+        app_array.astype(np.float64, copy=False)[mask]
+        - notebook_array.astype(np.float64, copy=False)[mask]
+    )
+    abs_delta = np.abs(delta)
+    count = int(delta.size)
+    stats: dict[str, Any] = {
+        "count": count,
+        "mean_abs_diff": float(np.mean(abs_delta)),
+        "median_abs_diff": float(np.median(abs_delta)),
+        "max_abs_diff": float(np.max(abs_delta)),
+        "p90_abs_diff": float(np.percentile(abs_delta, 90)),
+        "p99_abs_diff": float(np.percentile(abs_delta, 99)),
+        "mean_signed_diff": float(np.mean(delta)),
+        "median_signed_diff": float(np.median(delta)),
+        "positive_count": int(np.count_nonzero(delta > SAR_BAND_TOLERANCE.abs_tol)),
+        "negative_count": int(np.count_nonzero(delta < -SAR_BAND_TOLERANCE.abs_tol)),
+        "near_zero_count": int(np.count_nonzero(abs_delta <= SAR_BAND_TOLERANCE.abs_tol)),
+        "gt_0.1_count": int(np.count_nonzero(abs_delta > 1e-1)),
+    }
+    stats["positive_percent"] = round((stats["positive_count"] / count) * 100.0, 6)
+    stats["negative_percent"] = round((stats["negative_count"] / count) * 100.0, 6)
+    stats["near_zero_percent"] = round((stats["near_zero_count"] / count) * 100.0, 6)
+    stats["gt_0.1_percent"] = round((stats["gt_0.1_count"] / count) * 100.0, 6)
+    for threshold in F21_RESIDUAL_BIN_THRESHOLDS:
+        key = _threshold_key(threshold)
+        threshold_count = int(np.count_nonzero(abs_delta <= threshold))
+        stats[f"le_{key}_count"] = threshold_count
+        stats[f"le_{key}_percent"] = round((threshold_count / count) * 100.0, 6)
+    for key in (
+        "mean_abs_diff",
+        "median_abs_diff",
+        "max_abs_diff",
+        "p90_abs_diff",
+        "p99_abs_diff",
+        "mean_signed_diff",
+        "median_signed_diff",
+    ):
+        stats[f"{key}_text"] = f"{stats[key]:.8f}"
+    return stats
+
+
+def _threshold_key(threshold: float) -> str:
+    return f"{threshold:g}"
+
+
+def _f21_distribution_likely_cause(stats: dict[str, Any]) -> str:
+    count = int(stats.get("count") or 0)
+    if count == 0:
+        return "F21_NO_COMMON_VALID_PIXELS"
+    gt_large_percent = float(stats.get("gt_0.1_percent") or 0.0)
+    le_5e2_percent = float(stats.get("le_0.05_percent") or 0.0)
+    if gt_large_percent <= 1.0 and le_5e2_percent >= 90.0:
+        return "F21_BROAD_LOW_AMPLITUDE_DRIFT"
+    if gt_large_percent > 5.0:
+        return "F21_SPARSE_OR_LARGE_OUTLIER_EFFECT"
+    return "F21_MIXED_RESIDUAL_DISTRIBUTION"
 
 
 def _mask_percent(mask: np.ndarray, denominator_mask: np.ndarray) -> float | None:
@@ -1254,6 +1563,8 @@ def _linear_fit(x_values: np.ndarray, y_values: np.ndarray) -> tuple[float | Non
     if np.allclose(x_values, x_values[0]):
         intercept = float(y_values.mean())
         return None, 0.0, intercept
+    if np.allclose(y_values, y_values[0]):
+        return None, 0.0, float(y_values[0])
     slope, intercept = np.polyfit(x_values, y_values, deg=1)
     correlation_matrix = np.corrcoef(x_values, y_values)
     correlation = float(correlation_matrix[0, 1]) if correlation_matrix.shape == (2, 2) else None

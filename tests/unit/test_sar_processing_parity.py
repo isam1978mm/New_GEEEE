@@ -116,6 +116,10 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
     assert by_check["f20_nodata_edge_overlap_VV_dB_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["f20_angle_delta_distribution_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["f20_VV_dB_excluding_angle_delta_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_residual_distribution_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_sign_balance_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_regression_residual_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_vv_vh_residual_symmetry_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
     json_path, csv_path = write_sar_processing_parity_report(
@@ -138,6 +142,7 @@ def test_sar_processing_report_writer_stays_local_only_and_relative(tmp_path: Pa
     assert any(row["check"] == "VV_dB_raster" for row in rows)
     assert any(row["check"] == "pixel_probe_VV_dB_raster_center" for row in rows)
     assert any(row["check"] == "f20_angle_delta_distribution_raster" for row in rows)
+    assert any(row["check"] == "f21_residual_distribution_VV_dB_raster" for row in rows)
 
 
 def test_f20_diagnostics_report_edge_angle_delta_and_filtered_vv_residual(tmp_path: Path) -> None:
@@ -169,6 +174,45 @@ def test_f20_diagnostics_report_edge_angle_delta_and_filtered_vv_residual(tmp_pa
     nodata_row = by_check["f20_nodata_edge_overlap_incidence_raster"]
     assert nodata_row["status"] == "DIAGNOSTIC"
     assert "notebook_invalid_count=0" in nodata_row["evidence"]
+    serialized = json.dumps(report, sort_keys=True)
+    assert "C:\\" not in serialized
+    assert "/Users/" not in serialized
+    assert "/home/" not in serialized
+    assert "coordinates" not in serialized
+
+
+def test_f21_diagnostics_report_histograms_sign_balance_and_regression(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f21"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    _write_f21_broad_residual_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+
+    report = build_sar_processing_parity_report(app_run_dir=app_run_dir, notebook_roots=[notebook_root])
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    distribution = by_check["f21_residual_distribution_VV_dB_raster"]
+    assert distribution["likely_cause"] == "F21_BROAD_LOW_AMPLITUDE_DRIFT"
+    assert distribution["raw_matching_percent"] == 0.0
+    assert distribution["common_valid_matching_percent"] == 0.0
+    assert distribution["mask_overlap_percent"] == 0.0
+    assert "count_le_5e-2=9" in distribution["evidence"]
+    assert "count_gt_1e-1=0" in distribution["evidence"]
+
+    sign_balance = by_check["f21_sign_balance_VV_dB_raster"]
+    assert sign_balance["raw_matching_percent"] == 100.0
+    assert sign_balance["common_valid_matching_percent"] == 0.0
+    assert sign_balance["mask_overlap_percent"] == 0.0
+    assert "positive_delta_count=9" in sign_balance["evidence"]
+
+    regression = by_check["f21_regression_residual_VV_dB_raster"]
+    assert regression["likely_cause"] == "F21_LINEAR_TREND_EXPLAINS_RESIDUAL"
+    assert regression["raw_matching_percent"] > 99.0
+    assert regression["linear_slope"] == pytest.approx(1.0, abs=1e-6)
+    assert regression["linear_intercept"] == pytest.approx(0.02, abs=1e-6)
+
+    symmetry = by_check["f21_vv_vh_residual_symmetry_raster"]
+    assert symmetry["likely_cause"] == "F21_VV_VH_SYMMETRIC_RESIDUAL"
+    assert symmetry["raw_matching_percent"] == 100.0
+    assert symmetry["mean_diff"] == pytest.approx(0.0, abs=1e-6)
     serialized = json.dumps(report, sort_keys=True)
     assert "C:\\" not in serialized
     assert "/Users/" not in serialized
@@ -341,6 +385,40 @@ def _write_f20_edge_angle_fixture(*, app_run_dir: Path, notebook_root: Path) -> 
     _write_raster(app_run_dir / "VH_dB.tif", app_vh, nodata=-9999.0)
     _write_raster(app_run_dir / "logRatio_dB.tif", app_vv - app_vh, nodata=-9999.0)
     _write_raster(app_run_dir / "incidence.tif", app_incidence, nodata=None)
+
+
+def _write_f21_broad_residual_fixture(*, app_run_dir: Path, notebook_root: Path) -> None:
+    _write_summary_csv(
+        notebook_root / "SUMMARY_RADAR_demo.csv",
+        [
+            {"band_name": "VV_dB", "min": "1.0", "max": "9.0", "mean": "5.0", "nodata_count": "0"},
+            {"band_name": "VH_dB", "min": "11.0", "max": "19.0", "mean": "15.0", "nodata_count": "0"},
+            {"band_name": "logRatio_dB", "min": "-10.0", "max": "-10.0", "mean": "-10.0", "nodata_count": "0"},
+            {"band_name": "angle", "min": "35.0", "max": "35.0", "mean": "35.0", "nodata_count": "0"},
+        ],
+    )
+    _write_summary_csv(
+        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        [
+            {"band_name": "VV_dB", "min": "1.02", "max": "9.02", "mean": "5.02", "nodata_count": "0"},
+            {"band_name": "VH_dB", "min": "11.02", "max": "19.02", "mean": "15.02", "nodata_count": "0"},
+            {"band_name": "logRatio_dB", "min": "-10.0", "max": "-10.0", "mean": "-10.0", "nodata_count": "0"},
+            {"band_name": "incidence", "min": "35.0", "max": "35.0", "mean": "35.0", "nodata_count": "0"},
+        ],
+    )
+    notebook_vv = np.arange(1.0, 10.0, dtype=np.float32).reshape(3, 3)
+    notebook_vh = notebook_vv + np.float32(10.0)
+    notebook_angle = np.full((3, 3), 35.0, dtype=np.float32)
+    app_vv = notebook_vv + np.float32(0.02)
+    app_vh = notebook_vh + np.float32(0.02)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_VV_dB_640_demo.tif", notebook_vv, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_VH_dB_640_demo.tif", notebook_vh, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_logRatio_dB_640_demo.tif", notebook_vv - notebook_vh, nodata=-9999.0)
+    _write_raster(notebook_root / "GEOTIFF_RADAR_BANDS" / "RADAR_angle_640_demo.tif", notebook_angle, nodata=-9999.0)
+    _write_raster(app_run_dir / "VV_dB.tif", app_vv, nodata=-9999.0)
+    _write_raster(app_run_dir / "VH_dB.tif", app_vh, nodata=-9999.0)
+    _write_raster(app_run_dir / "logRatio_dB.tif", app_vv - app_vh, nodata=-9999.0)
+    _write_raster(app_run_dir / "incidence.tif", notebook_angle, nodata=None)
 
 
 def _write_summary_csv(path: Path, rows: list[dict[str, str]]) -> None:

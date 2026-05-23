@@ -80,6 +80,16 @@ F20 SAR numeric delta diagnostics:
 - `f20_*_excluding_angle_delta_*` rows recompute VV/VH/logRatio deltas after excluding pixels with large angle/incidence deltas.
 - These rows use counts, percentages, relative row/column diagnostics, and relative artifact labels only. They do not change SAR science logic, source selection, notebook code, or tolerances.
 
+F21 VV/VH residual isolation:
+
+- Notebook Cells 22, 24, and 25 were rechecked against `app/pipeline/stages/sar_rtc.py` for the residual candidates.
+- The checked notebook behavior is: dB-domain border mask using `VV > -35`, `VH > -42`, `29 < angle < 46`; dB-to-linear conversion; sigma Lee using `ee.Kernel.square(kernel_m, "meters", True)`, mean/std thresholds, and `lin.where(within, lee)`; Lee fallback with constant noise variance `0.25`; per-image `VV_dB`, `VH_dB`, `angle`; ASC/DESC pair median followed by final pair-stack median; and `toFloat`, `unmask(NODATA)`, `reproject`, `clip`, `sampleRectangle` only for sampling.
+- No exact notebook-code-backed SAR logic bug was identified in F21, so F21 remains diagnostic-only.
+- `f21_residual_distribution_*` rows add count-only residual histograms for `<=1e-4`, `<=1e-3`, `<=1e-2`, `<=5e-2`, `<=1e-1`, and `>1e-1`.
+- `f21_sign_balance_*` rows report positive, negative, and near-zero delta counts.
+- `f21_regression_residual_*` rows compare original VV/VH residuals to local report-only linear-fit-adjusted residuals.
+- `f21_vv_vh_residual_symmetry_*` rows compare VV and VH residual deltas to distinguish band-specific behavior from shared filter, aggregation, source-ID, or sampling behavior.
+
 F16 finding:
 
 - The notebook `NO-COP-DEM` path applies a dB-domain border mask first:

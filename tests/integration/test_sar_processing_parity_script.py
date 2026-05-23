@@ -54,6 +54,9 @@ def test_sar_processing_parity_script_writes_local_only_reports(tmp_path: Path, 
     assert by_check["f20_edge_interior_VV_dB_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["f20_nodata_edge_overlap_VV_dB_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["f20_angle_delta_distribution_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_residual_distribution_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_sign_balance_VV_dB_raster"]["status"] == "DIAGNOSTIC"
+    assert by_check["f21_regression_residual_VV_dB_raster"]["status"] == "DIAGNOSTIC"
     assert by_check["radar_linear_support_stack"]["status"] == "DOWNSTREAM_DIAGNOSTIC"
 
 
