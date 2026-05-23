@@ -2857,3 +2857,155 @@ Expected validation:
 
 Stop after F20 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F21 - Isolate VV/VH speckle-filter and aggregation residual
+
+Reason:
+
+F20 diagnostics showed the remaining SAR mismatch is not missing-file confusion, not nodata, not edge-only, and not driven by the small angle/incidence mismatch.
+
+Post-F20 evidence:
+
+- notebook/app nodata counts are zero for SAR bands.
+- edge pixels are only about 0.624 percent of the grid.
+- VV/VH interior mean_abs_diff remains about 0.037 dB.
+- excluding large angle-delta pixels barely changes VV/VH deltas.
+- logRatio remains downstream from VV/VH.
+- angle/incidence is almost identical and not the main cause.
+
+Therefore the remaining issue is most likely in VV/VH upstream processing semantics:
+
+- speckle filter kernel shape/units
+- sigma Lee threshold/where behavior
+- Lee fallback/noise variance behavior
+- filter order
+- Earth Engine aggregation/reproject/sample order
+- unresolved true Cell 25 image IDs, because old QA_RADAR_META lacks per-pair IDs
+
+F21 must isolate the VV/VH residual without guessing a new science formula.
+
+Scope:
+
+- SAR VV/VH diagnostics only.
+- Diagnostic-first.
+- Do not change SAR pair-selection.
+- Do not change notebook code.
+- Do not weaken tolerances.
+- Do not mark mismatched outputs as PASS.
+- Do not touch DEM derivatives, hypercube, object extraction, field ops, GPS, classifier, or non-SAR stack logic.
+- Do not change SAR math unless a notebook-code-backed exact bug is proven.
+
+Required notebook-code comparison:
+
+- Re-read and document notebook Cell 22, Cell 24, and Cell 25 behavior for:
+  - border mask thresholds
+  - dB to linear conversion
+  - sigma Lee implementation
+  - Lee implementation
+  - kernel shape
+  - kernel units
+  - `where` replacement direction
+  - noise variance / fallback formula
+  - per-image output bands
+  - pair median and final median order
+  - `to_grid`, `finalize_for_export`, `unmask`, `reproject`, `clip`, and `sampleRectangle` order
+- Compare those line-by-line against app/pipeline/stages/sar_rtc.py.
+- Do not infer missing notebook behavior from output values alone if notebook code is available.
+
+Required diagnostics:
+
+- Add local-only SAR processing diagnostics that can distinguish:
+  - filter residual versus aggregation/sample residual
+  - VV and VH residual symmetry/asymmetry
+  - residual after subtracting median/linear-fit trend
+  - spatially sparse outlier effect versus broad low-amplitude drift
+  - whether max_abs_diff is from small outlier set or broad distribution
+- Add histogram/count-only diagnostics for absolute residual bins:
+  - <= 1e-4
+  - <= 1e-3
+  - <= 1e-2
+  - <= 5e-2
+  - <= 1e-1
+  - > 1e-1
+- Add sign-balance diagnostics:
+  - positive delta count
+  - negative delta count
+  - zero/near-zero delta count
+- Add regression residual diagnostics:
+  - compare original VV/VH delta to linear-fit-adjusted residual
+  - do not apply correction to outputs; report only.
+
+Allowed optional diagnostic profiles:
+
+Only local/test-only. Do not affect public API or normal app outputs unless proven.
+
+- sigma Lee where behavior:
+  - app_current
+  - reversed_where
+- Lee noise variance:
+  - app_current
+  - zero_noise
+  - estimated_noise if notebook code proves it
+- kernel units/shape:
+  - meters_square_current
+  - pixels_square only if notebook code indicates pixels
+  - circle only if notebook code indicates circle
+- aggregation order:
+  - current pair-median-then-stack-median
+  - final-median without per-pair median only as diagnostic if notebook code is ambiguous
+- grid order:
+  - current to_grid after final median
+  - to_grid per pair/image only as diagnostic if notebook code is ambiguous
+
+Any alternative profile must be explicitly marked diagnostic-only.
+
+Potential narrow fix:
+
+Only if the exact notebook-code-backed mismatch is proven, make one narrow change in app/pipeline/stages/sar_rtc.py. Examples:
+
+- wrong sigma Lee `where` direction
+- wrong kernel units/shape
+- wrong Lee noise variance constant
+- wrong aggregation/reproject order
+
+If no exact bug is proven, F21 must remain diagnostic-only.
+
+Not allowed:
+
+- Do not change pair-selection constants or selected image IDs.
+- Do not use Cell 21 pair IDs as Cell 25 truth.
+- Do not invent Cell 25 pair IDs.
+- Do not tune formulas to improve matching percentage.
+- Do not weaken tolerances.
+- Do not change notebook code.
+- Do not expose coordinates, geometry, local paths, CRS transforms, hashes, or exact ROI context through public API responses.
+- Do not serve parity reports over HTTP.
+
+Create/update:
+
+- app/services/sar_processing_parity.py
+- scripts/report_sar_processing_parity.py only if CLI options are needed
+- app/pipeline/stages/sar_rtc.py only for a proven narrow fix
+- tests/unit/test_sar_processing_parity.py
+- tests/integration/test_sar_processing_parity_script.py if report output changes
+- tests/unit/test_sar_rtc.py if SAR logic changes
+- docs/SAR_PROCESSING_PARITY.md
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_processing_parity.py
+  - pytest tests/integration/test_sar_processing_parity_script.py
+  - pytest tests/unit/test_sar_rtc.py if SAR logic changes
+- Rerun SAR processing parity report on latest F18 app run:
+  - run id 68ec6b07-1842-4957-88cc-1b259b09dfdb
+- Rerun F11 numeric parity only if SAR logic changes.
+- Report:
+  - whether F21 is diagnostic-only or includes a proven narrow fix
+  - exact notebook-code-backed difference if found
+  - whether residual appears filter-driven, aggregation/sample-driven, unresolved source-ID-driven, or still unresolved
+  - next action
+
+Stop after F21 and report files changed, commands run, test results, and blockers.
+
