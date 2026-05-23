@@ -2442,3 +2442,152 @@ Expected validation:
 
 Stop after F17 and report files changed, commands run, test results, and blockers.
 
+---
+
+# Goal F18 - Mirror actual notebook SAR export cell
+
+Reason:
+
+F17 proved the remaining SAR mismatch is not source image availability, not logRatio formula, and not a simple constant offset.
+
+After reviewing the actual notebook SAR cells, the correct source of truth for SAR pixel outputs is not the standalone QA cell.
+
+Notebook evidence:
+
+- Cell 21 writes QA_S1_MASTER_UNITS.json and uses:
+  - MAX_PAIR_DT_HOURS = 48
+  - MAX_ORBIT_DT_DAYS = 12
+- Cell 22 defines per_image_products_db for the NO-COP-DEM SAR preprocessing path:
+  - dB border/noise mask
+  - dB to linear conversion
+  - sigma Lee filter
+  - Lee filter
+  - linear to dB conversion
+  - output bands VV_dB, VH_dB, angle
+- Cell 24 defines GRID-locked helpers:
+  - to_grid
+  - finalize_for_export
+  - unmask only after math
+- Cell 25 / Cell 015 is the actual SAR pixel export cell and writes:
+  - GEOTIFF_RADAR_BANDS/RADAR_VV_dB*.tif
+  - GEOTIFF_RADAR_BANDS/RADAR_VH_dB*.tif
+  - GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB*.tif
+  - GEOTIFF_RADAR_BANDS/RADAR_angle*.tif
+  - NPY_RADAR_BANDS/RADAR_*.npy
+  - NPY_STACKS/RADAR_STACK_HWC_*.npy
+  - QA/SUMMARY_RADAR*.csv
+  - QA/QA_RADAR_META*.json
+- Cell 25 uses:
+  - MAX_PAIR_DT_HOURS = 36
+  - MAX_ORBIT_DT_DAYS = 9
+  - MIN_PAIRS = 2
+  - targets [4, 3, 2]
+  - per_image_products_db on ASC and DESC
+  - median ASC/DESC per pair
+  - median across pair images
+  - sampleRectangle in 320x320 tiles
+  - local DEM RTC in NumPy after sampling
+  - Gamma0/RTC approximation:
+    - slope from DEM gradient
+    - corr = max(cos(slope), 0.25)
+    - cos_inc = max(cos(angle), 1e-6)
+    - vv_lin = db_to_lin(VV_db) / cos_inc / corr
+    - vh_lin = db_to_lin(VH_db) / cos_inc / corr
+    - corrected VV/VH back to dB
+    - logRatio_dB = corrected VV_dB - corrected VH_dB
+    - angle output remains sampled raw angle where not nodata
+
+F18 must make the app mirror Cell 22 + Cell 24 + Cell 25 for SAR pixel outputs.
+
+Important correction:
+
+For pixel parity, treat Cell 25 / Cell 015 as source of truth. Treat Cell 21 / QA_S1_MASTER_UNITS as auxiliary QA only unless proven to feed Cell 25. Do not use Cell 21 pair parameters to drive SAR pixel output parity.
+
+Scope:
+
+- SAR stage only.
+- Mirror actual notebook SAR output path.
+- Focus on app/pipeline/stages/sar_rtc.py and related tests/reports.
+- Do not work on DEM derivatives, hypercube, object extraction, field ops, GPS, classifier, or downstream stack logic except the radar stack that is directly emitted by SAR stage.
+
+Required changes:
+
+- Update app SAR output pair-selection profile for pixel outputs to match Cell 25:
+  - MAX_PAIR_DT_HOURS = 36
+  - MAX_ORBIT_DT_DAYS = 9
+  - MIN_PAIRS = 2
+  - target pairs [4, 3, 2]
+- Preserve the Cell 22 per_image_products_db path:
+  - border/noise mask in dB
+  - dB to linear
+  - sigma Lee
+  - Lee
+  - linear to dB
+  - angle carried through from masked image
+- Ensure app aggregation matches Cell 25:
+  - per pair: median of ASC processed image and DESC processed image
+  - final: median of pair images
+- Ensure app sampling/finalization matches Cell 25:
+  - unmask NODATA only in finalize_for_sample, after math
+  - reproject to GRID crsTransform
+  - sampleRectangle-style tile sampling semantics
+- Ensure local NumPy DEM RTC matches Cell 25:
+  - DEM nodata becomes NaN
+  - dz_dy, dz_dx = np.gradient(dem, SCALE, SCALE)
+  - slope_rad = arctan(sqrt(dx^2 + dy^2))
+  - corr = max(cos(slope), 0.25)
+  - inc_rad = deg2rad(angle)
+  - cos_inc = max(cos(angle), 1e-6)
+  - valid mask requires VV/VH not nodata plus finite corr/cos_inc
+  - VV/VH linear divided by cos_inc and corr
+  - corrected VV/VH written to dB
+  - logRatio = corrected VV - corrected VH
+  - incidence/angle output should represent notebook RADAR_angle output, not a DEM-corrected local incidence angle unless Cell 25 proves otherwise
+- Ensure output metadata records that Cell 25 pixel-output profile is active and that Cell 21 QA_S1_MASTER_UNITS is auxiliary.
+
+Required reports:
+
+- Update F13 source-selection parity report so it can distinguish:
+  - cell21_master_units_qa profile
+  - cell25_pixel_export profile
+- For SAR pixel parity, F13 should compare against the Cell 25 / QA_RADAR_META / SUMMARY_RADAR filename profile, not only QA_S1_MASTER_UNITS.
+- Update F15/F17 reports if needed to state which notebook cell/profile is being compared.
+
+Not allowed:
+
+- Do not guess a new SAR formula.
+- Do not use Cell 21 pair parameters for pixel outputs unless Cell 25 imports/uses them.
+- Do not change notebook code.
+- Do not weaken tolerances.
+- Do not mark mismatched outputs as PASS.
+- Do not expose coordinates, geometry, local paths, CRS transforms, hashes, or exact ROI context through public API responses.
+- Do not serve parity reports over HTTP.
+- Do not change non-SAR stages.
+
+Tests:
+
+- Add tests proving SAR pixel-output selection uses 36h/9d while Cell 21 QA metadata may be 48h/12d.
+- Add tests proving per_image_products_db order matches Cell 22.
+- Add tests proving aggregation order matches Cell 25.
+- Add tests proving local DEM RTC formula matches Cell 25 exactly.
+- Add tests proving angle/incidence output semantics match notebook RADAR_angle.
+- Add tests proving F13 distinguishes QA_S1_MASTER_UNITS from actual SAR pixel export metadata.
+- Existing tests must continue to pass.
+
+Expected validation:
+
+- Run tests:
+  - pytest tests/unit/test_sar_rtc.py
+  - pytest tests/unit/test_sar_source_selection_parity.py
+  - pytest tests/unit/test_sar_processing_parity.py
+  - pytest tests/integration/test_sar_source_selection_parity_script.py
+  - pytest tests/integration/test_sar_processing_parity_script.py
+- Run a fresh app job.
+- Run F13 source-selection parity report against notebook roots:
+  - report must clearly show Cell 25 pixel-export pair profile, not confuse it with Cell 21 QA_S1_MASTER_UNITS
+- Run F15/F17 SAR processing parity report.
+- Run F11 numeric parity for SAR families/full report.
+- If parity still fails, report the remaining exact mismatch and next action.
+
+Stop after F18 and report files changed, commands run, test results, and blockers.
+
