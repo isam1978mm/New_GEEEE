@@ -38,4 +38,20 @@ Key diagnostics:
 - linear fit `app ≈ slope * notebook + intercept`
 - likely cause categories such as masking, constant offset, RTC/scale difference, or downstream stack divergence
 
+F16 finding:
+
+- The notebook `NO-COP-DEM` path applies a dB-domain border mask first:
+  - `VV > -35`
+  - `VH > -42`
+  - `29 < angle < 46`
+- The notebook then applies `dB -> linear -> sigma-lee -> lee -> dB` per image before ASC/DESC pair median and final pair-stack median.
+- Local DEM RTC remains a later local NumPy step after sampling the fused `VV_dB`, `VH_dB`, and `angle` cube to the locked GRID.
+- `logRatio_dB` remains `VV_dB - VH_dB` after local DEM RTC on both notebook and app sides.
+
+App reconciliation:
+
+- `app/pipeline/stages/sar_rtc.py` now reproduces the notebook per-image no-Copernicus-DEM preprocessing path before pair aggregation.
+- SAR pair-selection was not changed in F16.
+- Local DEM RTC formulas and tolerances were not weakened in F16.
+
 This report is diagnostic only. It does not change SAR source selection, notebook code, numeric tolerances, or public API behavior.

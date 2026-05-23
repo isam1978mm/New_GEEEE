@@ -27,6 +27,9 @@ MAX_PAIR_DT_HOURS = 48
 MAX_PAIRS = 4
 MIN_PAIRS = 2
 MAX_PAIRS_TARGETS = (MAX_PAIRS, 3, 2)
+SAR_SIGMA_LEE_SIGMA = 1.0
+SAR_SIGMA_LEE_KERNEL_M = 30
+SAR_LEE_KERNEL_M = 20
 RADAR_BANDS = ("VV_dB", "VH_dB", "angle")
 OUTPUT_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 SAR_NPY_OUTPUT_DIR = "npy_radar_bands"
@@ -214,10 +217,64 @@ def img_by_id(image_id: str, grid_spec: GridSpec):
     return ee.Image(f"COPERNICUS/S1_GRD/{image_id}").select(["VV", "VH", "angle"]).clip(build_grid_region(grid_spec))
 
 
-def per_image_products_db(image):
+def _to_linear_from_db(db_image):
+    return ee.Image(10).pow(ee.Image(db_image).divide(10.0))
+
+
+def _to_db_from_linear(linear_image):
+    return ee.Image(linear_image).max(1e-12).log10().multiply(10.0)
+
+
+def _border_noise_mask_db(image_db):
+    mask = (
+        image_db.select("VV").gt(-35)
+        .And(image_db.select("VH").gt(-42))
+        .And(image_db.select("angle").gt(29))
+        .And(image_db.select("angle").lt(46))
+    )
+    return image_db.updateMask(mask)
+
+
+def _lee_filter(linear_image, kernel_m: int):
+    kernel = ee.Kernel.square(kernel_m, "meters", True)
+    mean = linear_image.reduceNeighborhood(ee.Reducer.mean(), kernel)
+    variance = linear_image.reduceNeighborhood(ee.Reducer.variance(), kernel)
+    noise_variance = ee.Image.constant(0.25)
+    weight = variance.subtract(noise_variance).divide(variance).clamp(0, 1)
+    return mean.add(weight.multiply(linear_image.subtract(mean)))
+
+
+def _sigma_lee_filter(linear_image, kernel_m: int, sigma: float):
+    kernel = ee.Kernel.square(kernel_m, "meters", True)
+    mean = linear_image.reduceNeighborhood(ee.Reducer.mean(), kernel)
+    stddev = linear_image.reduceNeighborhood(ee.Reducer.stdDev(), kernel)
+    low = mean.subtract(stddev.multiply(sigma))
+    high = mean.add(stddev.multiply(sigma))
+    within = linear_image.gte(low).And(linear_image.lte(high))
+    lee = _lee_filter(linear_image, kernel_m)
+    return linear_image.where(within, lee)
+
+
+def per_image_products_db(
+    image,
+    *,
+    sigma: float = SAR_SIGMA_LEE_SIGMA,
+    kernel_m_sigma: int = SAR_SIGMA_LEE_KERNEL_M,
+    kernel_m_ref: int = SAR_LEE_KERNEL_M,
+):
     image_db = ee.Image(image).select(["VV", "VH", "angle"])
-    vv_db = image_db.select("VV").rename("VV_dB")
-    vh_db = image_db.select("VH").rename("VH_dB")
+    image_db = _border_noise_mask_db(image_db)
+
+    vv_linear = _to_linear_from_db(image_db.select("VV"))
+    vh_linear = _to_linear_from_db(image_db.select("VH"))
+
+    vv_linear = _sigma_lee_filter(vv_linear, kernel_m_sigma, sigma)
+    vh_linear = _sigma_lee_filter(vh_linear, kernel_m_sigma, sigma)
+    vv_linear = _lee_filter(vv_linear, kernel_m_ref)
+    vh_linear = _lee_filter(vh_linear, kernel_m_ref)
+
+    vv_db = _to_db_from_linear(vv_linear).rename("VV_dB")
+    vh_db = _to_db_from_linear(vh_linear).rename("VH_dB")
     angle = image_db.select("angle").rename("angle")
     return ee.Image.cat([vv_db, vh_db, angle])
 
@@ -481,7 +538,10 @@ def build_pair_diagnostics_payload(
         },
         "processing_path": {
             "local_dem_rtc": True,
+            "speckle_sigma_lee_filtering": True,
+            "speckle_lee_filtering": True,
             "speckle_refined_lee_filtering": False,
+            "border_noise_mask_db": True,
             "db_to_linear_to_db": True,
             "grid_sampling": "sampleRectangle",
         },

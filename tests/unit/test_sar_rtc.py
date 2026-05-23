@@ -27,12 +27,16 @@ from app.pipeline.stages.sar_rtc import (
     SarFetchDiagnostics,
     SarPair,
     SarRtcStage,
+    SAR_LEE_KERNEL_M,
+    SAR_SIGMA_LEE_KERNEL_M,
+    SAR_SIGMA_LEE_SIGMA,
     apply_local_dem_rtc,
     build_pair_diagnostics_payload,
     build_final_radar_image,
     build_s1_base_collection,
     create_ee_radar_cube_fetcher,
     deterministic_radar_cube_fetcher,
+    per_image_products_db,
     select_pairs,
 )
 from app.services.storage import read_manifest
@@ -99,6 +103,73 @@ def test_apply_local_dem_rtc_keeps_all_outputs_nodata_when_angle_is_nodata() -> 
     assert outputs["VH_dB"][1, 2] == nodata
     assert outputs["logRatio_dB"][1, 2] == nodata
     assert outputs["incidence"][1, 2] == nodata
+
+
+def test_per_image_products_db_applies_notebook_no_cop_dem_filter_chain(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, object]] = []
+
+    class FakeBand:
+        def __init__(self, label: str):
+            self.label = label
+
+        def rename(self, name: str):
+            calls.append(("rename", (self.label, name)))
+            return FakeBand(f"{self.label}->{name}")
+
+    class FakeImage:
+        def __init__(self, label: str):
+            self.label = label
+
+        def select(self, bands):
+            calls.append(("select", (self.label, bands)))
+            if isinstance(bands, str):
+                return FakeBand(f"{self.label}.{bands}")
+            return FakeImage(f"{self.label}.select")
+
+    class FakeImageFactory:
+        def __call__(self, image):
+            return FakeImage(f"wrapped:{image}")
+
+        @staticmethod
+        def cat(items):
+            labels = [item.label for item in items]
+            calls.append(("cat", labels))
+            return {"labels": labels}
+
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Image", FakeImageFactory())
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc._border_noise_mask_db",
+        lambda image_db: calls.append(("border_mask", image_db.label)) or FakeImage("masked"),
+    )
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc._to_linear_from_db",
+        lambda band: calls.append(("to_linear", band.label)) or FakeBand(f"lin:{band.label}"),
+    )
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc._sigma_lee_filter",
+        lambda band, kernel_m, sigma: calls.append(("sigma_lee", (band.label, kernel_m, sigma))) or FakeBand(f"sigma:{band.label}"),
+    )
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc._lee_filter",
+        lambda band, kernel_m: calls.append(("lee", (band.label, kernel_m))) or FakeBand(f"lee:{band.label}"),
+    )
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc._to_db_from_linear",
+        lambda band: calls.append(("to_db", band.label)) or FakeBand(f"db:{band.label}"),
+    )
+
+    result = per_image_products_db("raw-image")
+
+    assert result["labels"] == [
+        "db:lee:sigma:lin:masked.VV->VV_dB",
+        "db:lee:sigma:lin:masked.VH->VH_dB",
+        "masked.angle->angle",
+    ]
+    assert ("border_mask", "wrapped:raw-image.select") in calls
+    assert ("sigma_lee", ("lin:masked.VV", SAR_SIGMA_LEE_KERNEL_M, SAR_SIGMA_LEE_SIGMA)) in calls
+    assert ("sigma_lee", ("lin:masked.VH", SAR_SIGMA_LEE_KERNEL_M, SAR_SIGMA_LEE_SIGMA)) in calls
+    assert ("lee", ("sigma:lin:masked.VV", SAR_LEE_KERNEL_M)) in calls
+    assert ("lee", ("sigma:lin:masked.VH", SAR_LEE_KERNEL_M)) in calls
 
 
 def test_build_s1_base_collection_uses_notebook_filters(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -498,7 +569,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert pair_diagnostics["angle_incidence_mapping"]["notebook_band"] == "angle"
         assert pair_diagnostics["angle_incidence_mapping"]["app_output_band"] == "incidence"
         assert pair_diagnostics["processing_path"]["local_dem_rtc"] is True
+        assert pair_diagnostics["processing_path"]["speckle_sigma_lee_filtering"] is True
+        assert pair_diagnostics["processing_path"]["speckle_lee_filtering"] is True
         assert pair_diagnostics["processing_path"]["speckle_refined_lee_filtering"] is False
+        assert pair_diagnostics["processing_path"]["border_noise_mask_db"] is True
         assert pair_diagnostics["processing_path"]["db_to_linear_to_db"] is True
         assert pair_diagnostics["pair_diagnostics_available"] is False
         assert pair_diagnostics["pair_count"] == 0
