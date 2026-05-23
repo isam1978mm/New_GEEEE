@@ -24,8 +24,9 @@ The app-side SAR metadata is `qa/sar/sar_pair_diagnostics.json`. It records:
 
 - Sentinel-1 collection id.
 - Date window and notebook-style filters.
-- Active selection profile: `notebook_qa_s1_master_units`.
-- Notebook-style source parameters: `orbit_window_days = 12`, `pair_cap_hours = 48`, `max_pairs = 4`.
+- Active SAR pixel-output selection profile: `cell25_pixel_export`.
+- Cell 25 pixel-output source parameters: `orbit_window_days = 9`, `pair_cap_hours = 36`, `max_pairs = 4`, `min_pairs = 2`, targets `[4, 3, 2]`.
+- Cell 21 `QA_S1_MASTER_UNITS` profile is recorded as auxiliary QA only and does not drive SAR pixel outputs.
 - Selected VV/VH/angle input bands and VV/VH/logRatio/incidence output bands.
 - ASC/DESC selected image ids and pair time deltas when Earth Engine diagnostics are available.
 - The `angle -> incidence` output mapping.
@@ -39,3 +40,8 @@ Interpretation rules:
 - Radar tensor stack mismatches are downstream diagnostics until the SAR bands are source-aligned.
 - Do not weaken numeric tolerances or mark mismatched SAR rows as pass.
 - Do not change notebook code.
+
+F18 profile distinction:
+
+- `cell25_pixel_export_profile` compares app SAR pixel-output metadata against `QA_RADAR_META*.json` or `SUMMARY_RADAR*` filename provenance.
+- `cell21_master_units_qa_profile` reports `QA_S1_MASTER_UNITS.json` as auxiliary metadata so its `48h/12d` values are not confused with the actual Cell 25 `36h/9d` pixel-export profile.

@@ -21,9 +21,10 @@ from app.services.ee_session import initialize_ee_session
 DEFAULT_START = "2026-01-01"
 DEFAULT_END = "2026-03-01"
 S1_COLLECTION_ID = "COPERNICUS/S1_GRD"
-SAR_SELECTION_PROFILE = "notebook_qa_s1_master_units"
-MAX_ORBIT_DT_DAYS = 12
-MAX_PAIR_DT_HOURS = 48
+SAR_SELECTION_PROFILE = "cell25_pixel_export"
+CELL21_MASTER_UNITS_QA_PROFILE = "cell21_master_units_qa_auxiliary"
+MAX_ORBIT_DT_DAYS = 9
+MAX_PAIR_DT_HOURS = 36
 MAX_PAIRS = 4
 MIN_PAIRS = 2
 MAX_PAIRS_TARGETS = (MAX_PAIRS, 3, 2)
@@ -390,7 +391,6 @@ def apply_local_dem_rtc(
     valid = (
         (vv_db != nodata)
         & (vh_db != nodata)
-        & (angle != nodata)
         & np.isfinite(corr)
         & np.isfinite(cos_inc)
     )
@@ -518,6 +518,9 @@ def build_pair_diagnostics_payload(
         "roi_grid_label": "run_grid",
         "source_filters": {
             "selection_profile": SAR_SELECTION_PROFILE,
+            "pixel_output_source_cell": "Cell 25",
+            "auxiliary_master_units_profile": CELL21_MASTER_UNITS_QA_PROFILE,
+            "auxiliary_master_units_source_cell": "Cell 21",
             "instrumentMode": "IW",
             "resolution_meters": 10,
             "polarizations": ["VV", "VH"],
@@ -534,9 +537,10 @@ def build_pair_diagnostics_payload(
         "angle_incidence_mapping": {
             "notebook_band": "angle",
             "app_output_band": "incidence",
-            "relationship": "incidence stores the sampled Sentinel-1 angle band after local DEM RTC masking.",
+            "relationship": "incidence stores the sampled raw Sentinel-1 angle band where angle is not nodata.",
         },
         "processing_path": {
+            "notebook_source_cells": ["Cell 22", "Cell 24", "Cell 25"],
             "local_dem_rtc": True,
             "speckle_sigma_lee_filtering": True,
             "speckle_lee_filtering": True,

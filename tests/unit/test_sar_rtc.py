@@ -22,6 +22,7 @@ from app.pipeline.stages.sar_rtc import (
     MAX_ORBIT_DT_DAYS,
     MAX_PAIR_DT_HOURS,
     MAX_PAIRS,
+    MIN_PAIRS,
     S1_COLLECTION_ID,
     SAR_SELECTION_PROFILE,
     SarFetchDiagnostics,
@@ -84,7 +85,7 @@ def test_apply_local_dem_rtc_uses_passed_scale_m() -> None:
     assert not np.allclose(outputs_scale_10["VV_dB"], outputs_scale_20["VV_dB"])
 
 
-def test_apply_local_dem_rtc_keeps_all_outputs_nodata_when_angle_is_nodata() -> None:
+def test_apply_local_dem_rtc_valid_mask_matches_cell25_when_angle_is_nodata() -> None:
     nodata = -9999.0
     dem = np.full((4, 4), 100.0, dtype=np.float32)
     cube = np.stack(
@@ -99,9 +100,9 @@ def test_apply_local_dem_rtc_keeps_all_outputs_nodata_when_angle_is_nodata() -> 
 
     outputs = apply_local_dem_rtc(cube, dem, nodata=nodata, scale_m=10.0)
 
-    assert outputs["VV_dB"][1, 2] == nodata
-    assert outputs["VH_dB"][1, 2] == nodata
-    assert outputs["logRatio_dB"][1, 2] == nodata
+    assert outputs["VV_dB"][1, 2] != nodata
+    assert outputs["VH_dB"][1, 2] != nodata
+    assert outputs["logRatio_dB"][1, 2] != nodata
     assert outputs["incidence"][1, 2] == nodata
 
 
@@ -432,7 +433,7 @@ def test_build_final_radar_image_keeps_stage_error_for_insufficient_pairs(monkey
         build_final_radar_image(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
 
 
-def test_select_pairs_uses_notebook_style_orbit_window_and_retains_january_18_pair() -> None:
+def test_select_pairs_uses_cell25_pixel_export_profile_not_cell21_master_units() -> None:
     asc_items = [
         _sar_item("S1C_IW_GRDH_1SDV_20260118T153231_20260118T153256_005960_00BF44_900B", "2026-01-18T15:32:31"),
         _sar_item("S1A_IW_GRDH_1SDV_20260124T153322_20260124T153347_062911_07E445_5A03", "2026-01-24T15:33:22"),
@@ -452,39 +453,28 @@ def test_select_pairs_uses_notebook_style_orbit_window_and_retains_january_18_pa
 
     selected = select_pairs(asc_items, desc_items)
 
-    assert MAX_ORBIT_DT_DAYS == 12
-    assert MAX_PAIR_DT_HOURS == 48
+    assert MAX_ORBIT_DT_DAYS == 9
+    assert MAX_PAIR_DT_HOURS == 36
     assert MAX_PAIRS == 4
-    assert [(pair.asc_id, pair.desc_id) for pair in selected] == [
-        (
-            "S1C_IW_GRDH_1SDV_20260118T153231_20260118T153256_005960_00BF44_900B",
-            "S1A_IW_GRDH_1SDV_20260118T034301_20260118T034326_062816_07E10A_BAF5",
-        ),
-        (
-            "S1C_IW_GRDH_1SDV_20260130T153231_20260130T153256_006135_00C4FC_B136",
-            "S1A_IW_GRDH_1SDV_20260130T034301_20260130T034326_062991_07E753_7321",
-        ),
-        (
-            "S1A_IW_GRDH_1SDV_20260124T153322_20260124T153347_062911_07E445_5A03",
-            "S1C_IW_GRDH_1SDV_20260124T034219_20260124T034244_006040_00C1BF_D131",
-        ),
-        (
-            "S1A_IW_GRDH_1SDV_20260124T153347_20260124T153412_062911_07E445_CC8F",
-            "S1C_IW_GRDH_1SDV_20260124T034154_20260124T034219_006040_00C1BF_56CA",
-        ),
+    assert MIN_PAIRS == 2
+    assert [pair.asc_id for pair in selected] == [
+        "S1C_IW_GRDH_1SDV_20260130T153231_20260130T153256_006135_00C4FC_B136",
+        "APP_ONLY_20260205_ASC",
+        "S1A_IW_GRDH_1SDV_20260124T153322_20260124T153347_062911_07E445_5A03",
+        "S1A_IW_GRDH_1SDV_20260124T153347_20260124T153412_062911_07E445_CC8F",
     ]
-    assert all("20260205" not in pair.asc_id for pair in selected)
+    assert all("20260118" not in pair.asc_id for pair in selected)
 
 
-def test_select_pairs_uses_48_hour_pair_cap() -> None:
+def test_select_pairs_uses_36_hour_pair_cap() -> None:
     asc_items = [_sar_item("ASC_42H", "2026-01-24T12:00:00")]
     desc_items = [_sar_item("DESC_42H", "2026-01-22T18:00:00")]
 
-    selected = select_pairs(asc_items, desc_items, min_pairs=1)
-    old_profile_selected = select_pairs(asc_items, desc_items, max_pair_dt_hours=36, min_pairs=0)
+    selected = select_pairs(asc_items, desc_items, min_pairs=0)
+    cell21_profile_selected = select_pairs(asc_items, desc_items, max_pair_dt_hours=48, min_pairs=1)
 
-    assert [(pair.asc_id, pair.desc_id) for pair in selected] == [("ASC_42H", "DESC_42H")]
-    assert [(pair.asc_id, pair.desc_id) for pair in old_profile_selected] == []
+    assert [(pair.asc_id, pair.desc_id) for pair in selected] == []
+    assert [(pair.asc_id, pair.desc_id) for pair in cell21_profile_selected] == [("ASC_42H", "DESC_42H")]
 
 
 def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
@@ -560,8 +550,11 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert pair_diagnostics["local_only"] is True
         assert pair_diagnostics["collection_id"] == S1_COLLECTION_ID
         assert pair_diagnostics["source_filters"]["selection_profile"] == SAR_SELECTION_PROFILE
-        assert pair_diagnostics["source_filters"]["max_orbit_dt_days"] == 12
-        assert pair_diagnostics["source_filters"]["max_pair_dt_hours"] == 48
+        assert pair_diagnostics["source_filters"]["selection_profile"] == "cell25_pixel_export"
+        assert pair_diagnostics["source_filters"]["pixel_output_source_cell"] == "Cell 25"
+        assert pair_diagnostics["source_filters"]["auxiliary_master_units_profile"] == "cell21_master_units_qa_auxiliary"
+        assert pair_diagnostics["source_filters"]["max_orbit_dt_days"] == 9
+        assert pair_diagnostics["source_filters"]["max_pair_dt_hours"] == 36
         assert pair_diagnostics["source_filters"]["max_pairs"] == 4
         assert pair_diagnostics["selected_band_list"] == ["VV", "VH", "angle"]
         assert pair_diagnostics["sampled_band_list"] == ["VV_dB", "VH_dB", "angle"]

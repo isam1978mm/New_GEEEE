@@ -59,6 +59,13 @@ F17 diagnostic scope:
 - Prior-report comparisons are trend evidence only and must not be treated as numeric parity.
 - No SAR science formula, source-selection rule, notebook code, or tolerance is changed by these diagnostics.
 
+F18 pixel-output source of truth:
+
+- SAR pixel outputs mirror notebook Cells 22, 24, and 25.
+- Cell 25 uses the `cell25_pixel_export` source-selection profile: `pair_cap_hours = 36`, `orbit_window_days = 9`, `min_pairs = 2`, and target pair counts `[4, 3, 2]`.
+- Cell 21 `QA_S1_MASTER_UNITS` remains auxiliary QA only; its `48h/12d` parameters are not used to drive app SAR pixel outputs.
+- The local DEM RTC valid mask follows Cell 25: VV/VH must be non-nodata, while `corr` and `cos_inc` must be finite. The output `incidence` file stores the sampled raw Sentinel-1 `angle` band where angle is not nodata.
+
 F16 finding:
 
 - The notebook `NO-COP-DEM` path applies a dB-domain border mask first:
