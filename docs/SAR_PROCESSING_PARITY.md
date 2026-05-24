@@ -108,47 +108,162 @@ F24 Cell 25 intermediate parity diagnostics:
 - `intermediate_post_rtc` reuses existing final notebook/app VV/VH/logRatio arrays plus notebook `angle` versus app `incidence`.
 - `first_divergence_stage` classifies:
   - `SOURCE_ID_MATCHED_INTERMEDIATES_MISSING`
+  - `APP_INTERMEDIATES_MISSING`
   - `FIRST_DIVERGENCE_PER_IMAGE_FILTER`
   - `FIRST_DIVERGENCE_PAIR_MEDIAN`
   - `FIRST_DIVERGENCE_FINAL_MEDIAN_OR_REPROJECT`
   - `FIRST_DIVERGENCE_LOCAL_RTC`
   - `FIRST_DIVERGENCE_NOT_FOUND`
+- `FIRST_DIVERGENCE_LOCAL_RTC` is valid only when all earlier intermediate stages are present and matched. If notebook intermediates exist but app-side earlier stages are missing, `first_divergence_stage` is blocked instead of claiming local RTC.
 - Missing notebook-side stages are reported as `MISSING_NOTEBOOK_INTERMEDIATE`; the report does not guess missing Cell 25 intermediates from final arrays alone.
 - `scripts/export_cell25_sar_intermediates.py` exports the feasible current app-side stage, `post_rtc`, into `qa/sar/intermediates/` or a caller-provided output directory.
 - Earlier notebook-side stages still require a local notebook export in the same manifest layout:
 
 ```python
-manifest = {
+import json, os, shutil
+import numpy as np
+
+if "pairs" not in globals():
+    raise RuntimeError("Run the Cell 25 pair-selection cell first so `pairs` is defined.")
+if "per_image_products_db" not in globals():
+    raise RuntimeError("Run the NO-COP-DEM per_image_products_db cell first.")
+if "img_by_id" not in globals():
+    raise RuntimeError("Run the Cell 25 image-id helper cell first.")
+if "to_grid_radar" not in globals() or "finalize_for_sample" not in globals():
+    raise RuntimeError("Run the Cell 25 grid/finalize helpers first.")
+
+OUT_BASE = os.path.join(PATHS["qa_root"], "sar", "intermediates")
+os.makedirs(OUT_BASE, exist_ok=True)
+
+def _stage_cube(img, band_names):
+    sampled = finalize_for_sample(to_grid_radar(ee.Image(img).select(list(band_names))))
+    cube = np.full((OUT_SIZE, OUT_SIZE, len(band_names)), NODATA, dtype=np.float32)
+    for ty in range(n_tiles):
+        for tx in range(n_tiles):
+            x0_t = xmin_f + (tx * TILE_SIZE * SCALE)
+            y1_t = ymax_f - (ty * TILE_SIZE * SCALE)
+            x1_t = x0_t + (TILE_SIZE * SCALE)
+            y0_t = y1_t - (TILE_SIZE * SCALE)
+            tile_geo = ee.Geometry.Rectangle([x0_t, y0_t, x1_t, y1_t], CRS, False)
+            rect = sampled.sampleRectangle(region=tile_geo, defaultValue=NODATA).getInfo()
+            for bi, bn in enumerate(band_names):
+                arr = np.array(rect["properties"][bn], dtype=np.float32)[:TILE_SIZE, :TILE_SIZE]
+                cube[ty*TILE_SIZE:(ty+1)*TILE_SIZE, tx*TILE_SIZE:(tx+1)*TILE_SIZE, bi] = arr
+    return {bn: cube[:, :, bi] for bi, bn in enumerate(band_names)}
+
+def _write_stage_arrays(stage_name, label, bands):
+    payload = {}
+    for band_name, arr in bands.items():
+        rel = os.path.join(stage_name, f"{label}_{band_name}.npy")
+        abs_path = os.path.join(OUT_BASE, rel)
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        np.save(abs_path, arr.astype(np.float32))
+        payload[band_name] = rel.replace("\\", "/")
+    return payload
+
+stage_manifest = {
     "artifact_class": "FILESYSTEM_ONLY",
     "local_only": True,
     "source_profile": "cell25_pixel_export",
     "stages": {
-        "per_image_products_db": {
-            "items": [
-                {
-                    "label": "pair0_asc",
-                    "bands": {
-                        "VV_dB": "per_image_products_db/pair0_asc_VV_dB.npy",
-                        "VH_dB": "per_image_products_db/pair0_asc_VH_dB.npy",
-                        "angle": "per_image_products_db/pair0_asc_angle.npy",
-                    },
-                },
-            ],
-        },
-        "pair_median": {"items": [...]},
-        "final_median_pre_rtc": {"items": [...]},
-        "post_sample_pre_rtc": {"items": [...]},
-        "post_rtc": {
-            "label": "final",
-            "bands": {
-                "VV_dB": "post_rtc/VV_dB.npy",
-                "VH_dB": "post_rtc/VH_dB.npy",
-                "logRatio_dB": "post_rtc/logRatio_dB.npy",
-                "angle": "post_rtc/angle.npy",
-            },
-        },
+        "per_image_products_db": {"items": []},
+        "pair_median": {"items": []},
     },
 }
+
+pair_images = []
+for idx, (a, d, _dt) in enumerate(pairs):
+    asc_im = per_image_products_db(img_by_id(a["id"]))
+    desc_im = per_image_products_db(img_by_id(d["id"]))
+    stage_manifest["stages"]["per_image_products_db"]["items"].append({
+        "label": f"pair{idx}_asc",
+        "bands": _write_stage_arrays("per_image_products_db", f"pair{idx}_asc", _stage_cube(asc_im, ["VV_dB", "VH_dB", "angle"])),
+    })
+    stage_manifest["stages"]["per_image_products_db"]["items"].append({
+        "label": f"pair{idx}_desc",
+        "bands": _write_stage_arrays("per_image_products_db", f"pair{idx}_desc", _stage_cube(desc_im, ["VV_dB", "VH_dB", "angle"])),
+    })
+    pair_im = ee.ImageCollection([asc_im, desc_im]).median().select(["VV_dB", "VH_dB", "angle"])
+    pair_images.append(pair_im)
+    stage_manifest["stages"]["pair_median"]["items"].append({
+        "label": f"pair{idx}",
+        "bands": _write_stage_arrays("pair_median", f"pair{idx}", _stage_cube(pair_im, ["VV_dB", "VH_dB", "angle"])),
+    })
+
+final_pair_stack = ee.ImageCollection(pair_images).median().select(["VV_dB", "VH_dB", "angle"])
+final_pre_rtc = _stage_cube(final_pair_stack, ["VV_dB", "VH_dB", "angle"])
+stage_manifest["stages"]["final_median_pre_rtc"] = {
+    "items": [{"label": "final", "bands": _write_stage_arrays("final_median_pre_rtc", "final", final_pre_rtc)}]
+}
+
+final_for_sample = finalize_for_sample(to_grid_radar(final_pair_stack))
+cube_3 = np.full((OUT_SIZE, OUT_SIZE, 3), NODATA, dtype=np.float32)
+for ty in range(n_tiles):
+    for tx in range(n_tiles):
+        x0_t = xmin_f + (tx * TILE_SIZE * SCALE)
+        y1_t = ymax_f - (ty * TILE_SIZE * SCALE)
+        x1_t = x0_t + (TILE_SIZE * SCALE)
+        y0_t = y1_t - (TILE_SIZE * SCALE)
+        tile_geo = ee.Geometry.Rectangle([x0_t, y0_t, x1_t, y1_t], CRS, False)
+        rect = final_for_sample.sampleRectangle(region=tile_geo, defaultValue=NODATA).getInfo()
+        for bi, bn in enumerate(["VV_dB", "VH_dB", "angle"]):
+            arr = np.array(rect["properties"][bn], dtype=np.float32)[:TILE_SIZE, :TILE_SIZE]
+            cube_3[ty*TILE_SIZE:(ty+1)*TILE_SIZE, tx*TILE_SIZE:(tx+1)*TILE_SIZE, bi] = arr
+
+stage_manifest["stages"]["post_sample_pre_rtc"] = {
+    "items": [{
+        "label": "final",
+        "bands": _write_stage_arrays("post_sample_pre_rtc", "final", {
+            "VV_dB": cube_3[:, :, 0],
+            "VH_dB": cube_3[:, :, 1],
+            "angle": cube_3[:, :, 2],
+        }),
+    }]
+}
+
+with rasterio.open(DEM_REF_TIF) as ref:
+    dem = ref.read(1).astype(np.float32)
+    dem_nd = ref.nodata
+if dem_nd is not None:
+    dem = np.where(dem == dem_nd, np.nan, dem)
+dz_dy, dz_dx = np.gradient(dem, SCALE, SCALE)
+slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
+corr = np.where(np.isfinite(np.cos(slope_rad)), np.maximum(np.cos(slope_rad), 0.25), np.nan)
+ang = cube_3[:, :, 2]
+cos_inc = np.where(np.isfinite(np.cos(np.deg2rad(ang))), np.maximum(np.cos(np.deg2rad(ang)), 1e-6), np.nan)
+valid = (cube_3[:, :, 0] != NODATA) & (cube_3[:, :, 1] != NODATA) & np.isfinite(corr) & np.isfinite(cos_inc)
+vv_lin = np.full(dem.shape, np.nan, dtype=np.float32)
+vh_lin = np.full(dem.shape, np.nan, dtype=np.float32)
+vv_lin[valid] = np.power(10.0, cube_3[:, :, 0][valid] / 10.0)
+vh_lin[valid] = np.power(10.0, cube_3[:, :, 1][valid] / 10.0)
+vv_lin = vv_lin / cos_inc / corr
+vh_lin = vh_lin / cos_inc / corr
+vv_db_corr = np.full(dem.shape, NODATA, dtype=np.float32)
+vh_db_corr = np.full(dem.shape, NODATA, dtype=np.float32)
+log_ratio = np.full(dem.shape, NODATA, dtype=np.float32)
+vv_db_corr[valid] = 10.0 * np.log10(np.maximum(vv_lin[valid], 1e-12))
+vh_db_corr[valid] = 10.0 * np.log10(np.maximum(vh_lin[valid], 1e-12))
+log_ratio[valid] = vv_db_corr[valid] - vh_db_corr[valid]
+stage_manifest["stages"]["post_rtc"] = {
+    "label": "final",
+    "bands": _write_stage_arrays("post_rtc", "final", {
+        "VV_dB": vv_db_corr,
+        "VH_dB": vh_db_corr,
+        "logRatio_dB": log_ratio,
+        "angle": ang.astype(np.float32),
+    }),
+}
+
+manifest_path = os.path.join(OUT_BASE, "sar_intermediate_manifest.json")
+with open(manifest_path, "w", encoding="utf-8") as f:
+    json.dump(stage_manifest, f, ensure_ascii=False, indent=2)
+print("✅ Wrote local-only Cell 25 SAR intermediate manifest:", manifest_path)
+
+if "PATHS_DRIVE_GLOBAL" in globals() and PATHS_DRIVE_GLOBAL:
+    drive_base = os.path.join(PATHS_DRIVE_GLOBAL["qa_root"], "sar", "intermediates")
+    os.makedirs(drive_base, exist_ok=True)
+    shutil.copy2(manifest_path, os.path.join(drive_base, "sar_intermediate_manifest.json"))
+    print("✅ Copied manifest to Drive RUN:", drive_base)
 ```
 
 F16 finding:

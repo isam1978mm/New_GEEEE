@@ -1302,6 +1302,28 @@ def _build_f24_first_divergence_row(
             recommended_next_action="Export the missing notebook Cell 25 intermediates in the documented local-only manifest layout, then rerun the report.",
         )
 
+    missing_app_rows = [row for row in stage_rows if row.status == "MISSING_APP_INTERMEDIATE"]
+    if missing_app_rows:
+        needed = ", ".join(row.check for row in missing_app_rows)
+        return SarProcessingRow(
+            check="first_divergence_stage",
+            status="FIRST_DIVERGENCE_BLOCKED",
+            band_name="",
+            notebook_file="",
+            app_file="",
+            likely_cause="APP_INTERMEDIATES_MISSING",
+            raw_matching_percent=None,
+            common_valid_matching_percent=None,
+            mask_overlap_percent=None,
+            mean_diff=None,
+            median_diff=None,
+            correlation=None,
+            linear_slope=None,
+            linear_intercept=None,
+            evidence=f"Notebook intermediates are available, but app intermediate capture is missing for {needed}.",
+            recommended_next_action="Export matching app intermediate stages locally before claiming a first divergence stage.",
+        )
+
     first_map = (
         ("intermediate_per_image_products_db", "FIRST_DIVERGENCE_PER_IMAGE_FILTER"),
         ("intermediate_pair_median", "FIRST_DIVERGENCE_PAIR_MEDIAN"),

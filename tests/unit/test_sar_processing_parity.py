@@ -420,6 +420,54 @@ def test_f24_report_finds_local_rtc_first_divergence(tmp_path: Path) -> None:
     assert by_check["first_divergence_stage"]["likely_cause"] == "FIRST_DIVERGENCE_LOCAL_RTC"
 
 
+def test_f24_report_blocks_first_divergence_when_earlier_app_intermediates_are_missing(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-app-missing"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    _write_source_gate_report(source_report_path)
+    match_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    common_angle = np.array([[30.0, 31.0], [32.0, 33.0]], dtype=np.float32)
+    notebook_stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "angle": common_angle},
+        },
+    }
+    app_stage_arrays = {
+        "post_rtc": {
+            "final": {"VV_dB": match_array, "VH_dB": match_array + 10.0, "logRatio_dB": match_array - match_array, "angle": common_angle},
+        }
+    }
+    _write_intermediate_manifest(notebook_manifest, notebook_stage_arrays)
+    _write_intermediate_manifest(app_manifest, app_stage_arrays)
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_manifest,
+        app_intermediate_manifest_path=app_manifest,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["intermediate_per_image_products_db"]["status"] == "MISSING_APP_INTERMEDIATE"
+    assert by_check["intermediate_pair_median"]["status"] == "MISSING_APP_INTERMEDIATE"
+    assert by_check["intermediate_post_rtc"]["status"] == "MISMATCH"
+    assert by_check["first_divergence_stage"]["status"] == "FIRST_DIVERGENCE_BLOCKED"
+    assert by_check["first_divergence_stage"]["likely_cause"] == "APP_INTERMEDIATES_MISSING"
+
+
 def test_f24_report_reports_no_first_divergence_when_all_stages_match(tmp_path: Path) -> None:
     app_run_dir = tmp_path / "data" / "runs" / "run-f24-match"
     notebook_root = tmp_path / "NOTEBOOK_RUN"
