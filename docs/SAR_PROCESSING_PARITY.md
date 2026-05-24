@@ -116,7 +116,10 @@ F24 Cell 25 intermediate parity diagnostics:
   - `FIRST_DIVERGENCE_NOT_FOUND`
 - `FIRST_DIVERGENCE_LOCAL_RTC` is valid only when all earlier intermediate stages are present and matched. If notebook intermediates exist but app-side earlier stages are missing, `first_divergence_stage` is blocked instead of claiming local RTC.
 - Missing notebook-side stages are reported as `MISSING_NOTEBOOK_INTERMEDIATE`; the report does not guess missing Cell 25 intermediates from final arrays alone.
-- `scripts/export_cell25_sar_intermediates.py` exports the feasible current app-side stage, `post_rtc`, into `qa/sar/intermediates/` or a caller-provided output directory.
+- `scripts/export_cell25_sar_intermediates.py` has two explicit modes:
+  - `--mode post-rtc-only` exports the feasible offline app-side stage, `post_rtc`, from existing local final arrays into `qa/sar/intermediates/` or a caller-provided output directory.
+  - `--mode live-cell25-full` replays the app Cell 25 path with Earth Engine access and exports `per_image_products_db`, `pair_median`, `final_median_pre_rtc`, `post_sample_pre_rtc`, and `post_rtc`.
+- Full app-side intermediate export requires explicit local operator approval before running because it uses Earth Engine credentials.
 - Earlier notebook-side stages still require a local notebook export in the same manifest layout:
 
 ```python
