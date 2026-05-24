@@ -125,6 +125,70 @@ def test_sar_parity_uses_notebook_collection_pair_and_sampling_flow(monkeypatch)
             calls.append(("unmask", nodata))
             return self
 
+        def gt(self, value):
+            calls.append(("gt", value))
+            return self
+
+        def And(self, other):
+            calls.append(("And", other))
+            return self
+
+        def lt(self, value):
+            calls.append(("lt", value))
+            return self
+
+        def updateMask(self, mask):
+            calls.append(("updateMask", mask))
+            return self
+
+        def divide(self, value):
+            calls.append(("divide", value))
+            return self
+
+        def pow(self, value):
+            calls.append(("pow", value))
+            return self
+
+        def max(self, value):
+            calls.append(("max", value))
+            return self
+
+        def log10(self):
+            calls.append(("log10", None))
+            return self
+
+        def multiply(self, value):
+            calls.append(("multiply", value))
+            return self
+
+        def reduceNeighborhood(self, reducer, kernel):
+            calls.append(("reduceNeighborhood", {"reducer": reducer, "kernel": kernel}))
+            return self
+
+        def subtract(self, value):
+            calls.append(("subtract", value))
+            return self
+
+        def clamp(self, low, high):
+            calls.append(("clamp", (low, high)))
+            return self
+
+        def add(self, value):
+            calls.append(("add", value))
+            return self
+
+        def gte(self, value):
+            calls.append(("gte", value))
+            return self
+
+        def lte(self, value):
+            calls.append(("lte", value))
+            return self
+
+        def where(self, test, value):
+            calls.append(("where", (test, value)))
+            return self
+
         def sampleRectangle(self, *, region, defaultValue):
             calls.append(("sampleRectangle", {"region": region, "defaultValue": defaultValue}))
             return FakeSampleResult()
@@ -219,6 +283,29 @@ def test_sar_parity_uses_notebook_collection_pair_and_sampling_flow(monkeypatch)
             calls.append(("Rectangle", {"coords": coords, "crs": crs, "geodesic": geodesic}))
             return "grid-region"
 
+    class FakeKernel:
+        @staticmethod
+        def square(radius, units, normalize):
+            value = ("square", radius, units, normalize)
+            calls.append(("Kernel.square", value))
+            return value
+
+    class FakeReducer:
+        @staticmethod
+        def mean():
+            calls.append(("Reducer.mean", None))
+            return "mean"
+
+        @staticmethod
+        def variance():
+            calls.append(("Reducer.variance", None))
+            return "variance"
+
+        @staticmethod
+        def stdDev():
+            calls.append(("Reducer.stdDev", None))
+            return "stdDev"
+
     def fake_image_constructor(value):
         if isinstance(value, FakeImage):
             return value
@@ -241,7 +328,14 @@ def test_sar_parity_uses_notebook_collection_pair_and_sampling_flow(monkeypatch)
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Filter", FakeFilter)
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.ImageCollection", FakeImageCollection)
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Image", fake_image_constructor)
+    monkeypatch.setattr(
+        "app.pipeline.stages.sar_rtc.ee.Image.constant",
+        staticmethod(lambda value: calls.append(("constant", value)) or FakeImage()),
+        raising=False,
+    )
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Geometry", FakeGeometry)
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Kernel", FakeKernel)
+    monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Reducer", FakeReducer)
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.List", lambda values: values if isinstance(values, FakeList) else FakeList(values))
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.Number", lambda value: value if isinstance(value, FakeNumber) else FakeNumber(value))
     monkeypatch.setattr("app.pipeline.stages.sar_rtc.ee.String", lambda value: value if isinstance(value, FakeString) else FakeString(value))
