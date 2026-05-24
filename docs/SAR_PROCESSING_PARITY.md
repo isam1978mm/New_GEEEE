@@ -105,6 +105,7 @@ F24 Cell 25 intermediate parity diagnostics:
 - `report_sar_processing_parity.py` accepts optional local-only `--source-report`, `--notebook-intermediate-manifest`, and `--app-intermediate-manifest` inputs.
 - `f24_source_identity_gate` blocks intermediate interpretation unless F13/F22 proved `SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS` on the same run.
 - `intermediate_per_image_products_db`, `intermediate_pair_median`, `intermediate_final_median_pre_rtc`, `intermediate_post_sample_pre_rtc`, and `intermediate_post_rtc` compare local-only Cell 25 intermediate manifests when available.
+- F24 intermediate manifest comparisons treat `-9999` as SAR nodata so fill pixels are not counted as numeric science deltas.
 - `intermediate_post_rtc` reuses existing final notebook/app VV/VH/logRatio arrays plus notebook `angle` versus app `incidence`.
 - `first_divergence_stage` classifies:
   - `SOURCE_ID_MATCHED_INTERMEDIATES_MISSING`

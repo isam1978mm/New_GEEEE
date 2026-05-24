@@ -376,6 +376,67 @@ def test_f24_report_finds_pair_median_first_divergence(tmp_path: Path) -> None:
     assert by_check["first_divergence_stage"]["likely_cause"] == "FIRST_DIVERGENCE_PAIR_MEDIAN"
 
 
+def test_f24_intermediate_comparison_ignores_manifest_nodata_fill(tmp_path: Path) -> None:
+    app_run_dir = tmp_path / "data" / "runs" / "run-f24-nodata"
+    notebook_root = tmp_path / "NOTEBOOK_RUN"
+    source_report_path = tmp_path / "source_report.json"
+    notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    _write_matching_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
+    _write_source_gate_report(source_report_path)
+    nodata = np.float32(-9999.0)
+    notebook_per_image = np.array([[1.0, nodata], [3.0, 4.0]], dtype=np.float32)
+    app_per_image = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    notebook_per_image_vh = np.where(notebook_per_image == nodata, nodata, notebook_per_image + np.float32(10.0)).astype(np.float32)
+    app_per_image_vh = app_per_image + np.float32(10.0)
+    common_angle = np.array([[30.0, nodata], [32.0, 33.0]], dtype=np.float32)
+    app_angle = np.array([[30.0, 31.0], [32.0, 33.0]], dtype=np.float32)
+    downstream = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+    stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": notebook_per_image, "VH_dB": notebook_per_image_vh, "angle": common_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": downstream, "VH_dB": downstream + 10.0, "angle": app_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": downstream, "VH_dB": downstream + 10.0, "angle": app_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": downstream, "VH_dB": downstream + 10.0, "angle": app_angle},
+        },
+    }
+    app_stage_arrays = {
+        "per_image_products_db": {
+            "pair0_asc": {"VV_dB": app_per_image, "VH_dB": app_per_image_vh, "angle": app_angle},
+        },
+        "pair_median": {
+            "pair0": {"VV_dB": downstream, "VH_dB": downstream + 10.0, "angle": app_angle},
+        },
+        "final_median_pre_rtc": {
+            "final": {"VV_dB": downstream, "VH_dB": downstream + 10.0, "angle": app_angle},
+        },
+        "post_sample_pre_rtc": {
+            "final": {"VV_dB": downstream, "VH_dB": downstream + 10.0, "angle": app_angle},
+        },
+    }
+    _write_intermediate_manifest(notebook_manifest, stage_arrays)
+    _write_intermediate_manifest(app_manifest, app_stage_arrays)
+
+    report = build_sar_processing_parity_report(
+        app_run_dir=app_run_dir,
+        notebook_roots=[notebook_root],
+        source_report_path=source_report_path,
+        notebook_intermediate_manifest_path=notebook_manifest,
+        app_intermediate_manifest_path=app_manifest,
+    )
+    by_check = {row["check"]: row for row in report["rows"]}
+
+    assert by_check["intermediate_per_image_products_db"]["status"] == "MATCH_COMMON_VALID_MASK"
+    assert by_check["intermediate_per_image_products_db"]["mean_diff"] == 0.0
+    assert by_check["first_divergence_stage"]["likely_cause"] == "FIRST_DIVERGENCE_NOT_FOUND"
+
+
 def test_f24_report_finds_local_rtc_first_divergence(tmp_path: Path) -> None:
     app_run_dir = tmp_path / "data" / "runs" / "run-f24-rtc"
     notebook_root = tmp_path / "NOTEBOOK_RUN"

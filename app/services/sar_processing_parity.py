@@ -101,6 +101,7 @@ F24_STAGE_BANDS = {
     "post_rtc": ("VV_dB", "VH_dB", "logRatio_dB", "angle"),
 }
 F24_SOURCE_GATE_REQUIRED = "SOURCE_ID_MATCH_PROCESSING_DELTA_REMAINS"
+F24_INTERMEDIATE_NODATA = -9999.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -463,6 +464,7 @@ def analyze_array_pair(
         "common_valid_matching_percent": common_metrics.get("matching_percent"),
         "mask_overlap_percent": mask_overlap_percent,
         "mean_diff": mean_diff,
+        "mean_abs_diff": common_metrics.get("mean_abs_diff"),
         "median_diff": median_diff,
         "correlation": correlation,
         "linear_slope": slope,
@@ -1404,7 +1406,10 @@ def _compare_f24_post_rtc_stage(band_arrays: dict[str, dict[str, Any]]) -> dict[
         match_percent = analysis["common_valid_matching_percent"] or analysis["raw_matching_percent"]
         if match_percent is not None:
             matching_percents.append(float(match_percent))
-        if analysis["mean_diff"] is not None:
+        mean_abs_diff = analysis.get("mean_abs_diff")
+        if mean_abs_diff is not None:
+            mean_abs_diffs.append(float(mean_abs_diff))
+        elif analysis["mean_diff"] is not None:
             mean_abs_diffs.append(abs(float(analysis["mean_diff"])))
         evidence_parts.append(f"{notebook_band}->{app_band}:{analysis['status']}")
         if analysis["status"] == "MISMATCH":
@@ -1486,6 +1491,7 @@ def _compare_f24_manifest_stage(
     matching_percents: list[float] = []
     mean_abs_diffs: list[float] = []
     evidence_parts: list[str] = []
+    matched_common_valid_mask = False
     for label in sorted(notebook_by_label):
         notebook_item = notebook_by_label[label]
         app_item = app_by_label[label]
@@ -1518,15 +1524,20 @@ def _compare_f24_manifest_stage(
                 band_name=app_band_name,
                 notebook_array=notebook_array,
                 app_array=app_array,
-                notebook_nodata=None,
-                app_nodata=None,
+                notebook_nodata=F24_INTERMEDIATE_NODATA,
+                app_nodata=F24_INTERMEDIATE_NODATA,
             )
             match_percent = analysis["common_valid_matching_percent"] or analysis["raw_matching_percent"]
             if match_percent is not None:
                 matching_percents.append(float(match_percent))
-            if analysis["mean_diff"] is not None:
+            mean_abs_diff = analysis.get("mean_abs_diff")
+            if mean_abs_diff is not None:
+                mean_abs_diffs.append(float(mean_abs_diff))
+            elif analysis["mean_diff"] is not None:
                 mean_abs_diffs.append(abs(float(analysis["mean_diff"])))
             evidence_parts.append(f"{label}:{notebook_band_name}->{app_band_name}:{analysis['status']}")
+            if analysis["status"] == "MATCH_COMMON_VALID_MASK":
+                matched_common_valid_mask = True
             if analysis["status"] == "MISMATCH":
                 return {
                     "status": "MISMATCH",
@@ -1538,8 +1549,8 @@ def _compare_f24_manifest_stage(
                 }
 
     return {
-        "status": "MATCH",
-        "likely_cause": f"{stage_name.upper()}_MATCH",
+        "status": "MATCH_COMMON_VALID_MASK" if matched_common_valid_mask else "MATCH",
+        "likely_cause": f"{stage_name.upper()}_{'COMMON_VALID_MASK_MATCH' if matched_common_valid_mask else 'MATCH'}",
         "matching_percent": min(matching_percents) if matching_percents else 100.0,
         "mean_abs_diff": max(mean_abs_diffs) if mean_abs_diffs else 0.0,
         "evidence": f"Intermediate stage {stage_name} matches for labels {sorted(notebook_by_label)}.",
