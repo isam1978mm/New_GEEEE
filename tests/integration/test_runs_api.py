@@ -52,6 +52,27 @@ def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch
         _assert_no_sensitive_public_fields(detail_response.text)
 
 
+def test_public_run_surfaces_do_not_expose_grid_override_fields(monkeypatch) -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        monkeypatch.setattr("app.api.runs.enqueue_core_pipeline_run", _fake_background_runner_factory(settings))
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.post("/runs", json={"lat": 35.59499, "lon": 36.12694, "name": "release run"})
+            run_id = response.json()["id"]
+            detail_response = client.get(f"/runs/{run_id}")
+
+        assert response.status_code == 201
+        assert detail_response.status_code == 200
+        assert "notebook" not in response.text.casefold()
+        assert "notebook" not in detail_response.text.casefold()
+        assert "grid" not in response.text.casefold()
+        assert "grid" not in detail_response.text.casefold()
+        _assert_no_sensitive_public_fields(response.text)
+        _assert_no_sensitive_public_fields(detail_response.text)
+
+
 def test_post_runs_rejects_second_active_run_with_public_safe_conflict(monkeypatch) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))

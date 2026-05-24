@@ -19,7 +19,7 @@ from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
 from app.pipeline.stages.gps_compare import GpsComparisonStage
-from app.pipeline.stages.grid import GridStage, build_run_grid
+from app.pipeline.stages.grid import GridSpec, GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
@@ -105,7 +105,12 @@ def enqueue_core_pipeline_run(run_id: str, settings: Settings) -> None:
     asyncio.run(run_core_pipeline_for_run(run_id=run_id, settings=settings))
 
 
-async def run_core_pipeline_for_run(*, run_id: str, settings: Settings) -> None:
+async def run_core_pipeline_for_run(
+    *,
+    run_id: str,
+    settings: Settings,
+    grid_spec_override: GridSpec | None = None,
+) -> None:
     from app.db.session import create_engine, create_session_factory
 
     engine = create_engine(settings)
@@ -118,12 +123,12 @@ async def run_core_pipeline_for_run(*, run_id: str, settings: Settings) -> None:
             latitude = float(run.latitude)
             longitude = float(run.longitude)
 
-        grid_spec = build_run_grid(latitude, longitude)
+        grid_spec = grid_spec_override or build_run_grid(latitude, longitude)
         orchestrator = Orchestrator(
             settings=settings,
             session_factory=session_factory,
             stages=[
-                GridStage(latitude=latitude, longitude=longitude),
+                GridStage(latitude=latitude, longitude=longitude, grid_spec_override=grid_spec_override),
                 DemStage(grid_spec=grid_spec),
                 ZeroShiftStage(grid_spec=grid_spec),
                 SarRtcStage(grid_spec=grid_spec),

@@ -41,6 +41,43 @@ def grid_spec_from_manifest(manifest: GridManifest, *, nodata: float = DEFAULT_N
     return GridSpec(manifest=manifest, nodata=float(nodata))
 
 
+def grid_spec_from_notebook_radar_meta(path: Path) -> GridSpec:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    crs_raw = str(payload.get("CRS", ""))
+    if not crs_raw.startswith("EPSG:"):
+        raise ValueError("Notebook radar metadata must include CRS as EPSG:<code>.")
+    epsg = int(crs_raw.split(":", 1)[1])
+    scale = float(payload["SCALE"])
+    size = int(payload["OUT_SIZE"])
+    transform = payload.get("crsTransform", payload.get("ct"))
+    bounds = payload["bounds_utm"]
+    if not isinstance(transform, list) or len(transform) != 6:
+        raise ValueError("Notebook radar metadata must include a 6-value crsTransform/ct.")
+    if not isinstance(bounds, list) or len(bounds) != 4:
+        raise ValueError("Notebook radar metadata must include 4-value bounds_utm.")
+    if not scale.is_integer():
+        raise ValueError("Notebook radar metadata SCALE must be an integer meter value for app GRID manifests.")
+    utm_zone = epsg % 100
+    hemisphere = "north" if 32601 <= epsg <= 32660 else "south" if 32701 <= epsg <= 32760 else ""
+    if not hemisphere:
+        raise ValueError("Notebook radar metadata CRS must be a UTM EPSG code.")
+    manifest = GridManifest(
+        epsg=epsg,
+        utm_zone=utm_zone,
+        hemisphere=hemisphere,
+        scale_m=int(scale),
+        size_px=size,
+        crs_transform=[float(value) for value in transform],
+        bounds_m={
+            "xmin": float(bounds[0]),
+            "ymin": float(bounds[1]),
+            "xmax": float(bounds[2]),
+            "ymax": float(bounds[3]),
+        },
+    )
+    return grid_spec_from_manifest(manifest, nodata=float(payload.get("NODATA", DEFAULT_NODATA)))
+
+
 def build_run_grid(lat: float, lon: float, *, nodata: float = DEFAULT_NODATA) -> GridSpec:
     return grid_spec_from_manifest(build_grid_manifest(lat, lon), nodata=nodata)
 
@@ -80,13 +117,21 @@ class GridStage(Stage):
     name = "grid"
     parity_category = ParityCategory.PARITY_REPRODUCES
 
-    def __init__(self, *, latitude: float, longitude: float, nodata: float = DEFAULT_NODATA) -> None:
+    def __init__(
+        self,
+        *,
+        latitude: float,
+        longitude: float,
+        nodata: float = DEFAULT_NODATA,
+        grid_spec_override: GridSpec | None = None,
+    ) -> None:
         self.latitude = latitude
         self.longitude = longitude
         self.nodata = float(nodata)
+        self.grid_spec_override = grid_spec_override
 
     async def run(self, context: StageContext) -> StageResult:
-        grid_spec = build_run_grid(self.latitude, self.longitude, nodata=self.nodata)
+        grid_spec = self.grid_spec_override or build_run_grid(self.latitude, self.longitude, nodata=self.nodata)
         manifest_path = save_grid_manifest(context.settings, context.run_id, grid_spec.manifest)
         guard_summary_path = write_grid_guard_summary(context.run_dir, grid_spec)
         artifacts = [

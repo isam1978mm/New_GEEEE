@@ -9,7 +9,7 @@ from pyproj import Transformer
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
-from app.pipeline.stages.grid import GridStage
+from app.pipeline.stages.grid import GridStage, grid_spec_from_notebook_radar_meta
 from app.services.grid import build_grid_manifest
 
 
@@ -84,6 +84,73 @@ def test_grid_stage_writes_grid_guard_summary_as_filesystem_only() -> None:
         assert guard_summary["grid_identity_recorded"] is True
         assert "bounds_m" not in guard_summary
         assert "crs_transform" not in guard_summary
+
+
+def test_notebook_radar_meta_grid_override_preserves_exact_grid_values(tmp_path: Path) -> None:
+    meta_path = tmp_path / "QA_RADAR_META_demo.json"
+    transform = [10, 0, 236505.41247268865, 0, -10, 3946029.415191464]
+    bounds = [236505.41247268865, 3939629.415191464, 242905.41247268865, 3946029.415191464]
+    meta_path.write_text(
+        json.dumps(
+            {
+                "CRS": "EPSG:32637",
+                "SCALE": 10.0,
+                "OUT_SIZE": 640,
+                "NODATA": -9999.0,
+                "ct": transform,
+                "bounds_utm": bounds,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    grid_spec = grid_spec_from_notebook_radar_meta(meta_path)
+
+    assert grid_spec.crs == "EPSG:32637"
+    assert grid_spec.size == 640
+    assert grid_spec.nodata == -9999.0
+    assert grid_spec.manifest.crs_transform == [float(value) for value in transform]
+    assert grid_spec.manifest.bounds_m == {
+        "xmin": bounds[0],
+        "ymin": bounds[1],
+        "xmax": bounds[2],
+        "ymax": bounds[3],
+    }
+
+
+def test_grid_stage_override_does_not_recompute_from_lat_lon(tmp_path: Path) -> None:
+    meta_path = tmp_path / "QA_RADAR_META_demo.json"
+    transform = [10, 0, 236505.41247268865, 0, -10, 3946029.415191464]
+    bounds = [236505.41247268865, 3939629.415191464, 242905.41247268865, 3946029.415191464]
+    meta_path.write_text(
+        json.dumps(
+            {
+                "CRS": "EPSG:32637",
+                "SCALE": 10,
+                "OUT_SIZE": 640,
+                "NODATA": -9999.0,
+                "crsTransform": transform,
+                "bounds_utm": bounds,
+            }
+        ),
+        encoding="utf-8",
+    )
+    override = grid_spec_from_notebook_radar_meta(meta_path)
+    settings = _settings(tmp_path)
+    context = StageContext(run_id="run-1", settings=settings, run_dir=tmp_path)
+    stage = GridStage(latitude=43.6532, longitude=-79.3832, grid_spec_override=override)
+
+    asyncio.run(stage.run(context))
+
+    written = json.loads((settings.data_dir / "runs" / "run-1" / "grid_manifest.json").read_text(encoding="utf-8"))
+    assert written["epsg"] == 32637
+    assert written["crs_transform"] == [float(value) for value in transform]
+    assert written["bounds_m"] == {
+        "xmin": bounds[0],
+        "ymin": bounds[1],
+        "xmax": bounds[2],
+        "ymax": bounds[3],
+    }
 
 
 def _settings(run_dir: Path):
