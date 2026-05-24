@@ -6,14 +6,15 @@ from pathlib import Path
 from typing import Iterable
 
 import numpy as np
-from PIL import Image
+import rasterio
+from rasterio.transform import Affine
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.stages.dem import write_raster_sidecar
 from app.pipeline.stages.feature_stacks import SCIENCE_CORE_BANDS
-from app.pipeline.stages.grid import GridSpec, pixel_center_from_transform
+from app.pipeline.stages.grid import GridSpec
 
 FOCUS_MASK_TIF_NAME = "focus_zone_17m.tif"
 FOCUS_MASK_NPY_NAME = "focus_zone_17m.npy"
@@ -51,30 +52,24 @@ def build_focus_mask_products(
     if ai_ready_stack.shape[0] != grid_spec.size or ai_ready_stack.shape[1] != grid_spec.size:
         raise StageError("Focus-mask stage requires ai_ready support stack on the authoritative grid.")
 
-    half_focus_m = focus_size_m / 2.0
-    bounds = grid_spec.manifest.bounds_m
-    center_x = (float(bounds["xmin"]) + float(bounds["xmax"])) / 2.0
-    center_y = (float(bounds["ymin"]) + float(bounds["ymax"])) / 2.0
     transform = grid_spec.transform
+    pixel_size_m = float((abs(transform[0]) + abs(transform[4])) / 2.0)
+    radius_px = float(focus_size_m) / pixel_size_m
+    center_row = float(grid_spec.size) / 2.0
+    center_col = float(grid_spec.size) / 2.0
 
-    mask = np.zeros((grid_spec.size, grid_spec.size), dtype=np.float32)
-    row_indices: list[int] = []
-    col_indices: list[int] = []
-    for row in range(grid_spec.size):
-        for col in range(grid_spec.size):
-            pixel_x, pixel_y = pixel_center_from_transform(transform, row=row, col=col)
-            if abs(pixel_x - center_x) <= half_focus_m and abs(pixel_y - center_y) <= half_focus_m:
-                mask[row, col] = 1.0
-                row_indices.append(row)
-                col_indices.append(col)
+    rows, cols = np.meshgrid(np.arange(grid_spec.size), np.arange(grid_spec.size), indexing="ij")
+    dist_px = np.sqrt((rows.astype(np.float64) - center_row) ** 2 + (cols.astype(np.float64) - center_col) ** 2)
+    mask = (dist_px <= radius_px).astype(np.float32)
+    row_indices, col_indices = np.where(mask == 1.0)
 
-    if not row_indices or not col_indices:
+    if row_indices.size == 0 or col_indices.size == 0:
         raise StageError("Focus-mask stage could not derive a non-empty focus zone from the configured grid.")
 
-    row_min = min(row_indices)
-    row_max = max(row_indices)
-    col_min = min(col_indices)
-    col_max = max(col_indices)
+    row_min = int(row_indices.min())
+    row_max = int(row_indices.max())
+    col_min = int(col_indices.min())
+    col_max = int(col_indices.max())
     cropped_window = ai_ready_stack[row_min : row_max + 1, col_min : col_max + 1, :].astype(np.float32)
     masked_window = cropped_window * mask[row_min : row_max + 1, col_min : col_max + 1, None]
 
@@ -127,7 +122,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     summary_path = focus_dir / FOCUS_SUMMARY_JSON_NAME
     band_summary_path = focus_dir / FOCUS_BAND_SUMMARY_CSV_NAME
 
-    Image.fromarray(mask.astype(np.float32)).save(mask_tif_path, format="TIFF")
+    _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
     np.save(focus_window_path, masked_window.astype(np.float32))
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
@@ -135,8 +130,8 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     write_raster_sidecar(
         mask_tif_path,
         grid_manifest=grid_spec.manifest,
-        nodata=grid_spec.nodata,
-        dtype="float32",
+        nodata=0.0,
+        dtype="uint8",
         shape=mask.shape,
     )
 
@@ -147,6 +142,24 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "focus_summary_json": summary_path,
         "focus_band_summary_csv": band_summary_path,
     }
+
+
+def _write_focus_mask_tif(path: Path, mask: np.ndarray, grid_spec: GridSpec) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=int(mask.shape[0]),
+        width=int(mask.shape[1]),
+        count=1,
+        dtype="uint8",
+        crs=grid_spec.crs,
+        transform=Affine(*grid_spec.transform),
+        nodata=0,
+        compress="deflate",
+    ) as dataset:
+        dataset.write(mask.astype(np.uint8, copy=False), 1)
 
 
 class FocusMaskStage(Stage):

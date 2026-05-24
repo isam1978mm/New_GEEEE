@@ -48,12 +48,15 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
 
         mask = np.load(run_dir / "full_job" / "focus" / "focus_zone_17m.npy")
         assert mask.shape == (grid_spec.size, grid_spec.size)
-        assert int(mask.sum()) > 0
+        assert int(mask.sum()) == 9
         mask_sidecar = read_manifest(raster_sidecar_path(run_dir / "full_job" / "focus" / "focus_zone_17m.tif"))
         assert mask_sidecar["transform"] == grid_spec.manifest.crs_transform
+        assert mask_sidecar["dtype"] == "uint8"
+        assert mask_sidecar["nodata"] == 0.0
 
         focus_window = np.load(run_dir / "full_job" / "focus" / "focus_zone_ai_ready_window.npy")
         assert focus_window.ndim == 3
+        assert focus_window.shape[:2] == (3, 3)
         assert focus_window.shape[-1] > 1
 
         summary = json.loads((run_dir / "full_job" / "focus" / "focus_zone_summary.json").read_text(encoding="utf-8"))
