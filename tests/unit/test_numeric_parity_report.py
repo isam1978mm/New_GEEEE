@@ -58,6 +58,28 @@ def test_compare_raster_files_checks_real_tiff_metadata(tmp_path: Path) -> None:
     assert "missing" not in row.notes
 
 
+def test_compare_raster_files_passes_value_matched_geotiffs_with_matching_metadata_and_nodata(tmp_path: Path) -> None:
+    notebook_path = tmp_path / "notebook_dem.tif"
+    app_path = tmp_path / "app_dem.tif"
+    array = np.arange(4, dtype=np.float32).reshape(2, 2)
+    transform = from_origin(500000.0, 4100000.0, 10.0, 10.0)
+    _write_geotiff(notebook_path, array=array, crs="EPSG:32612", transform=transform, nodata=-9999.0)
+    _write_geotiff(app_path, array=array, crs="EPSG:32612", transform=transform, nodata=-9999.0)
+
+    row = compare_raster_files(
+        ComparisonSpec(family="dem_core", comparison_type="raster", app_file="dem.tif", notebook_candidates=("dem.tif",)),
+        notebook_path=notebook_path,
+        app_path=app_path,
+        notebook_file="dem.tif",
+    )
+
+    assert row.status == "PASS"
+    assert row.crs_match is True
+    assert row.transform_match is True
+    assert row.matching_percent == 100.0
+    assert "nodata_policy_mismatch" not in row.notes
+
+
 def test_compare_raster_files_fails_when_real_tiff_georef_metadata_is_missing(tmp_path: Path) -> None:
     notebook_path = tmp_path / "notebook_dem.tif"
     app_path = tmp_path / "app_dem.tif"
@@ -168,7 +190,7 @@ def test_notebook_mapping_patterns_cover_requested_downloaded_names(tmp_path: Pa
         "logRatio_dB.tif": "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_match.tif",
         "incidence.tif": "GEOTIFF_RADAR_BANDS/RADAR_angle_640_match.tif",
         "npy_radar_bands/VV_dB.npy": "NPY_RADAR_BANDS/RADAR_VV_dB_640_match.npy",
-        "stacks/tensor_support/radar_linear_support_stack.npy": "NPY_STACKS/RADAR_STACK_HWC_640_match.npy",
+        "stacks/tensor_support/radar_db_support_stack.npy": "NPY_STACKS/RADAR_STACK_HWC_640_match.npy",
         "hypercube.tif": "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_match.tif",
         "full_job/focus/focus_zone_17m.tif": "QA/FOCUS_" "MASK_17m_inside_640.tif",
         "qa/sar/sar_summary.csv": "SUMMARY_RADAR_match.csv",
@@ -261,6 +283,7 @@ def _write_geotiff(
     array: np.ndarray,
     crs: str | None,
     transform,
+    nodata: float | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     profile = {
@@ -274,5 +297,7 @@ def _write_geotiff(
         profile["crs"] = crs
     if transform is not None:
         profile["transform"] = transform
+    if nodata is not None:
+        profile["nodata"] = nodata
     with rasterio.open(path, "w", **profile) as dataset:
         dataset.write(array.astype(np.float32), 1)

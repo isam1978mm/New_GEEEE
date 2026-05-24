@@ -81,6 +81,8 @@ APPROVED_OUTPUT_FAMILIES: tuple[OutputFamilySpec, ...] = (
             "stacks/tensor_support/science_core_stack.npy",
             "stacks/tensor_support/radar_linear_support_stack.tif",
             "stacks/tensor_support/radar_linear_support_stack.npy",
+            "stacks/tensor_support/radar_db_support_stack.tif",
+            "stacks/tensor_support/radar_db_support_stack.npy",
             "stacks/tensor_support/ai_ready_support_stack.tif",
             "stacks/tensor_support/ai_ready_support_stack.npy",
             "stacks/optical_support/s2_mask_support_valid.tif",

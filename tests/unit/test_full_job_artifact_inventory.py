@@ -92,6 +92,8 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "science_core_stack_npy": ArtifactClass.FILESYSTEM_ONLY,
             "radar_linear_support_stack_tif": ArtifactClass.FILESYSTEM_ONLY,
             "radar_linear_support_stack_npy": ArtifactClass.FILESYSTEM_ONLY,
+            "radar_db_support_stack_tif": ArtifactClass.FILESYSTEM_ONLY,
+            "radar_db_support_stack_npy": ArtifactClass.FILESYSTEM_ONLY,
             "ai_ready_support_stack_tif": ArtifactClass.FILESYSTEM_ONLY,
             "ai_ready_support_stack_npy": ArtifactClass.FILESYSTEM_ONLY,
             "s2_mask_support_valid": ArtifactClass.FILESYSTEM_ONLY,

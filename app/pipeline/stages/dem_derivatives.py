@@ -4,12 +4,11 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
-from app.pipeline.stages.dem import write_raster_sidecar
+from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 
 WINDOW_RADIUS_METERS = 100.0
@@ -50,10 +49,6 @@ def box_std_nanaware(array: np.ndarray, radius_px: int) -> np.ndarray:
     mean = np.where(window_cnt > 0, window_sum / window_cnt, np.nan)
     variance = np.where(window_cnt > 0, (window_sum2 / window_cnt) - mean * mean, np.nan)
     return np.sqrt(np.maximum(variance, 0.0)).astype(np.float32)
-
-
-def _write_raster(path: Path, array: np.ndarray) -> None:
-    Image.fromarray(array.astype(np.float32)).save(path, format="TIFF")
 
 
 def load_dem_array(run_dir: Path) -> np.ndarray:
@@ -108,7 +103,7 @@ def write_dem_derivative_outputs(run_dir: Path, grid_spec: GridSpec, outputs: di
     for name in OUTPUT_NAMES:
         tif_path = run_dir / f"{name}.tif"
         array = outputs[name]
-        _write_raster(tif_path, array)
+        write_georeferenced_raster(tif_path, array, grid_spec)
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,

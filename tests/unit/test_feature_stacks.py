@@ -39,6 +39,8 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "science_core_stack_npy",
             "radar_linear_support_stack_tif",
             "radar_linear_support_stack_npy",
+            "radar_db_support_stack_tif",
+            "radar_db_support_stack_npy",
             "ai_ready_support_stack_tif",
             "ai_ready_support_stack_npy",
             "s2_mask_support_valid",
@@ -63,6 +65,14 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         )
         assert radar_linear_sidecar["transform"] == grid_spec.manifest.crs_transform
 
+        radar_db_stack = np.load(run_dir / "stacks" / "tensor_support" / "radar_db_support_stack.npy")
+        assert radar_db_stack.shape == (grid_spec.size, grid_spec.size, 4)
+        for band_index, band_name in enumerate(("VV_dB", "VH_dB", "logRatio_dB", "incidence")):
+            source = np.load(run_dir / "npy_radar_bands" / f"{band_name}.npy")
+            np.testing.assert_array_equal(radar_db_stack[:, :, band_index], source)
+        radar_db_sidecar = read_manifest(raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "radar_db_support_stack.tif"))
+        assert radar_db_sidecar["transform"] == grid_spec.manifest.crs_transform
+
         ai_ready_stack = np.load(run_dir / "stacks" / "tensor_support" / "ai_ready_support_stack.npy")
         assert ai_ready_stack.shape == (grid_spec.size, grid_spec.size, len(SCIENCE_CORE_BANDS))
         assert float(ai_ready_stack.min()) >= 0.0
@@ -80,6 +90,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert presence_summary["all_expected_bands_present"] is True
         assert presence_summary["missing_expected_bands"] == []
         assert [entry["artifact_name"] for entry in presence_summary["variant_families"]] == [
+            "radar_db_support_stack",
             "radar_linear_support_stack",
             "ai_ready_support_stack",
         ]

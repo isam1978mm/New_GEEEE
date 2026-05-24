@@ -208,8 +208,10 @@ def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
         )
     specs.extend(
         (
+            ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/radar_db_support_stack.tif", ("stacks/tensor_support/radar_db_support_stack.tif",)),
+            ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/radar_db_support_stack.npy", ("stacks/tensor_support/radar_db_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")),
             ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/radar_linear_support_stack.tif", ("stacks/tensor_support/radar_linear_support_stack.tif",)),
-            ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/radar_linear_support_stack.npy", ("stacks/tensor_support/radar_linear_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")),
+            ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/radar_linear_support_stack.npy", ("stacks/tensor_support/radar_linear_support_stack.npy",)),
             ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/science_core_stack.tif", ("stacks/tensor_support/science_core_stack.tif",)),
             ComparisonSpec("radar_tensor_stack", "npy", "stacks/tensor_support/science_core_stack.npy", ("stacks/tensor_support/science_core_stack.npy",)),
             ComparisonSpec("radar_tensor_stack", "raster", "stacks/tensor_support/ai_ready_support_stack.tif", ("stacks/tensor_support/ai_ready_support_stack.tif",)),

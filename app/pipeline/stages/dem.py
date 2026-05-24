@@ -7,7 +7,8 @@ from typing import Protocol
 
 import ee
 import numpy as np
-from PIL import Image
+import rasterio
+from rasterio.transform import Affine
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import (
@@ -209,11 +210,36 @@ def write_raster_sidecar(
     return sidecar_path
 
 
+def write_georeferenced_raster(path: Path, array: np.ndarray, grid_spec: GridSpec) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = array.astype(np.float32, copy=False)
+    if data.ndim == 2:
+        raster_data = data[np.newaxis, :, :]
+    elif data.ndim == 3:
+        raster_data = np.moveaxis(data, -1, 0)
+    else:
+        raise ValueError("GeoTIFF output must be a 2D array or HWC cube.")
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=int(data.shape[0]),
+        width=int(data.shape[1]),
+        count=int(raster_data.shape[0]),
+        dtype="float32",
+        crs=grid_spec.crs,
+        transform=Affine(*grid_spec.transform),
+        nodata=float(grid_spec.nodata),
+        compress="deflate",
+    ) as dataset:
+        dataset.write(raster_data)
+
+
 def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> dict[str, Path]:
     dem_tif_path = run_dir / DEM_TIF_NAME
     dem_npy_path = run_dir / DEM_NPY_NAME
 
-    Image.fromarray(dem_array).save(dem_tif_path, format="TIFF")
+    write_georeferenced_raster(dem_tif_path, dem_array, grid_spec)
     np.save(dem_npy_path, dem_array)
     sidecar_path = write_raster_sidecar(
         dem_tif_path,
