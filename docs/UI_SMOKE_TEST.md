@@ -35,23 +35,35 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    if polling fails, the UI offers a manual refresh option.
 
-6. Load the public-safe artifact list.
+6. Refresh or inspect recent-run history.
+   Expected result:
+   the UI lists recent public-safe runs from the API without exposing internal run data.
+
+7. Use explicit run lookup.
+   Expected result:
+   entering a run ID loads that run, updates the lifecycle panel, and resumes polling if the run is still active.
+
+8. Select a run from history.
+   Expected result:
+   the selected run shows its run ID, status, terminal state, and artifacts when available.
+
+9. Load the public-safe artifact list.
    Expected result:
    the UI renders the real artifact list from the API for the selected run.
 
-7. Test artifact download links.
+10. Test artifact download links.
    Expected result:
    public-safe downloads use the guarded route and resolve correctly.
 
-8. Check artifact filtering.
+11. Check artifact filtering.
    Expected result:
    `FILESYSTEM_ONLY` artifacts do not render in the UI at all.
 
-9. Check network-bind protection for `LOCAL_SENSITIVE` downloads when applicable.
+12. Check network-bind protection for `LOCAL_SENSITIVE` downloads when applicable.
    Expected result:
    when `ALLOW_NETWORK_BIND=true`, guarded access to `LOCAL_SENSITIVE` artifacts returns `403`.
 
-10. Verify leak safety.
+13. Verify leak safety.
     Expected result:
     the UI does not expose coordinates, bounds, transforms, local paths, bundle environment variables, internal GRID overrides, or traceback text.
 

@@ -12,6 +12,7 @@
     currentRunStatus: null,
     pollTimerId: null,
     pollFailed: false,
+    recentRuns: [],
   };
 
   function isVisibleArtifact(artifact) {
@@ -162,6 +163,123 @@
       item.appendChild(meta);
       item.appendChild(link);
       list.appendChild(item);
+    }
+  }
+
+  function setHistoryStatus(message) {
+    const status = document.getElementById("history-status");
+    if (status) {
+      status.textContent = message;
+    }
+  }
+
+  function renderRunHistory(runs) {
+    const list = document.getElementById("run-history-list");
+    if (!list) {
+      return;
+    }
+
+    list.innerHTML = "";
+    if (!Array.isArray(runs) || runs.length === 0) {
+      setHistoryStatus("No recent runs found.");
+      return;
+    }
+
+    setHistoryStatus(`${runs.length} recent run${runs.length === 1 ? "" : "s"} available.`);
+    for (const run of runs) {
+      if (!run || typeof run.id !== "string") {
+        continue;
+      }
+
+      const item = document.createElement("li");
+      item.className = "run-history-item";
+
+      const meta = document.createElement("span");
+      meta.className = "run-history-meta";
+
+      const id = document.createElement("span");
+      id.className = "run-history-id";
+      id.textContent = run.id;
+
+      const name = document.createElement("span");
+      name.className = "run-history-name";
+      name.textContent = typeof run.name === "string" && run.name.trim() ? run.name : "Unnamed run";
+
+      const status = document.createElement("span");
+      status.className = "run-history-status";
+      status.textContent = describeRunStatus(run.status);
+
+      const button = document.createElement("button");
+      button.className = "refresh-button";
+      button.type = "button";
+      button.textContent = "Load";
+      button.addEventListener("click", function () {
+        void selectRun(run.id);
+      });
+
+      meta.appendChild(id);
+      meta.appendChild(name);
+      item.appendChild(meta);
+      item.appendChild(status);
+      item.appendChild(button);
+      list.appendChild(item);
+    }
+  }
+
+  async function loadRecentRuns() {
+    setHistoryStatus("Loading recent runs...");
+    try {
+      const response = await fetch("/runs");
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_error) {
+        payload = null;
+      }
+      if (!response.ok) {
+        const message =
+          payload && typeof payload.message === "string" ? payload.message : "Recent runs are temporarily unavailable.";
+        throw new Error(message);
+      }
+      state.recentRuns = Array.isArray(payload) ? payload : [];
+      renderRunHistory(state.recentRuns);
+    } catch (error) {
+      state.recentRuns = [];
+      renderRunHistory([]);
+      setHistoryStatus(error instanceof Error ? error.message : "Recent runs are temporarily unavailable.");
+    }
+  }
+
+  async function selectRun(runId) {
+    const feedback = document.getElementById("run-feedback");
+    clearRunPolling();
+    state.currentRunId = runId;
+    setRunLifecycleView({
+      runId,
+      stateLabel: "Loading",
+      detail: "Loading selected run.",
+      showManualRefresh: false,
+    });
+    renderArtifactMessage("Loading artifact status for the selected run.");
+    if (feedback) {
+      feedback.textContent = `Loading run: ${runId}`;
+    }
+
+    try {
+      await fetchRunStatus(runId);
+      await loadRecentRuns();
+    } catch (error) {
+      state.pollFailed = true;
+      setRunLifecycleView({
+        runId,
+        stateLabel: describeRunStatus(state.currentRunStatus),
+        detail: "Selected run could not be loaded. Use manual refresh to retry.",
+        showManualRefresh: true,
+      });
+      renderArtifactMessage("Artifact status is unavailable. Use manual refresh to retry.");
+      if (feedback) {
+        feedback.textContent = error instanceof Error ? error.message : "Run lookup failed.";
+      }
     }
   }
 
@@ -318,6 +436,7 @@
       });
       feedback.textContent = `Run queued: ${payload.id}`;
       await fetchRunStatus(payload.id, { updateFeedback: false });
+      await loadRecentRuns();
     } catch (error) {
       clearRunPolling();
       state.currentRunStatus = "failed";
@@ -338,7 +457,10 @@
     const map = document.getElementById("pin-map");
     const form = document.getElementById("run-form");
     const refreshButton = document.getElementById("run-refresh");
-    if (!map || !form || !refreshButton) {
+    const lookupForm = document.getElementById("run-lookup-form");
+    const lookupInput = document.getElementById("run-lookup-id");
+    const recentRunsRefresh = document.getElementById("recent-runs-refresh");
+    if (!map || !form || !refreshButton || !lookupForm || !lookupInput || !recentRunsRefresh) {
       return;
     }
 
@@ -361,6 +483,18 @@
     });
 
     form.addEventListener("submit", submitRun);
+    lookupForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      const runId = lookupInput.value.trim();
+      if (!runId) {
+        setHistoryStatus("Enter a run ID to load a run.");
+        return;
+      }
+      void selectRun(runId);
+    });
+    recentRunsRefresh.addEventListener("click", function () {
+      void loadRecentRuns();
+    });
     refreshButton.addEventListener("click", function () {
       if (!state.currentRunId) {
         return;
@@ -381,6 +515,7 @@
       showManualRefresh: false,
     });
     renderArtifactMessage("Artifacts will appear after a run completes.");
+    void loadRecentRuns();
   }
 
   initializePinWorkspace();

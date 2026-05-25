@@ -75,6 +75,21 @@
             Parity scope: production runs use the app-authoritative GRID. Notebook-exact GRID is validation/replay-only;
             fresh-ROI notebook parity is not claimed, and app-only outputs are not parity failures.
           </p>
+          <div class="run-browser" aria-labelledby="run-browser-title">
+            <div class="run-browser-head">
+              <h3 id="run-browser-title">Run lookup</h3>
+              <button class="refresh-button" id="recent-runs-refresh" type="button">Refresh runs</button>
+            </div>
+            <form class="lookup-form" id="run-lookup-form">
+              <label class="run-field" for="run-lookup-id">Run ID</label>
+              <div class="lookup-row">
+                <input class="run-input" id="run-lookup-id" name="run_id" type="text" autocomplete="off" placeholder="Paste run ID">
+                <button class="submit-button lookup-button" type="submit">Load run</button>
+              </div>
+            </form>
+            <p class="history-status" id="history-status" aria-live="polite">Recent runs will load automatically.</p>
+            <ul class="run-history-list" id="run-history-list"></ul>
+          </div>
           <ul class="artifact-list" id="artifact-list"></ul>
         </section>
       </main>

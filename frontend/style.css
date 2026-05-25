@@ -362,6 +362,97 @@ kbd {
   line-height: 1.5;
 }
 
+.run-browser {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid rgba(31, 43, 34, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.run-browser-head,
+.lookup-row,
+.run-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.run-browser-head {
+  justify-content: space-between;
+}
+
+.run-browser-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lookup-form {
+  display: grid;
+  gap: 8px;
+}
+
+.lookup-row {
+  align-items: stretch;
+}
+
+.lookup-row .run-input {
+  min-width: 0;
+}
+
+.lookup-button {
+  min-width: 110px;
+}
+
+.history-status {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.run-history-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.run-history-item {
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.8);
+  border: 1px solid rgba(31, 43, 34, 0.08);
+}
+
+.run-history-meta {
+  min-width: 0;
+}
+
+.run-history-id,
+.run-history-name {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.run-history-id {
+  font-weight: 700;
+}
+
+.run-history-name {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.run-history-status {
+  color: var(--accent-strong);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .artifact-list {
   display: grid;
   gap: 12px;
@@ -425,5 +516,16 @@ kbd {
 
   .artifact-card {
     grid-template-columns: 1fr;
+  }
+
+  .lookup-row,
+  .run-browser-head,
+  .run-history-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lookup-button {
+    width: 100%;
   }
 }

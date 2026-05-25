@@ -19,6 +19,9 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "External tiles disabled" in response.text
     assert "Queue local run" in response.text
     assert "Stage a local point" in response.text
+    assert "Run lookup" in response.text
+    assert "Refresh runs" in response.text
+    assert "Load run" in response.text
     assert "latitude" not in response.text.casefold()
     assert "longitude" not in response.text.casefold()
     assert "geojson" not in response.text.casefold()
@@ -39,12 +42,25 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "application/javascript" in js_response.headers["content-type"] or "text/javascript" in js_response.headers["content-type"]
     assert 'externalTilesEnabled: false' in js_response.text
     assert 'fetch("/runs"' in js_response.text
+    assert 'fetch("/runs")' in js_response.text
+    assert "fetch(`/runs/${encodeURIComponent(runId)}`)" in js_response.text
     assert 'method: "POST"' in js_response.text
+    assert "loadRecentRuns" in js_response.text
+    assert "selectRun" in js_response.text
+    assert "run-lookup-form" in js_response.text
+    assert "run-history-list" in js_response.text
     assert '/artifacts/' in js_response.text
     assert 'FILESYSTEM_ONLY' in js_response.text
-    assert 'experimental/' in js_response.text
+    assert "experimental_" in js_response.text
+    assert "sampleArtifacts" not in js_response.text
+    assert "demo-run" not in js_response.text
+    assert "Artifacts will appear after a run completes." in js_response.text
+    assert "Run completed with no public artifacts." in js_response.text
     assert 'GeoJSON' not in js_response.text
     assert 'WKT' not in js_response.text
+    assert "relative_path" not in js_response.text
+    assert "display_label" not in js_response.text
+    assert "run_id" not in js_response.text
     assert 'https://' not in js_response.text
     assert 'http://' not in js_response.text
 

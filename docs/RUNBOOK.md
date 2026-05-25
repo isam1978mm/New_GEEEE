@@ -317,6 +317,22 @@ To use another laptop or future VPS, copy the bundle out-of-band to a secure loc
 
 Without `NOTEBOOK_REFERENCE_BUNDLE_DIR`, the reference-bundle parity tests skip cleanly and do not fail. With it set, tests verify `MANIFEST.json` checksums before comparing reference outputs.
 
+## UI and VPS Readiness
+
+The UI is expected to work from public API responses only. It must not depend on local Windows paths, local run-directory paths, notebook paths, or machine-specific reference-bundle locations.
+
+Operational rules before moving the app to a VPS:
+
+- normal production runs use the app-authoritative GRID
+- notebook-exact GRID remains validation/replay-only and has no public UI control
+- the notebook reference bundle remains external and operator-supplied
+- copy the reference bundle out-of-band to any new machine only when parity checks need it
+- run history and run lookup must use `GET /runs` and `GET /runs/<run_id>` public responses
+- artifact downloads must use the guarded artifact route
+- the UI must not expose stack traces, local filesystem paths, internal GRID controls, or reference-bundle configuration
+
+This is not deployment automation. Authentication, public hosting, process supervision, TLS, and VPS provisioning remain future work.
+
 ## Earth Engine Key Rotation
 
 When rotating the Earth Engine service-account key:
