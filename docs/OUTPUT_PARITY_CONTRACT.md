@@ -61,15 +61,25 @@ Required parity:
 
 - `slope.tif`
 - `aspect.tif`
-- `curvature.tif`
 - `TPI.tif`
-- `TRI.tif`
 - `roughness.tif`
-- `TWI.tif`
 
 Required parity:
 
 - notebook-equivalent DEM derivative calculations and output ordering
+- required H1 notebook-matched derivative parity is limited to the files listed above because the current frozen notebook reference set exposes matching files for those outputs
+
+### App-only DEM derivative outputs not matched in current notebook reference set
+
+- `curvature.tif`
+- `TRI.tif`
+- `TWI.tif`
+
+Parity status:
+
+- these are app outputs, but they are not required H1 notebook-matched parity targets in the current frozen reference set
+- F11 `SKIP_MISSING_NOTEBOOK` rows for these files mean the notebook-side reference artifact is absent, not that numeric parity failed
+- these files can become required parity targets later only if matching notebook reference files are added to the frozen reference set and documented in the reference manifest
 
 ### Thermal LST
 
