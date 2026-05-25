@@ -48,15 +48,23 @@ Scope:
 - map the current run-create and run-detail DTOs to the UI
 - queue a run from the existing submission flow
 - display the returned run ID
-- poll `/runs/{run_id}`
+- poll `/runs/{run_id}` every 2 seconds while the run is `queued` or `running`
+- stop polling on terminal `done`, `failed`, or `cancelled` state
+- show a manual refresh option if polling fails
 - show queued, running, done, and failed states safely
+- ensure background pipeline stage failures cleanly mark the run as failed in the database
+- ensure `/runs/{run_id}` exposes a public-safe failed state
+- verify the current `RuntimeError` pattern `Caught handled exception, but response already started` does not break the response chain for run lifecycle status
 - add tests for run lifecycle rendering and safe error handling
 
 Acceptance criteria:
 
 - a submitted run shows its run ID in the UI
-- the UI continues polling until the run reaches a terminal state
+- the UI polls every 2 seconds until the run reaches a terminal state
 - terminal states are rendered clearly without stack traces or internal exception details
+- if polling fails, the operator can trigger a manual refresh without reloading the full page
+- handled background stage failures are visible as a stable public-safe failed state
+- the response chain remains valid even when background execution fails after the initial run-create response
 - failure messaging remains redacted and public-safe
 - tests cover lifecycle transitions and public-safe failure output
 
@@ -67,6 +75,9 @@ Scope:
 - fetch the real artifact list for a live run from the API
 - render the artifact list from live data instead of sample placeholders
 - provide guarded download links for public-safe artifacts
+- ensure `LOCAL_SENSITIVE` artifacts use only the guarded download route
+- verify `LOCAL_SENSITIVE` downloads return `403` when `ALLOW_NETWORK_BIND=true`
+- ensure `FILESYSTEM_ONLY` artifacts never render in the UI at all, not even as hidden DOM content
 - show empty, missing, and not-yet-ready artifact states cleanly
 - add redaction and leak tests for artifact rendering
 
@@ -74,7 +85,9 @@ Acceptance criteria:
 
 - live public-safe artifacts appear in the UI after run completion
 - filesystem-only and experimental outputs remain hidden from the public artifact view
+- `FILESYSTEM_ONLY` artifacts are absent from rendered UI output, not merely hidden with styling
 - guarded download links resolve only through the approved route
+- `LOCAL_SENSITIVE` artifact access respects the guarded route policy and network-bind restriction
 - empty and missing states do not look like failures when the API is still valid
 - tests verify artifact filtering, link generation, and leak-safe rendering
 
@@ -85,14 +98,15 @@ Scope:
 - add recent-run history or explicit run lookup
 - add operator guidance in the UI and runbook for the completed flow
 - keep assumptions compatible with a future VPS-hosted operator workflow
-- define a final local full-run validation checklist
+- create [UI_SMOKE_TEST.md](/abs/path/docs/UI_SMOKE_TEST.md) as the documented local validation checklist
+- allow the UI to link to or summarize that checklist afterward without embedding validation-only internals directly into the main operator flow
 
 Acceptance criteria:
 
 - an operator can return to a recent run or look up a known run ID
 - the UI and runbook describe the normal operator workflow clearly
 - the UI does not assume notebook-local validation-only features are public runtime controls
-- a documented smoke checklist exists for a full local run from creation through artifact review
+- a documented smoke checklist exists for a full local run from creation through artifact review in [UI_SMOKE_TEST.md](/abs/path/docs/UI_SMOKE_TEST.md)
 
 ## Explicit Non-Goals
 
@@ -115,6 +129,7 @@ Implementation work under this plan should validate all of the following:
 - frontend or static tests, if available
 - API and public-surface tests
 - unit and integration tests
+- create and maintain [UI_SMOKE_TEST.md](/abs/path/docs/UI_SMOKE_TEST.md)
 - leak scans for:
   - `NOTEBOOK_REFERENCE_BUNDLE_DIR`
   - `grid_spec_override`
@@ -124,7 +139,14 @@ Implementation work under this plan should validate all of the following:
   - `/content`
   - `RUN_lon`
   - `traceback`
-- a manual local UI smoke test
+- a manual local UI smoke test covering:
+  - create run from UI
+  - see run ID
+  - poll status
+  - see done or failed state
+  - load artifacts
+  - test download links
+  - verify no coordinate, path, or traceback leaks
 
 ## Scope Guardrails
 
