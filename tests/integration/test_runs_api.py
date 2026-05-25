@@ -12,6 +12,7 @@ from app.config import Settings
 from app.db.base import Base
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
+from app.services.storage import write_stage_manifest
 
 
 def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch) -> None:
@@ -67,8 +68,8 @@ def test_public_run_surfaces_do_not_expose_grid_override_fields(monkeypatch) -> 
         assert detail_response.status_code == 200
         assert "notebook" not in response.text.casefold()
         assert "notebook" not in detail_response.text.casefold()
-        assert "grid" not in response.text.casefold()
-        assert "grid" not in detail_response.text.casefold()
+        assert "grid_spec_override" not in response.text.casefold()
+        assert "grid_spec_override" not in detail_response.text.casefold()
         _assert_no_sensitive_public_fields(response.text)
         _assert_no_sensitive_public_fields(detail_response.text)
 
@@ -110,6 +111,61 @@ def test_background_pipeline_failure_marks_run_failed_without_breaking_create_re
         assert detail_response.json()["status"] == "failed"
         _assert_no_sensitive_public_fields(detail_response.text)
         assert "traceback" not in detail_response.text.casefold()
+
+
+def test_run_detail_exposes_public_safe_stage_progress() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        asyncio.run(_seed_run(settings, run_id="progress-run", status=RunStatus.QUEUED, name="progress"))
+        write_stage_manifest(settings, "progress-run", "grid", {"status": "done", "artifact_count": 1})
+        write_stage_manifest(settings, "progress-run", "dem", {"status": "running", "artifact_count": 0})
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get("/runs/progress-run")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "queued"
+        assert body["current_stage"] == "dem"
+        assert len(body["stages"]) == 16
+        assert body["stages"][0] == {"name": "grid", "label": "GRID setup", "status": "done"}
+        assert body["stages"][1] == {"name": "dem", "label": "DEM", "status": "running"}
+        assert body["stages"][2] == {"name": "zero_shift", "label": "Zero shift", "status": "pending"}
+        assert all(set(stage) == {"name", "label", "status"} for stage in body["stages"])
+        assert {stage["status"] for stage in body["stages"]} <= {"pending", "running", "done", "failed", "skipped"}
+        assert {stage["label"] for stage in body["stages"]} >= {"GRID setup", "SAR RTC", "Alignment QA"}
+        assert "stage_name" not in response.text
+        assert "artifact_count" not in response.text
+        _assert_no_sensitive_public_fields(response.text)
+
+
+def test_run_detail_exposes_failed_stage_without_internal_error_content() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        asyncio.run(_seed_run(settings, run_id="failed-stage-run", status=RunStatus.FAILED, name="failed"))
+        write_stage_manifest(settings, "failed-stage-run", "grid", {"status": "done", "artifact_count": 1})
+        write_stage_manifest(
+            settings,
+            "failed-stage-run",
+            "dem",
+            {"status": "failed", "artifact_count": 0, "metadata": {"failure": "stage_failed"}},
+        )
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get("/runs/failed-stage-run")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "failed"
+        assert body["current_stage"] == "dem"
+        assert body["stages"][1] == {"name": "dem", "label": "DEM", "status": "failed"}
+        assert all(set(stage) == {"name", "label", "status"} for stage in body["stages"])
+        assert "stage_failed" not in response.text
+        assert "metadata" not in response.text
+        assert "traceback" not in response.text.casefold()
+        _assert_no_sensitive_public_fields(response.text)
 
 
 async def _create_database(settings: Settings) -> None:

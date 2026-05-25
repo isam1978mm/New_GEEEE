@@ -30,12 +30,32 @@ from app.pipeline.stages.sar_rtc import SarRtcStage
 from app.pipeline.stages.thermal import ThermalStage
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
-from app.schemas.run import RunCreate, RunDetailPublic, RunPublic
+from app.schemas.run import RunCreate, RunDetailPublic, RunPublic, RunStageProgressPublic
 from app.services.run_state import ensure_single_active_run
-from app.services.storage import initialize_run_storage
+from app.services.storage import initialize_run_storage, read_manifest, get_run_dir
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
+    ("grid", "GRID setup"),
+    ("dem", "DEM"),
+    ("zero_shift", "Zero shift"),
+    ("sar_rtc", "SAR RTC"),
+    ("s2_indices", "Sentinel-2 indices"),
+    ("dem_derivatives", "DEM derivatives"),
+    ("thermal", "Thermal"),
+    ("feature_stacks", "Feature stacks"),
+    ("focus_mask", "Focus mask"),
+    ("location_exports", "Location exports"),
+    ("field_ops_exports", "Field ops exports"),
+    ("gps_compare", "GPS comparison"),
+    ("hypercube", "Hypercube"),
+    ("pca_anomaly", "PCA anomaly"),
+    ("object_extract", "Object extraction"),
+    ("alignment_qa", "Alignment QA"),
+)
+SAFE_STAGE_STATUSES = {"pending", "running", "done", "failed", "skipped"}
 
 
 class RunNotFoundError(AppError):
@@ -84,6 +104,7 @@ async def list_runs(
 @router.get("/runs/{run_id}", response_model=RunDetailPublic)
 async def get_run(
     run_id: str,
+    settings: Settings = Depends(get_settings_from_request),
     session: AsyncSession = Depends(get_db_session),
 ) -> RunDetailPublic:
     run = await session.scalar(select(Run).where(Run.id == run_id))
@@ -94,11 +115,14 @@ async def get_run(
         select(Artifact).where(Artifact.run_id == run_id).order_by(Artifact.created_at.asc(), Artifact.id.asc())
     )
     public_artifacts = [_to_artifact_public(artifact) for artifact in artifact_rows if _is_publicly_listable_artifact(artifact)]
+    progress = _build_stage_progress(settings=settings, run_id=run_id, run_status=run.status)
     return RunDetailPublic(
         id=run.id,
         name=run.name,
         status=run.status,
         created_at=run.created_at,
+        current_stage=_current_stage(progress),
+        stages=progress,
         artifacts=public_artifacts,
     )
 
@@ -184,6 +208,48 @@ def _to_artifact_public(artifact: Artifact) -> ArtifactPublic:
         artifact_class=artifact.artifact_class,
         created_at=artifact.created_at,
     )
+
+
+def _build_stage_progress(*, settings: Settings, run_id: str, run_status: RunStatus) -> list[RunStageProgressPublic]:
+    manifest_statuses = _read_stage_manifest_statuses(settings=settings, run_id=run_id)
+    stages: list[RunStageProgressPublic] = []
+    for safe_name, public_label in SAFE_STAGE_PROGRESS:
+        status = manifest_statuses.get(safe_name, "pending")
+        if status not in SAFE_STAGE_STATUSES:
+            status = "pending"
+        stages.append(RunStageProgressPublic(name=safe_name, label=public_label, status=status))
+
+    if run_status == RunStatus.DONE and not manifest_statuses:
+        return [RunStageProgressPublic(name=name, label=label, status="skipped") for name, label in SAFE_STAGE_PROGRESS]
+    return stages
+
+
+def _read_stage_manifest_statuses(*, settings: Settings, run_id: str) -> dict[str, str]:
+    run_dir = get_run_dir(settings, run_id)
+    statuses: dict[str, str] = {}
+    for internal_name, _public_name in SAFE_STAGE_PROGRESS:
+        manifest_path = run_dir / f"stage_{internal_name}.manifest.json"
+        if not manifest_path.exists():
+            continue
+        try:
+            payload = read_manifest(manifest_path)
+        except (OSError, ValueError):
+            continue
+        status = payload.get("status")
+        if isinstance(status, str):
+            statuses[internal_name] = status
+    return statuses
+
+
+def _current_stage(stages: list[RunStageProgressPublic]) -> str | None:
+    for status in ("running", "failed"):
+        for stage in stages:
+            if stage.status == status:
+                return stage.name
+    for stage in stages:
+        if stage.status == "pending":
+            return stage.name
+    return None
 
 
 def _is_publicly_listable_artifact(artifact: Artifact) -> bool:

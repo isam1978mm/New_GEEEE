@@ -50,5 +50,13 @@ class RunPublic(BaseModel):
     created_at: datetime
 
 
+class RunStageProgressPublic(BaseModel):
+    name: str
+    label: str
+    status: str
+
+
 class RunDetailPublic(RunPublic):
+    current_stage: str | None = None
+    stages: list[RunStageProgressPublic] = Field(default_factory=list)
     artifacts: list[ArtifactPublic] = Field(default_factory=list)
