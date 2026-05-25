@@ -90,6 +90,23 @@ RASTER_FILES = {
     "pca_anomaly.tif",
 }
 
+RASTER_FAMILIES = {
+    "dem_core",
+    "sar_geotiff_bands",
+    "dem_derivatives",
+    "focus_zone_local",
+}
+
+ARRAY_FAMILIES = {
+    "sar_npy_bands",
+    "radar_tensor_stack",
+}
+
+TABULAR_JSON_FAMILIES = {
+    "qa_csv",
+    "qa_json",
+}
+
 NPY_FILES = {
     "dem.npy",
     "hypercube.npy",
@@ -146,7 +163,9 @@ def test_reference_rasters_match_contract_or_skip() -> None:
     manifest = load_reference_manifest()
     verify_manifest_checksums(manifest)
     raster_names = sorted(
-        artifact_id for artifact_id, entry in manifest.file_entries.items() if entry.get("artifact_name") in RASTER_FILES
+        artifact_id
+        for artifact_id, entry in manifest.file_entries.items()
+        if entry.get("extension") == "tif" and entry.get("artifact_family") in RASTER_FAMILIES
     )
     if not raster_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
@@ -157,7 +176,9 @@ def test_reference_arrays_match_contract_or_skip() -> None:
     manifest = load_reference_manifest()
     verify_manifest_checksums(manifest)
     array_names = sorted(
-        artifact_id for artifact_id, entry in manifest.file_entries.items() if entry.get("artifact_name") in NPY_FILES
+        artifact_id
+        for artifact_id, entry in manifest.file_entries.items()
+        if entry.get("extension") == "npy" and entry.get("artifact_family") in ARRAY_FAMILIES
     )
     if not array_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
@@ -170,7 +191,7 @@ def test_reference_tabular_and_json_match_contract_or_skip() -> None:
     artifact_names = sorted(
         artifact_id
         for artifact_id, entry in manifest.file_entries.items()
-        if entry.get("artifact_name") in CSV_FILES or entry.get("artifact_name") in JSON_FILES
+        if entry.get("extension") in {"csv", "json"} and entry.get("artifact_family") in TABULAR_JSON_FAMILIES
     )
     if not artifact_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")

@@ -72,6 +72,7 @@ def manifest_files(bundle_dir: Path) -> tuple[list[dict[str, Any]], dict[str, An
         entries.append(
             {
                 "artifact_id": artifact_id,
+                **classify_artifact(path),
                 "redacted_path": f"redacted/{artifact_id}{safe_suffix(path)}",
                 "artifact_name": safe_artifact_name(path.name),
                 "sha256": sha256_file(path),
@@ -86,6 +87,82 @@ def safe_suffix(path: Path) -> str:
     if suffix in {".json", ".csv", ".txt", ".tif", ".npy"}:
         return f"_{suffix.removeprefix('.')}"
     return "_bin"
+
+
+def classify_artifact(path: Path) -> dict[str, str]:
+    name = path.name.lower()
+    suffix = path.suffix.lower().removeprefix(".") or "bin"
+    role = artifact_role(name, suffix)
+    family = artifact_family(name, suffix, role)
+    return {
+        "artifact_family": family,
+        "artifact_role": role,
+        "extension": suffix,
+    }
+
+
+def artifact_role(name: str, suffix: str) -> str:
+    if "iron_swir" in name:
+        return "iron_swir_option_a"
+    if "vv_db" in name or name == "vv_db.tif":
+        return "vv_db"
+    if "vh_db" in name or name == "vh_db.tif":
+        return "vh_db"
+    if "logratio" in name:
+        return "logratio_db"
+    if "incidence" in name:
+        return "incidence"
+    if name.startswith("dem.") or name == "dem_tif.meta.json":
+        return "dem"
+    if "slope" in name:
+        return "slope"
+    if "aspect" in name:
+        return "aspect"
+    if "tpi" in name:
+        return "tpi"
+    if "roughness" in name:
+        return "roughness"
+    if "curvature" in name:
+        return "curvature_app_only"
+    if "tri" in name:
+        return "tri_app_only"
+    if "twi" in name:
+        return "twi_app_only"
+    if "radar" in name and ("stack" in name or suffix == "npy"):
+        return "radar_db_stack"
+    if "focus" in name:
+        return "focus_mask"
+    return "unknown"
+
+
+def artifact_family(name: str, suffix: str, role: str) -> str:
+    if role == "dem":
+        return "dem_core"
+    if role in {"vv_db", "vh_db", "logratio_db", "incidence"} and suffix == "tif":
+        return "sar_geotiff_bands"
+    if role in {"vv_db", "vh_db", "logratio_db", "incidence"} and suffix == "npy":
+        return "sar_npy_bands"
+    if role in {
+        "slope",
+        "aspect",
+        "tpi",
+        "roughness",
+        "curvature_app_only",
+        "tri_app_only",
+        "twi_app_only",
+    }:
+        return "dem_derivatives"
+    if role == "radar_db_stack":
+        return "radar_tensor_stack"
+    if role == "focus_mask":
+        return "focus_zone_local"
+    if suffix == "json":
+        return "qa_json"
+    if suffix == "csv":
+        return "qa_csv"
+    if suffix in {"tif", "npy"}:
+        return "experimental_tail"
+    return "unknown"
 
 
 def encode_path(relative_path: str) -> str:
