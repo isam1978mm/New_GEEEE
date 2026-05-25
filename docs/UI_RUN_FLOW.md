@@ -90,6 +90,44 @@ Safe stage statuses:
 - `failed`
 - `skipped`
 
+## Status History Design
+
+Current status alone is not enough for operators to understand what happened during a run. A run can be `queued` or `running` before a current stage is active, and a failed run needs a short public-safe explanation of the last safe event.
+
+The UI should include a status history timeline made from safe run events. The timeline helps explain what happened before artifacts appear and gives operators a way to see recent activity without exposing internal execution details.
+
+Safe event types:
+
+- `run_created`
+- `run_queued`
+- `run_started`
+- `stage_started`
+- `stage_done`
+- `stage_failed`
+- `run_done`
+- `run_failed`
+- `run_stale_failed`
+
+Public event fields:
+
+- `timestamp`
+- `event_type`
+- `label`
+- stage name if applicable
+- safe message
+
+Forbidden event fields:
+
+- coordinates
+- bounds
+- transforms
+- local paths
+- raw Earth Engine errors
+- stack traces
+- notebook paths
+- `grid_spec_override`
+- `NOTEBOOK_REFERENCE_BUNDLE_DIR`
+
 ## UI Progress Display
 
 The UI should show:
@@ -97,7 +135,15 @@ The UI should show:
 - overall run status
 - current stage
 - stage checklist
+- status history
 - public-safe failed state when a run fails
+
+Status history behavior:
+
+- show `Status history` under Run lifecycle
+- show the latest event even when `current_stage` is not active
+- keep `current_stage` and the stage checklist visible
+- use history to explain what happened before artifacts appear
 
 Polling behavior:
 
@@ -146,22 +192,29 @@ Rules:
 
 ## Implementation Goals
 
-Goal A: backend stage progress model/API
+Goal A: backend stage progress model/API — done
 
 - add a public-safe stage progress representation
 - use only the safe stage names and statuses defined here
 - keep coordinates, transforms, local paths, and internal controls out of public DTOs
 
-Goal B: UI target input and progress rendering
+Goal B: UI target input and progress rendering — done
 
 - replace the authoritative blank-map input with validated latitude and longitude fields
 - keep optional run name support
 - render overall status, current stage, and stage checklist
 - keep recent-run history, lookup, artifact loading, and guarded downloads
 
-Goal C: final browser smoke test and fixes
+Goal C: backend run status history and UI timeline
+
+- add a public-safe status history representation
+- expose only the safe event types and fields defined here
+- render the timeline under Run lifecycle
+- keep status history free of coordinates, paths, transforms, raw errors, and internal controls
+
+Goal D: final browser smoke test and fixes
 
 - run the local UI smoke test against the implemented flow
-- verify create-run, status polling, lookup/history, progress display, artifacts, and guarded downloads
+- verify create-run, status polling, lookup/history, progress display, status history, artifacts, and guarded downloads
 - verify public surfaces do not leak restricted fields
 - make only narrow fixes found by the smoke test
