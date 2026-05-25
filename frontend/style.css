@@ -381,6 +381,11 @@ kbd {
   border: 1px solid rgba(31, 43, 34, 0.08);
 }
 
+.artifact-card-empty {
+  display: block;
+  color: var(--muted);
+}
+
 .artifact-label {
   font-weight: 600;
 }

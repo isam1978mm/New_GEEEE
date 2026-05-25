@@ -14,35 +14,8 @@
     pollFailed: false,
   };
 
-  const sampleArtifacts = [
-    {
-      run_id: "demo-run",
-      name: "objects_index.csv",
-      artifact_class: "REDACTED_PUBLIC",
-      relative_path: "objects_index.csv",
-      display_label: "Object table",
-    },
-    {
-      run_id: "demo-run",
-      name: "alignment_qa.json",
-      artifact_class: "REDACTED_PUBLIC",
-      relative_path: "alignment_qa.json",
-      display_label: "Alignment QA",
-    },
-    {
-      run_id: "demo-run",
-      name: "experimental_summary",
-      artifact_class: "FILESYSTEM_ONLY",
-      relative_path: "experimental/summary.json",
-      display_label: "Hidden experimental summary",
-    },
-  ];
-
   function isVisibleArtifact(artifact) {
     if (!artifact || artifact.artifact_class === "FILESYSTEM_ONLY") {
-      return false;
-    }
-    if (typeof artifact.relative_path === "string" && artifact.relative_path.startsWith("experimental/")) {
       return false;
     }
     if (typeof artifact.name === "string" && artifact.name.startsWith("experimental_")) {
@@ -51,8 +24,8 @@
     return true;
   }
 
-  function buildArtifactHref(artifact) {
-    return `${SPA_CONFIG.guardedArtifactPrefix}${encodeURIComponent(artifact.run_id)}/artifacts/${encodeURIComponent(artifact.name)}`;
+  function buildArtifactHref(runId, artifact) {
+    return `${SPA_CONFIG.guardedArtifactPrefix}${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifact.name)}`;
   }
 
   function clamp(value, min, max) {
@@ -132,6 +105,66 @@
     refreshButton.classList.toggle("is-hidden", !detail.showManualRefresh);
   }
 
+  function renderArtifactMessage(message) {
+    const list = document.getElementById("artifact-list");
+    const count = document.getElementById("artifact-count");
+    const tileMode = document.getElementById("tile-mode");
+    if (!list || !count || !tileMode) {
+      return;
+    }
+
+    tileMode.textContent = SPA_CONFIG.externalTilesEnabled ? "External tiles enabled" : "External tiles disabled";
+    count.textContent = "0 visible";
+    list.innerHTML = "";
+
+    const item = document.createElement("li");
+    item.className = "artifact-card artifact-card-empty";
+    item.textContent = message;
+    list.appendChild(item);
+  }
+
+  function renderArtifacts(runId, artifacts) {
+    const list = document.getElementById("artifact-list");
+    const count = document.getElementById("artifact-count");
+    const tileMode = document.getElementById("tile-mode");
+    if (!list || !count || !tileMode) {
+      return;
+    }
+
+    const visibleArtifacts = Array.isArray(artifacts) ? artifacts.filter(isVisibleArtifact) : [];
+    tileMode.textContent = SPA_CONFIG.externalTilesEnabled ? "External tiles enabled" : "External tiles disabled";
+    count.textContent = `${visibleArtifacts.length} visible`;
+
+    list.innerHTML = "";
+    if (visibleArtifacts.length === 0) {
+      renderArtifactMessage("Run completed with no public artifacts.");
+      return;
+    }
+
+    for (const artifact of visibleArtifacts) {
+      const item = document.createElement("li");
+      item.className = "artifact-card";
+
+      const title = document.createElement("span");
+      title.className = "artifact-label";
+      title.textContent = artifact.name;
+
+      const link = document.createElement("a");
+      link.className = "artifact-link";
+      link.href = buildArtifactHref(runId, artifact);
+      link.textContent = "Download";
+
+      const meta = document.createElement("span");
+      meta.className = "artifact-meta";
+      meta.textContent = artifact.artifact_class;
+
+      item.appendChild(title);
+      item.appendChild(meta);
+      item.appendChild(link);
+      list.appendChild(item);
+    }
+  }
+
   function clearRunPolling() {
     if (state.pollTimerId !== null) {
       window.clearTimeout(state.pollTimerId);
@@ -183,12 +216,18 @@
     }
 
     if (!isTerminalRunStatus(status)) {
+      renderArtifactMessage("Artifacts are not ready while the run is queued or running.");
       clearRunPolling();
       state.pollTimerId = window.setTimeout(function () {
         void pollRunStatus(runId);
       }, 2000);
     } else {
       clearRunPolling();
+      if (status === "done") {
+        renderArtifacts(runId, payload.artifacts);
+      } else {
+        renderArtifactMessage("Artifacts are unavailable for this run state.");
+      }
     }
 
     return payload;
@@ -206,6 +245,7 @@
         detail: "Polling paused. Use manual refresh to retry.",
         showManualRefresh: true,
       });
+      renderArtifactMessage("Artifact status is unavailable. Use manual refresh to retry.");
       const feedback = document.getElementById("run-feedback");
       if (feedback) {
         feedback.textContent = error instanceof Error ? error.message : "Polling failed.";
@@ -241,6 +281,7 @@
     submitButton.disabled = true;
     feedback.textContent = "Queueing local run...";
     clearRunPolling();
+    renderArtifactMessage("Artifacts are not ready while the run is queued or running.");
     setRunLifecycleView({
       runId: state.currentRunId || "Pending",
       stateLabel: "Submitting",
@@ -268,6 +309,7 @@
 
       state.currentRunId = payload.id;
       state.currentRunStatus = payload.status;
+      renderArtifactMessage("Artifacts are not ready while the run is queued or running.");
       setRunLifecycleView({
         runId: payload.id,
         stateLabel: describeRunStatus(payload.status),
@@ -279,6 +321,7 @@
     } catch (error) {
       clearRunPolling();
       state.currentRunStatus = "failed";
+      renderArtifactMessage("Artifacts are unavailable because the run request failed.");
       setRunLifecycleView({
         runId: state.currentRunId || "Not started",
         stateLabel: "Failed",
@@ -337,42 +380,8 @@
       detail: "Submit a run to begin polling.",
       showManualRefresh: false,
     });
+    renderArtifactMessage("Artifacts will appear after a run completes.");
   }
 
-  function renderArtifacts(artifacts) {
-    const visibleArtifacts = artifacts.filter(isVisibleArtifact);
-    const list = document.getElementById("artifact-list");
-    const count = document.getElementById("artifact-count");
-    const tileMode = document.getElementById("tile-mode");
-
-    tileMode.textContent = SPA_CONFIG.externalTilesEnabled ? "External tiles enabled" : "External tiles disabled";
-    count.textContent = `${visibleArtifacts.length} visible`;
-
-    list.innerHTML = "";
-    for (const artifact of visibleArtifacts) {
-      const item = document.createElement("li");
-      item.className = "artifact-card";
-
-      const title = document.createElement("span");
-      title.className = "artifact-label";
-      title.textContent = artifact.display_label;
-
-      const link = document.createElement("a");
-      link.className = "artifact-link";
-      link.href = buildArtifactHref(artifact);
-      link.textContent = "Download";
-
-      const meta = document.createElement("span");
-      meta.className = "artifact-meta";
-      meta.textContent = artifact.artifact_class;
-
-      item.appendChild(title);
-      item.appendChild(meta);
-      item.appendChild(link);
-      list.appendChild(item);
-    }
-  }
-
-  renderArtifacts(sampleArtifacts);
   initializePinWorkspace();
 })();
