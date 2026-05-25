@@ -98,7 +98,7 @@ Scope:
 - add recent-run history or explicit run lookup
 - add operator guidance in the UI and runbook for the completed flow
 - keep assumptions compatible with a future VPS-hosted operator workflow
-- create [UI_SMOKE_TEST.md](/abs/path/docs/UI_SMOKE_TEST.md) as the documented local validation checklist
+- create [UI_SMOKE_TEST.md](UI_SMOKE_TEST.md) as the documented local validation checklist
 - allow the UI to link to or summarize that checklist afterward without embedding validation-only internals directly into the main operator flow
 
 Acceptance criteria:
@@ -106,7 +106,7 @@ Acceptance criteria:
 - an operator can return to a recent run or look up a known run ID
 - the UI and runbook describe the normal operator workflow clearly
 - the UI does not assume notebook-local validation-only features are public runtime controls
-- a documented smoke checklist exists for a full local run from creation through artifact review in [UI_SMOKE_TEST.md](/abs/path/docs/UI_SMOKE_TEST.md)
+- a documented smoke checklist exists for a full local run from creation through artifact review in [UI_SMOKE_TEST.md](UI_SMOKE_TEST.md)
 
 ## Explicit Non-Goals
 
@@ -129,7 +129,7 @@ Implementation work under this plan should validate all of the following:
 - frontend or static tests, if available
 - API and public-surface tests
 - unit and integration tests
-- create and maintain [UI_SMOKE_TEST.md](/abs/path/docs/UI_SMOKE_TEST.md)
+- create and maintain [UI_SMOKE_TEST.md](UI_SMOKE_TEST.md)
 - leak scans for:
   - `NOTEBOOK_REFERENCE_BUNDLE_DIR`
   - `grid_spec_override`
