@@ -15,17 +15,17 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 ## Smoke Test Steps
 
-1. Create a run from the UI.
+1. Enter the target point and create a run from the UI.
    Expected result:
-   the UI accepts the submission and returns a visible run ID.
+   the UI requires valid latitude and longitude values before enabling the queue button, accepts the submission, and returns a visible run ID.
 
-2. Confirm the UI starts polling run status.
+2. Confirm the UI starts polling run status and progress.
    Expected result:
-   the UI checks run status every 2 seconds while the run is still `queued` or `running`.
+   the UI checks run status every 2 seconds while the run is still `queued` or `running`, shows the current public-safe stage, and renders the stage checklist.
 
 3. Observe terminal state handling.
    Expected result:
-   the UI stops polling when the run reaches `done`, `failed`, or `cancelled`.
+   the UI stops polling when the run reaches `done`, `failed`, or `cancelled`, while keeping the final stage checklist visible.
 
 4. Verify failed-run handling if a run fails.
    Expected result:
@@ -45,7 +45,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 8. Select a run from history.
    Expected result:
-   the selected run shows its run ID, status, terminal state, and artifacts when available.
+   the selected run shows its run ID, status, public-safe stage progress, terminal state, and artifacts when available.
 
 9. Load the public-safe artifact list.
    Expected result:

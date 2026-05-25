@@ -96,136 +96,6 @@ body {
   font-size: 0.85rem;
 }
 
-.blank-map {
-  position: relative;
-  min-height: 420px;
-  margin-top: 18px;
-  overflow: hidden;
-  border-radius: 20px;
-  background:
-    linear-gradient(135deg, rgba(157, 92, 54, 0.08), rgba(72, 104, 85, 0.1)),
-    linear-gradient(180deg, #f8f5ef, #ece6d8);
-  border: 1px solid rgba(31, 43, 34, 0.08);
-}
-
-.gridlines {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(31, 43, 34, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 43, 34, 0.08) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(circle at center, black 42%, transparent 92%);
-}
-
-.hemisphere-ring {
-  position: absolute;
-  inset: 24px;
-  border: 1px dashed rgba(31, 43, 34, 0.16);
-  border-radius: 50%;
-}
-
-.hemisphere-ring::before,
-.hemisphere-ring::after {
-  content: "";
-  position: absolute;
-  background: rgba(31, 43, 34, 0.12);
-}
-
-.hemisphere-ring::before {
-  left: 50%;
-  top: 10%;
-  bottom: 10%;
-  width: 1px;
-  transform: translateX(-50%);
-}
-
-.hemisphere-ring::after {
-  top: 50%;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  transform: translateY(-50%);
-}
-
-.ring-label {
-  position: absolute;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: rgba(31, 43, 34, 0.46);
-}
-
-.ring-label.north {
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.ring-label.south {
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.ring-label.west {
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.ring-label.east {
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.pin-marker {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  margin-left: -11px;
-  margin-top: -11px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #6b3418, #b76832);
-  border: 2px solid rgba(255, 252, 245, 0.95);
-  box-shadow: 0 10px 24px rgba(62, 33, 14, 0.24);
-}
-
-.pin-marker::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(107, 52, 24, 0.22);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.pin-marker.is-hidden {
-  display: none;
-}
-
-.map-copy {
-  position: absolute;
-  inset: auto 24px 24px 24px;
-  padding: 18px 20px;
-  border-radius: 18px;
-  background: rgba(255, 252, 245, 0.9);
-  border: 1px solid rgba(31, 43, 34, 0.1);
-}
-
-.map-copy p:first-child {
-  margin: 0 0 6px;
-  font-weight: 700;
-}
-
-.map-copy p:last-child {
-  margin: 0;
-  color: var(--muted);
-}
-
 .map-toolbar {
   display: grid;
   grid-template-columns: 0.95fr 1.2fr;
@@ -306,6 +176,41 @@ body {
   display: none;
 }
 
+.stage-progress-list {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-progress-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.78);
+  border: 1px solid rgba(31, 43, 34, 0.08);
+}
+
+.stage-progress-empty {
+  display: block;
+  color: var(--muted);
+}
+
+.stage-progress-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stage-progress-status {
+  color: var(--accent-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .run-input {
   width: 100%;
   min-height: 44px;
@@ -318,8 +223,7 @@ body {
 }
 
 .run-input:focus-visible,
-.submit-button:focus-visible,
-.blank-map:focus-visible {
+.submit-button:focus-visible {
   outline: 2px solid rgba(107, 52, 24, 0.55);
   outline-offset: 3px;
 }
@@ -504,10 +408,6 @@ kbd {
 
   .layout {
     grid-template-columns: 1fr;
-  }
-
-  .blank-map {
-    min-height: 320px;
   }
 
   .map-toolbar {

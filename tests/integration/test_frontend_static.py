@@ -15,15 +15,19 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "GEE Screening Workspace" in response.text
     assert 'src="/app.js"' in response.text
     assert 'href="/style.css"' in response.text
-    assert "Manual Pin Workspace" in response.text
+    assert "Target Input" in response.text
     assert "External tiles disabled" in response.text
-    assert "Queue local run" in response.text
-    assert "Stage a local point" in response.text
+    assert "Queue run" in response.text
+    assert 'id="target-lat"' in response.text
+    assert 'id="target-lon"' in response.text
+    assert "Current stage" in response.text
+    assert "stage-progress-list" in response.text
     assert "Run lookup" in response.text
     assert "Refresh runs" in response.text
     assert "Load run" in response.text
-    assert "latitude" not in response.text.casefold()
-    assert "longitude" not in response.text.casefold()
+    assert "Manual Pin Workspace" not in response.text
+    assert "Stage a local point" not in response.text
+    assert "pin-map" not in response.text
     assert "geojson" not in response.text.casefold()
     assert "wkt" not in response.text.casefold()
     assert "cdn" not in response.text.casefold()
@@ -49,6 +53,14 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "selectRun" in js_response.text
     assert "run-lookup-form" in js_response.text
     assert "run-history-list" in js_response.text
+    assert "target-lat" in js_response.text
+    assert "target-lon" in js_response.text
+    assert "renderStageProgress" in js_response.text
+    assert "current_stage" in js_response.text
+    assert "stage-progress-list" in js_response.text
+    assert "selectedPoint" not in js_response.text
+    assert "pin-map" not in js_response.text
+    assert "stagePointFromNormalized" not in js_response.text
     assert '/artifacts/' in js_response.text
     assert 'FILESYSTEM_ONLY' in js_response.text
     assert "experimental_" in js_response.text

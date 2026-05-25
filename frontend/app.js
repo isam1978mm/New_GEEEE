@@ -7,7 +7,6 @@
   };
 
   const state = {
-    selectedPoint: null,
     currentRunId: null,
     currentRunStatus: null,
     pollTimerId: null,
@@ -29,43 +28,44 @@
     return `${SPA_CONFIG.guardedArtifactPrefix}${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifact.name)}`;
   }
 
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function describeSelection(point) {
-    if (!point) {
-      return "No point staged yet.";
+  function parseTargetInput() {
+    const latInput = document.getElementById("target-lat");
+    const lonInput = document.getElementById("target-lon");
+    if (!latInput || !lonInput) {
+      return { isValid: false, lat: null, lon: null, message: "Target input is unavailable." };
     }
 
-    const verticalLabel = point.lat > 8 ? "northern" : point.lat < -8 ? "southern" : "equatorial";
-    const horizontalLabel = point.lon > 12 ? "eastern" : point.lon < -12 ? "western" : "central";
-    return `Point staged in the ${verticalLabel} ${horizontalLabel} sector.`;
+    const lat = Number.parseFloat(latInput.value);
+    const lon = Number.parseFloat(lonInput.value);
+    if (!Number.isFinite(lat)) {
+      return { isValid: false, lat: null, lon: null, message: "Target point is incomplete." };
+    }
+    if (lat < -90 || lat > 90) {
+      return { isValid: false, lat: null, lon: null, message: "Target point is outside the accepted range." };
+    }
+    if (!Number.isFinite(lon)) {
+      return { isValid: false, lat: null, lon: null, message: "Target point is incomplete." };
+    }
+    if (lon < -180 || lon > 180) {
+      return { isValid: false, lat: null, lon: null, message: "Target point is outside the accepted range." };
+    }
+    return { isValid: true, lat, lon, message: "Target point is valid." };
   }
 
-  function renderSelection() {
-    const marker = document.getElementById("pin-marker");
+  function renderTargetValidation() {
     const status = document.getElementById("selection-status");
     const submitButton = document.getElementById("submit-run");
     const feedback = document.getElementById("run-feedback");
-
-    if (!marker || !status || !submitButton || !feedback) {
+    if (!status || !submitButton || !feedback) {
       return;
     }
 
-    if (!state.selectedPoint) {
-      marker.classList.add("is-hidden");
-      submitButton.disabled = true;
-      status.textContent = "No point staged yet.";
+    const target = parseTargetInput();
+    submitButton.disabled = !target.isValid;
+    status.textContent = target.message;
+    if (!target.isValid && !state.currentRunId) {
       feedback.textContent = "";
-      return;
     }
-
-    marker.classList.remove("is-hidden");
-    marker.style.left = `${state.selectedPoint.x * 100}%`;
-    marker.style.top = `${state.selectedPoint.y * 100}%`;
-    submitButton.disabled = false;
-    status.textContent = describeSelection(state.selectedPoint);
   }
 
   function isTerminalRunStatus(status) {
@@ -104,6 +104,51 @@
     runStateValue.textContent = detail.stateLabel;
     runDetailValue.textContent = detail.detail;
     refreshButton.classList.toggle("is-hidden", !detail.showManualRefresh);
+  }
+
+  function renderStageProgress(runDetail) {
+    const currentStageValue = document.getElementById("current-stage-value");
+    const list = document.getElementById("stage-progress-list");
+    if (!currentStageValue || !list) {
+      return;
+    }
+
+    const stages = Array.isArray(runDetail && runDetail.stages) ? runDetail.stages : [];
+    const currentStageName = typeof runDetail.current_stage === "string" ? runDetail.current_stage : null;
+    const currentStage = stages.find(function (stage) {
+      return stage && stage.name === currentStageName;
+    });
+
+    currentStageValue.textContent = currentStage ? currentStage.label : "Not active";
+    list.innerHTML = "";
+
+    if (stages.length === 0) {
+      const item = document.createElement("li");
+      item.className = "stage-progress-item stage-progress-empty";
+      item.textContent = "Stage progress is not available yet.";
+      list.appendChild(item);
+      return;
+    }
+
+    for (const stage of stages) {
+      if (!stage || typeof stage.label !== "string" || typeof stage.status !== "string") {
+        continue;
+      }
+      const item = document.createElement("li");
+      item.className = "stage-progress-item";
+
+      const label = document.createElement("span");
+      label.className = "stage-progress-label";
+      label.textContent = stage.label;
+
+      const status = document.createElement("span");
+      status.className = "stage-progress-status";
+      status.textContent = stage.status;
+
+      item.appendChild(label);
+      item.appendChild(status);
+      list.appendChild(item);
+    }
   }
 
   function renderArtifactMessage(message) {
@@ -324,6 +369,7 @@
       detail,
       showManualRefresh: false,
     });
+    renderStageProgress(payload);
 
     if (!options || options.updateFeedback !== false) {
       const feedback = document.getElementById("run-feedback");
@@ -371,21 +417,11 @@
     }
   }
 
-  function stagePointFromNormalized(x, y) {
-    const boundedX = clamp(x, 0, 1);
-    const boundedY = clamp(y, 0, 1);
-    state.selectedPoint = {
-      x: boundedX,
-      y: boundedY,
-      lon: boundedX * 360 - 180,
-      lat: 90 - boundedY * 180,
-    };
-    renderSelection();
-  }
-
   async function submitRun(event) {
     event.preventDefault();
-    if (!state.selectedPoint) {
+    const target = parseTargetInput();
+    if (!target.isValid) {
+      renderTargetValidation();
       return;
     }
 
@@ -414,8 +450,8 @@
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          lat: state.selectedPoint.lat,
-          lon: state.selectedPoint.lon,
+          lat: target.lat,
+          lon: target.lon,
           name: runNameInput.value.trim() || null,
         }),
       });
@@ -454,34 +490,19 @@
   }
 
   function initializePinWorkspace() {
-    const map = document.getElementById("pin-map");
     const form = document.getElementById("run-form");
+    const latInput = document.getElementById("target-lat");
+    const lonInput = document.getElementById("target-lon");
     const refreshButton = document.getElementById("run-refresh");
     const lookupForm = document.getElementById("run-lookup-form");
     const lookupInput = document.getElementById("run-lookup-id");
     const recentRunsRefresh = document.getElementById("recent-runs-refresh");
-    if (!map || !form || !refreshButton || !lookupForm || !lookupInput || !recentRunsRefresh) {
+    if (!form || !latInput || !lonInput || !refreshButton || !lookupForm || !lookupInput || !recentRunsRefresh) {
       return;
     }
 
-    map.addEventListener("click", function (event) {
-      const rect = map.getBoundingClientRect();
-      if (!rect.width || !rect.height) {
-        return;
-      }
-      const x = (event.clientX - rect.left) / rect.width;
-      const y = (event.clientY - rect.top) / rect.height;
-      stagePointFromNormalized(x, y);
-    });
-
-    map.addEventListener("keydown", function (event) {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-      event.preventDefault();
-      stagePointFromNormalized(0.5, 0.5);
-    });
-
+    latInput.addEventListener("input", renderTargetValidation);
+    lonInput.addEventListener("input", renderTargetValidation);
     form.addEventListener("submit", submitRun);
     lookupForm.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -507,13 +528,14 @@
       });
       void fetchRunStatus(state.currentRunId);
     });
-    renderSelection();
+    renderTargetValidation();
     setRunLifecycleView({
       runId: "Not started",
       stateLabel: "Idle",
       detail: "Submit a run to begin polling.",
       showManualRefresh: false,
     });
+    renderStageProgress({ current_stage: null, stages: [] });
     renderArtifactMessage("Artifacts will appear after a run completes.");
     void loadRecentRuns();
   }

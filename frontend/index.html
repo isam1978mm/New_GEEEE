@@ -18,34 +18,24 @@
       </header>
 
       <main class="layout">
-        <section class="panel map-panel" aria-labelledby="map-title">
+        <section class="panel map-panel" aria-labelledby="target-title">
           <div class="panel-head">
-            <h2 id="map-title">Manual Pin Workspace</h2>
+            <h2 id="target-title">Target Input</h2>
             <span class="status-chip" id="tile-mode">External tiles disabled</span>
-          </div>
-          <div class="blank-map" id="pin-map" aria-label="Blank local point-selection workspace" role="button" tabindex="0">
-            <div class="gridlines"></div>
-            <div class="hemisphere-ring" aria-hidden="true">
-              <span class="ring-label north">N</span>
-              <span class="ring-label south">S</span>
-              <span class="ring-label west">W</span>
-              <span class="ring-label east">E</span>
-            </div>
-            <div class="pin-marker is-hidden" id="pin-marker" aria-hidden="true"></div>
-            <div class="map-copy">
-              <p>Stage a local point</p>
-              <p>Click anywhere on the workspace to set a pin, then queue the run without exposing the exact location in public responses.</p>
-            </div>
           </div>
           <div class="map-toolbar">
             <div class="selection-card" aria-live="polite">
-              <p class="selection-label">Selection status</p>
-              <p class="selection-value" id="selection-status">No point staged yet.</p>
+              <p class="selection-label">Input status</p>
+              <p class="selection-value" id="selection-status">Enter a valid target point to queue a run.</p>
             </div>
             <form class="run-form" id="run-form">
+              <label class="run-field" for="target-lat">Latitude</label>
+              <input class="run-input" id="target-lat" name="lat" type="number" min="-90" max="90" step="any" inputmode="decimal" required placeholder="-90 to 90">
+              <label class="run-field" for="target-lon">Longitude</label>
+              <input class="run-input" id="target-lon" name="lon" type="number" min="-180" max="180" step="any" inputmode="decimal" required placeholder="-180 to 180">
               <label class="run-field" for="run-name">Run name</label>
               <input class="run-input" id="run-name" name="name" type="text" maxlength="255" placeholder="Operator label">
-              <button class="submit-button" id="submit-run" type="submit" disabled>Queue local run</button>
+              <button class="submit-button" id="submit-run" type="submit" disabled>Queue run</button>
             </form>
           </div>
           <div class="run-status-card" id="run-status-card" aria-live="polite">
@@ -56,9 +46,11 @@
             <p class="run-status-line"><span class="run-status-key">Run ID</span><span id="run-id-value">Not started</span></p>
             <p class="run-status-line"><span class="run-status-key">State</span><span id="run-state-value">Idle</span></p>
             <p class="run-status-line"><span class="run-status-key">Detail</span><span id="run-detail-value">Submit a run to begin polling.</span></p>
+            <p class="run-status-line"><span class="run-status-key">Current stage</span><span id="current-stage-value">Not started</span></p>
+            <ul class="stage-progress-list" id="stage-progress-list"></ul>
           </div>
           <p class="map-legend">
-            Keyboard fallback: focus the workspace and press <kbd>Enter</kbd> or <kbd>Space</kbd> to stage a centered pin.
+            The target point is entered directly. External map tiles are not used.
           </p>
           <p class="run-feedback" id="run-feedback" aria-live="polite"></p>
         </section>
