@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "reference_run_id": "REQUIRES_OPERATOR_CAPTURE",
+  "notebook_commit_sha": "REQUIRES_OPERATOR_CAPTURE",
+  "notebook_file_sha256": "REQUIRES_OPERATOR_CAPTURE",
+  "capture_date_iso": "REQUIRES_OPERATOR_CAPTURE",
+  "canonical_roi_label": "canonical_roi_v1",
+  "grid_identity": {
+    "crs": "REQUIRES_OPERATOR_CAPTURE",
+    "epsg": "REQUIRES_OPERATOR_CAPTURE",
+    "utm_zone": "REQUIRES_OPERATOR_CAPTURE",
+    "hemisphere": "REQUIRES_OPERATOR_CAPTURE",
+    "scale_m": "REQUIRES_OPERATOR_CAPTURE",
+    "out_size": "REQUIRES_OPERATOR_CAPTURE",
+    "nodata": "REQUIRES_OPERATOR_CAPTURE"
+  },
+  "files": [
+    {
+      "relative_path": "REQUIRES_OPERATOR_CAPTURE",
+      "sha256": "REQUIRES_OPERATOR_CAPTURE",
+      "size_bytes": "REQUIRES_OPERATOR_CAPTURE"
+    }
+  ],
+  "comparison_rules": {
+    "IRON_SWIR.tif": "option_a_corrected_app_reference"
+  },
+  "notes": "REQUIRES_OPERATOR_CAPTURE"
+}

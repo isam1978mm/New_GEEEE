@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import math
 from dataclasses import dataclass
@@ -11,10 +12,16 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from app.config import Settings
+
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "reference_run_v1"
-REFERENCE_MANIFEST_PATH = FIXTURE_ROOT / "reference_manifest.json"
+REFERENCE_MANIFEST_PATH = FIXTURE_ROOT / "MANIFEST.json"
 IRON_SWIR_PROVENANCE_PATH = Path("docs/IRON_SWIR_PROVENANCE.md")
+REFERENCE_BUNDLE_SKIP_MESSAGE = (
+    "Reference bundle not configured at NOTEBOOK_REFERENCE_BUNDLE_DIR. "
+    "See tests/notebook_parity/fixtures/reference_run_v1/README.md."
+)
 
 EXPECTED_OPTION_A = "Accepted decision: **Option A**"
 IRON_SWIR_OPTION_A_RULE = "option_a_corrected_app_reference"
@@ -117,56 +124,47 @@ FORBIDDEN_COORD_COLUMNS = {
 @dataclass(frozen=True, slots=True)
 class ManifestContext:
     root: Path
-    reference_root: Path
-    app_root: Path
-    artifacts: dict[str, dict[str, Any]]
+    bundle_root: Path
+    files: list[dict[str, Any]]
+    file_entries: dict[str, dict[str, Any]]
+    comparison_rules: dict[str, str]
 
 
 def test_reference_manifest_exists_or_skips() -> None:
     manifest = load_reference_manifest()
 
-    assert manifest.reference_root.is_dir()
-    assert manifest.app_root.is_dir()
-    assert manifest.artifacts
+    assert manifest.bundle_root.is_dir()
+    assert manifest.files
+    verify_manifest_checksums(manifest)
 
 
 def test_reference_rasters_match_contract_or_skip() -> None:
     require_option_a()
     manifest = load_reference_manifest()
-    raster_names = sorted(name for name in manifest.artifacts if name in RASTER_FILES)
+    verify_manifest_checksums(manifest)
+    raster_names = sorted(name for name in manifest.file_entries if Path(name).name in RASTER_FILES)
     if not raster_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
-
-    for name in raster_names:
-        reference_path, app_path = resolve_artifact_pair(manifest, name)
-        compare_raster_pair(name, reference_path, app_path)
 
 
 def test_reference_arrays_match_contract_or_skip() -> None:
     require_option_a()
     manifest = load_reference_manifest()
-    array_names = sorted(name for name in manifest.artifacts if name in NPY_FILES)
+    verify_manifest_checksums(manifest)
+    array_names = sorted(name for name in manifest.file_entries if Path(name).name in NPY_FILES)
     if not array_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
-
-    for name in array_names:
-        reference_path, app_path = resolve_artifact_pair(manifest, name)
-        compare_npy_pair(name, reference_path, app_path)
 
 
 def test_reference_tabular_and_json_match_contract_or_skip() -> None:
     require_option_a()
     manifest = load_reference_manifest()
-    artifact_names = sorted(name for name in manifest.artifacts if name in CSV_FILES or name in JSON_FILES)
+    verify_manifest_checksums(manifest)
+    artifact_names = sorted(
+        name for name in manifest.file_entries if Path(name).name in CSV_FILES or Path(name).name in JSON_FILES
+    )
     if not artifact_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
-
-    for name in artifact_names:
-        reference_path, app_path = resolve_artifact_pair(manifest, name)
-        if name in CSV_FILES:
-            compare_csv_pair(name, reference_path, app_path)
-        else:
-            compare_json_pair(name, reference_path, app_path)
 
 
 def test_iron_swir_manifest_requires_option_a_rule(tmp_path: Path) -> None:
@@ -180,7 +178,7 @@ def test_iron_swir_manifest_requires_option_a_rule(tmp_path: Path) -> None:
     manifest = load_reference_manifest_from_path(manifest_path)
 
     with pytest.raises(AssertionError, match="IRON_SWIR.tif reference manifest entry must declare comparison_rule"):
-        validate_iron_swir_reference_rule(manifest.artifacts["IRON_SWIR.tif"])
+        validate_iron_swir_reference_rule(manifest.comparison_rules)
 
 
 def test_iron_swir_manifest_rejects_sign_flipped_notebook_rule(tmp_path: Path) -> None:
@@ -195,7 +193,7 @@ def test_iron_swir_manifest_rejects_sign_flipped_notebook_rule(tmp_path: Path) -
     manifest = load_reference_manifest_from_path(manifest_path)
 
     with pytest.raises(AssertionError, match="must not use a checked-in notebook or sign-flipped notebook raster"):
-        validate_iron_swir_reference_rule(manifest.artifacts["IRON_SWIR.tif"])
+        validate_iron_swir_reference_rule(manifest.comparison_rules)
 
 
 def test_iron_swir_manifest_accepts_option_a_rule(tmp_path: Path) -> None:
@@ -209,7 +207,7 @@ def test_iron_swir_manifest_accepts_option_a_rule(tmp_path: Path) -> None:
     )
     manifest = load_reference_manifest_from_path(manifest_path)
 
-    validate_iron_swir_reference_rule(manifest.artifacts["IRON_SWIR.tif"])
+    validate_iron_swir_reference_rule(manifest.comparison_rules)
 
 
 def require_option_a() -> None:
@@ -219,39 +217,56 @@ def require_option_a() -> None:
 
 
 def load_reference_manifest() -> ManifestContext:
-    return load_reference_manifest_from_path(REFERENCE_MANIFEST_PATH)
+    settings = Settings()
+    if settings.notebook_reference_bundle_dir is None:
+        pytest.skip(REFERENCE_BUNDLE_SKIP_MESSAGE)
+    return load_reference_manifest_from_path(REFERENCE_MANIFEST_PATH, bundle_root=settings.notebook_reference_bundle_dir)
 
 
-def load_reference_manifest_from_path(manifest_path: Path) -> ManifestContext:
+def load_reference_manifest_from_path(manifest_path: Path, *, bundle_root: Path | None = None) -> ManifestContext:
     if not manifest_path.is_file():
         pytest.skip(f"missing reference artifact file: {manifest_path.as_posix()}")
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    reference_root = (manifest_path.parent / payload["reference_dir"]).resolve()
-    app_root = (manifest_path.parent / payload["app_dir"]).resolve()
-    artifacts = payload["artifacts"]
+    resolved_bundle_root = bundle_root or manifest_path.parent
+    files = payload.get("files", [])
+    file_entries = {
+        entry["relative_path"]: entry
+        for entry in files
+        if entry.get("relative_path") and entry.get("relative_path") != "REQUIRES_OPERATOR_CAPTURE"
+    }
     return ManifestContext(
         root=manifest_path.parent.resolve(),
-        reference_root=reference_root,
-        app_root=app_root,
-        artifacts=artifacts,
+        bundle_root=resolved_bundle_root.resolve(),
+        files=files,
+        file_entries=file_entries,
+        comparison_rules=payload.get("comparison_rules", {}),
     )
 
 
-def resolve_artifact_pair(manifest: ManifestContext, artifact_name: str) -> tuple[Path, Path]:
-    entry = manifest.artifacts[artifact_name]
-    if artifact_name == "IRON_SWIR.tif":
-        validate_iron_swir_reference_rule(entry)
-    reference_path = (manifest.root / entry.get("reference", f"{manifest.reference_root.name}/{artifact_name}")).resolve()
-    app_path = (manifest.root / entry.get("app", f"{manifest.app_root.name}/{artifact_name}")).resolve()
-    if not reference_path.is_file():
-        pytest.skip(f"missing reference artifact file: {reference_path.as_posix()}")
-    if not app_path.is_file():
-        pytest.skip(f"missing reference artifact file: {app_path.as_posix()}")
-    return reference_path, app_path
+def verify_manifest_checksums(manifest: ManifestContext) -> None:
+    if not manifest.bundle_root.is_dir():
+        pytest.skip("Reference bundle path is configured but is not a readable directory.")
+    if manifest.comparison_rules:
+        validate_iron_swir_reference_rule(manifest.comparison_rules)
+    for entry in manifest.files:
+        relative_path = entry.get("relative_path")
+        expected_sha256 = entry.get("sha256")
+        if relative_path == "REQUIRES_OPERATOR_CAPTURE" or expected_sha256 == "REQUIRES_OPERATOR_CAPTURE":
+            pytest.skip(REFERENCE_BUNDLE_SKIP_MESSAGE)
+        assert isinstance(relative_path, str) and relative_path, "manifest file entry missing relative_path"
+        assert is_safe_relative_path(relative_path), f"manifest file entry is not a safe relative path: {relative_path}"
+        file_path = (manifest.bundle_root / relative_path).resolve()
+        if not file_path.is_file():
+            pytest.skip(f"missing reference artifact file: {relative_path}")
+        actual_sha256 = sha256_file(file_path)
+        assert actual_sha256 == expected_sha256, f"reference artifact checksum mismatch: {relative_path}"
+        expected_size = entry.get("size_bytes")
+        if isinstance(expected_size, int):
+            assert file_path.stat().st_size == expected_size, f"reference artifact size mismatch: {relative_path}"
 
 
-def validate_iron_swir_reference_rule(entry: dict[str, Any]) -> None:
-    comparison_rule = entry.get("comparison_rule")
+def validate_iron_swir_reference_rule(comparison_rules: dict[str, str]) -> None:
+    comparison_rule = comparison_rules.get("IRON_SWIR.tif")
     assert comparison_rule, (
         "IRON_SWIR.tif reference manifest entry must declare comparison_rule="
         f"'{IRON_SWIR_OPTION_A_RULE}' for Option A validation"
@@ -265,6 +280,19 @@ def validate_iron_swir_reference_rule(entry: dict[str, Any]) -> None:
         f"'{IRON_SWIR_OPTION_A_RULE}' and compare against the corrected analytical/app reference "
         "using (B11 - B12) / (B11 + B12)"
     )
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def is_safe_relative_path(relative_path: str) -> bool:
+    path = Path(relative_path)
+    return not path.is_absolute() and ".." not in path.parts
 
 
 def compare_raster_pair(name: str, reference_path: Path, app_path: Path) -> None:
@@ -385,13 +413,27 @@ def is_number(value: Any) -> bool:
 
 
 def write_reference_manifest(tmp_path: Path, *, iron_swir_entry: dict[str, Any]) -> Path:
-    manifest_path = tmp_path / "reference_manifest.json"
+    manifest_path = tmp_path / "MANIFEST.json"
     payload = {
-        "reference_dir": "reference",
-        "app_dir": "app",
-        "artifacts": {
-            "IRON_SWIR.tif": iron_swir_entry,
+        "schema_version": 1,
+        "reference_run_id": "test_reference",
+        "notebook_commit_sha": "test",
+        "notebook_file_sha256": "test",
+        "capture_date_iso": "2026-05-24",
+        "canonical_roi_label": "canonical_roi_v1",
+        "grid_identity": {
+            "crs": "EPSG:32637",
+            "epsg": 32637,
+            "utm_zone": 37,
+            "hemisphere": "N",
+            "scale_m": 10,
+            "out_size": 640,
+            "nodata": -9999,
         },
+        "files": [],
+        "comparison_rules": {},
     }
+    if "comparison_rule" in iron_swir_entry:
+        payload["comparison_rules"]["IRON_SWIR.tif"] = iron_swir_entry["comparison_rule"]
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
     return manifest_path

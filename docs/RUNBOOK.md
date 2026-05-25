@@ -302,6 +302,21 @@ Reference-output parity notes:
 - skip output should clearly name the missing reference file or directory
 - parity mismatches fail when the required reference fixtures are present
 
+## Notebook Reference Bundle
+
+The frozen notebook reference binaries are operator-supplied and never committed. The repo commits `tests/notebook_parity/fixtures/reference_run_v1/MANIFEST.json` as the portable contract for that bundle.
+
+Set `NOTEBOOK_REFERENCE_BUNDLE_DIR` when running reference-bundle parity checks:
+
+```powershell
+$env:NOTEBOOK_REFERENCE_BUNDLE_DIR = "<operator-supplied-bundle-dir>"
+pytest tests/notebook_parity/
+```
+
+To use another laptop or future VPS, copy the bundle out-of-band to a secure local directory on that machine and set `NOTEBOOK_REFERENCE_BUNDLE_DIR` there.
+
+Without `NOTEBOOK_REFERENCE_BUNDLE_DIR`, the reference-bundle parity tests skip cleanly and do not fail. With it set, tests verify `MANIFEST.json` checksums before comparing reference outputs.
+
 ## Earth Engine Key Rotation
 
 When rotating the Earth Engine service-account key:

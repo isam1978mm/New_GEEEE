@@ -1,71 +1,53 @@
 # Reference Run v1
 
-This directory holds the frozen notebook reference-capture notes for the production-parity phase.
+This directory holds the portable contract for the frozen notebook reference set.
 
-## Required Contents
+The binary notebook reference bundle is operator-supplied and never committed. The repo commits only `MANIFEST.json`, which records the files expected in that bundle plus their checksums and safe metadata.
 
-At minimum, record:
+## Environment Variable
 
-- notebook path
-- notebook git commit SHA
-- notebook file hash
-- capture date
-- operator environment summary
-- Earth Engine datasets used
-- canonical ROI label
-- grid manifest identity summary
-- exported artifact inventory
-- parity comparison summary
-- any approved `PARITY_CORRECTS` note used during interpretation
+Set `NOTEBOOK_REFERENCE_BUNDLE_DIR` to the local directory containing the out-of-band reference bundle.
 
-## Expected Artifact Inventory
+If the variable is unset, notebook reference-output parity tests skip cleanly with a message pointing back to this file. The app must still start without this variable.
 
-The capture should describe or store references for:
+## Manifest
 
-- `grid_manifest.json`
-- `dem.tif`
-- `dem.npy`
-- `VV_dB.tif`
-- `VH_dB.tif`
-- `logRatio_dB.tif`
-- `incidence.tif`
-- `slope.tif`
-- `aspect.tif`
-- `curvature.tif`
-- `TPI.tif`
-- `TRI.tif`
-- `roughness.tif`
-- `TWI.tif`
-- `lst.tif`
-- `NDVI.tif`
-- `NDWI.tif`
-- `NDMI.tif`
-- `NBR.tif`
-- `IRONOX.tif`
-- `IRON_SWIR.tif`
-- `BSI.tif`
-- `hypercube.tif`
-- `hypercube.npy`
-- `hypercube_band_order.csv`
-- `hypercube_band_stats.csv`
-- `hypercube_norm_params.csv`
-- `pca_anomaly.tif`
-- `pca_eigenvalues.json`
-- `objects_index.csv`
-- `clusters_summary.csv`
-- `alignment_qa.json`
+`MANIFEST.json` records:
 
-## Tolerance Source
+- bundle metadata: `reference_run_id`, `notebook_commit_sha`, `notebook_file_sha256`, `capture_date_iso`, and `canonical_roi_label`
+- safe GRID identity only: CRS, EPSG, UTM zone, hemisphere, scale, output size, and nodata
+- one entry per bundle file with relative path, SHA-256 checksum, and size in bytes
+- comparison rules, including the `IRON_SWIR.tif` Option A rule
 
-Use the stage and artifact tolerances defined in [REFERENCE_CAPTURE_PROTOCOL.md](../../../../docs/REFERENCE_CAPTURE_PROTOCOL.md).
+The manifest must not contain raw coordinates, raw bounds, raw transform values, absolute paths, or local machine paths.
 
-## Current Verified Notebook Notes
+## Regeneration
 
-- `IRON_SWIR` provenance must be recorded with an exact notebook commit SHA and file hash. The currently checked-in notebook inspection on `2026-05-20` found cell `206` using the corrected add-denominator form, so any older buggy source revision must be identified explicitly if it is still the accepted parity reference.
-- Object clustering in the currently checked-in notebook inspection on `2026-05-20` is deterministic `DBSCAN` in cell `70` with `eps=4.0` and `min_samples=2`; no seed is used.
+After copying or refreshing the operator-local bundle, regenerate the manifest with:
 
-## Binary Fixture Policy
+```powershell
+$env:NOTEBOOK_REFERENCE_BUNDLE_DIR = "<operator-supplied-bundle-dir>"
+python scripts/generate_reference_manifest.py
+```
 
-- Do not commit large binary notebook exports here unless explicitly accepted.
-- Prefer metadata notes, hashes, and small derived summaries.
-- If large binaries are added later, document why they are required.
+The script writes `tests/notebook_parity/fixtures/reference_run_v1/MANIFEST.json`. It prints only a file count and never prints the configured path.
+
+## VPS / New Machine Workflow
+
+This mechanism is portable. To verify parity on a second laptop or future VPS:
+
+1. Copy the binary reference bundle out-of-band to a secure local directory.
+2. Set `NOTEBOOK_REFERENCE_BUNDLE_DIR` on that machine.
+3. Run the notebook parity tests.
+
+The binaries remain outside git in every environment.
+
+## IRON_SWIR Option A
+
+`IRON_SWIR.tif` must use comparison rule `option_a_corrected_app_reference`.
+
+That rule preserves the accepted Option A decision: compare the corrected analytical/app reference using `(B11 - B12) / (B11 + B12)`, not a checked-in notebook or sign-flipped notebook raster.
+
+## Placeholder State
+
+If `MANIFEST.json` contains `REQUIRES_OPERATOR_CAPTURE`, the manifest is not finalized. The operator must configure `NOTEBOOK_REFERENCE_BUNDLE_DIR` and rerun `scripts/generate_reference_manifest.py` before configured reference-bundle parity tests can pass.

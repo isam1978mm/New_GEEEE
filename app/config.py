@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     allow_network_bind: bool = Field(default=False)
     ee_service_account_email: str | None = Field(default=None)
     ee_service_account_key_path: Path | None = Field(default=None)
+    notebook_reference_bundle_dir: Path | None = Field(default=None)
 
     @property
     def database_url(self) -> str:

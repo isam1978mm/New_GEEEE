@@ -143,6 +143,22 @@ Store the H4 reference capture under:
 
 Do not add large binary fixtures unless they already exist and are explicitly accepted for storage.
 
+## Bundle Storage and Portability
+
+The frozen notebook reference bundle is operator-local and never committed. The repo commits only the portable manifest:
+
+- `tests/notebook_parity/fixtures/reference_run_v1/MANIFEST.json`
+
+Binary notebook outputs such as GeoTIFF, NPY, CSV, and JSON bundle files remain outside git. Operators point parity tests at the local bundle with:
+
+- `NOTEBOOK_REFERENCE_BUNDLE_DIR`
+
+On a new machine or future VPS, copy the bundle out-of-band to the chosen local path and set `NOTEBOOK_REFERENCE_BUNDLE_DIR` there. The path is operator configuration, not repo state.
+
+Before comparing reference outputs, parity tests verify each file against the committed manifest checksum and recorded size. Missing configured files skip with the relative file name. Checksum mismatches fail because the configured bundle no longer matches the committed reference contract.
+
+The manifest and test output must not expose raw coordinates, raw bounds, raw CRS transforms, absolute paths, or local machine paths.
+
 ## Verified Notebook Findings
 
 ### IRON_SWIR provenance
