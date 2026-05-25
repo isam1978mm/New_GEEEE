@@ -4,7 +4,7 @@
 
 This document defines the intended real operator run flow before further UI implementation.
 
-The current blank pin workspace is not the authoritative AOI picker. A production run must start from explicit target coordinates entered by the operator.
+The earlier blank pin workspace was not the authoritative AOI picker and has been replaced by explicit coordinate input. A production run must start from explicit target coordinates entered by the operator.
 
 ## Primary Target Input
 
@@ -125,8 +125,8 @@ Forbidden event fields:
 - raw Earth Engine errors
 - stack traces
 - notebook paths
-- `grid_spec_override`
-- `NOTEBOOK_REFERENCE_BUNDLE_DIR`
+- internal GRID override controls
+- reference bundle environment configuration
 
 ## UI Progress Display
 
@@ -192,13 +192,12 @@ Rules:
 
 ## Implementation Goals
 
-Completed:
-- Backend stage progress API
-- UI coordinate input and stage progress
-- Local HTTP smoke test
+Goal A: backend stage progress model/API — done
 
-Next:
-- Run status history / event timeline
+Goal B: UI target input and progress rendering — done
 
-After:
-- Final browser smoke test and narrow fixes
+Goal C: final local HTTP/API smoke test — done
+
+Goal D: run status history / event timeline
+
+Goal E: final browser smoke test and narrow fixes
