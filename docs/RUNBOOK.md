@@ -205,8 +205,8 @@ Operator retrieval examples:
 
 ```powershell
 Get-ChildItem .\data\runs\<run_id> -Recurse
-Copy-Item .\data\runs\<run_id>\qa -Destination C:\tmp\run-qa -Recurse
-Copy-Item .\data\runs\<run_id>\stacks -Destination C:\tmp\run-stacks -Recurse
+Copy-Item .\data\runs\<run_id>\qa -Destination <operator-review-dir>\run-qa -Recurse
+Copy-Item .\data\runs\<run_id>\stacks -Destination <operator-review-dir>\run-stacks -Recurse
 ```
 
 Use filesystem copy workflows for local operational review. Do not expect the API to list or serve the full notebook-equivalent set.
@@ -398,21 +398,21 @@ Recommended local workaround:
 Example PowerShell session:
 
 ```powershell
-$env:TEMP = "C:\tmp\pytest-temp"
-$env:TMP = "C:\tmp\pytest-temp"
-python -m pytest tests/unit/ tests/integration/ tests/notebook_parity/ --basetemp C:\tmp\pytest-temp\basetemp
+$env:TEMP = "<writable-temp-dir>"
+$env:TMP = "<writable-temp-dir>"
+python -m pytest tests/unit/ tests/integration/ tests/notebook_parity/ --basetemp <writable-temp-dir>\basetemp
 ```
 
 If the cache provider is the problem:
 
 ```powershell
-python -m pytest tests/unit/ tests/integration/ tests/notebook_parity/ --basetemp C:\tmp\pytest-temp\basetemp -p no:cacheprovider
+python -m pytest tests/unit/ tests/integration/ tests/notebook_parity/ --basetemp <writable-temp-dir>\basetemp -p no:cacheprovider
 ```
 
 Or:
 
 ```powershell
-python -m pytest tests/unit/ tests/integration/ tests/notebook_parity/ --basetemp C:\tmp\pytest-temp\basetemp --cache-clear
+python -m pytest tests/unit/ tests/integration/ tests/notebook_parity/ --basetemp <writable-temp-dir>\basetemp --cache-clear
 ```
 
 Do not change `pyproject.toml` for this unless a future test proves that a repo-level config change is necessary.
