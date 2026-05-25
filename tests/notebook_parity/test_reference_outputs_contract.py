@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import math
+from base64 import urlsafe_b64decode
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ from app.config import Settings
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "reference_run_v1"
 REFERENCE_MANIFEST_PATH = FIXTURE_ROOT / "MANIFEST.json"
+REFERENCE_PATH_MAP_PATH = FIXTURE_ROOT / "PATH_MAP.local.json"
 IRON_SWIR_PROVENANCE_PATH = Path("docs/IRON_SWIR_PROVENANCE.md")
 REFERENCE_BUNDLE_SKIP_MESSAGE = (
     "Reference bundle not configured at NOTEBOOK_REFERENCE_BUNDLE_DIR. "
@@ -127,6 +129,7 @@ class ManifestContext:
     bundle_root: Path
     files: list[dict[str, Any]]
     file_entries: dict[str, dict[str, Any]]
+    path_map: dict[str, str]
     comparison_rules: dict[str, str]
 
 
@@ -142,7 +145,9 @@ def test_reference_rasters_match_contract_or_skip() -> None:
     require_option_a()
     manifest = load_reference_manifest()
     verify_manifest_checksums(manifest)
-    raster_names = sorted(name for name in manifest.file_entries if Path(name).name in RASTER_FILES)
+    raster_names = sorted(
+        artifact_id for artifact_id, entry in manifest.file_entries.items() if entry.get("artifact_name") in RASTER_FILES
+    )
     if not raster_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
 
@@ -151,7 +156,9 @@ def test_reference_arrays_match_contract_or_skip() -> None:
     require_option_a()
     manifest = load_reference_manifest()
     verify_manifest_checksums(manifest)
-    array_names = sorted(name for name in manifest.file_entries if Path(name).name in NPY_FILES)
+    array_names = sorted(
+        artifact_id for artifact_id, entry in manifest.file_entries.items() if entry.get("artifact_name") in NPY_FILES
+    )
     if not array_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
 
@@ -161,7 +168,9 @@ def test_reference_tabular_and_json_match_contract_or_skip() -> None:
     manifest = load_reference_manifest()
     verify_manifest_checksums(manifest)
     artifact_names = sorted(
-        name for name in manifest.file_entries if Path(name).name in CSV_FILES or Path(name).name in JSON_FILES
+        artifact_id
+        for artifact_id, entry in manifest.file_entries.items()
+        if entry.get("artifact_name") in CSV_FILES or entry.get("artifact_name") in JSON_FILES
     )
     if not artifact_names:
         pytest.skip(f"missing reference artifact file: {REFERENCE_MANIFEST_PATH.as_posix()}")
@@ -230,17 +239,34 @@ def load_reference_manifest_from_path(manifest_path: Path, *, bundle_root: Path 
     resolved_bundle_root = bundle_root or manifest_path.parent
     files = payload.get("files", [])
     file_entries = {
-        entry["relative_path"]: entry
+        entry["artifact_id"]: entry
         for entry in files
-        if entry.get("relative_path") and entry.get("relative_path") != "REQUIRES_OPERATOR_CAPTURE"
+        if entry.get("artifact_id") and entry.get("artifact_id") != "REQUIRES_OPERATOR_CAPTURE"
     }
+    path_map = load_reference_path_map(manifest_path.parent) if bundle_root is not None else {}
     return ManifestContext(
         root=manifest_path.parent.resolve(),
         bundle_root=resolved_bundle_root.resolve(),
         files=files,
         file_entries=file_entries,
+        path_map=path_map,
         comparison_rules=payload.get("comparison_rules", {}),
     )
+
+
+def load_reference_path_map(root: Path) -> dict[str, str]:
+    if not REFERENCE_PATH_MAP_PATH.is_file():
+        pytest.skip(
+            "Reference bundle path map is missing. Regenerate it with scripts/generate_reference_manifest.py."
+        )
+    payload = json.loads(REFERENCE_PATH_MAP_PATH.read_text(encoding="utf-8"))
+    encoded_paths = payload.get("paths", {})
+    assert isinstance(encoded_paths, dict), "reference path map must contain a paths object"
+    return {artifact_id: decode_path(encoded_path) for artifact_id, encoded_path in encoded_paths.items()}
+
+
+def decode_path(encoded_path: str) -> str:
+    return urlsafe_b64decode(encoded_path.encode("ascii")).decode("utf-8")
 
 
 def verify_manifest_checksums(manifest: ManifestContext) -> None:
@@ -249,20 +275,23 @@ def verify_manifest_checksums(manifest: ManifestContext) -> None:
     if manifest.comparison_rules:
         validate_iron_swir_reference_rule(manifest.comparison_rules)
     for entry in manifest.files:
-        relative_path = entry.get("relative_path")
+        artifact_id = entry.get("artifact_id")
         expected_sha256 = entry.get("sha256")
-        if relative_path == "REQUIRES_OPERATOR_CAPTURE" or expected_sha256 == "REQUIRES_OPERATOR_CAPTURE":
+        if artifact_id == "REQUIRES_OPERATOR_CAPTURE" or expected_sha256 == "REQUIRES_OPERATOR_CAPTURE":
             pytest.skip(REFERENCE_BUNDLE_SKIP_MESSAGE)
-        assert isinstance(relative_path, str) and relative_path, "manifest file entry missing relative_path"
+        assert isinstance(artifact_id, str) and artifact_id, "manifest file entry missing artifact_id"
+        relative_path = manifest.path_map.get(artifact_id)
+        if not relative_path:
+            pytest.skip(f"missing reference artifact path-map entry: {artifact_id}")
         assert is_safe_relative_path(relative_path), f"manifest file entry is not a safe relative path: {relative_path}"
         file_path = (manifest.bundle_root / relative_path).resolve()
         if not file_path.is_file():
-            pytest.skip(f"missing reference artifact file: {relative_path}")
+            pytest.skip(f"missing reference artifact file for manifest id: {artifact_id}")
         actual_sha256 = sha256_file(file_path)
-        assert actual_sha256 == expected_sha256, f"reference artifact checksum mismatch: {relative_path}"
+        assert actual_sha256 == expected_sha256, f"reference artifact checksum mismatch: {artifact_id}"
         expected_size = entry.get("size_bytes")
         if isinstance(expected_size, int):
-            assert file_path.stat().st_size == expected_size, f"reference artifact size mismatch: {relative_path}"
+            assert file_path.stat().st_size == expected_size, f"reference artifact size mismatch: {artifact_id}"
 
 
 def validate_iron_swir_reference_rule(comparison_rules: dict[str, str]) -> None:

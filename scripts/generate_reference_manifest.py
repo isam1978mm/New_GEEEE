@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from base64 import urlsafe_b64encode
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ from app.config import Settings
 
 
 MANIFEST_PATH = Path("tests/notebook_parity/fixtures/reference_run_v1/MANIFEST.json")
+PATH_MAP_PATH = Path("tests/notebook_parity/fixtures/reference_run_v1/PATH_MAP.local.json")
 NOTEBOOK_PATH = Path("notebooks/new.ipynb")
 REQUIRES_CAPTURE = "REQUIRES_OPERATOR_CAPTURE"
 IRON_SWIR_OPTION_A_RULE = "option_a_corrected_app_reference"
@@ -34,15 +36,17 @@ def main() -> int:
         )
         return 2
 
-    manifest = build_manifest(bundle_dir)
+    manifest, path_map = build_manifest(bundle_dir)
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    PATH_MAP_PATH.write_text(json.dumps(path_map, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"Wrote MANIFEST.json with {len(manifest['files'])} files.")
     return 0
 
 
-def build_manifest(bundle_dir: Path) -> dict[str, Any]:
-    return {
+def build_manifest(bundle_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    files, path_map = manifest_files(bundle_dir)
+    manifest = {
         "schema_version": 1,
         "reference_run_id": "reference_run_v1",
         "notebook_commit_sha": git_head_sha(),
@@ -50,25 +54,52 @@ def build_manifest(bundle_dir: Path) -> dict[str, Any]:
         "capture_date_iso": datetime.now(UTC).date().isoformat(),
         "canonical_roi_label": "canonical_roi_v1",
         "grid_identity": extract_grid_identity(bundle_dir),
-        "files": manifest_files(bundle_dir),
+        "files": files,
         "comparison_rules": {
             "IRON_SWIR.tif": IRON_SWIR_OPTION_A_RULE,
         },
     }
+    return manifest, path_map
 
 
-def manifest_files(bundle_dir: Path) -> list[dict[str, Any]]:
+def manifest_files(bundle_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    for path in sorted(item for item in bundle_dir.rglob("*") if item.is_file()):
+    path_entries: dict[str, str] = {}
+    for index, path in enumerate(sorted(item for item in bundle_dir.rglob("*") if item.is_file()), start=1):
+        artifact_id = f"file_{index:06d}"
         relative_path = path.relative_to(bundle_dir).as_posix()
+        path_entries[artifact_id] = encode_path(relative_path)
         entries.append(
             {
-                "relative_path": relative_path,
+                "artifact_id": artifact_id,
+                "redacted_path": f"redacted/{artifact_id}{safe_suffix(path)}",
+                "artifact_name": safe_artifact_name(path.name),
                 "sha256": sha256_file(path),
                 "size_bytes": path.stat().st_size,
             }
         )
-    return entries
+    return entries, {"schema_version": 1, "paths": path_entries}
+
+
+def safe_suffix(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".json", ".csv", ".txt", ".tif", ".npy"}:
+        return f"_{suffix.removeprefix('.')}"
+    return "_bin"
+
+
+def encode_path(relative_path: str) -> str:
+    return urlsafe_b64encode(relative_path.encode("utf-8")).decode("ascii")
+
+
+def safe_artifact_name(filename: str) -> str:
+    lower = filename.lower()
+    unsafe_tokens = ("lat", "lon", "focus_mask_17m", "bounds", "crstransform")
+    if any(token in lower for token in unsafe_tokens):
+        return "redacted_artifact"
+    if any(char.isdigit() for char in filename):
+        return "redacted_artifact"
+    return filename
 
 
 def extract_grid_identity(bundle_dir: Path) -> dict[str, Any]:
