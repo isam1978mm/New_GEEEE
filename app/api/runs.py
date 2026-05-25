@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import select
@@ -34,6 +35,7 @@ from app.services.run_state import ensure_single_active_run
 from app.services.storage import initialize_run_storage
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class RunNotFoundError(AppError):
@@ -102,7 +104,10 @@ async def get_run(
 
 
 def enqueue_core_pipeline_run(run_id: str, settings: Settings) -> None:
-    asyncio.run(run_core_pipeline_for_run(run_id=run_id, settings=settings))
+    try:
+        asyncio.run(run_core_pipeline_for_run(run_id=run_id, settings=settings))
+    except Exception:
+        logger.exception("Background pipeline execution failed for run.")
 
 
 async def run_core_pipeline_for_run(
@@ -116,39 +121,52 @@ async def run_core_pipeline_for_run(
     engine = create_engine(settings)
     session_factory = create_session_factory(settings, engine)
     try:
-        async with session_factory() as session:
-            run = await session.scalar(select(Run).where(Run.id == run_id))
-            if run is None:
-                raise RunNotFoundError()
-            latitude = float(run.latitude)
-            longitude = float(run.longitude)
+        try:
+            async with session_factory() as session:
+                run = await session.scalar(select(Run).where(Run.id == run_id))
+                if run is None:
+                    raise RunNotFoundError()
+                latitude = float(run.latitude)
+                longitude = float(run.longitude)
 
-        grid_spec = grid_spec_override or build_run_grid(latitude, longitude)
-        orchestrator = Orchestrator(
-            settings=settings,
-            session_factory=session_factory,
-            stages=[
-                GridStage(latitude=latitude, longitude=longitude, grid_spec_override=grid_spec_override),
-                DemStage(grid_spec=grid_spec),
-                ZeroShiftStage(grid_spec=grid_spec),
-                SarRtcStage(grid_spec=grid_spec),
-                S2IndicesStage(grid_spec=grid_spec),
-                DemDerivativesStage(grid_spec=grid_spec),
-                ThermalStage(grid_spec=grid_spec),
-                FeatureStacksStage(grid_spec=grid_spec),
-                FocusMaskStage(grid_spec=grid_spec),
-                LocationExportsStage(grid_spec=grid_spec),
-                FieldOpsExportsStage(grid_spec=grid_spec),
-                GpsComparisonStage(input_lat=latitude, input_lon=longitude, grid_spec=grid_spec),
-                HypercubeStage(grid_spec=grid_spec),
-                PcaAnomalyStage(grid_spec=grid_spec),
-                ObjectExtractStage(grid_spec=grid_spec),
-                AlignmentQaStage(grid_spec=grid_spec),
-            ],
-        )
-        await orchestrator.run_run(run_id)
+            grid_spec = grid_spec_override or build_run_grid(latitude, longitude)
+            orchestrator = Orchestrator(
+                settings=settings,
+                session_factory=session_factory,
+                stages=[
+                    GridStage(latitude=latitude, longitude=longitude, grid_spec_override=grid_spec_override),
+                    DemStage(grid_spec=grid_spec),
+                    ZeroShiftStage(grid_spec=grid_spec),
+                    SarRtcStage(grid_spec=grid_spec),
+                    S2IndicesStage(grid_spec=grid_spec),
+                    DemDerivativesStage(grid_spec=grid_spec),
+                    ThermalStage(grid_spec=grid_spec),
+                    FeatureStacksStage(grid_spec=grid_spec),
+                    FocusMaskStage(grid_spec=grid_spec),
+                    LocationExportsStage(grid_spec=grid_spec),
+                    FieldOpsExportsStage(grid_spec=grid_spec),
+                    GpsComparisonStage(input_lat=latitude, input_lon=longitude, grid_spec=grid_spec),
+                    HypercubeStage(grid_spec=grid_spec),
+                    PcaAnomalyStage(grid_spec=grid_spec),
+                    ObjectExtractStage(grid_spec=grid_spec),
+                    AlignmentQaStage(grid_spec=grid_spec),
+                ],
+            )
+            await orchestrator.run_run(run_id)
+        except Exception:
+            await _mark_run_failed_if_present(session_factory, run_id)
+            raise
     finally:
         await engine.dispose()
+
+
+async def _mark_run_failed_if_present(session_factory, run_id: str) -> None:
+    async with session_factory() as session:
+        run = await session.scalar(select(Run).where(Run.id == run_id))
+        if run is None or run.status in {RunStatus.DONE, RunStatus.FAILED, RunStatus.STALE_FAILED}:
+            return
+        run.status = RunStatus.FAILED
+        await session.commit()
 
 
 def _to_run_public(run: Run) -> RunPublic:

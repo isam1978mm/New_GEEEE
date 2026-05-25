@@ -91,6 +91,27 @@ def test_post_runs_rejects_second_active_run_with_public_safe_conflict(monkeypat
         _assert_no_sensitive_public_fields(response.text)
 
 
+def test_background_pipeline_failure_marks_run_failed_without_breaking_create_response(monkeypatch) -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        monkeypatch.setattr("app.api.runs.run_core_pipeline_for_run", _failing_run_core_pipeline)
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.post("/runs", json={"lat": 35.59499, "lon": 36.12694, "name": "failing run"})
+            run_id = response.json()["id"]
+            detail_response = client.get(f"/runs/{run_id}")
+
+        assert response.status_code == 201
+        assert response.json()["status"] == "queued"
+        assert "traceback" not in response.text.casefold()
+
+        assert detail_response.status_code == 200
+        assert detail_response.json()["status"] == "failed"
+        _assert_no_sensitive_public_fields(detail_response.text)
+        assert "traceback" not in detail_response.text.casefold()
+
+
 async def _create_database(settings: Settings) -> None:
     engine = create_async_engine(settings.database_url, future=True)
     async with engine.begin() as connection:
@@ -182,6 +203,19 @@ async def _seed_run(settings: Settings, *, run_id: str, status: RunStatus, name:
         )
         await session.commit()
     await engine.dispose()
+
+
+async def _failing_run_core_pipeline(*, run_id: str, settings: Settings, grid_spec_override=None) -> None:
+    del grid_spec_override
+    engine = create_async_engine(settings.database_url, future=True)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        run = await session.scalar(select(Run).where(Run.id == run_id))
+        assert run is not None
+        run.status = RunStatus.FAILED
+        await session.commit()
+    await engine.dispose()
+    raise RuntimeError("Synthetic pipeline failure for response-chain coverage.")
 
 
 def _settings(root: Path) -> Settings:

@@ -8,6 +8,10 @@
 
   const state = {
     selectedPoint: null,
+    currentRunId: null,
+    currentRunStatus: null,
+    pollTimerId: null,
+    pollFailed: false,
   };
 
   const sampleArtifacts = [
@@ -90,6 +94,125 @@
     status.textContent = describeSelection(state.selectedPoint);
   }
 
+  function isTerminalRunStatus(status) {
+    return status === "done" || status === "failed" || status === "stale_failed" || status === "cancelled";
+  }
+
+  function describeRunStatus(status) {
+    if (status === "queued") {
+      return "Queued";
+    }
+    if (status === "running") {
+      return "Running";
+    }
+    if (status === "done") {
+      return "Done";
+    }
+    if (status === "failed" || status === "stale_failed") {
+      return "Failed";
+    }
+    if (status === "cancelled") {
+      return "Cancelled";
+    }
+    return "Idle";
+  }
+
+  function setRunLifecycleView(detail) {
+    const runIdValue = document.getElementById("run-id-value");
+    const runStateValue = document.getElementById("run-state-value");
+    const runDetailValue = document.getElementById("run-detail-value");
+    const refreshButton = document.getElementById("run-refresh");
+    if (!runIdValue || !runStateValue || !runDetailValue || !refreshButton) {
+      return;
+    }
+
+    runIdValue.textContent = detail.runId || "Not started";
+    runStateValue.textContent = detail.stateLabel;
+    runDetailValue.textContent = detail.detail;
+    refreshButton.classList.toggle("is-hidden", !detail.showManualRefresh);
+  }
+
+  function clearRunPolling() {
+    if (state.pollTimerId !== null) {
+      window.clearTimeout(state.pollTimerId);
+      state.pollTimerId = null;
+    }
+  }
+
+  async function fetchRunStatus(runId, options) {
+    const response = await fetch(`/runs/${encodeURIComponent(runId)}`);
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (_error) {
+      payload = null;
+    }
+    if (!response.ok) {
+      const message =
+        payload && typeof payload.message === "string" ? payload.message : "Run status is temporarily unavailable.";
+      throw new Error(message);
+    }
+
+    const status = typeof payload.status === "string" ? payload.status : "queued";
+    state.currentRunId = runId;
+    state.currentRunStatus = status;
+    state.pollFailed = false;
+
+    const detail =
+      status === "queued"
+        ? "Run accepted. Polling every 2 seconds."
+        : status === "running"
+          ? "Run is in progress. Polling every 2 seconds."
+          : status === "done"
+            ? "Run completed."
+            : "Run ended in a failed state.";
+
+    setRunLifecycleView({
+      runId,
+      stateLabel: describeRunStatus(status),
+      detail,
+      showManualRefresh: false,
+    });
+
+    if (!options || options.updateFeedback !== false) {
+      const feedback = document.getElementById("run-feedback");
+      if (feedback) {
+        feedback.textContent =
+          status === "done" ? `Run completed: ${runId}` : status === "failed" || status === "stale_failed" ? `Run failed: ${runId}` : `Run active: ${runId}`;
+      }
+    }
+
+    if (!isTerminalRunStatus(status)) {
+      clearRunPolling();
+      state.pollTimerId = window.setTimeout(function () {
+        void pollRunStatus(runId);
+      }, 2000);
+    } else {
+      clearRunPolling();
+    }
+
+    return payload;
+  }
+
+  async function pollRunStatus(runId) {
+    try {
+      await fetchRunStatus(runId);
+    } catch (error) {
+      clearRunPolling();
+      state.pollFailed = true;
+      setRunLifecycleView({
+        runId,
+        stateLabel: describeRunStatus(state.currentRunStatus),
+        detail: "Polling paused. Use manual refresh to retry.",
+        showManualRefresh: true,
+      });
+      const feedback = document.getElementById("run-feedback");
+      if (feedback) {
+        feedback.textContent = error instanceof Error ? error.message : "Polling failed.";
+      }
+    }
+  }
+
   function stagePointFromNormalized(x, y) {
     const boundedX = clamp(x, 0, 1);
     const boundedY = clamp(y, 0, 1);
@@ -117,6 +240,13 @@
 
     submitButton.disabled = true;
     feedback.textContent = "Queueing local run...";
+    clearRunPolling();
+    setRunLifecycleView({
+      runId: state.currentRunId || "Pending",
+      stateLabel: "Submitting",
+      detail: "Submitting run request.",
+      showManualRefresh: false,
+    });
 
     try {
       const response = await fetch("/runs", {
@@ -136,8 +266,25 @@
         throw new Error(typeof payload.message === "string" ? payload.message : "Run request failed.");
       }
 
-      feedback.textContent = `Run queued: ${payload.name || payload.id}`;
+      state.currentRunId = payload.id;
+      state.currentRunStatus = payload.status;
+      setRunLifecycleView({
+        runId: payload.id,
+        stateLabel: describeRunStatus(payload.status),
+        detail: "Run accepted. Polling every 2 seconds.",
+        showManualRefresh: false,
+      });
+      feedback.textContent = `Run queued: ${payload.id}`;
+      await fetchRunStatus(payload.id, { updateFeedback: false });
     } catch (error) {
+      clearRunPolling();
+      state.currentRunStatus = "failed";
+      setRunLifecycleView({
+        runId: state.currentRunId || "Not started",
+        stateLabel: "Failed",
+        detail: "Run request did not complete. Check the safe message below.",
+        showManualRefresh: false,
+      });
       feedback.textContent = error instanceof Error ? error.message : "Run request failed.";
     } finally {
       submitButton.disabled = false;
@@ -147,7 +294,8 @@
   function initializePinWorkspace() {
     const map = document.getElementById("pin-map");
     const form = document.getElementById("run-form");
-    if (!map || !form) {
+    const refreshButton = document.getElementById("run-refresh");
+    if (!map || !form || !refreshButton) {
       return;
     }
 
@@ -170,7 +318,25 @@
     });
 
     form.addEventListener("submit", submitRun);
+    refreshButton.addEventListener("click", function () {
+      if (!state.currentRunId) {
+        return;
+      }
+      setRunLifecycleView({
+        runId: state.currentRunId,
+        stateLabel: describeRunStatus(state.currentRunStatus),
+        detail: "Refreshing run state.",
+        showManualRefresh: false,
+      });
+      void fetchRunStatus(state.currentRunId);
+    });
     renderSelection();
+    setRunLifecycleView({
+      runId: "Not started",
+      stateLabel: "Idle",
+      detail: "Submit a run to begin polling.",
+      showManualRefresh: false,
+    });
   }
 
   function renderArtifacts(artifacts) {

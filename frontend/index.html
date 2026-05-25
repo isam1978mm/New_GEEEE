@@ -48,6 +48,15 @@
               <button class="submit-button" id="submit-run" type="submit" disabled>Queue local run</button>
             </form>
           </div>
+          <div class="run-status-card" id="run-status-card" aria-live="polite">
+            <div class="run-status-head">
+              <p class="selection-label">Run lifecycle</p>
+              <button class="refresh-button is-hidden" id="run-refresh" type="button">Manual refresh</button>
+            </div>
+            <p class="run-status-line"><span class="run-status-key">Run ID</span><span id="run-id-value">Not started</span></p>
+            <p class="run-status-line"><span class="run-status-key">State</span><span id="run-state-value">Idle</span></p>
+            <p class="run-status-line"><span class="run-status-key">Detail</span><span id="run-detail-value">Submit a run to begin polling.</span></p>
+          </div>
           <p class="map-legend">
             Keyboard fallback: focus the workspace and press <kbd>Enter</kbd> or <kbd>Space</kbd> to stage a centered pin.
           </p>

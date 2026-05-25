@@ -13,3 +13,4 @@ logs/
 *.npy
 *.npz
 .pytest-tmp/
+tests/notebook_parity/fixtures/reference_run_v1/PATH_MAP.local.json

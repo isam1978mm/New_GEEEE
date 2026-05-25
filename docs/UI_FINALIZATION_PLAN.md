@@ -56,6 +56,8 @@ Scope:
 - ensure `/runs/{run_id}` exposes a public-safe failed state
 - verify the current `RuntimeError` pattern `Caught handled exception, but response already started` does not break the response chain for run lifecycle status
 - add tests for run lifecycle rendering and safe error handling
+- Investigate whether stage failures already mark the run as failed in the DB. If not, fix the orchestrator to do so before adding UI rendering.
+- If failed runs can remain stuck in running, verify existing stale-run-on-startup cleanup handles them or add a follow-up note if it does not.
 
 Acceptance criteria:
 
