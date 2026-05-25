@@ -192,29 +192,13 @@ Rules:
 
 ## Implementation Goals
 
-Goal A: backend stage progress model/API — done
+Completed:
+- Backend stage progress API
+- UI coordinate input and stage progress
+- Local HTTP smoke test
 
-- add a public-safe stage progress representation
-- use only the safe stage names and statuses defined here
-- keep coordinates, transforms, local paths, and internal controls out of public DTOs
+Next:
+- Run status history / event timeline
 
-Goal B: UI target input and progress rendering — done
-
-- replace the authoritative blank-map input with validated latitude and longitude fields
-- keep optional run name support
-- render overall status, current stage, and stage checklist
-- keep recent-run history, lookup, artifact loading, and guarded downloads
-
-Goal C: backend run status history and UI timeline
-
-- add a public-safe status history representation
-- expose only the safe event types and fields defined here
-- render the timeline under Run lifecycle
-- keep status history free of coordinates, paths, transforms, raw errors, and internal controls
-
-Goal D: final browser smoke test and fixes
-
-- run the local UI smoke test against the implemented flow
-- verify create-run, status polling, lookup/history, progress display, status history, artifacts, and guarded downloads
-- verify public surfaces do not leak restricted fields
-- make only narrow fixes found by the smoke test
+After:
+- Final browser smoke test and narrow fixes
