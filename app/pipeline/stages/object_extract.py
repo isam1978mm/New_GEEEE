@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from collections import deque
 from pathlib import Path
 from typing import Iterable
@@ -21,6 +22,13 @@ OBJECTS_INDEX_NAME = "objects_index.csv"
 CLUSTERS_SUMMARY_NAME = "clusters_summary.csv"
 OBJECT_PATCHES_DIRNAME = "objects/object_patches"
 OBJECT_MASK_NAME = "object_mask.npy"
+REPORT_640_MANIFEST_RELATIVE_PATH = Path("QA") / "REPORT_640_manifest.json"
+REPORT_640_REQUIRED_FILES = (
+    "REPORT_640_Pottery_Report.tif",
+    "REPORT_640_Mass_Report.tif",
+    "REPORT_640_FINAL_Zero_Point_Targets.tif",
+)
+REPORT_640_NO_SOURCE_REASON = "No real app raster equivalent exists in the current object/PCA/focus/alignment output set."
 MIN_OBJECT_PIXELS = 4
 ANOMALY_PERCENTILE = 90.0
 ANOMALY_FLOOR = 0.6
@@ -313,6 +321,26 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
     }
 
 
+def write_report_640_manifest(run_dir: Path) -> Path:
+    manifest_path = run_dir / REPORT_640_MANIFEST_RELATIVE_PATH
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    reports = {
+        filename: {
+            "status": "not_implemented_no_source_equivalent",
+            "source_equivalent": None,
+            "reason": REPORT_640_NO_SOURCE_REASON,
+        }
+        for filename in REPORT_640_REQUIRED_FILES
+    }
+    payload = {
+        "schema": "notebook_report_640_manifest_v1",
+        "stage": "object_extract",
+        "reports": reports,
+    }
+    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return manifest_path
+
+
 class ObjectExtractStage(Stage):
     name = "object_extract"
     parity_category = ParityCategory.PARITY_REPRODUCES
@@ -324,6 +352,7 @@ class ObjectExtractStage(Stage):
         anomaly, hypercube = load_object_extract_inputs(context.run_dir, self.grid_spec)
         products = build_object_products(anomaly, hypercube)
         outputs = write_object_outputs(context.run_dir, products)
+        report_manifest_path = write_report_640_manifest(context.run_dir)
         patch_paths = outputs["patches"]
         assert isinstance(patch_paths, list)
 
@@ -345,6 +374,13 @@ class ObjectExtractStage(Stage):
                 relative_path=Path(outputs["mask_npy"]).relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=Path(outputs["mask_npy"]).stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_REPORT_640_manifest",
+                relative_path=report_manifest_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=report_manifest_path.stat().st_size,
                 http_servable=False,
             ),
         ]
@@ -371,5 +407,7 @@ class ObjectExtractStage(Stage):
                 "object_count": len(objects),
                 "cluster_count": len(clusters),
                 "candidate_threshold": threshold,
+                "report_640_status": "not_implemented_no_source_equivalent",
+                "report_640_files": list(REPORT_640_REQUIRED_FILES),
             },
         )

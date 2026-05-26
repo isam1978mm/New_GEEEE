@@ -166,6 +166,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert object_classes["objects_index"] == ArtifactClass.REDACTED_PUBLIC
         assert object_classes["clusters_summary"] == ArtifactClass.REDACTED_PUBLIC
         assert object_classes["object_mask"] == ArtifactClass.FILESYSTEM_ONLY
+        assert object_classes["notebook_REPORT_640_manifest"] == ArtifactClass.FILESYSTEM_ONLY
         patch_names = [name for name in object_classes if name.startswith("object_patch_")]
         assert patch_names
         assert all(object_classes[name] == ArtifactClass.FILESYSTEM_ONLY for name in patch_names)
