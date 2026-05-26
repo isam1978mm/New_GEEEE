@@ -61,6 +61,14 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "renderStatusHistory" in js_response.text
     assert "current_stage" in js_response.text
     assert "history" in js_response.text
+    assert "Completed" in js_response.text
+    assert "Waiting for first stage" in js_response.text
+    assert "Historical run; detailed stage progress is unavailable." in js_response.text
+    assert "Detailed stage progress is unavailable for this failed run." in js_response.text
+    assert "Waiting for first stage update." in js_response.text
+    assert "No detailed status history is available for this run." in js_response.text
+    assert "Stage progress is not available yet." not in js_response.text
+    assert "Status history is not available yet." not in js_response.text
     assert "stage-progress-list" in js_response.text
     assert "status-history-list" in js_response.text
     assert "selectedPoint" not in js_response.text

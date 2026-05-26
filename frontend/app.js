@@ -114,18 +114,37 @@
     }
 
     const stages = Array.isArray(runDetail && runDetail.stages) ? runDetail.stages : [];
+    const runStatus = typeof runDetail.status === "string" ? runDetail.status : null;
     const currentStageName = typeof runDetail.current_stage === "string" ? runDetail.current_stage : null;
     const currentStage = stages.find(function (stage) {
       return stage && stage.name === currentStageName;
     });
 
-    currentStageValue.textContent = currentStage ? currentStage.label : "Not active";
+    if (currentStage) {
+      currentStageValue.textContent = currentStage.label;
+    } else if (runStatus === "done") {
+      currentStageValue.textContent = "Completed";
+    } else if (runStatus === "failed" || runStatus === "stale_failed") {
+      currentStageValue.textContent = "Failed";
+    } else if (runStatus === "queued" || runStatus === "running") {
+      currentStageValue.textContent = "Waiting for first stage";
+    } else {
+      currentStageValue.textContent = "Not active";
+    }
     list.innerHTML = "";
 
     if (stages.length === 0) {
       const item = document.createElement("li");
       item.className = "stage-progress-item stage-progress-empty";
-      item.textContent = "Stage progress is not available yet.";
+      if (runStatus === "done") {
+        item.textContent = "Historical run; detailed stage progress is unavailable.";
+      } else if (runStatus === "failed" || runStatus === "stale_failed") {
+        item.textContent = "Detailed stage progress is unavailable for this failed run.";
+      } else if (runStatus === "queued" || runStatus === "running") {
+        item.textContent = "Waiting for first stage update.";
+      } else {
+        item.textContent = "Detailed stage progress is unavailable.";
+      }
       list.appendChild(item);
       return;
     }
@@ -163,7 +182,7 @@
     if (history.length === 0) {
       const item = document.createElement("li");
       item.className = "status-history-item status-history-empty";
-      item.textContent = "Status history is not available yet.";
+      item.textContent = "No detailed status history is available for this run.";
       list.appendChild(item);
       return;
     }

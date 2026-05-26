@@ -215,6 +215,37 @@ def test_run_detail_uses_persisted_public_safe_status_history() -> None:
         _assert_no_sensitive_public_fields(response.text)
 
 
+def test_terminal_runs_without_stage_manifests_get_sparse_fallback_history() -> None:
+    cases = [
+        (RunStatus.DONE, "run_done"),
+        (RunStatus.FAILED, "run_failed"),
+        (RunStatus.STALE_FAILED, "run_stale_failed"),
+    ]
+    for status, terminal_event in cases:
+        with TemporaryDirectory() as temp_dir:
+            settings = _settings(Path(temp_dir))
+            asyncio.run(_create_database(settings))
+            asyncio.run(_seed_run(settings, run_id=f"{status.value}-sparse-run", status=status, name="sparse"))
+
+            with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+                response = client.get(f"/runs/{status.value}-sparse-run")
+
+            assert response.status_code == 200
+            body = response.json()
+            assert body["status"] == status.value
+            assert body["current_stage"] is None
+            assert body["stages"] == []
+            assert [event["event_type"] for event in body["history"]] == [
+                "run_created",
+                "run_queued",
+                terminal_event,
+            ]
+            assert all(set(event) <= {"timestamp", "event_type", "label", "stage_name", "message"} for event in body["history"])
+            assert all(not event["event_type"].startswith("stage_") for event in body["history"])
+            assert all(event.get("stage_name") is None for event in body["history"])
+            _assert_no_sensitive_public_fields(response.text)
+
+
 async def _create_database(settings: Settings) -> None:
     engine = create_async_engine(settings.database_url, future=True)
     async with engine.begin() as connection:

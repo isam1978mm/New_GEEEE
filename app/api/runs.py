@@ -225,8 +225,8 @@ def _build_stage_progress(*, settings: Settings, run_id: str, run_status: RunSta
             status = "pending"
         stages.append(RunStageProgressPublic(name=safe_name, label=public_label, status=status))
 
-    if run_status == RunStatus.DONE and not manifest_statuses:
-        return [RunStageProgressPublic(name=name, label=label, status="skipped") for name, label in SAFE_STAGE_PROGRESS]
+    if run_status in {RunStatus.DONE, RunStatus.FAILED, RunStatus.STALE_FAILED} and not manifest_statuses:
+        return []
     return stages
 
 
