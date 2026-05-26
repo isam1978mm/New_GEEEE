@@ -21,7 +21,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 2. Confirm the UI starts polling run status and progress.
    Expected result:
-   the UI checks run status every 2 seconds while the run is still `queued` or `running`, shows the current public-safe stage, and renders the stage checklist.
+   the UI checks run status every 2 seconds while the run is still `queued` or `running`, shows the current public-safe stage, renders the stage checklist, and shows a `Status history` timeline with the latest safe run event.
 
 3. Observe terminal state handling.
    Expected result:
@@ -45,7 +45,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 8. Select a run from history.
    Expected result:
-   the selected run shows its run ID, status, public-safe stage progress, terminal state, and artifacts when available.
+   the selected run shows its run ID, status, public-safe stage progress, status history, terminal state, and artifacts when available.
 
 9. Load the public-safe artifact list.
    Expected result:

@@ -176,7 +176,8 @@ body {
   display: none;
 }
 
-.stage-progress-list {
+.stage-progress-list,
+.status-history-list {
   display: grid;
   gap: 8px;
   margin: 4px 0 0;
@@ -184,7 +185,8 @@ body {
   list-style: none;
 }
 
-.stage-progress-item {
+.stage-progress-item,
+.status-history-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,20 +197,27 @@ body {
   border: 1px solid rgba(31, 43, 34, 0.08);
 }
 
-.stage-progress-empty {
+.stage-progress-empty,
+.status-history-empty {
   display: block;
   color: var(--muted);
 }
 
-.stage-progress-label {
+.stage-progress-label,
+.status-history-label {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.stage-progress-status {
+.stage-progress-status,
+.status-history-message {
   color: var(--accent-strong);
   font-size: 0.84rem;
   font-weight: 700;
+}
+
+.status-history-message {
+  text-align: right;
 }
 
 .run-input {

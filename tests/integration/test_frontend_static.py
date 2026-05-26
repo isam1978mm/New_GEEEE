@@ -22,6 +22,8 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert 'id="target-lon"' in response.text
     assert "Current stage" in response.text
     assert "stage-progress-list" in response.text
+    assert "Status history" in response.text
+    assert "status-history-list" in response.text
     assert "Run lookup" in response.text
     assert "Refresh runs" in response.text
     assert "Load run" in response.text
@@ -56,8 +58,11 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "target-lat" in js_response.text
     assert "target-lon" in js_response.text
     assert "renderStageProgress" in js_response.text
+    assert "renderStatusHistory" in js_response.text
     assert "current_stage" in js_response.text
+    assert "history" in js_response.text
     assert "stage-progress-list" in js_response.text
+    assert "status-history-list" in js_response.text
     assert "selectedPoint" not in js_response.text
     assert "pin-map" not in js_response.text
     assert "stagePointFromNormalized" not in js_response.text

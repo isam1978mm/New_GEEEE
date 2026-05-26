@@ -13,6 +13,7 @@ from app.db.models.run import Run
 from app.errors import ArtifactClassError, ParityMetadataError, StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult
 from app.pipeline.manifest import save_stage_manifest
+from app.services.run_history import append_run_event
 from app.services.storage import initialize_run_storage
 
 
@@ -40,10 +41,12 @@ class Orchestrator:
         run = await self._get_run(run_id)
         run_dir = initialize_run_storage(self.settings, run_id)
         await self._set_run_status(run_id, RunStatus.RUNNING)
+        append_run_event(self.settings, run_id, "run_started")
 
         records: list[StageExecutionRecord] = []
         for stage in self.stages:
             try:
+                append_run_event(self.settings, run_id, "stage_started", stage_name=stage.name)
                 await self._persist_stage_status(run_id, stage.name, "running", stage, artifact_count=0)
                 result = await stage.run(StageContext(run_id=run.id, settings=self.settings, run_dir=run_dir))
                 self._validate_stage_result(result)
@@ -63,6 +66,7 @@ class Orchestrator:
                         status="done",
                     )
                 )
+                append_run_event(self.settings, run_id, "stage_done", stage_name=stage.name)
             except Exception:
                 await self._persist_stage_status(
                     run_id,
@@ -72,10 +76,13 @@ class Orchestrator:
                     artifact_count=0,
                     metadata={"failure": "stage_failed"},
                 )
+                append_run_event(self.settings, run_id, "stage_failed", stage_name=stage.name)
                 await self._set_run_status(run_id, RunStatus.FAILED)
+                append_run_event(self.settings, run_id, "run_failed")
                 raise
 
         await self._set_run_status(run_id, RunStatus.DONE)
+        append_run_event(self.settings, run_id, "run_done")
         return records
 
     def _validate_stage_registry(self) -> None:

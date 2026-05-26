@@ -12,6 +12,7 @@ from app.config import Settings
 from app.db.base import Base
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
+from app.services.run_history import append_run_event
 from app.services.storage import write_stage_manifest
 
 
@@ -44,6 +45,7 @@ def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch
         body = detail_response.json()
         assert body["id"] == run_id
         assert body["status"] == "done"
+        assert "history" in body
         assert {artifact["name"] for artifact in body["artifacts"]} == {"objects_index", "alignment_qa"}
         assert all("relative_path" not in artifact for artifact in body["artifacts"])
         assert all("sha256" not in artifact for artifact in body["artifacts"])
@@ -135,7 +137,13 @@ def test_run_detail_exposes_public_safe_stage_progress() -> None:
         assert all(set(stage) == {"name", "label", "status"} for stage in body["stages"])
         assert {stage["status"] for stage in body["stages"]} <= {"pending", "running", "done", "failed", "skipped"}
         assert {stage["label"] for stage in body["stages"]} >= {"GRID setup", "SAR RTC", "Alignment QA"}
-        assert "stage_name" not in response.text
+        assert body["history"]
+        assert {"run_created", "run_queued", "run_started", "stage_done", "stage_started"} <= {
+            event["event_type"] for event in body["history"]
+        }
+        assert all(set(event) <= {"timestamp", "event_type", "label", "stage_name", "message"} for event in body["history"])
+        stage_names = {stage["name"] for stage in body["stages"]}
+        assert {event["stage_name"] for event in body["history"] if event.get("stage_name")} <= stage_names
         assert "artifact_count" not in response.text
         _assert_no_sensitive_public_fields(response.text)
 
@@ -162,9 +170,48 @@ def test_run_detail_exposes_failed_stage_without_internal_error_content() -> Non
         assert body["current_stage"] == "dem"
         assert body["stages"][1] == {"name": "dem", "label": "DEM", "status": "failed"}
         assert all(set(stage) == {"name", "label", "status"} for stage in body["stages"])
-        assert "stage_failed" not in response.text
+        assert {"stage_failed", "run_failed"} <= {event["event_type"] for event in body["history"]}
+        failed_event = next(event for event in body["history"] if event["event_type"] == "stage_failed")
+        assert failed_event["stage_name"] == "dem"
+        assert failed_event["label"] == "DEM failed"
+        assert failed_event["message"] == "DEM stage failed."
         assert "metadata" not in response.text
         assert "traceback" not in response.text.casefold()
+        _assert_no_sensitive_public_fields(response.text)
+
+
+def test_run_detail_uses_persisted_public_safe_status_history() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        asyncio.run(_seed_run(settings, run_id="history-run", status=RunStatus.QUEUED, name="history"))
+        append_run_event(settings, "history-run", "run_created")
+        append_run_event(settings, "history-run", "run_queued")
+        append_run_event(settings, "history-run", "run_started")
+        append_run_event(settings, "history-run", "stage_started", stage_name="sar_rtc")
+        write_stage_manifest(settings, "history-run", "sar_rtc", {"status": "running", "artifact_count": 0})
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get("/runs/history-run")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["current_stage"] == "sar_rtc"
+        assert [event["event_type"] for event in body["history"]] == [
+            "run_created",
+            "run_queued",
+            "run_started",
+            "stage_started",
+        ]
+        assert body["history"][-1] == {
+            "timestamp": body["history"][-1]["timestamp"],
+            "event_type": "stage_started",
+            "label": "SAR RTC started",
+            "message": "SAR RTC stage started.",
+            "stage_name": "sar_rtc",
+        }
+        assert "artifact_count" not in response.text
+        assert "metadata" not in response.text
         _assert_no_sensitive_public_fields(response.text)
 
 

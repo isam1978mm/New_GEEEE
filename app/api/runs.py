@@ -30,7 +30,8 @@ from app.pipeline.stages.sar_rtc import SarRtcStage
 from app.pipeline.stages.thermal import ThermalStage
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
-from app.schemas.run import RunCreate, RunDetailPublic, RunPublic, RunStageProgressPublic
+from app.schemas.run import RunCreate, RunDetailPublic, RunHistoryEventPublic, RunPublic, RunStageProgressPublic
+from app.services.run_history import append_run_event, build_run_event, read_run_history_events
 from app.services.run_state import ensure_single_active_run
 from app.services.storage import initialize_run_storage, read_manifest, get_run_dir
 
@@ -86,6 +87,8 @@ async def create_run(
     del run_dir
     grid_spec = build_run_grid(float(payload.lat), float(payload.lon))
     save_grid_manifest(settings, run.id, grid_spec.manifest)
+    append_run_event(settings, run.id, "run_created", timestamp=run.created_at or None)
+    append_run_event(settings, run.id, "run_queued", timestamp=run.created_at or None)
     await session.commit()
     await session.refresh(run)
 
@@ -116,6 +119,7 @@ async def get_run(
     )
     public_artifacts = [_to_artifact_public(artifact) for artifact in artifact_rows if _is_publicly_listable_artifact(artifact)]
     progress = _build_stage_progress(settings=settings, run_id=run_id, run_status=run.status)
+    history = _build_run_history(settings=settings, run=run, stages=progress)
     return RunDetailPublic(
         id=run.id,
         name=run.name,
@@ -123,6 +127,7 @@ async def get_run(
         created_at=run.created_at,
         current_stage=_current_stage(progress),
         stages=progress,
+        history=history,
         artifacts=public_artifacts,
     )
 
@@ -178,19 +183,20 @@ async def run_core_pipeline_for_run(
             )
             await orchestrator.run_run(run_id)
         except Exception:
-            await _mark_run_failed_if_present(session_factory, run_id)
+            await _mark_run_failed_if_present(session_factory, run_id, settings=settings)
             raise
     finally:
         await engine.dispose()
 
 
-async def _mark_run_failed_if_present(session_factory, run_id: str) -> None:
+async def _mark_run_failed_if_present(session_factory, run_id: str, *, settings: Settings) -> None:
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))
         if run is None or run.status in {RunStatus.DONE, RunStatus.FAILED, RunStatus.STALE_FAILED}:
             return
         run.status = RunStatus.FAILED
         await session.commit()
+    append_run_event(settings, run_id, "run_failed")
 
 
 def _to_run_public(run: Run) -> RunPublic:
@@ -222,6 +228,59 @@ def _build_stage_progress(*, settings: Settings, run_id: str, run_status: RunSta
     if run_status == RunStatus.DONE and not manifest_statuses:
         return [RunStageProgressPublic(name=name, label=label, status="skipped") for name, label in SAFE_STAGE_PROGRESS]
     return stages
+
+
+def _build_run_history(*, settings: Settings, run: Run, stages: list[RunStageProgressPublic]) -> list[RunHistoryEventPublic]:
+    events = read_run_history_events(settings, run.id)
+    if not events:
+        events = _fallback_run_history(run=run, stages=stages)
+    return [
+        RunHistoryEventPublic(
+            timestamp=event.timestamp,
+            event_type=event.event_type,
+            label=event.label,
+            stage_name=event.stage_name,
+            message=event.message,
+        )
+        for event in events
+    ]
+
+
+def _fallback_run_history(*, run: Run, stages: list[RunStageProgressPublic]):
+    events = []
+    created = run.created_at
+    for event_type in ("run_created", "run_queued"):
+        event = build_run_event(event_type=event_type, timestamp=created)
+        if event is not None:
+            events.append(event)
+
+    if any(stage.status in {"running", "done", "failed"} for stage in stages):
+        event = build_run_event(event_type="run_started", timestamp=created)
+        if event is not None:
+            events.append(event)
+
+    for stage in stages:
+        if stage.status == "running":
+            event = build_run_event(event_type="stage_started", stage_name=stage.name, timestamp=created)
+        elif stage.status == "done":
+            event = build_run_event(event_type="stage_done", stage_name=stage.name, timestamp=created)
+        elif stage.status == "failed":
+            event = build_run_event(event_type="stage_failed", stage_name=stage.name, timestamp=created)
+        else:
+            event = None
+        if event is not None:
+            events.append(event)
+
+    terminal_event_type = {
+        RunStatus.DONE: "run_done",
+        RunStatus.FAILED: "run_failed",
+        RunStatus.STALE_FAILED: "run_stale_failed",
+    }.get(run.status)
+    if terminal_event_type:
+        event = build_run_event(event_type=terminal_event_type, timestamp=created)
+        if event is not None:
+            events.append(event)
+    return events
 
 
 def _read_stage_manifest_statuses(*, settings: Settings, run_id: str) -> dict[str, str]:

@@ -151,6 +151,44 @@
     }
   }
 
+  function renderStatusHistory(runDetail) {
+    const list = document.getElementById("status-history-list");
+    if (!list) {
+      return;
+    }
+
+    const history = Array.isArray(runDetail && runDetail.history) ? runDetail.history : [];
+    list.innerHTML = "";
+
+    if (history.length === 0) {
+      const item = document.createElement("li");
+      item.className = "status-history-item status-history-empty";
+      item.textContent = "Status history is not available yet.";
+      list.appendChild(item);
+      return;
+    }
+
+    for (const event of history) {
+      if (!event || typeof event.label !== "string" || typeof event.message !== "string") {
+        continue;
+      }
+      const item = document.createElement("li");
+      item.className = "status-history-item";
+
+      const label = document.createElement("span");
+      label.className = "status-history-label";
+      label.textContent = event.label;
+
+      const message = document.createElement("span");
+      message.className = "status-history-message";
+      message.textContent = event.message;
+
+      item.appendChild(label);
+      item.appendChild(message);
+      list.appendChild(item);
+    }
+  }
+
   function renderArtifactMessage(message) {
     const list = document.getElementById("artifact-list");
     const count = document.getElementById("artifact-count");
@@ -370,6 +408,7 @@
       showManualRefresh: false,
     });
     renderStageProgress(payload);
+    renderStatusHistory(payload);
 
     if (!options || options.updateFeedback !== false) {
       const feedback = document.getElementById("run-feedback");
@@ -536,6 +575,7 @@
       showManualRefresh: false,
     });
     renderStageProgress({ current_stage: null, stages: [] });
+    renderStatusHistory({ history: [] });
     renderArtifactMessage("Artifacts will appear after a run completes.");
     void loadRecentRuns();
   }
