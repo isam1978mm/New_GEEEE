@@ -18,6 +18,13 @@ The UI shows a public-safe run view:
 
 The UI does not show target coordinates, raw spatial metadata, local machine locations, internal validation controls, raw processing errors, or secrets.
 
+Operator reminder:
+
+- use the actual running local port, currently `8007`
+- after changing `.env` or code, restart the FastAPI server
+- after a restart, hard reload the browser with `Ctrl+F5`
+- confirm `/readyz` is healthy before creating a run
+
 ## What Exists Locally After A Run
 
 Each run writes its working files under:
@@ -44,6 +51,8 @@ Downloads use the guarded route:
 `/runs/{run_id}/artifacts/{artifact_name}`
 
 The API decides whether an artifact can be served. The UI does not construct direct file links and does not show artifacts that the API omits.
+
+If a run fails, zero downloadable artifacts is expected. Failed runs do not produce public-safe output downloads.
 
 ## What Is Local/Internal Only
 
@@ -325,3 +334,16 @@ These future or contracted families must not be treated as current public UI out
 ## Operator Reading Rule
 
 If an output appears in the UI, it is a public-safe artifact selected by the API. If it exists only under `data/runs/<run_id>/`, it is local operator material and may contain internal information. Use the guarded UI download links for public-safe exports and use the local run folder only for trusted local inspection.
+
+## Troubleshooting Readiness And DEM Failures
+
+Use this check sequence before retrying a failed run:
+
+1. Confirm the server was restarted after any `.env` or code change.
+2. Hard reload the browser with `Ctrl+F5`.
+3. Check `/readyz` on the active local port before queuing a run.
+4. If `/readyz` reports `ee_not_ready`, inspect Earth Engine service-account configuration.
+5. Verify `EE_SERVICE_ACCOUNT_KEY_PATH` points to an existing service-account JSON file.
+6. Verify `.env` settings are separated cleanly, one setting per line.
+
+If Earth Engine is not ready, the `DEM` stage can fail immediately and the run will not produce downloadable outputs.

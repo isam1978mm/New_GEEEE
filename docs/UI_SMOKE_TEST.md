@@ -8,16 +8,31 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 ## Preconditions
 
-- the app is running locally
+- the app is running locally on the intended port, currently `8007`
 - the operator can open the local UI
 - required local configuration is already in place
 - the operator is using the accepted production API surface, not internal validation-only hooks
+
+## Restart And Readiness Checks
+
+- after changing `.env` or application code, restart the FastAPI server before testing
+- after restarting the server, hard reload the browser with `Ctrl+F5`
+- open the UI on the actual running port, currently `http://127.0.0.1:8007`
+- check `http://127.0.0.1:8007/readyz` before creating a run
+- if `/readyz` returns `ee_not_ready`, stop and fix Earth Engine configuration before creating a run
+- verify `EE_SERVICE_ACCOUNT_KEY_PATH` points to an existing service-account JSON file
+- ensure each `.env` setting is on its own line; do not join multiple settings on one line
+- be aware that the DEM stage can fail almost immediately if Earth Engine is not ready
+- failed runs can still appear in history, but they will not produce downloadable outputs
 
 ## Smoke Test Steps
 
 1. Enter the target point and create a run from the UI.
    Expected result:
    the UI requires valid latitude and longitude values before enabling the queue button, accepts the submission, and returns a visible run ID.
+
+   Operator note:
+   if `/readyz` is not healthy first, do not queue the run. Fix readiness, restart the server, and hard reload the browser before trying again.
 
 2. Confirm the UI starts polling run status and progress.
    Expected result:
@@ -30,6 +45,9 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 4. Verify failed-run handling if a run fails.
    Expected result:
    the UI shows a public-safe failed state without stack traces or internal exception content.
+
+   Operator note:
+   if the run fails during `DEM`, check `/readyz` and Earth Engine service-account configuration before assuming there is a pipeline bug.
 
 5. Verify polling-failure behavior.
    Expected result:
@@ -50,6 +68,9 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 9. Load the public-safe artifact list.
    Expected result:
    the UI renders the real artifact list from the API for the selected run.
+
+   Operator note:
+   failed runs are expected to show no downloadable outputs.
 
 10. Test artifact download links.
    Expected result:
