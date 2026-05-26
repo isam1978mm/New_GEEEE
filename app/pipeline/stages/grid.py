@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import (
     ParityCategory,
@@ -16,6 +18,11 @@ from app.pipeline.manifest import save_grid_manifest
 from app.services.grid import GridManifest, build_grid_manifest
 
 DEFAULT_NODATA = -9999.0
+NOTEBOOK_QA_DIR = "QA"
+NOTEBOOK_QA_GRID_DX_NAME = "QA_GRID_dx_m_640.tif"
+NOTEBOOK_QA_GRID_DY_NAME = "QA_GRID_dy_m_640.tif"
+NOTEBOOK_QA_GRID_VALIDMASK_NAME = "QA_GRID_validmask_640.tif"
+NOTEBOOK_RUN_MANIFEST_NAME = "RUN_MANIFEST.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +120,64 @@ def write_grid_guard_summary(run_dir: Path, grid_spec: GridSpec) -> Path:
     return path
 
 
+def write_notebook_qa_grid_outputs(run_dir: Path, grid_spec: GridSpec) -> list[Path]:
+    from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
+
+    qa_dir = run_dir / NOTEBOOK_QA_DIR
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    zeros = np.zeros((grid_spec.size, grid_spec.size), dtype=np.float32)
+    validmask = np.ones((grid_spec.size, grid_spec.size), dtype=np.float32)
+    outputs = [
+        (NOTEBOOK_QA_GRID_DX_NAME, zeros),
+        (NOTEBOOK_QA_GRID_DY_NAME, zeros),
+        (NOTEBOOK_QA_GRID_VALIDMASK_NAME, validmask),
+    ]
+    written_paths: list[Path] = []
+    for filename, array in outputs:
+        path = qa_dir / filename
+        write_georeferenced_raster(path, array, grid_spec)
+        write_raster_sidecar(
+            path,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=array.shape,
+        )
+        written_paths.append(path)
+    return written_paths
+
+
+def write_notebook_run_manifest(run_dir: Path, run_id: str, grid_spec: GridSpec) -> Path:
+    qa_dir = run_dir / NOTEBOOK_QA_DIR
+    qa_dir.mkdir(parents=True, exist_ok=True)
+    path = qa_dir / NOTEBOOK_RUN_MANIFEST_NAME
+    payload = {
+        "schema": "notebook_compatible_run_manifest_v1",
+        "run_id": run_id,
+        "grid": {
+            "crs": grid_spec.crs,
+            "epsg": int(grid_spec.manifest.epsg),
+            "scale_m": float(grid_spec.manifest.scale_m),
+            "out_size": grid_spec.size,
+            "nodata": float(grid_spec.nodata),
+        },
+        "output_groups": [
+            "DEM_GEO8_TIFS",
+            "GEOTIFF_RADAR_BANDS",
+            "NPY_RADAR_BANDS",
+            "NPY_STACKS",
+            "QA",
+        ],
+        "qa_grid_outputs": [
+            NOTEBOOK_QA_GRID_DX_NAME,
+            NOTEBOOK_QA_GRID_DY_NAME,
+            NOTEBOOK_QA_GRID_VALIDMASK_NAME,
+        ],
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
 class GridStage(Stage):
     name = "grid"
     parity_category = ParityCategory.PARITY_REPRODUCES
@@ -134,6 +199,8 @@ class GridStage(Stage):
         grid_spec = self.grid_spec_override or build_run_grid(self.latitude, self.longitude, nodata=self.nodata)
         manifest_path = save_grid_manifest(context.settings, context.run_id, grid_spec.manifest)
         guard_summary_path = write_grid_guard_summary(context.run_dir, grid_spec)
+        qa_grid_paths = write_notebook_qa_grid_outputs(context.run_dir, grid_spec)
+        notebook_manifest_path = write_notebook_run_manifest(context.run_dir, context.run_id, grid_spec)
         artifacts = [
             build_stage_artifact(
                 name="grid_manifest",
@@ -149,11 +216,34 @@ class GridStage(Stage):
                 http_servable=False,
             ),
         ]
+        artifacts.extend(
+            build_stage_artifact(
+                name={
+                    NOTEBOOK_QA_GRID_DX_NAME: "notebook_QA_GRID_dx_m_640",
+                    NOTEBOOK_QA_GRID_DY_NAME: "notebook_QA_GRID_dy_m_640",
+                    NOTEBOOK_QA_GRID_VALIDMASK_NAME: "notebook_QA_GRID_validmask_640",
+                }[path.name],
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=path.stat().st_size,
+            )
+            for path in qa_grid_paths
+        )
+        artifacts.append(
+            build_stage_artifact(
+                name="notebook_RUN_MANIFEST",
+                relative_path=notebook_manifest_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=notebook_manifest_path.stat().st_size,
+            )
+        )
         return StageResult(
             artifacts=artifacts,
             metadata={
                 "crs": grid_spec.crs,
                 "size_px": grid_spec.size,
                 "nodata": grid_spec.nodata,
+                "notebook_qa_grid_outputs": [path.name for path in qa_grid_paths],
+                "notebook_run_manifest": NOTEBOOK_RUN_MANIFEST_NAME,
             },
         )

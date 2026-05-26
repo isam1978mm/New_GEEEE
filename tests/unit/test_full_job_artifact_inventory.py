@@ -51,6 +51,10 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(grid_result) == {
             "grid_manifest": ArtifactClass.LOCAL_SENSITIVE,
             "grid_guard_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_QA_GRID_dx_m_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_QA_GRID_dy_m_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_QA_GRID_validmask_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_RUN_MANIFEST": ArtifactClass.LOCAL_SENSITIVE,
         }
         assert _artifact_classes(dem_result) == {
             "dem_tif": ArtifactClass.LOCAL_SENSITIVE,

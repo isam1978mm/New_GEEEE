@@ -9,7 +9,9 @@ from pyproj import Transformer
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
-from app.pipeline.stages.grid import GridStage, grid_spec_from_notebook_radar_meta
+from app.pipeline.stages.dem import raster_sidecar_path
+from app.pipeline.stages.grid import GridStage, build_run_grid, grid_spec_from_notebook_radar_meta
+from app.services.storage import read_manifest
 from app.services.grid import build_grid_manifest
 
 
@@ -70,20 +72,56 @@ def test_grid_stage_writes_grid_guard_summary_as_filesystem_only() -> None:
         run_dir = Path(temp_dir)
         context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
         stage = GridStage(latitude=35.59499, longitude=36.12694)
+        grid_spec = build_run_grid(35.59499, 36.12694)
 
         result = asyncio.run(stage.run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["grid_manifest", "grid_guard_summary"]
+        assert [artifact.name for artifact in result.artifacts] == [
+            "grid_manifest",
+            "grid_guard_summary",
+            "notebook_QA_GRID_dx_m_640",
+            "notebook_QA_GRID_dy_m_640",
+            "notebook_QA_GRID_validmask_640",
+            "notebook_RUN_MANIFEST",
+        ]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
         assert artifact_classes == {
             "grid_manifest": ArtifactClass.LOCAL_SENSITIVE,
             "grid_guard_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_QA_GRID_dx_m_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_QA_GRID_dy_m_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_QA_GRID_validmask_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_RUN_MANIFEST": ArtifactClass.LOCAL_SENSITIVE,
         }
         guard_summary = json.loads((run_dir / "qa" / "grid_dem" / "grid_guard_summary.json").read_text(encoding="utf-8"))
         assert guard_summary["stage"] == "grid"
         assert guard_summary["grid_identity_recorded"] is True
         assert "bounds_m" not in guard_summary
         assert "crs_transform" not in guard_summary
+
+        qa_dir = run_dir / "QA"
+        for filename in ("QA_GRID_dx_m_640.tif", "QA_GRID_dy_m_640.tif", "QA_GRID_validmask_640.tif"):
+            path = qa_dir / filename
+            assert path.is_file()
+            sidecar = read_manifest(raster_sidecar_path(path))
+            assert sidecar["crs"] == grid_spec.crs
+            assert sidecar["height"] == grid_spec.size
+            assert sidecar["width"] == grid_spec.size
+            assert sidecar["transform"] == grid_spec.manifest.crs_transform
+            assert sidecar["dtype"] == "float32"
+
+        run_manifest = json.loads((qa_dir / "RUN_MANIFEST.json").read_text(encoding="utf-8"))
+        assert run_manifest["schema"] == "notebook_compatible_run_manifest_v1"
+        assert run_manifest["run_id"] == "run-1"
+        assert run_manifest["grid"]["crs"] == grid_spec.crs
+        assert run_manifest["grid"]["out_size"] == grid_spec.size
+        assert run_manifest["grid"]["nodata"] == grid_spec.nodata
+        assert "bounds" not in json.dumps(run_manifest).lower()
+        assert "transform" not in json.dumps(run_manifest).lower()
+        assert "latitude" not in json.dumps(run_manifest).lower()
+        assert "longitude" not in json.dumps(run_manifest).lower()
+        artifact_paths = {artifact.name: run_dir / artifact.relative_path for artifact in result.artifacts}
+        assert artifact_paths["grid_manifest"].is_file()
 
 
 def test_notebook_radar_meta_grid_override_preserves_exact_grid_values(tmp_path: Path) -> None:
