@@ -14,6 +14,14 @@
     alignment_mask_selection: "selected masks used for alignment QA",
   };
 
+  const ARTIFACT_DISPLAY_FILENAMES = {
+    objects_index: "objects_index.csv",
+    clusters_summary: "clusters_summary.csv",
+    alignment_qa: "alignment_qa.json",
+    alignment_audit: "alignment_audit.json",
+    alignment_mask_selection: "alignment_mask_selection.json",
+  };
+
   const state = {
     currentRunId: null,
     currentRunStatus: null,
@@ -43,6 +51,13 @@
     const artifactName = artifact.name;
     const artifactStem = artifactName.replace(/\.[^.]+$/, "");
     return ARTIFACT_DESCRIPTIONS[artifactName] || ARTIFACT_DESCRIPTIONS[artifactStem] || "public-safe run artifact";
+  }
+
+  function displayArtifactName(artifact) {
+    if (!artifact || typeof artifact.name !== "string") {
+      return "run artifact";
+    }
+    return ARTIFACT_DISPLAY_FILENAMES[artifact.name] || artifact.name;
   }
 
   function parseTargetInput() {
@@ -306,7 +321,7 @@
 
       const label = document.createElement("span");
       label.className = "artifact-label";
-      label.textContent = artifact.name;
+      label.textContent = displayArtifactName(artifact);
 
       const description = document.createElement("span");
       description.className = "artifact-description";
