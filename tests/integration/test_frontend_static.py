@@ -24,6 +24,21 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "stage-progress-list" in response.text
     assert "Status history" in response.text
     assert "status-history-list" in response.text
+    assert "What outputs will I get?" in response.text
+    assert "public-safe artifacts" in response.text
+    assert "data/runs/&lt;run_id&gt;/" in response.text
+    assert "guarded links" in response.text
+    assert "FILESYSTEM_ONLY" in response.text
+    assert "GRID/DEM" in response.text
+    assert "SAR" in response.text
+    assert "Sentinel-2 indices" in response.text
+    assert "DEM derivatives" in response.text
+    assert "thermal" in response.text
+    assert "hypercube/PCA" in response.text
+    assert "object extraction" in response.text
+    assert "alignment QA" in response.text
+    assert "docs/RUN_OUTPUTS.md" in response.text
+    assert 'href="docs/RUN_OUTPUTS.md"' not in response.text
     assert "Run lookup" in response.text
     assert "Refresh runs" in response.text
     assert "Load run" in response.text

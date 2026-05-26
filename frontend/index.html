@@ -69,6 +69,18 @@
             Parity scope: production runs use the app-authoritative GRID. Notebook-exact GRID is validation/replay-only;
             fresh-ROI notebook parity is not claimed, and app-only outputs are not parity failures.
           </p>
+          <div class="output-guidance" aria-labelledby="output-guidance-title">
+            <h3 id="output-guidance-title">What outputs will I get?</h3>
+            <p>
+              The UI shows only public-safe artifacts. Full local outputs live under
+              <code>data/runs/&lt;run_id&gt;/</code>, and downloads use guarded links.
+            </p>
+            <p>
+              <code>FILESYSTEM_ONLY</code> and internal outputs are not shown here. Outputs may include
+              GRID/DEM, SAR, Sentinel-2 indices, DEM derivatives, thermal, hypercube/PCA,
+              object extraction, and alignment QA. See <code>docs/RUN_OUTPUTS.md</code>.
+            </p>
+          </div>
           <div class="run-browser" aria-labelledby="run-browser-title">
             <div class="run-browser-head">
               <h3 id="run-browser-title">Run lookup</h3>
