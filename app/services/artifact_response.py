@@ -25,10 +25,15 @@ def public_download_filename(artifact_name: str) -> str:
     return ARTIFACT_DOWNLOAD_FILENAMES.get(artifact_name, artifact_name)
 
 
+def is_expected_download_filename(*, artifact_name: str, download_filename: str) -> bool:
+    return public_download_filename(artifact_name) == download_filename
+
+
 async def serve_artifact_response(
     *,
     run_id: str,
     artifact_name: str,
+    download_filename: str | None = None,
     settings: Settings,
     session: AsyncSession,
 ) -> FileResponse:
@@ -50,6 +55,10 @@ async def serve_artifact_response(
     )
     decision = can_serve_artifact(internal_artifact, settings)
     if not decision.allow:
+        raise ArtifactServeViolation()
+    if download_filename is not None and not is_expected_download_filename(
+        artifact_name=artifact.name, download_filename=download_filename
+    ):
         raise ArtifactServeViolation()
 
     artifact_path = resolve_run_artifact_path(settings, run_id, artifact.relative_path)

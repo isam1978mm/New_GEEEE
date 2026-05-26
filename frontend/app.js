@@ -41,7 +41,8 @@
   }
 
   function buildArtifactHref(runId, artifact) {
-    return `${SPA_CONFIG.guardedArtifactPrefix}${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifact.name)}`;
+    const downloadFilename = displayArtifactName(artifact);
+    return `${SPA_CONFIG.guardedArtifactPrefix}${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifact.name)}/download/${encodeURIComponent(downloadFilename)}`;
   }
 
   function describeArtifact(artifact) {

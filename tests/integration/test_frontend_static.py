@@ -106,6 +106,8 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "pin-map" not in js_response.text
     assert "stagePointFromNormalized" not in js_response.text
     assert '/artifacts/' in js_response.text
+    assert '/download/' in js_response.text
+    assert 'artifacts/${encodeURIComponent(artifact.name)}/download/${encodeURIComponent(downloadFilename)}' in js_response.text
     assert "link.download = displayArtifactName(artifact);" in js_response.text
     assert 'FILESYSTEM_ONLY' in js_response.text
     assert "experimental_" in js_response.text

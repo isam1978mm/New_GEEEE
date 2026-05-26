@@ -24,3 +24,20 @@ async def get_artifact(
         settings=settings,
         session=session,
     )
+
+
+@router.get("/runs/{run_id}/artifacts/{artifact_name}/download/{download_filename}")
+async def download_artifact(
+    run_id: str,
+    artifact_name: str,
+    download_filename: str,
+    settings: Settings = Depends(get_settings_from_request),
+    session: AsyncSession = Depends(get_db_session),
+) -> Response:
+    return await serve_artifact_response(
+        run_id=run_id,
+        artifact_name=artifact_name,
+        download_filename=download_filename,
+        settings=settings,
+        session=session,
+    )

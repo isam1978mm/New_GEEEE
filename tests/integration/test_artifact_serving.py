@@ -11,7 +11,7 @@ from app.config import Settings
 from app.db.base import Base
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
-from app.services.artifact_response import public_download_filename
+from app.services.artifact_response import is_expected_download_filename, public_download_filename
 
 
 async def seed_artifact(
@@ -74,6 +74,8 @@ def test_public_download_filename_mapping_is_safe_and_keeps_unknown_names() -> N
     assert public_download_filename("alignment_audit") == "alignment_audit.json"
     assert public_download_filename("alignment_mask_selection") == "alignment_mask_selection.json"
     assert public_download_filename("unknown_artifact") == "unknown_artifact"
+    assert is_expected_download_filename(artifact_name="objects_index", download_filename="objects_index.csv") is True
+    assert is_expected_download_filename(artifact_name="objects_index", download_filename="objects_index") is False
 
 
 def test_known_logical_artifact_download_uses_public_filename_with_extension() -> None:
@@ -100,6 +102,16 @@ def test_known_logical_json_artifact_download_uses_public_filename_with_extensio
                 expected_filename="alignment_qa.json",
             )
         )
+
+
+def test_new_download_route_accepts_safe_filename_and_old_route_still_works() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_dual_route_test(Path(temp_dir)))
+
+
+def test_new_download_route_rejects_wrong_safe_filename() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_wrong_filename_route_test(Path(temp_dir)))
 
 
 def _assert_artifact_response(
@@ -212,5 +224,83 @@ async def _run_known_artifact_filename_test(
         assert response.status_code == 200
         assert response.text.replace("\r\n", "\n") == expected_body
         assert f'filename="{expected_filename}"' in response.headers["content-disposition"]
+    finally:
+        await engine.dispose()
+
+
+async def _run_dual_route_test(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    db_path = data_dir / "gee_screening.db"
+    settings = Settings(data_dir=data_dir, database_path=db_path)
+    app = create_app(settings)
+
+    engine = create_async_engine(settings.database_url, future=True)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        run_id = "run-1"
+        run_dir = data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "objects_index.csv").write_text("object_id\n1\n", encoding="utf-8")
+
+        async with session_factory() as session:
+            await seed_artifact(
+                session,
+                run_id=run_id,
+                artifact_name="objects_index",
+                artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                relative_path="objects_index.csv",
+            )
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            old_route_response = client.get(f"/runs/{run_id}/artifacts/objects_index")
+            new_route_response = client.get(f"/runs/{run_id}/artifacts/objects_index/download/objects_index.csv")
+
+        assert old_route_response.status_code == 200
+        assert new_route_response.status_code == 200
+        assert old_route_response.text.replace("\r\n", "\n") == "object_id\n1\n"
+        assert new_route_response.text.replace("\r\n", "\n") == "object_id\n1\n"
+        assert 'filename="objects_index.csv"' in old_route_response.headers["content-disposition"]
+        assert 'filename="objects_index.csv"' in new_route_response.headers["content-disposition"]
+    finally:
+        await engine.dispose()
+
+
+async def _run_wrong_filename_route_test(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    db_path = data_dir / "gee_screening.db"
+    settings = Settings(data_dir=data_dir, database_path=db_path)
+    app = create_app(settings)
+
+    engine = create_async_engine(settings.database_url, future=True)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        run_id = "run-1"
+        run_dir = data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "objects_index.csv").write_text("object_id\n1\n", encoding="utf-8")
+
+        async with session_factory() as session:
+            await seed_artifact(
+                session,
+                run_id=run_id,
+                artifact_name="objects_index",
+                artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                relative_path="objects_index.csv",
+            )
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.get(f"/runs/{run_id}/artifacts/objects_index/download/objects_index")
+
+        assert response.status_code == 404
+        assert response.json() == {
+            "error": "artifact_unavailable",
+            "message": "Artifact is unavailable.",
+        }
     finally:
         await engine.dispose()
