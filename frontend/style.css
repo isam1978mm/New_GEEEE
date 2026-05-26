@@ -275,7 +275,8 @@ kbd {
   line-height: 1.5;
 }
 
-.run-browser {
+.run-browser,
+.run-outputs {
   display: grid;
   gap: 12px;
   margin: 18px 0;
@@ -286,6 +287,7 @@ kbd {
 }
 
 .run-browser-head,
+.run-outputs-head,
 .lookup-row,
 .run-history-item {
   display: flex;
@@ -293,11 +295,13 @@ kbd {
   gap: 12px;
 }
 
-.run-browser-head {
+.run-browser-head,
+.run-outputs-head {
   justify-content: space-between;
 }
 
-.run-browser-head h3 {
+.run-browser-head h3,
+.run-outputs-head h3 {
   margin: 0;
   font-size: 1rem;
 }
@@ -386,7 +390,9 @@ kbd {
 }
 
 .artifact-card-empty {
-  display: block;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
   color: var(--muted);
 }
 
@@ -397,6 +403,14 @@ kbd {
 .artifact-meta {
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.artifact-message {
+  color: var(--muted);
+}
+
+.artifact-message-detail {
+  display: block;
 }
 
 .artifact-link {
@@ -429,6 +443,7 @@ kbd {
 
   .lookup-row,
   .run-browser-head,
+  .run-outputs-head,
   .run-history-item {
     align-items: stretch;
     flex-direction: column;

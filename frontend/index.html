@@ -59,8 +59,7 @@
 
         <section class="panel results-panel" aria-labelledby="results-title">
           <div class="panel-head">
-            <h2 id="results-title">Visible Artifacts</h2>
-            <span class="status-chip" id="artifact-count">0 visible</span>
+            <h2 id="results-title">Results</h2>
           </div>
           <p class="panel-copy">
             The frontend excludes experimental outputs and Class IV filesystem-only artifacts.
@@ -81,6 +80,16 @@
               object extraction, and alignment QA. See <code>docs/RUN_OUTPUTS.md</code>.
             </p>
           </div>
+          <div class="run-outputs" aria-labelledby="run-outputs-title">
+            <div class="run-outputs-head">
+              <h3 id="run-outputs-title">Run outputs</h3>
+              <span class="status-chip" id="artifact-count">0 artifacts</span>
+            </div>
+            <p class="history-status">
+              Public-safe artifacts appear here when a run completes.
+            </p>
+            <ul class="artifact-list" id="artifact-list"></ul>
+          </div>
           <div class="run-browser" aria-labelledby="run-browser-title">
             <div class="run-browser-head">
               <h3 id="run-browser-title">Run lookup</h3>
@@ -96,7 +105,6 @@
             <p class="history-status" id="history-status" aria-live="polite">Recent runs will load automatically.</p>
             <ul class="run-history-list" id="run-history-list"></ul>
           </div>
-          <ul class="artifact-list" id="artifact-list"></ul>
         </section>
       </main>
     </div>

@@ -91,6 +91,30 @@
     return "Idle";
   }
 
+  function syncRecentRunFromDetail(runDetail) {
+    if (!runDetail || typeof runDetail.id !== "string" || typeof runDetail.status !== "string") {
+      return;
+    }
+
+    let changed = false;
+    state.recentRuns = state.recentRuns.map(function (run) {
+      if (!run || run.id !== runDetail.id) {
+        return run;
+      }
+      changed = true;
+      return {
+        ...run,
+        name: Object.prototype.hasOwnProperty.call(runDetail, "name") ? runDetail.name : run.name,
+        status: runDetail.status,
+        created_at: runDetail.created_at || run.created_at,
+      };
+    });
+
+    if (changed) {
+      renderRunHistory(state.recentRuns);
+    }
+  }
+
   function setRunLifecycleView(detail) {
     const runIdValue = document.getElementById("run-id-value");
     const runStateValue = document.getElementById("run-state-value");
@@ -208,7 +232,7 @@
     }
   }
 
-  function renderArtifactMessage(message) {
+  function renderArtifactMessage(message, detailMessage) {
     const list = document.getElementById("artifact-list");
     const count = document.getElementById("artifact-count");
     const tileMode = document.getElementById("tile-mode");
@@ -217,12 +241,21 @@
     }
 
     tileMode.textContent = SPA_CONFIG.externalTilesEnabled ? "External tiles enabled" : "External tiles disabled";
-    count.textContent = "0 visible";
+    count.textContent = "0 artifacts";
     list.innerHTML = "";
 
     const item = document.createElement("li");
     item.className = "artifact-card artifact-card-empty";
-    item.textContent = message;
+    const primary = document.createElement("span");
+    primary.className = "artifact-message";
+    primary.textContent = message;
+    item.appendChild(primary);
+    if (detailMessage) {
+      const detail = document.createElement("span");
+      detail.className = "artifact-meta artifact-message-detail";
+      detail.textContent = detailMessage;
+      item.appendChild(detail);
+    }
     list.appendChild(item);
   }
 
@@ -236,11 +269,14 @@
 
     const visibleArtifacts = Array.isArray(artifacts) ? artifacts.filter(isVisibleArtifact) : [];
     tileMode.textContent = SPA_CONFIG.externalTilesEnabled ? "External tiles enabled" : "External tiles disabled";
-    count.textContent = `${visibleArtifacts.length} visible`;
+    count.textContent = `${visibleArtifacts.length} artifact${visibleArtifacts.length === 1 ? "" : "s"}`;
 
     list.innerHTML = "";
     if (visibleArtifacts.length === 0) {
-      renderArtifactMessage("Run completed with no public artifacts.");
+      renderArtifactMessage(
+        "No UI-downloadable artifacts are available for this run.",
+        "Full local outputs are stored under data/runs/<" + "run" + "_id>/."
+      );
       return;
     }
 
@@ -410,6 +446,7 @@
     state.currentRunId = runId;
     state.currentRunStatus = status;
     state.pollFailed = false;
+    syncRecentRunFromDetail(payload);
 
     const detail =
       status === "queued"

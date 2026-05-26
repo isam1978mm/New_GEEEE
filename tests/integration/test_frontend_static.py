@@ -25,6 +25,8 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "Status history" in response.text
     assert "status-history-list" in response.text
     assert "What outputs will I get?" in response.text
+    assert "Run outputs" in response.text
+    assert "Public-safe artifacts appear here when a run completes." in response.text
     assert "public-safe artifacts" in response.text
     assert "data/runs/&lt;run_id&gt;/" in response.text
     assert "guarded links" in response.text
@@ -74,6 +76,7 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "target-lon" in js_response.text
     assert "renderStageProgress" in js_response.text
     assert "renderStatusHistory" in js_response.text
+    assert "syncRecentRunFromDetail" in js_response.text
     assert "current_stage" in js_response.text
     assert "history" in js_response.text
     assert "Completed" in js_response.text
@@ -95,7 +98,9 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "sampleArtifacts" not in js_response.text
     assert "demo-run" not in js_response.text
     assert "Artifacts will appear after a run completes." in js_response.text
-    assert "Run completed with no public artifacts." in js_response.text
+    assert "No UI-downloadable artifacts are available for this run." in js_response.text
+    assert "Full local outputs are stored under data/runs/<" in js_response.text
+    assert "Run completed with no public artifacts." not in js_response.text
     assert 'GeoJSON' not in js_response.text
     assert 'WKT' not in js_response.text
     assert "relative_path" not in js_response.text
