@@ -11,6 +11,7 @@ dependencies = [
     "alembic>=1.16.0",
     "fastapi>=0.115.0",
     "pydantic-settings>=2.8.0",
+    "rasterio>=1.4.0",
     "sqlalchemy>=2.0.0",
     "aiosqlite>=0.21.0",
     "earthengine-api>=1.7.24",
