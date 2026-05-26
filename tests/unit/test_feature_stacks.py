@@ -12,7 +12,7 @@ from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
-from app.pipeline.stages.feature_stacks import FeatureStacksStage, SCIENCE_CORE_BANDS
+from app.pipeline.stages.feature_stacks import FeatureStacksStage, NOTEBOOK_STACK_OUTPUT_DIR, SCIENCE_CORE_BANDS
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
@@ -48,6 +48,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "stack_presence_summary",
             "tensor_audit_summary",
             "geometry_consistency_summary",
+            "notebook_RADAR_STACK_HWC_640_npy",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -60,6 +61,12 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         radar_linear_stack = np.load(run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.npy")
         assert radar_linear_stack.shape == (grid_spec.size, grid_spec.size, 4)
         assert float(radar_linear_stack[:, :, 0].min()) >= 0.0
+        notebook_radar_stack_path = run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "RADAR_STACK_HWC_640_app.npy"
+        assert notebook_radar_stack_path.is_file()
+        notebook_radar_stack = np.load(notebook_radar_stack_path)
+        assert notebook_radar_stack.dtype == np.float32
+        assert notebook_radar_stack.shape == (grid_spec.size, grid_spec.size, 4)
+        np.testing.assert_array_equal(notebook_radar_stack, radar_linear_stack)
         radar_linear_sidecar = read_manifest(
             raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.tif")
         )

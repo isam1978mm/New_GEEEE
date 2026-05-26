@@ -49,6 +49,8 @@ BAND_STATS_CSV = "band_stats.csv"
 STACK_PRESENCE_SUMMARY_JSON = "stack_presence_summary.json"
 TENSOR_AUDIT_SUMMARY_JSON = "tensor_audit_summary.json"
 GEOMETRY_CONSISTENCY_SUMMARY_JSON = "geometry_consistency_summary.json"
+NOTEBOOK_STACK_OUTPUT_DIR = "NPY_STACKS"
+NOTEBOOK_RADAR_STACK_NPY = "RADAR_STACK_HWC_640_app.npy"
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 EPS = 1e-6
@@ -286,9 +288,11 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     tensor_dir = run_dir / "stacks" / "tensor_support"
     optical_dir = run_dir / "stacks" / "optical_support"
     qa_dir = run_dir / "qa" / "stacks"
+    notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
     tensor_dir.mkdir(parents=True, exist_ok=True)
     optical_dir.mkdir(parents=True, exist_ok=True)
     qa_dir.mkdir(parents=True, exist_ok=True)
+    notebook_stack_dir.mkdir(parents=True, exist_ok=True)
 
     stack_tif_path = tensor_dir / SCIENCE_CORE_STACK_TIF
     stack_npy_path = tensor_dir / SCIENCE_CORE_STACK_NPY
@@ -303,11 +307,13 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     stack_presence_path = qa_dir / STACK_PRESENCE_SUMMARY_JSON
     tensor_audit_path = qa_dir / TENSOR_AUDIT_SUMMARY_JSON
     geometry_summary_path = qa_dir / GEOMETRY_CONSISTENCY_SUMMARY_JSON
+    notebook_radar_stack_npy_path = notebook_stack_dir / NOTEBOOK_RADAR_STACK_NPY
 
     _save_multipage_tiff(stack_tif_path, cube)
     np.save(stack_npy_path, cube)
     _save_multipage_tiff(radar_linear_tif_path, radar_linear_stack)
     np.save(radar_linear_npy_path, radar_linear_stack)
+    np.save(notebook_radar_stack_npy_path, radar_linear_stack)
     write_georeferenced_raster(radar_db_tif_path, radar_db_stack, grid_spec)
     np.save(radar_db_npy_path, radar_db_stack)
     _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)
@@ -372,6 +378,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         "stack_presence_summary_json": stack_presence_path,
         "tensor_audit_summary_json": tensor_audit_path,
         "geometry_consistency_summary_json": geometry_summary_path,
+        "notebook_radar_stack_npy": notebook_radar_stack_npy_path,
     }
 
 
@@ -476,6 +483,13 @@ class FeatureStacksStage(Stage):
                 relative_path=outputs["geometry_consistency_summary_json"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["geometry_consistency_summary_json"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_RADAR_STACK_HWC_640_npy",
+                relative_path=outputs["notebook_radar_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_radar_stack_npy"].stat().st_size,
                 http_servable=False,
             ),
         ]

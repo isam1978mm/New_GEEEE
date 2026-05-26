@@ -116,6 +116,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "stack_presence_summary": ArtifactClass.FILESYSTEM_ONLY,
             "tensor_audit_summary": ArtifactClass.FILESYSTEM_ONLY,
             "geometry_consistency_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_RADAR_STACK_HWC_640_npy": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(focus_mask_result) == {
             "focus_zone_17m_tif": ArtifactClass.FILESYSTEM_ONLY,
@@ -140,6 +141,8 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(hypercube_result) == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_npy": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_band_order": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_band_stats": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_norm_params": ArtifactClass.LOCAL_SENSITIVE,

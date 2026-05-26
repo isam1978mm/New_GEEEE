@@ -20,6 +20,11 @@ HYPERCUBE_BAND_ORDER_NAME = "hypercube_band_order.csv"
 HYPERCUBE_STATS_NAME = "hypercube_band_stats.csv"
 HYPERCUBE_NORM_PARAMS_NAME = "hypercube_norm_params.csv"
 HYPERCUBE_AUDIT_NAME = "hypercube_audit.csv"
+NOTEBOOK_STACK_OUTPUT_DIR = "NPY_STACKS"
+NOTEBOOK_HYPERCUBE_TIF_NAME = "FINAL_TESLA_V7_2_HYPERCUBE.tif"
+NOTEBOOK_HYPERCUBE_NPY_NAME = "FINAL_TESLA_V7_2_HYPERCUBE.npy"
+NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME = "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif"
+NOTEBOOK_PATCHED_14B_STATUS = "not_implemented_no_source_equivalent"
 EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}
 EPS = 1e-6
 
@@ -132,12 +137,25 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
     stats_path = run_dir / HYPERCUBE_STATS_NAME
     norm_params_path = run_dir / HYPERCUBE_NORM_PARAMS_NAME
     audit_path = run_dir / "qa" / "parity" / HYPERCUBE_AUDIT_NAME
+    notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    notebook_tif_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME
+    notebook_npy_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME
     audit_path.parent.mkdir(parents=True, exist_ok=True)
+    notebook_stack_dir.mkdir(parents=True, exist_ok=True)
 
     _save_multipage_tiff(tif_path, cube_raw)
     np.save(npy_path, cube_raw)
+    _save_multipage_tiff(notebook_tif_path, cube_raw)
+    np.save(notebook_npy_path, cube_raw)
     write_raster_sidecar(
         tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=cube_raw.shape[:2],
+    )
+    write_raster_sidecar(
+        notebook_tif_path,
         grid_manifest=grid_spec.manifest,
         nodata=grid_spec.nodata,
         dtype="float32",
@@ -220,6 +238,8 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
     return {
         "hypercube_tif": tif_path,
         "hypercube_npy": npy_path,
+        "notebook_hypercube_tif": notebook_tif_path,
+        "notebook_hypercube_npy": notebook_npy_path,
         "band_order_csv": order_path,
         "band_stats_csv": stats_path,
         "norm_params_csv": norm_params_path,
@@ -260,6 +280,18 @@ class HypercubeStage(Stage):
                 size_bytes=outputs["hypercube_npy"].stat().st_size,
             ),
             build_stage_artifact(
+                name="notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif",
+                relative_path=outputs["notebook_hypercube_tif"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["notebook_hypercube_tif"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy",
+                relative_path=outputs["notebook_hypercube_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["notebook_hypercube_npy"].stat().st_size,
+            ),
+            build_stage_artifact(
                 name="hypercube_band_order",
                 relative_path=outputs["band_order_csv"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
@@ -293,5 +325,7 @@ class HypercubeStage(Stage):
                 "band_names": band_names,
                 "band_count": len(band_names),
                 "shape": [self.grid_spec.size, self.grid_spec.size, len(band_names)],
+                "notebook_patched_14b_filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+                "notebook_patched_14b_status": NOTEBOOK_PATCHED_14B_STATUS,
             },
         )
