@@ -21,6 +21,7 @@ from app.pipeline.stages.sar_rtc import (
     SAR_NPY_OUTPUT_DIR,
     NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR,
     NOTEBOOK_SAR_NPY_OUTPUT_DIR,
+    NOTEBOOK_SAR_INTERMEDIATE_DIR,
     MAX_ORBIT_DT_DAYS,
     MAX_PAIR_DT_HOURS,
     MAX_PAIRS,
@@ -505,6 +506,11 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_sar_npy_RADAR_VH_dB_640",
             "notebook_sar_npy_RADAR_logRatio_dB_640",
             "notebook_sar_npy_RADAR_angle_640",
+            "notebook_sar_intermediate_manifest",
+            "notebook_sar_intermediate_post_rtc_VV_dB",
+            "notebook_sar_intermediate_post_rtc_VH_dB",
+            "notebook_sar_intermediate_post_rtc_logRatio_dB",
+            "notebook_sar_intermediate_post_rtc_angle",
             "sar_pair_diagnostics",
             "sar_summary",
             "sar_nodata_audit",
@@ -528,6 +534,11 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_sar_npy_RADAR_VH_dB_640": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_sar_npy_RADAR_logRatio_dB_640": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_sar_npy_RADAR_angle_640": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_manifest": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_VV_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_VH_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_logRatio_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_angle": ArtifactClass.FILESYSTEM_ONLY,
             "sar_pair_diagnostics": ArtifactClass.FILESYSTEM_ONLY,
             "sar_summary": ArtifactClass.FILESYSTEM_ONLY,
             "sar_nodata_audit": ArtifactClass.FILESYSTEM_ONLY,
@@ -541,6 +552,11 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_sar_npy_RADAR_VH_dB_640",
             "notebook_sar_npy_RADAR_logRatio_dB_640",
             "notebook_sar_npy_RADAR_angle_640",
+            "notebook_sar_intermediate_manifest",
+            "notebook_sar_intermediate_post_rtc_VV_dB",
+            "notebook_sar_intermediate_post_rtc_VH_dB",
+            "notebook_sar_intermediate_post_rtc_logRatio_dB",
+            "notebook_sar_intermediate_post_rtc_angle",
         ):
             assert artifact_http_flags[artifact_name] is False
         assert artifact_http_flags["sar_pair_diagnostics"] is False
@@ -597,6 +613,33 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             array = np.load(notebook_npy_dir / filename)
             assert array.dtype == np.float32
             assert array.shape == (640, 640)
+
+        intermediate_dir = run_dir / NOTEBOOK_SAR_INTERMEDIATE_DIR
+        intermediate_manifest = json.loads((intermediate_dir / "sar_intermediate_manifest.json").read_text(encoding="utf-8"))
+        assert intermediate_manifest["schema"] == "notebook_sar_intermediates_v1"
+        assert intermediate_manifest["stages"]["per_image_products_db"]["status"] == "not_implemented_no_source_equivalent"
+        assert intermediate_manifest["stages"]["pair_median"]["status"] == "not_implemented_no_source_equivalent"
+        assert intermediate_manifest["stages"]["final_median_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
+        assert intermediate_manifest["stages"]["post_sample_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
+        assert intermediate_manifest["stages"]["post_rtc"]["status"] == "implemented"
+        assert intermediate_manifest["stages"]["post_rtc"]["bands"] == {
+            "VV_dB": "post_rtc/final_VV_dB.npy",
+            "VH_dB": "post_rtc/final_VH_dB.npy",
+            "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
+            "angle": "post_rtc/final_angle.npy",
+        }
+        serialized_intermediate_manifest = json.dumps(intermediate_manifest, sort_keys=True)
+        assert "bounds" not in serialized_intermediate_manifest
+        assert "transform" not in serialized_intermediate_manifest
+        assert "C:\\" not in serialized_intermediate_manifest
+        for filename in ("final_VV_dB.npy", "final_VH_dB.npy", "final_logRatio_dB.npy", "final_angle.npy"):
+            array = np.load(intermediate_dir / "post_rtc" / filename)
+            assert array.dtype == np.float32
+            assert array.shape == (640, 640)
+        np.testing.assert_array_equal(
+            np.load(intermediate_dir / "post_rtc" / "final_angle.npy"),
+            np.load(run_dir / SAR_NPY_OUTPUT_DIR / "incidence.npy"),
+        )
 
         pair_diagnostics = json.loads((run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
         assert pair_diagnostics["artifact_class"] == "FILESYSTEM_ONLY"

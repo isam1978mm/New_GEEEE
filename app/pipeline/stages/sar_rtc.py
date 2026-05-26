@@ -35,6 +35,7 @@ OUTPUT_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 SAR_NPY_OUTPUT_DIR = "npy_radar_bands"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
+NOTEBOOK_SAR_INTERMEDIATE_DIR = "QA/sar/intermediates"
 NOTEBOOK_SAR_OUTPUT_SUFFIX = "app"
 SAR_NPY_ARTIFACT_NAMES = {
     "VV_dB": "sar_npy_VV_dB",
@@ -49,6 +50,18 @@ NOTEBOOK_SAR_BAND_NAMES = {
     "incidence": "RADAR_angle",
 }
 APP_BAND_BY_NOTEBOOK_SAR_BAND_NAME = {notebook_name: app_name for app_name, notebook_name in NOTEBOOK_SAR_BAND_NAMES.items()}
+NOTEBOOK_SAR_INTERMEDIATE_MISSING_STAGES = (
+    "per_image_products_db",
+    "pair_median",
+    "final_median_pre_rtc",
+    "post_sample_pre_rtc",
+)
+NOTEBOOK_SAR_POST_RTC_BANDS = {
+    "VV_dB": "VV_dB",
+    "VH_dB": "VH_dB",
+    "logRatio_dB": "logRatio_dB",
+    "angle": "incidence",
+}
 
 
 class RadarCubeFetcher(Protocol):
@@ -510,6 +523,49 @@ def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]
     return written_paths
 
 
+def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
+    base_dir = run_dir / NOTEBOOK_SAR_INTERMEDIATE_DIR
+    post_rtc_dir = base_dir / "post_rtc"
+    post_rtc_dir.mkdir(parents=True, exist_ok=True)
+    written_paths: list[Path] = []
+    bands: dict[str, str] = {}
+    for notebook_band, app_band in NOTEBOOK_SAR_POST_RTC_BANDS.items():
+        filename = f"final_{notebook_band}.npy"
+        path = post_rtc_dir / filename
+        np.save(path, outputs[app_band].astype(np.float32, copy=False))
+        written_paths.append(path)
+        bands[notebook_band] = f"post_rtc/{filename}"
+
+    manifest_path = base_dir / "sar_intermediate_manifest.json"
+    stages = {
+        stage_name: {
+            "status": "not_implemented_no_source_equivalent",
+            "items": [],
+            "missing_reason": "The production SAR stage does not persist this notebook intermediate before post-RTC output.",
+        }
+        for stage_name in NOTEBOOK_SAR_INTERMEDIATE_MISSING_STAGES
+    }
+    stages["post_rtc"] = {
+        "status": "implemented",
+        "bands": bands,
+    }
+    payload = {
+        "schema": "notebook_sar_intermediates_v1",
+        "stage": "sar_rtc",
+        "local_only": True,
+        "stages": stages,
+    }
+    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return [manifest_path, *written_paths]
+
+
+def _notebook_sar_intermediate_artifact_name(path: Path) -> str:
+    if path.name == "sar_intermediate_manifest.json":
+        return "notebook_sar_intermediate_manifest"
+    band_name = path.stem.removeprefix("final_")
+    return f"notebook_sar_intermediate_post_rtc_{band_name}"
+
+
 def build_band_summary_rows(outputs: dict[str, np.ndarray], *, nodata: float) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for band_name in OUTPUT_BANDS:
@@ -734,6 +790,7 @@ class SarRtcStage(Stage):
         notebook_tif_paths = write_notebook_sar_geotiff_outputs(context.run_dir, self.grid_spec, outputs)
         npy_paths = write_sar_npy_outputs(context.run_dir, outputs)
         notebook_npy_paths = write_notebook_sar_npy_outputs(context.run_dir, outputs)
+        notebook_intermediate_paths = write_notebook_sar_intermediate_outputs(context.run_dir, outputs)
         qa_paths = write_sar_qa_outputs(
             context.run_dir,
             outputs=outputs,
@@ -779,6 +836,16 @@ class SarRtcStage(Stage):
                 http_servable=False,
             )
             for path in notebook_npy_paths
+        )
+        artifacts.extend(
+            build_stage_artifact(
+                name=_notebook_sar_intermediate_artifact_name(path),
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=path.stat().st_size,
+                http_servable=False,
+            )
+            for path in notebook_intermediate_paths
         )
         artifacts.extend(
             build_stage_artifact(
