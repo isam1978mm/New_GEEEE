@@ -12,6 +12,19 @@ from app.services.artifact_policy import can_serve_artifact
 from app.services.storage import resolve_run_artifact_path
 
 
+ARTIFACT_DOWNLOAD_FILENAMES = {
+    "objects_index": "objects_index.csv",
+    "clusters_summary": "clusters_summary.csv",
+    "alignment_qa": "alignment_qa.json",
+    "alignment_audit": "alignment_audit.json",
+    "alignment_mask_selection": "alignment_mask_selection.json",
+}
+
+
+def public_download_filename(artifact_name: str) -> str:
+    return ARTIFACT_DOWNLOAD_FILENAMES.get(artifact_name, artifact_name)
+
+
 async def serve_artifact_response(
     *,
     run_id: str,
@@ -43,4 +56,4 @@ async def serve_artifact_response(
     if not artifact_path.is_file():
         raise ArtifactNotFoundError()
 
-    return FileResponse(path=artifact_path, filename=artifact.name)
+    return FileResponse(path=artifact_path, filename=public_download_filename(artifact.name))
