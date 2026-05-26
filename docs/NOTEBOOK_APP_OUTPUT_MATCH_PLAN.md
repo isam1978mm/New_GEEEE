@@ -87,7 +87,7 @@ A full app/notebook output match means:
 
 ## Planned Goals
 
-### Goal A — Actual output inventory comparison
+### Goal A — Actual output inventory comparison *(Phase 1 — Complete)*
 
 Create a factual comparison between the actual notebook reference output folder and an actual successful app run folder.
 
@@ -133,7 +133,7 @@ Goal A must answer:
 
 No production code changes in Goal A.
 
-### Goal B — Define the notebook-output app contract
+### Goal B — Define the notebook-output app contract *(Phase 2 — Complete)*
 
 Turn the inventory comparison into a formal app output contract.
 
@@ -157,23 +157,13 @@ The contract must define:
 
 No science logic changes in Goal B.
 
-### Goal C — Implement missing local app outputs
+### Goal C — Implement missing local app outputs *(Phase 3 — In Progress)*
 
-Make the app write notebook-equivalent outputs into the app run folder.
+Make the app write notebook-equivalent outputs into the app run folder. Split into sub-phases so each is independently reviewable and mergeable.
 
-Likely implementation areas:
+Do not remove useful existing app outputs unless there is a deliberate migration decision.
 
-- DEM stage
-- SAR RTC stage
-- DEM derivatives stage
-- zero shift / focus mask stage
-- hypercube / stack stage
-- QA/report stage
-- object/report generation stage
-- run manifest writer
-- artifact registration
-
-Expected local app tree:
+Expected local app tree (full target):
 
 ```text
 data/runs/<run_id>/
@@ -188,7 +178,104 @@ data/runs/<run_id>/
 └── RUN_MANIFEST.json
 ```
 
-Do not remove useful existing app outputs unless there is a deliberate migration decision.
+#### Phase 3A — DEM_GEO8_TIFS notebook-compatible outputs
+
+Required outputs:
+
+- `DEM_GEO8_TIFS/DEM_640.tif`
+- `DEM_GEO8_TIFS/slope_deg_640.tif`
+- `DEM_GEO8_TIFS/aspect_deg_640.tif`
+- `DEM_GEO8_TIFS/roughness_100m_640.tif`
+- `DEM_GEO8_TIFS/tpi_100m_640.tif`
+- `DEM_GEO8_TIFS/hillshade_0to1_640.tif`
+
+Scope:
+
+- Emit notebook-compatible copies/names for existing DEM equivalents.
+- Add the missing `hillshade_0to1_640.tif` output derived from the existing DEM/grid.
+- Do not change existing app outputs.
+- Do not change DEM math except where strictly needed to produce hillshade from the existing DEM/grid.
+- Add tests only for output existence and metadata (dimensions, CRS, dtype, band count, nodata) first.
+- Content parity checks come later in Phase 5, unless an existing parity test already applies.
+
+#### Phase 3B — GEOTIFF_RADAR_BANDS and NPY_RADAR_BANDS notebook-compatible outputs
+
+Required outputs:
+
+- `GEOTIFF_RADAR_BANDS/RADAR_angle_640_*.tif`
+- `GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_*.tif`
+- `GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_*.tif`
+- `GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_*.tif`
+- `NPY_RADAR_BANDS/RADAR_angle_640_*.npy`
+- `NPY_RADAR_BANDS/RADAR_logRatio_dB_640_*.npy`
+- `NPY_RADAR_BANDS/RADAR_VH_dB_640_*.npy`
+- `NPY_RADAR_BANDS/RADAR_VV_dB_640_*.npy`
+
+Scope:
+
+- Emit notebook-compatible raster and array outputs for existing radar band equivalents.
+- Do not change existing app outputs or SAR math.
+- Add tests for output existence and raster metadata first.
+- Content parity checks deferred to Phase 5.
+
+#### Phase 3C — NPY_STACKS notebook-compatible outputs
+
+Required outputs:
+
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif`
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
+- `NPY_STACKS/RADAR_STACK_HWC_640_*.npy`
+
+Scope:
+
+- Emit notebook-compatible hypercube and stack outputs.
+- Do not change existing app outputs or stack math.
+- Add tests for output existence and metadata first.
+- Content parity checks deferred to Phase 5.
+
+#### Phase 3D — QA grid products and QA/RUN_MANIFEST.json
+
+Required outputs:
+
+- `QA/FOCUS_MASK_17m_inside_640.tif`
+- `QA/SUMMARY_RADAR_*.csv`
+- `RUN_MANIFEST.json`
+
+Scope:
+
+- Emit notebook-compatible QA grid products.
+- `RUN_MANIFEST.json` must record the expected output inventory.
+- Do not change existing QA behavior or CSV schemas unless required for alignment.
+- Add tests for output existence and manifest key coverage first.
+- Content parity checks deferred to Phase 5.
+
+#### Phase 3E — QA/sar/intermediates outputs
+
+Required outputs:
+
+- `QA/sar/intermediates/` subtree as documented in `docs/APP_NOTEBOOK_OUTPUT_CONTRACT.md`.
+
+Scope:
+
+- Emit notebook-compatible SAR intermediate outputs under `QA/sar/intermediates/`.
+- Do not change existing app outputs or SAR math.
+- Add tests for output existence and raster metadata first.
+- Content parity checks deferred to Phase 5.
+
+#### Phase 3F — Root REPORT_640_*.tif outputs
+
+Required outputs:
+
+- `REPORT_640_Pottery_Report.tif`
+- `REPORT_640_Mass_Report.tif`
+- `REPORT_640_FINAL_Zero_Point_Targets.tif`
+
+Scope:
+
+- Emit root-level notebook-compatible report rasters.
+- Do not change existing report math or object extraction behavior.
+- Add tests for output existence and raster metadata first.
+- Content parity checks deferred to Phase 5.
 
 ### Goal D — Register full output inventory for downloads
 
@@ -288,38 +375,14 @@ Do not expose in UI/API:
 
 ## Next Immediate Goal
 
-Start with Goal A only.
+Phases 1 and 2 are complete. The next target is **Phase 3A: DEM_GEO8_TIFS notebook-compatible outputs**.
 
-Suggested prompt:
+Phase 3A scope (implementation, not planning):
 
-```text
-/goal Compare actual notebook output folder against actual successful app run folder. Do not change code.
+- Emit notebook-compatible copies/names for existing DEM equivalents in `DEM_GEO8_TIFS/`.
+- Add the missing `hillshade_0to1_640.tif` output derived from the existing DEM/grid.
+- Do not change existing app outputs.
+- Do not change DEM math except where strictly needed to produce hillshade.
+- Add tests for output existence and metadata only; defer content parity to Phase 5.
 
-Create docs/NOTEBOOK_VS_APP_OUTPUTS.md with a file-by-file comparison between:
-
-Notebook:
-<local notebook reference output folder>
-
-App:
-data/runs/<successful_app_run_id>/
-
-For each notebook file, identify:
-- app equivalent path if present
-- status: matched, renamed-equivalent, missing-in-app, app-only, notebook-only, needs-content-parity-check, intentionally-different
-- UI-visible yes/no
-- notes
-
-Also list app-only outputs.
-
-Do not change pipeline, UI, tests, SAR math, GRID behavior, notebook code, tolerances, parity report behavior, or reference manifest behavior.
-
-Return:
-1. Files inspected
-2. Files changed
-3. Summary counts
-4. Missing notebook outputs in app
-5. App-only outputs
-6. Renamed/equivalent outputs
-7. Recommended implementation phases
-8. Any blocker
-```
+Do not begin Phase 3B until Phase 3A is merged and verified.
