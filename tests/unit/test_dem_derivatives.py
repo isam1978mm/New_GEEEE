@@ -53,14 +53,45 @@ def test_dem_derivatives_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == [*OUTPUT_NAMES, "dem_derivatives_summary"]
+        assert [artifact.name for artifact in result.artifacts] == [
+            *OUTPUT_NAMES,
+            "notebook_DEM_640",
+            "notebook_slope_deg_640",
+            "notebook_aspect_deg_640",
+            "notebook_roughness_100m_640",
+            "notebook_tpi_100m_640",
+            "notebook_hillshade_0to1_640",
+            "dem_derivatives_summary",
+        ]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
         for name in OUTPUT_NAMES:
+            assert artifact_classes[name] == ArtifactClass.LOCAL_SENSITIVE
+        for name in (
+            "notebook_DEM_640",
+            "notebook_slope_deg_640",
+            "notebook_aspect_deg_640",
+            "notebook_roughness_100m_640",
+            "notebook_tpi_100m_640",
+            "notebook_hillshade_0to1_640",
+        ):
             assert artifact_classes[name] == ArtifactClass.LOCAL_SENSITIVE
         assert artifact_classes["dem_derivatives_summary"] == ArtifactClass.FILESYSTEM_ONLY
         for name in OUTPUT_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        notebook_dem_dir = run_dir / "DEM_GEO8_TIFS"
+        expected_notebook_outputs = {
+            "slope_deg_640.tif",
+            "aspect_deg_640.tif",
+            "roughness_100m_640.tif",
+            "tpi_100m_640.tif",
+            "hillshade_0to1_640.tif",
+        }
+        assert notebook_dem_dir.is_dir()
+        assert expected_notebook_outputs <= {path.name for path in notebook_dem_dir.iterdir() if path.is_file()}
+        for name in expected_notebook_outputs:
+            notebook_sidecar = read_manifest(raster_sidecar_path(notebook_dem_dir / name))
+            assert notebook_sidecar["transform"] == grid_spec.manifest.crs_transform
         summary = json.loads((run_dir / "qa" / "stacks" / "dem_derivatives_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "dem_derivatives"
         assert summary["band_count"] == len(OUTPUT_NAMES)

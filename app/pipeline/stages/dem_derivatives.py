@@ -8,11 +8,18 @@ import numpy as np
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
-from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
+from app.pipeline.stages.dem import NOTEBOOK_DEM_DIR_NAME, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 
 WINDOW_RADIUS_METERS = 100.0
 OUTPUT_NAMES = ("slope", "aspect", "curvature", "TPI", "TRI", "roughness", "TWI")
+NOTEBOOK_DEM_FILENAMES = {
+    "slope": "slope_deg_640.tif",
+    "aspect": "aspect_deg_640.tif",
+    "roughness": "roughness_100m_640.tif",
+    "TPI": "tpi_100m_640.tif",
+}
+NOTEBOOK_HILLSHADE_NAME = "hillshade_0to1_640.tif"
 
 
 def _integral_image(array: np.ndarray) -> np.ndarray:
@@ -98,11 +105,65 @@ def compute_dem_derivatives(dem: np.ndarray, *, nodata: float, scale_m: float) -
     return outputs
 
 
+def compute_hillshade(dem: np.ndarray, *, nodata: float, scale_m: float) -> np.ndarray:
+    dem_float = dem.astype(np.float32, copy=True)
+    dem_float = np.where(dem_float == nodata, np.nan, dem_float)
+    source_valid = np.isfinite(dem_float)
+    dz_dy, dz_dx = np.gradient(dem_float, scale_m, scale_m)
+    slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
+    aspect_rad = np.arctan2(-dz_dx, dz_dy)
+    azimuth_rad = np.deg2rad(315.0)
+    altitude_rad = np.deg2rad(45.0)
+    hillshade = (
+        np.sin(altitude_rad) * np.cos(slope_rad)
+        + np.cos(altitude_rad) * np.sin(slope_rad) * np.cos(azimuth_rad - aspect_rad)
+    )
+    hillshade = np.clip(hillshade, 0.0, 1.0).astype(np.float32)
+    hillshade[~source_valid] = nodata
+    hillshade[~np.isfinite(hillshade)] = nodata
+    return hillshade.astype(np.float32, copy=False)
+
+
 def write_dem_derivative_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.ndarray]) -> list[Path]:
     written_paths: list[Path] = []
     for name in OUTPUT_NAMES:
         tif_path = run_dir / f"{name}.tif"
         array = outputs[name]
+        write_georeferenced_raster(tif_path, array, grid_spec)
+        write_raster_sidecar(
+            tif_path,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=array.shape,
+        )
+        written_paths.append(tif_path)
+    return written_paths
+
+
+def write_notebook_dem_outputs(
+    run_dir: Path,
+    grid_spec: GridSpec,
+    *,
+    dem: np.ndarray,
+    outputs: dict[str, np.ndarray],
+) -> list[Path]:
+    notebook_dir = run_dir / NOTEBOOK_DEM_DIR_NAME
+    notebook_outputs = {
+        "DEM_640.tif": dem.astype(np.float32, copy=False),
+        NOTEBOOK_DEM_FILENAMES["slope"]: outputs["slope"],
+        NOTEBOOK_DEM_FILENAMES["aspect"]: outputs["aspect"],
+        NOTEBOOK_DEM_FILENAMES["roughness"]: outputs["roughness"],
+        NOTEBOOK_DEM_FILENAMES["TPI"]: outputs["TPI"],
+        NOTEBOOK_HILLSHADE_NAME: compute_hillshade(
+            dem,
+            nodata=grid_spec.nodata,
+            scale_m=float(grid_spec.manifest.scale_m),
+        ),
+    }
+    written_paths: list[Path] = []
+    for filename, array in notebook_outputs.items():
+        tif_path = notebook_dir / filename
         write_georeferenced_raster(tif_path, array, grid_spec)
         write_raster_sidecar(
             tif_path,
@@ -163,6 +224,12 @@ class DemDerivativesStage(Stage):
             scale_m=float(self.grid_spec.manifest.scale_m),
         )
         written_paths = write_dem_derivative_outputs(context.run_dir, self.grid_spec, outputs)
+        notebook_written_paths = write_notebook_dem_outputs(
+            context.run_dir,
+            self.grid_spec,
+            dem=dem,
+            outputs=outputs,
+        )
         summary_path = write_dem_derivatives_summary(context.run_dir, outputs, nodata=self.grid_spec.nodata)
         artifacts = [
             build_stage_artifact(
@@ -173,6 +240,15 @@ class DemDerivativesStage(Stage):
             )
             for path in written_paths
         ]
+        artifacts.extend(
+            build_stage_artifact(
+                name=f"notebook_{path.stem}",
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=path.stat().st_size,
+            )
+            for path in notebook_written_paths
+        )
         artifacts.append(
             build_stage_artifact(
                 name="dem_derivatives_summary",

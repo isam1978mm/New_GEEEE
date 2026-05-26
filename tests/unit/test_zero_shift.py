@@ -29,15 +29,16 @@ def test_zero_shift_stage_accepts_grid_locked_outputs() -> None:
         assert ZeroShiftStage(grid_spec=grid_spec).parity_category == ParityCategory.PARITY_REPRODUCES
         assert [artifact.name for artifact in result.artifacts] == ["zero_shift_summary", "drift_audit"]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
-        assert result.metadata["validated_tifs"] == 1
-        assert result.metadata["validated_arrays"] == 1
         assert result.metadata["status"] == "grid_locked"
 
         summary = json.loads((run_dir / "qa" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
         assert summary["status"] == "grid_locked"
         with (run_dir / "qa" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
-        assert [row["artifact_name"] for row in rows] == ["dem.tif", "dem.npy"]
+        artifact_names = {row["artifact_name"] for row in rows}
+        assert {"dem.tif", "DEM_640.tif", "dem.npy"} <= artifact_names
+        assert result.metadata["validated_tifs"] == sum(1 for row in rows if row["artifact_type"] == "tif")
+        assert result.metadata["validated_arrays"] == sum(1 for row in rows if row["artifact_type"] == "npy")
         assert all(row["passes_alignment"] == "true" for row in rows)
 
 

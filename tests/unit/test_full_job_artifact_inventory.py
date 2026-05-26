@@ -55,6 +55,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(dem_result) == {
             "dem_tif": ArtifactClass.LOCAL_SENSITIVE,
             "dem_npy": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_dem_640_tif": ArtifactClass.LOCAL_SENSITIVE,
             "dem_audit_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(zero_shift_result) == {
@@ -81,6 +82,12 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         }
         assert _artifact_classes(dem_derivatives_result) == {
             **{name: ArtifactClass.LOCAL_SENSITIVE for name in DEM_DERIVATIVE_NAMES},
+            "notebook_DEM_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_slope_deg_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_aspect_deg_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_roughness_100m_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_tpi_100m_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_hillshade_0to1_640": ArtifactClass.LOCAL_SENSITIVE,
             "dem_derivatives_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(thermal_result) == {

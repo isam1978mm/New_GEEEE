@@ -25,6 +25,8 @@ from app.services.grid import GridManifest
 DEM_TIF_NAME = "dem.tif"
 DEM_NPY_NAME = "dem.npy"
 DEM_TILE_SIZE = 320
+NOTEBOOK_DEM_DIR_NAME = "DEM_GEO8_TIFS"
+NOTEBOOK_DEM_TIF_NAME = "DEM_640.tif"
 
 
 class DemTileFetcher(Protocol):
@@ -238,6 +240,7 @@ def write_georeferenced_raster(path: Path, array: np.ndarray, grid_spec: GridSpe
 def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> dict[str, Path]:
     dem_tif_path = run_dir / DEM_TIF_NAME
     dem_npy_path = run_dir / DEM_NPY_NAME
+    notebook_dem_tif_path = run_dir / NOTEBOOK_DEM_DIR_NAME / NOTEBOOK_DEM_TIF_NAME
 
     write_georeferenced_raster(dem_tif_path, dem_array, grid_spec)
     np.save(dem_npy_path, dem_array)
@@ -248,7 +251,21 @@ def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray)
         dtype="float32",
         shape=dem_array.shape,
     )
-    return {"dem_tif": dem_tif_path, "dem_npy": dem_npy_path, "dem_tif_sidecar": sidecar_path}
+    write_georeferenced_raster(notebook_dem_tif_path, dem_array, grid_spec)
+    notebook_sidecar_path = write_raster_sidecar(
+        notebook_dem_tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=dem_array.shape,
+    )
+    return {
+        "dem_tif": dem_tif_path,
+        "dem_npy": dem_npy_path,
+        "dem_tif_sidecar": sidecar_path,
+        "notebook_dem_tif": notebook_dem_tif_path,
+        "notebook_dem_tif_sidecar": notebook_sidecar_path,
+    }
 
 
 def write_dem_audit_summary(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> Path:
@@ -302,6 +319,12 @@ class DemStage(Stage):
                 relative_path=outputs["dem_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=outputs["dem_npy"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="notebook_dem_640_tif",
+                relative_path=outputs["notebook_dem_tif"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["notebook_dem_tif"].stat().st_size,
             ),
             build_stage_artifact(
                 name="dem_audit_summary",
