@@ -333,6 +333,7 @@
       const link = document.createElement("a");
       link.className = "artifact-link";
       link.href = buildArtifactHref(runId, artifact);
+      link.download = displayArtifactName(artifact);
       link.textContent = "Download";
 
       const meta = document.createElement("span");
