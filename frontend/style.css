@@ -397,7 +397,20 @@ kbd {
 }
 
 .artifact-label {
+  display: block;
   font-weight: 600;
+}
+
+.artifact-title {
+  min-width: 0;
+}
+
+.artifact-description {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .artifact-meta {

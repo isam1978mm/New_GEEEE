@@ -77,6 +77,13 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "renderStageProgress" in js_response.text
     assert "renderStatusHistory" in js_response.text
     assert "syncRecentRunFromDetail" in js_response.text
+    assert "describeArtifact" in js_response.text
+    assert "detailed detected object table" in js_response.text
+    assert "grouped cluster summary" in js_response.text
+    assert "safe alignment health summary" in js_response.text
+    assert "alignment audit details" in js_response.text
+    assert "selected masks used for alignment QA" in js_response.text
+    assert "public-safe run artifact" in js_response.text
     assert "current_stage" in js_response.text
     assert "history" in js_response.text
     assert "Completed" in js_response.text

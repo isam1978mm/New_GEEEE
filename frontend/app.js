@@ -6,6 +6,14 @@
     guardedArtifactPrefix: "/runs/",
   };
 
+  const ARTIFACT_DESCRIPTIONS = {
+    objects_index: "detailed detected object table",
+    clusters_summary: "grouped cluster summary",
+    alignment_qa: "safe alignment health summary",
+    alignment_audit: "alignment audit details",
+    alignment_mask_selection: "selected masks used for alignment QA",
+  };
+
   const state = {
     currentRunId: null,
     currentRunStatus: null,
@@ -26,6 +34,15 @@
 
   function buildArtifactHref(runId, artifact) {
     return `${SPA_CONFIG.guardedArtifactPrefix}${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifact.name)}`;
+  }
+
+  function describeArtifact(artifact) {
+    if (!artifact || typeof artifact.name !== "string") {
+      return "public-safe run artifact";
+    }
+    const artifactName = artifact.name;
+    const artifactStem = artifactName.replace(/\.[^.]+$/, "");
+    return ARTIFACT_DESCRIPTIONS[artifactName] || ARTIFACT_DESCRIPTIONS[artifactStem] || "public-safe run artifact";
   }
 
   function parseTargetInput() {
@@ -285,8 +302,18 @@
       item.className = "artifact-card";
 
       const title = document.createElement("span");
-      title.className = "artifact-label";
-      title.textContent = artifact.name;
+      title.className = "artifact-title";
+
+      const label = document.createElement("span");
+      label.className = "artifact-label";
+      label.textContent = artifact.name;
+
+      const description = document.createElement("span");
+      description.className = "artifact-description";
+      description.textContent = describeArtifact(artifact);
+
+      title.appendChild(label);
+      title.appendChild(description);
 
       const link = document.createElement("a");
       link.className = "artifact-link";
