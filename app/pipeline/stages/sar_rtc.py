@@ -33,12 +33,22 @@ SAR_LEE_KERNEL_M = 20
 RADAR_BANDS = ("VV_dB", "VH_dB", "angle")
 OUTPUT_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 SAR_NPY_OUTPUT_DIR = "npy_radar_bands"
+NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
+NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
+NOTEBOOK_SAR_OUTPUT_SUFFIX = "app"
 SAR_NPY_ARTIFACT_NAMES = {
     "VV_dB": "sar_npy_VV_dB",
     "VH_dB": "sar_npy_VH_dB",
     "logRatio_dB": "sar_npy_logRatio_dB",
     "incidence": "sar_npy_incidence",
 }
+NOTEBOOK_SAR_BAND_NAMES = {
+    "VV_dB": "RADAR_VV_dB",
+    "VH_dB": "RADAR_VH_dB",
+    "logRatio_dB": "RADAR_logRatio_dB",
+    "incidence": "RADAR_angle",
+}
+APP_BAND_BY_NOTEBOOK_SAR_BAND_NAME = {notebook_name: app_name for app_name, notebook_name in NOTEBOOK_SAR_BAND_NAMES.items()}
 
 
 class RadarCubeFetcher(Protocol):
@@ -442,12 +452,59 @@ def write_sar_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.
     return written_paths
 
 
+def notebook_sar_filename(name: str, extension: str) -> str:
+    return f"{NOTEBOOK_SAR_BAND_NAMES[name]}_640_{NOTEBOOK_SAR_OUTPUT_SUFFIX}.{extension}"
+
+
+def notebook_sar_artifact_name(name: str) -> str:
+    return f"notebook_{NOTEBOOK_SAR_BAND_NAMES[name]}_640"
+
+
+def notebook_sar_npy_artifact_name(name: str) -> str:
+    return f"notebook_sar_npy_{NOTEBOOK_SAR_BAND_NAMES[name]}_640"
+
+
+def _app_band_name_from_notebook_stem(stem: str) -> str:
+    notebook_band_name = stem.removesuffix(f"_640_{NOTEBOOK_SAR_OUTPUT_SUFFIX}")
+    return APP_BAND_BY_NOTEBOOK_SAR_BAND_NAME[notebook_band_name]
+
+
+def write_notebook_sar_geotiff_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.ndarray]) -> list[Path]:
+    output_dir = run_dir / NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written_paths: list[Path] = []
+    for name in OUTPUT_BANDS:
+        tif_path = output_dir / notebook_sar_filename(name, "tif")
+        array = outputs[name]
+        write_georeferenced_raster(tif_path, array, grid_spec)
+        write_raster_sidecar(
+            tif_path,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=array.shape,
+        )
+        written_paths.append(tif_path)
+    return written_paths
+
+
 def write_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
     output_dir = run_dir / SAR_NPY_OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     written_paths: list[Path] = []
     for name in OUTPUT_BANDS:
         npy_path = output_dir / f"{name}.npy"
+        np.save(npy_path, outputs[name].astype(np.float32, copy=False))
+        written_paths.append(npy_path)
+    return written_paths
+
+
+def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
+    output_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written_paths: list[Path] = []
+    for name in OUTPUT_BANDS:
+        npy_path = output_dir / notebook_sar_filename(name, "npy")
         np.save(npy_path, outputs[name].astype(np.float32, copy=False))
         written_paths.append(npy_path)
     return written_paths
@@ -674,7 +731,9 @@ class SarRtcStage(Stage):
             scale_m=float(self.grid_spec.manifest.scale_m),
         )
         written_paths = write_sar_outputs(context.run_dir, self.grid_spec, outputs)
+        notebook_tif_paths = write_notebook_sar_geotiff_outputs(context.run_dir, self.grid_spec, outputs)
         npy_paths = write_sar_npy_outputs(context.run_dir, outputs)
+        notebook_npy_paths = write_notebook_sar_npy_outputs(context.run_dir, outputs)
         qa_paths = write_sar_qa_outputs(
             context.run_dir,
             outputs=outputs,
@@ -694,6 +753,15 @@ class SarRtcStage(Stage):
         ]
         artifacts.extend(
             build_stage_artifact(
+                name=notebook_sar_artifact_name(_app_band_name_from_notebook_stem(path.stem)),
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=path.stat().st_size,
+            )
+            for path in notebook_tif_paths
+        )
+        artifacts.extend(
+            build_stage_artifact(
                 name=SAR_NPY_ARTIFACT_NAMES[path.stem],
                 relative_path=path.relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
@@ -701,6 +769,16 @@ class SarRtcStage(Stage):
                 http_servable=False,
             )
             for path in npy_paths
+        )
+        artifacts.extend(
+            build_stage_artifact(
+                name=notebook_sar_npy_artifact_name(_app_band_name_from_notebook_stem(path.stem)),
+                relative_path=path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=path.stat().st_size,
+                http_servable=False,
+            )
+            for path in notebook_npy_paths
         )
         artifacts.extend(
             build_stage_artifact(

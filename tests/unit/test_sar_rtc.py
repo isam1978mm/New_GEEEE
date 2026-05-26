@@ -19,6 +19,8 @@ from app.pipeline.stages.sar_rtc import (
     RADAR_BANDS,
     SAR_NPY_ARTIFACT_NAMES,
     SAR_NPY_OUTPUT_DIR,
+    NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR,
+    NOTEBOOK_SAR_NPY_OUTPUT_DIR,
     MAX_ORBIT_DT_DAYS,
     MAX_PAIR_DT_HOURS,
     MAX_PAIRS,
@@ -491,10 +493,18 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "VH_dB",
             "logRatio_dB",
             "incidence",
+            "notebook_RADAR_VV_dB_640",
+            "notebook_RADAR_VH_dB_640",
+            "notebook_RADAR_logRatio_dB_640",
+            "notebook_RADAR_angle_640",
             "sar_npy_VV_dB",
             "sar_npy_VH_dB",
             "sar_npy_logRatio_dB",
             "sar_npy_incidence",
+            "notebook_sar_npy_RADAR_VV_dB_640",
+            "notebook_sar_npy_RADAR_VH_dB_640",
+            "notebook_sar_npy_RADAR_logRatio_dB_640",
+            "notebook_sar_npy_RADAR_angle_640",
             "sar_pair_diagnostics",
             "sar_summary",
             "sar_nodata_audit",
@@ -506,10 +516,18 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "VH_dB": ArtifactClass.LOCAL_SENSITIVE,
             "logRatio_dB": ArtifactClass.LOCAL_SENSITIVE,
             "incidence": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_RADAR_VV_dB_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_RADAR_VH_dB_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_RADAR_logRatio_dB_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_RADAR_angle_640": ArtifactClass.LOCAL_SENSITIVE,
             "sar_npy_VV_dB": ArtifactClass.FILESYSTEM_ONLY,
             "sar_npy_VH_dB": ArtifactClass.FILESYSTEM_ONLY,
             "sar_npy_logRatio_dB": ArtifactClass.FILESYSTEM_ONLY,
             "sar_npy_incidence": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_npy_RADAR_VV_dB_640": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_npy_RADAR_VH_dB_640": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_npy_RADAR_logRatio_dB_640": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_npy_RADAR_angle_640": ArtifactClass.FILESYSTEM_ONLY,
             "sar_pair_diagnostics": ArtifactClass.FILESYSTEM_ONLY,
             "sar_summary": ArtifactClass.FILESYSTEM_ONLY,
             "sar_nodata_audit": ArtifactClass.FILESYSTEM_ONLY,
@@ -517,6 +535,13 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         }
         artifact_http_flags = {artifact.name: artifact.http_servable for artifact in result.artifacts}
         for artifact_name in SAR_NPY_ARTIFACT_NAMES.values():
+            assert artifact_http_flags[artifact_name] is False
+        for artifact_name in (
+            "notebook_sar_npy_RADAR_VV_dB_640",
+            "notebook_sar_npy_RADAR_VH_dB_640",
+            "notebook_sar_npy_RADAR_logRatio_dB_640",
+            "notebook_sar_npy_RADAR_angle_640",
+        ):
             assert artifact_http_flags[artifact_name] is False
         assert artifact_http_flags["sar_pair_diagnostics"] is False
         assert artifact_http_flags["sar_summary"] is False
@@ -544,6 +569,34 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             npy_array = np.load(npy_path)
             assert npy_array.dtype == np.float32
             assert npy_array.shape == (640, 640)
+
+        expected_notebook_tifs = {
+            "RADAR_VV_dB_640_app.tif",
+            "RADAR_VH_dB_640_app.tif",
+            "RADAR_logRatio_dB_640_app.tif",
+            "RADAR_angle_640_app.tif",
+        }
+        notebook_tif_dir = run_dir / NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR
+        assert {path.name for path in notebook_tif_dir.glob("*.tif")} == expected_notebook_tifs
+        for filename in expected_notebook_tifs:
+            sidecar = read_manifest(raster_sidecar_path(notebook_tif_dir / filename))
+            assert sidecar["transform"] == grid_spec.manifest.crs_transform
+            assert sidecar["height"] == 640
+            assert sidecar["width"] == 640
+            assert sidecar["dtype"] == "float32"
+
+        expected_notebook_npys = {
+            "RADAR_VV_dB_640_app.npy",
+            "RADAR_VH_dB_640_app.npy",
+            "RADAR_logRatio_dB_640_app.npy",
+            "RADAR_angle_640_app.npy",
+        }
+        notebook_npy_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
+        assert expected_notebook_npys <= {path.name for path in notebook_npy_dir.glob("*.npy")}
+        for filename in expected_notebook_npys:
+            array = np.load(notebook_npy_dir / filename)
+            assert array.dtype == np.float32
+            assert array.shape == (640, 640)
 
         pair_diagnostics = json.loads((run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
         assert pair_diagnostics["artifact_class"] == "FILESYSTEM_ONLY"
