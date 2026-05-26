@@ -239,3 +239,119 @@ Phase 1 does not check values. The following equivalents still need content-leve
 - Core DEM and SAR outputs do exist, but they are currently renamed and re-foldered.
 - The frozen notebook reference contains a large QA/intermediate footprint that this fresh app run does not reproduce.
 - The app currently produces many operator-local extras that are not represented in the notebook reference tree.
+
+## Post Phase 3A-3F Audit
+
+Audit date: `2026-05-26`
+
+Fresh app run ID: `2ed977ce-8ded-42d8-9ea0-5fafdee9547a`
+
+Absolute local paths are intentionally omitted. The inventory below uses run-relative paths only.
+
+### Fresh Run Summary
+
+| Inventory | Count |
+|---|---:|
+| App run files | 644 |
+| App run directories | 24 |
+
+Top-level output groups observed:
+
+- `DEM_GEO8_TIFS/`
+- `GEOTIFF_RADAR_BANDS/`
+- `NPY_RADAR_BANDS/`
+- `NPY_STACKS/`
+- `full_job/`
+- `kmz/`
+- `npy_radar_bands/`
+- `objects/`
+- `qa/`
+- `stacks/`
+
+### Newly Matched Notebook-Compatible Outputs
+
+These outputs were missing or renamed-only in the Phase 1 inventory and now exist in the fresh app run under notebook-compatible names or patterns:
+
+| Notebook-compatible output | Status | Notes |
+|---|---|---|
+| `DEM_GEO8_TIFS/DEM_640.tif` | `matched` | Notebook-compatible DEM alias exists. |
+| `DEM_GEO8_TIFS/slope_deg_640.tif` | `matched` | Notebook-compatible slope alias exists. |
+| `DEM_GEO8_TIFS/aspect_deg_640.tif` | `matched` | Notebook-compatible aspect alias exists. |
+| `DEM_GEO8_TIFS/roughness_100m_640.tif` | `matched` | Notebook-compatible roughness alias exists. |
+| `DEM_GEO8_TIFS/tpi_100m_640.tif` | `matched` | Notebook-compatible TPI alias exists. |
+| `DEM_GEO8_TIFS/hillshade_0to1_640.tif` | `matched` | Hillshade output exists. |
+| `GEOTIFF_RADAR_BANDS/RADAR_angle_640_*.tif` | `matched` | Notebook-compatible SAR angle GeoTIFF exists. |
+| `GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_*.tif` | `matched` | Notebook-compatible SAR log-ratio GeoTIFF exists. |
+| `GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_*.tif` | `matched` | Notebook-compatible SAR VH GeoTIFF exists. |
+| `GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_*.tif` | `matched` | Notebook-compatible SAR VV GeoTIFF exists. |
+| `NPY_RADAR_BANDS/RADAR_angle_640_*.npy` | `matched` | Notebook-compatible SAR angle NPY exists. |
+| `NPY_RADAR_BANDS/RADAR_logRatio_dB_640_*.npy` | `matched` | Notebook-compatible SAR log-ratio NPY exists. |
+| `NPY_RADAR_BANDS/RADAR_VH_dB_640_*.npy` | `matched` | Notebook-compatible SAR VH NPY exists. |
+| `NPY_RADAR_BANDS/RADAR_VV_dB_640_*.npy` | `matched` | Notebook-compatible SAR VV NPY exists. |
+| `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif` | `matched` | Notebook-compatible hypercube GeoTIFF exists. |
+| `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy` | `matched` | Notebook-compatible hypercube NPY exists. |
+| `NPY_STACKS/RADAR_STACK_HWC_640_*.npy` | `matched` | Notebook-compatible radar stack NPY exists. |
+| `QA/QA_GRID_dx_m_640.tif` | `matched-with-case-warning` | File exists on this Windows audit run, but see case-sensitivity note below. |
+| `QA/QA_GRID_dy_m_640.tif` | `matched-with-case-warning` | File exists on this Windows audit run, but see case-sensitivity note below. |
+| `QA/QA_GRID_validmask_640.tif` | `matched-with-case-warning` | File exists on this Windows audit run, but see case-sensitivity note below. |
+| `QA/RUN_MANIFEST.json` | `matched-with-case-warning` | Manifest exists on this Windows audit run, but see case-sensitivity note below. |
+| `QA/sar/intermediates/sar_intermediate_manifest.json` | `matched-with-case-warning` | Manifest exists on this Windows audit run, but see case-sensitivity note below. |
+| `QA/sar/intermediates/post_rtc/final_VV_dB.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
+| `QA/sar/intermediates/post_rtc/final_VH_dB.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
+| `QA/sar/intermediates/post_rtc/final_logRatio_dB.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
+| `QA/sar/intermediates/post_rtc/final_angle.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
+
+### Remaining Missing Notebook Outputs
+
+These contract or notebook-reference outputs remain absent as real notebook-compatible outputs:
+
+| Notebook output | Status | Notes |
+|---|---|---|
+| `REPORT_640_Pottery_Report.tif` | `missing-in-app` | No real app raster equivalent has been identified. |
+| `REPORT_640_Mass_Report.tif` | `missing-in-app` | No real app raster equivalent has been identified. |
+| `REPORT_640_FINAL_Zero_Point_Targets.tif` | `missing-in-app` | No real app raster equivalent has been identified. |
+| `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` | `notebook-only` | No real app equivalent was found during Phase 3C. |
+| `QA/FOCUS_MASK_17m_inside_640.tif` | `renamed-equivalent-only` | App equivalent remains `full_job/focus/focus_zone_17m.tif`; no notebook-compatible QA alias was emitted in Phase 3. |
+| `QA/SUMMARY_RADAR_*.csv` | `renamed-equivalent-only` | App equivalent remains `qa/sar/sar_summary.csv`; no notebook-compatible QA alias was emitted in Phase 3. |
+| `QA/sar/intermediates/per_image_products_db/*.npy` | `not_implemented_no_source_equivalent` | Manifest records that production SAR does not persist this notebook intermediate. |
+| `QA/sar/intermediates/pair_median/*.npy` | `not_implemented_no_source_equivalent` | Manifest records that production SAR does not persist this notebook intermediate. |
+| `QA/sar/intermediates/final_median_pre_rtc/*.npy` | `not_implemented_no_source_equivalent` | Manifest records that production SAR does not persist this notebook intermediate. |
+| `QA/sar/intermediates/post_sample_pre_rtc/*.npy` | `not_implemented_no_source_equivalent` | Manifest records that production SAR does not persist this notebook intermediate. |
+
+### Intentionally Not Implemented Or No-Source Outputs
+
+- The three root `REPORT_640_*.tif` outputs are not emitted as fake rasters. The app writes `QA/REPORT_640_manifest.json` with `not_implemented_no_source_equivalent` entries for each report.
+- Pre-RTC SAR intermediate stages are not reconstructed from final products. `QA/sar/intermediates/sar_intermediate_manifest.json` records the missing notebook stages as `not_implemented_no_source_equivalent`.
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` remains notebook-only because no source-equivalent app raster has been identified.
+
+### App-Only Outputs Still Preserved
+
+The fresh run still preserves app-only outputs, including:
+
+- `objects_index.csv`
+- `clusters_summary.csv`
+- `alignment_qa.json`
+- `alignment_audit.csv`
+- `alignment_mask_selection.json`
+- `grid_manifest.json`
+- `run_status_history.json`
+- `stage_*.manifest.json`
+- Sentinel-2 index rasters
+- `TRI.tif`
+- `TWI.tif`
+- `lst.tif`
+- `full_job/*`
+- `kmz/*`
+- `objects/object_mask.npy`
+- object patch arrays
+
+### Case-Sensitivity Issue
+
+The notebook contract expects uppercase `QA/` paths. This Windows audit run already had a lowercase `qa/` folder, and notebook-compatible `QA/...` writes resolved into that existing lowercase folder on the case-insensitive local filesystem.
+
+On Linux or VPS filesystems, `QA/` and `qa/` are distinct paths. Before claiming Linux-portable notebook tree parity, the app needs an explicit path-case decision:
+
+- either emit notebook-compatible QA files into an actual uppercase `QA/` directory without relying on Windows case-insensitive behavior
+- or revise the contract to accept lowercase `qa/` for app output while documenting the notebook path mapping
+
+No pipeline or GRID behavior was changed during this audit.
