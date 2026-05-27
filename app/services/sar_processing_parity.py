@@ -63,7 +63,7 @@ SAR_BAND_MAPPINGS = {
         "notebook_npy_candidates": ("npy_radar_bands/incidence.npy", "NPY_RADAR_BANDS/RADAR_angle_640*.npy", "NPY_RADAR_BANDS/*angle*.npy", "NPY_RADAR_BANDS/*incidence*.npy"),
     },
 }
-NOTEBOOK_SUMMARY_CANDIDATES = ("qa/sar/sar_summary.csv", "QA/SUMMARY_RADAR*.csv", "SUMMARY_RADAR*.csv")
+NOTEBOOK_SUMMARY_CANDIDATES = ("QA/sar/sar_summary.csv", "qa/sar/sar_summary.csv", "QA/SUMMARY_RADAR*.csv", "SUMMARY_RADAR*.csv")
 NOTEBOOK_STACK_CANDIDATES = ("stacks/tensor_support/radar_linear_support_stack.npy", "NPY_STACKS/RADAR_STACK_HWC_640*.npy")
 NOTEBOOK_RADAR_META_CANDIDATES = ("QA/QA_RADAR_META*.json", "QA_RADAR_META*.json")
 NOTEBOOK_INTERMEDIATE_MANIFEST_CANDIDATES = (
@@ -71,7 +71,7 @@ NOTEBOOK_INTERMEDIATE_MANIFEST_CANDIDATES = (
     "QA/sar/intermediates/sar_intermediate_manifest.json",
     "QA/SAR_INTERMEDIATE_MANIFEST*.json",
 )
-APP_INTERMEDIATE_MANIFEST = "qa/sar/intermediates/sar_intermediate_manifest.json"
+APP_INTERMEDIATE_MANIFEST = "QA/sar/intermediates/sar_intermediate_manifest.json"
 F24_STAGE_ORDER = (
     "per_image_products_db",
     "pair_median",
@@ -174,8 +174,8 @@ def build_sar_processing_parity_report(
     rows.extend(summary_rows)
     for item in summary_files:
         referenced_notebook_files[(item.root_label, item.relative_path)] = item
-    if (app_run_dir / "qa" / "sar" / "sar_summary.csv").is_file():
-        referenced_app_files.add("qa/sar/sar_summary.csv")
+    if (app_run_dir / "QA" / "sar" / "sar_summary.csv").is_file():
+        referenced_app_files.add("QA/sar/sar_summary.csv")
 
     metadata_rows, metadata_npy_candidates, metadata_files = _build_notebook_metadata_rows(notebook_roots)
     rows.extend(metadata_rows)
@@ -480,7 +480,7 @@ def _build_summary_rows(
 ) -> tuple[list[SarProcessingRow], list[NotebookRelativeFile]]:
     rows: list[SarProcessingRow] = []
     referenced_files: list[NotebookRelativeFile] = []
-    app_summary_path = app_run_dir / "qa" / "sar" / "sar_summary.csv"
+    app_summary_path = app_run_dir / "QA" / "sar" / "sar_summary.csv"
     notebook_summary = _resolve_notebook_relative_file(notebook_roots, NOTEBOOK_SUMMARY_CANDIDATES)
     if not app_summary_path.is_file() or notebook_summary is None:
         rows.append(
@@ -489,7 +489,7 @@ def _build_summary_rows(
                 status="MISSING",
                 band_name="",
                 notebook_file="" if notebook_summary is None else f"{notebook_summary.root_label}:{notebook_summary.relative_path}",
-                app_file="qa/sar/sar_summary.csv" if app_summary_path.is_file() else "",
+                app_file="QA/sar/sar_summary.csv" if app_summary_path.is_file() else "",
                 likely_cause="MISSING_SUMMARY_INPUT",
                 raw_matching_percent=None,
                 common_valid_matching_percent=None,
@@ -514,7 +514,7 @@ def _build_summary_rows(
                 status=diff.status,
                 band_name=diff.band_name,
                 notebook_file=f"{notebook_summary.root_label}:{notebook_summary.relative_path}",
-                app_file="qa/sar/sar_summary.csv",
+                app_file="QA/sar/sar_summary.csv",
                 likely_cause="SUMMARY_STATS_MATCH" if diff.status == "MATCH" else "SUMMARY_STATS_MISMATCH",
                 raw_matching_percent=None,
                 common_valid_matching_percent=None,

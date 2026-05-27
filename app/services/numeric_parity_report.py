@@ -251,7 +251,7 @@ def build_default_comparison_specs() -> tuple[ComparisonSpec, ...]:
     )
     specs.extend(
         (
-            ComparisonSpec("sar_geotiff_bands", "csv", "qa/sar/sar_summary.csv", ("qa/sar/sar_summary.csv", "SUMMARY_RADAR*.csv")),
+            ComparisonSpec("sar_geotiff_bands", "csv", "QA/sar/sar_summary.csv", ("QA/sar/sar_summary.csv", "qa/sar/sar_summary.csv", "SUMMARY_RADAR*.csv")),
             ComparisonSpec("alignment_qa_summaries", "json", "alignment_qa.json", ("alignment_qa.json",), tolerance=Tolerance(abs_tol=1e-6, rel_tol=1e-6)),
             ComparisonSpec("alignment_qa_summaries", "json", "alignment_mask_selection.json", ("alignment_mask_selection.json", "*mask*selection*.json")),
             ComparisonSpec("alignment_qa_summaries", "csv", "alignment_audit.csv", ("alignment_audit.csv", "*alignment*audit*.csv")),

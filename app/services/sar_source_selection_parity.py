@@ -24,6 +24,7 @@ NOTEBOOK_SAR_QA_PATTERNS = (
     "QA_S1_MASTER_UNITS.json",
     "QA_RADAR_META*.json",
     "SUMMARY_RADAR*.csv",
+    "QA/sar/sar_pair_diagnostics.json",
     "qa/sar/sar_pair_diagnostics.json",
     "*sar*selection*.json",
     "*SAR*selection*.json",
@@ -69,8 +70,8 @@ def build_sar_source_selection_parity_report(
         "local_only": True,
         "app_run_id": app_run_dir.name,
         "notebook_root_labels": [root.name for root in notebook_roots],
-        "app_metadata_file": "qa/sar/sar_pair_diagnostics.json"
-        if (app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").is_file()
+        "app_metadata_file": "QA/sar/sar_pair_diagnostics.json"
+        if (app_run_dir / "QA" / "sar" / "sar_pair_diagnostics.json").is_file()
         else "",
         "notebook_metadata_files": [
             {"root_label": item.root_label, "relative_path": item.relative_path} for item in notebook_metadata
@@ -153,7 +154,7 @@ def build_sar_source_selection_rows(
             check="notebook_qa_metadata",
             status="FOUND" if notebook_metadata else "MISSING",
             notebook_value=notebook_files,
-            app_value="qa/sar/sar_pair_diagnostics.json" if app_payload is not None else "",
+            app_value="QA/sar/sar_pair_diagnostics.json" if app_payload is not None else "",
             evidence=(
                 "Notebook SAR QA metadata was found by root label and relative path."
                 if notebook_metadata
@@ -173,7 +174,7 @@ def build_sar_source_selection_rows(
                 status="MISSING",
                 notebook_value="",
                 app_value="",
-                evidence="The app run does not contain qa/sar/sar_pair_diagnostics.json.",
+                evidence="The app run does not contain QA/sar/sar_pair_diagnostics.json.",
                 recommended_next_action="Run the SAR RTC stage with F13 metadata capture enabled by default.",
             )
         )
@@ -265,7 +266,7 @@ def build_sar_source_selection_rows(
 
 
 def _load_app_sar_metadata(app_run_dir: Path) -> dict[str, Any] | None:
-    path = app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
+    path = app_run_dir / "QA" / "sar" / "sar_pair_diagnostics.json"
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))

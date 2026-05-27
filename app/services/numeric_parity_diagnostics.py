@@ -482,7 +482,7 @@ def is_app_only_output(app_file: str) -> bool:
         "hypercube_band_stats.csv",
         "hypercube_norm_params.csv",
         "alignment_qa.json",
-        "qa/sar/sar_summary.csv",
+        "QA/sar/sar_summary.csv",
     }:
         return False
     return False
