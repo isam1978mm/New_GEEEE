@@ -70,6 +70,27 @@ If the run exists but the comparison fails, the report should distinguish:
 - dtype mismatch
 - numeric mismatch
 
+## Phase 5E Configuration Requirements
+
+Phase 5E requires two local operator-supplied paths:
+
+- `NOTEBOOK_REFERENCE_BUNDLE_DIR` = the frozen notebook reference bundle
+- `APP_NOTEBOOK_OUTPUT_RUN_DIR` = the matching app output directory for the same notebook-grid validation case
+
+Rules:
+
+- both values are local/operator configuration only
+- do not commit local absolute paths
+- do not commit reference bundles
+- do not use arbitrary fresh production-grid UI runs for notebook reference parity
+- if either path is missing, Phase 5E tests should skip or xfail as config-required
+
+Current Phase 5E-1 status:
+
+- the DEM reference numeric parity test exists
+- it is config-required until `APP_NOTEBOOK_OUTPUT_RUN_DIR` points to a matching notebook-grid app run
+- no numeric pass is claimed yet
+
 ## Phase 5F: Parity Report Integration
 
 Phase 5F integrates the earlier evidence into one local operator-facing report.
