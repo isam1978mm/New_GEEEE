@@ -11,7 +11,7 @@ from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.qa_paths import ensure_run_qa_dir
-from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
+from app.pipeline.stages.dem import raster_sidecar_path, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.storage import read_manifest
 
@@ -110,12 +110,6 @@ def build_hypercube_products(
     }
 
 
-def _save_multipage_tiff(path: Path, cube_hwc: np.ndarray) -> None:
-    pages = [Image.fromarray(cube_hwc[:, :, band_index].astype(np.float32)) for band_index in range(cube_hwc.shape[-1])]
-    first, *rest = pages
-    first.save(path, format="TIFF", save_all=True, append_images=rest)
-
-
 def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -144,9 +138,9 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     notebook_stack_dir.mkdir(parents=True, exist_ok=True)
 
-    _save_multipage_tiff(tif_path, cube_raw)
+    write_georeferenced_raster(tif_path, cube_raw, grid_spec)
     np.save(npy_path, cube_raw)
-    _save_multipage_tiff(notebook_tif_path, cube_raw)
+    write_georeferenced_raster(notebook_tif_path, cube_raw, grid_spec)
     np.save(notebook_npy_path, cube_raw)
     write_raster_sidecar(
         tif_path,
