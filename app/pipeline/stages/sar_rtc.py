@@ -13,7 +13,7 @@ import numpy as np
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
-from app.pipeline.qa_paths import ensure_run_qa_dir
+from app.pipeline.qa_paths import ensure_run_canonical_dir, ensure_run_qa_dir
 from app.pipeline.stages.dem import DEM_TILE_SIZE, raster_sidecar_path, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.ee_session import initialize_ee_session
@@ -514,8 +514,7 @@ def write_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list
 
 
 def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
-    output_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = ensure_run_canonical_dir(run_dir, NOTEBOOK_SAR_NPY_OUTPUT_DIR)
     written_paths: list[Path] = []
     for name in OUTPUT_BANDS:
         npy_path = output_dir / notebook_sar_filename(name, "npy")

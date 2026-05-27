@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -177,6 +178,105 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "alignment_summary_redacted": ArtifactClass.LOCAL_SENSITIVE,
         }
 
+
+def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        settings = _settings(run_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=settings, run_dir=run_dir)
+
+        asyncio.run(GridStage(latitude=35.59499, longitude=36.12694).run(context))
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        asyncio.run(ZeroShiftStage(grid_spec=grid_spec).run(context))
+        asyncio.run(SarRtcStage(grid_spec=grid_spec, radar_cube_fetcher=deterministic_radar_cube_fetcher).run(context))
+        asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
+        asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
+        asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
+        asyncio.run(FieldOpsExportsStage(grid_spec=grid_spec).run(context))
+        asyncio.run(GpsComparisonStage(input_lat=35.59499, input_lon=36.12694, grid_spec=grid_spec).run(context))
+        asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
+        asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
+        asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
+
+        expected_groups = {
+            "DEM_GEO8_TIFS",
+            "GEOTIFF_RADAR_BANDS",
+            "NPY_RADAR_BANDS",
+            "NPY_STACKS",
+            "QA",
+            "QA/sar/intermediates",
+            "objects",
+        }
+        observed_dirs = {path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_dir()}
+        assert expected_groups <= observed_dirs
+        assert "qa" not in {path.name for path in run_dir.iterdir() if path.is_dir()}
+
+        observed_files = {path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_file()}
+        required_files = {
+            "DEM_GEO8_TIFS/DEM_640.tif",
+            "DEM_GEO8_TIFS/slope_deg_640.tif",
+            "DEM_GEO8_TIFS/aspect_deg_640.tif",
+            "DEM_GEO8_TIFS/roughness_100m_640.tif",
+            "DEM_GEO8_TIFS/tpi_100m_640.tif",
+            "DEM_GEO8_TIFS/hillshade_0to1_640.tif",
+            "GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_app.tif",
+            "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_app.tif",
+            "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_app.tif",
+            "GEOTIFF_RADAR_BANDS/RADAR_angle_640_app.tif",
+            "NPY_RADAR_BANDS/RADAR_VV_dB_640_app.npy",
+            "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy",
+            "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy",
+            "NPY_RADAR_BANDS/RADAR_angle_640_app.npy",
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+            "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
+            "QA/QA_GRID_dx_m_640.tif",
+            "QA/QA_GRID_dy_m_640.tif",
+            "QA/QA_GRID_validmask_640.tif",
+            "QA/RUN_MANIFEST.json",
+            "QA/REPORT_640_manifest.json",
+            "QA/sar/intermediates/sar_intermediate_manifest.json",
+            "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_angle.npy",
+            "objects_index.csv",
+            "clusters_summary.csv",
+            "objects/object_mask.npy",
+        }
+        assert required_files <= observed_files
+        assert not any(path.startswith("qa/") for path in observed_files)
+
+        report_manifest = json.loads((run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8"))
+        assert {
+            name
+            for name, item in report_manifest["reports"].items()
+            if item["status"] == "not_implemented_no_source_equivalent"
+        } == {
+            "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_Mass_Report.tif",
+            "REPORT_640_FINAL_Zero_Point_Targets.tif",
+        }
+
+        sar_manifest = json.loads(
+            (run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json").read_text(encoding="utf-8")
+        )
+        assert sar_manifest["stages"]["per_image_products_db"]["status"] == "not_implemented_no_source_equivalent"
+        assert sar_manifest["stages"]["pair_median"]["status"] == "not_implemented_no_source_equivalent"
+        assert sar_manifest["stages"]["final_median_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
+        assert sar_manifest["stages"]["post_sample_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
+        assert sar_manifest["stages"]["post_rtc"]["status"] == "implemented"
+        assert sar_manifest["stages"]["post_rtc"]["bands"] == {
+            "VV_dB": "post_rtc/final_VV_dB.npy",
+            "VH_dB": "post_rtc/final_VH_dB.npy",
+            "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
+            "angle": "post_rtc/final_angle.npy",
+        }
 
 def _artifact_classes(result) -> dict[str, ArtifactClass]:
     return {artifact.name: artifact.artifact_class for artifact in result.artifacts}

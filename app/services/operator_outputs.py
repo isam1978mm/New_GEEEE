@@ -11,8 +11,8 @@ from app.schemas.operator_output import OperatorOutputFilePublic, OperatorOutput
 from app.services.storage import get_run_dir, resolve_run_artifact_path
 
 SENSITIVE_FILENAMES = {
-    ".env",
-    "PATH_MAP.local.json",
+    ".env".casefold(),
+    "PATH_MAP.local.json".casefold(),
 }
 SENSITIVE_SUFFIXES = (
     ".db",
