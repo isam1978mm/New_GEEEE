@@ -22,7 +22,7 @@ def test_sar_source_selection_report_compares_metadata_and_stays_local_only(tmp_
 
     assert report["artifact_class"] == "FILESYSTEM_ONLY"
     assert report["local_only"] is True
-    assert report["app_metadata_file"] == "qa/sar/sar_pair_diagnostics.json"
+    assert report["app_metadata_file"] == "QA/sar/sar_pair_diagnostics.json"
     assert report["notebook_metadata_files"] == [
         {"root_label": "NOTEBOOK_RUN", "relative_path": "SUMMARY_RADAR_demo.csv"}
     ]
@@ -287,7 +287,7 @@ def _write_app_sar_metadata(
     pairs: list[dict[str, object]] | None = None,
     source_filters: dict[str, object] | None = None,
 ) -> None:
-    path = app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
+    path = app_run_dir / "QA" / "sar" / "sar_pair_diagnostics.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(

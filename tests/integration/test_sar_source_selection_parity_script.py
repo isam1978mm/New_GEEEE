@@ -113,7 +113,7 @@ def test_sar_source_selection_parity_script_accepts_cell25_sidecar(
 
 
 def _write_app_sar_metadata(app_run_dir: Path) -> None:
-    path = app_run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
+    path = app_run_dir / "QA" / "sar" / "sar_pair_diagnostics.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(

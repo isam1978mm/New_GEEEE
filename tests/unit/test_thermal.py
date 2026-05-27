@@ -117,7 +117,7 @@ def test_thermal_stage_writes_classified_grid_aligned_output() -> None:
         assert result.artifacts[1].artifact_class == ArtifactClass.FILESYSTEM_ONLY
         sidecar = read_manifest(raster_sidecar_path(run_dir / "lst.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
-        summary = json.loads((run_dir / "qa" / "stacks" / "thermal_summary.json").read_text(encoding="utf-8"))
+        summary = json.loads((run_dir / "QA" / "stacks" / "thermal_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "thermal"
         assert summary["start_date"] == DEFAULT_START
         assert summary["end_date"] == DEFAULT_END

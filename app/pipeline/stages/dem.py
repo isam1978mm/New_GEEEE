@@ -18,6 +18,7 @@ from app.pipeline._base import (
     StageResult,
     build_stage_artifact,
 )
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.grid import GridSpec
 from app.services.ee_session import initialize_ee_session
 from app.services.grid import GridManifest
@@ -269,7 +270,7 @@ def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray)
 
 
 def write_dem_audit_summary(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> Path:
-    qa_dir = run_dir / "qa" / "grid_dem"
+    qa_dir = ensure_run_qa_dir(run_dir) / "grid_dem"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "dem_audit_summary.json"
     nodata_count = int((dem_array == grid_spec.nodata).sum())

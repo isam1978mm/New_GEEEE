@@ -15,10 +15,11 @@ from app.pipeline._base import (
     build_stage_artifact,
 )
 from app.pipeline.manifest import save_grid_manifest
+from app.pipeline.qa_paths import NOTEBOOK_QA_DIRNAME, ensure_run_qa_dir
 from app.services.grid import GridManifest, build_grid_manifest
 
 DEFAULT_NODATA = -9999.0
-NOTEBOOK_QA_DIR = "QA"
+NOTEBOOK_QA_DIR = NOTEBOOK_QA_DIRNAME
 NOTEBOOK_QA_GRID_DX_NAME = "QA_GRID_dx_m_640.tif"
 NOTEBOOK_QA_GRID_DY_NAME = "QA_GRID_dy_m_640.tif"
 NOTEBOOK_QA_GRID_VALIDMASK_NAME = "QA_GRID_validmask_640.tif"
@@ -102,7 +103,7 @@ def pixel_center_from_transform(
 
 
 def write_grid_guard_summary(run_dir: Path, grid_spec: GridSpec) -> Path:
-    qa_dir = run_dir / "qa" / "grid_dem"
+    qa_dir = ensure_run_qa_dir(run_dir) / "grid_dem"
     qa_dir.mkdir(parents=True, exist_ok=True)
     path = qa_dir / "grid_guard_summary.json"
     payload = {
@@ -123,7 +124,7 @@ def write_grid_guard_summary(run_dir: Path, grid_spec: GridSpec) -> Path:
 def write_notebook_qa_grid_outputs(run_dir: Path, grid_spec: GridSpec) -> list[Path]:
     from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
 
-    qa_dir = run_dir / NOTEBOOK_QA_DIR
+    qa_dir = ensure_run_qa_dir(run_dir)
     qa_dir.mkdir(parents=True, exist_ok=True)
     zeros = np.zeros((grid_spec.size, grid_spec.size), dtype=np.float32)
     validmask = np.ones((grid_spec.size, grid_spec.size), dtype=np.float32)
@@ -148,7 +149,7 @@ def write_notebook_qa_grid_outputs(run_dir: Path, grid_spec: GridSpec) -> list[P
 
 
 def write_notebook_run_manifest(run_dir: Path, run_id: str, grid_spec: GridSpec) -> Path:
-    qa_dir = run_dir / NOTEBOOK_QA_DIR
+    qa_dir = ensure_run_qa_dir(run_dir)
     qa_dir.mkdir(parents=True, exist_ok=True)
     path = qa_dir / NOTEBOOK_RUN_MANIFEST_NAME
     payload = {

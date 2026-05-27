@@ -70,6 +70,9 @@ def test_grid_manifest_is_centered_on_projected_roi_center() -> None:
 def test_grid_stage_writes_grid_guard_summary_as_filesystem_only() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
+        legacy_qa_dir = run_dir / "qa"
+        legacy_qa_dir.mkdir()
+        (legacy_qa_dir / "legacy_app_qa.txt").write_text("preserve", encoding="utf-8")
         context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
         stage = GridStage(latitude=35.59499, longitude=36.12694)
         grid_spec = build_run_grid(35.59499, 36.12694)
@@ -93,7 +96,12 @@ def test_grid_stage_writes_grid_guard_summary_as_filesystem_only() -> None:
             "notebook_QA_GRID_validmask_640": ArtifactClass.LOCAL_SENSITIVE,
             "notebook_RUN_MANIFEST": ArtifactClass.LOCAL_SENSITIVE,
         }
-        guard_summary = json.loads((run_dir / "qa" / "grid_dem" / "grid_guard_summary.json").read_text(encoding="utf-8"))
+        top_level_dirs = {path.name for path in run_dir.iterdir() if path.is_dir()}
+        assert "QA" in top_level_dirs
+        assert "qa" not in top_level_dirs
+        assert (run_dir / "QA" / "legacy_app_qa.txt").read_text(encoding="utf-8") == "preserve"
+
+        guard_summary = json.loads((run_dir / "QA" / "grid_dem" / "grid_guard_summary.json").read_text(encoding="utf-8"))
         assert guard_summary["stage"] == "grid"
         assert guard_summary["grid_identity_recorded"] is True
         assert "bounds_m" not in guard_summary
@@ -122,6 +130,12 @@ def test_grid_stage_writes_grid_guard_summary_as_filesystem_only() -> None:
         assert "longitude" not in json.dumps(run_manifest).lower()
         artifact_paths = {artifact.name: run_dir / artifact.relative_path for artifact in result.artifacts}
         assert artifact_paths["grid_manifest"].is_file()
+        assert result.artifacts[1].relative_path == "QA/grid_dem/grid_guard_summary.json"
+        assert all(
+            artifact.relative_path.startswith("QA/")
+            for artifact in result.artifacts
+            if artifact.name.startswith("notebook_")
+        )
 
 
 def test_notebook_radar_meta_grid_override_preserves_exact_grid_values(tmp_path: Path) -> None:

@@ -92,7 +92,7 @@ def test_dem_derivatives_stage_writes_classified_grid_aligned_outputs() -> None:
         for name in expected_notebook_outputs:
             notebook_sidecar = read_manifest(raster_sidecar_path(notebook_dem_dir / name))
             assert notebook_sidecar["transform"] == grid_spec.manifest.crs_transform
-        summary = json.loads((run_dir / "qa" / "stacks" / "dem_derivatives_summary.json").read_text(encoding="utf-8"))
+        summary = json.loads((run_dir / "QA" / "stacks" / "dem_derivatives_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "dem_derivatives"
         assert summary["band_count"] == len(OUTPUT_NAMES)
 

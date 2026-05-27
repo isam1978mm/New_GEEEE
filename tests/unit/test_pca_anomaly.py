@@ -58,7 +58,7 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         report = read_manifest(run_dir / "pca_eigenvalues.json")
         assert report["seed"] == 0
         assert "eigenvalues" in report or "explained_variance" in report
-        qa_summary = json.loads((run_dir / "qa" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
+        qa_summary = json.loads((run_dir / "QA" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
         assert qa_summary["seed"] == 0
         assert qa_summary["components_count"] == 3
 

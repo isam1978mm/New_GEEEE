@@ -161,7 +161,7 @@ def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
         assert notebook_sidecar["height"] == 640
         assert notebook_sidecar["transform"] == grid_spec.manifest.crs_transform
 
-        audit_summary = json.loads((run_dir / "qa" / "grid_dem" / "dem_audit_summary.json").read_text(encoding="utf-8"))
+        audit_summary = json.loads((run_dir / "QA" / "grid_dem" / "dem_audit_summary.json").read_text(encoding="utf-8"))
         assert audit_summary["stage"] == "dem"
         assert audit_summary["grid_locked"] is True
         assert audit_summary["tile_count"] == 4

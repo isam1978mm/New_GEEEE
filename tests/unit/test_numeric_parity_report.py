@@ -193,7 +193,7 @@ def test_notebook_mapping_patterns_cover_requested_downloaded_names(tmp_path: Pa
         "stacks/tensor_support/radar_db_support_stack.npy": "NPY_STACKS/RADAR_STACK_HWC_640_match.npy",
         "hypercube.tif": "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_match.tif",
         "full_job/focus/focus_zone_17m.tif": "QA/FOCUS_" "MASK_17m_inside_640.tif",
-        "qa/sar/sar_summary.csv": "SUMMARY_RADAR_match.csv",
+        "QA/sar/sar_summary.csv": "SUMMARY_RADAR_match.csv",
     }
 
     for app_file, notebook_path in expected_matches.items():

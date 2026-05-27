@@ -10,6 +10,7 @@ from PIL import Image
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import DEM_TILE_SIZE, raster_sidecar_path, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.ee_session import initialize_ee_session
@@ -208,7 +209,7 @@ def write_s2_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.n
 
 
 def write_s2_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float, start_date: str, end_date: str, cloud_max: int) -> Path:
-    qa_dir = run_dir / "qa" / "stacks"
+    qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "s2_indices_summary.json"
     index_summaries = {}

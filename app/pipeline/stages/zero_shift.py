@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from app.db.models.enums import ArtifactClass
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline._base import build_stage_artifact
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult
 from app.pipeline.stages.dem import raster_sidecar_path
@@ -91,7 +92,7 @@ def write_zero_shift_reports(
     tif_issues: dict[str, list[str]],
     npy_issues: dict[str, list[str]],
 ) -> tuple[Path, Path]:
-    qa_dir = run_dir / "qa" / "grid_dem"
+    qa_dir = ensure_run_qa_dir(run_dir) / "grid_dem"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "zero_shift_summary.json"
     audit_path = qa_dir / "drift_audit.csv"

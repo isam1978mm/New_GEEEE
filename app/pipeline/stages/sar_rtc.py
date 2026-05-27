@@ -13,6 +13,7 @@ import numpy as np
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import DEM_TILE_SIZE, raster_sidecar_path, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.ee_session import initialize_ee_session
@@ -524,7 +525,7 @@ def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]
 
 
 def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
-    base_dir = run_dir / NOTEBOOK_SAR_INTERMEDIATE_DIR
+    base_dir = ensure_run_qa_dir(run_dir) / "sar" / "intermediates"
     post_rtc_dir = base_dir / "post_rtc"
     post_rtc_dir.mkdir(parents=True, exist_ok=True)
     written_paths: list[Path] = []
@@ -718,10 +719,11 @@ def write_sar_qa_outputs(
     end_date: str,
     diagnostics: SarFetchDiagnostics | None,
 ) -> list[Path]:
-    pair_diagnostics_path = run_dir / "qa" / "sar" / "sar_pair_diagnostics.json"
-    summary_path = run_dir / "qa" / "sar" / "sar_summary.csv"
-    nodata_audit_path = run_dir / "qa" / "sar" / "sar_nodata_audit.csv"
-    alignment_summary_path = run_dir / "qa" / "sar" / "sar_alignment_summary.json"
+    sar_qa_dir = ensure_run_qa_dir(run_dir) / "sar"
+    pair_diagnostics_path = sar_qa_dir / "sar_pair_diagnostics.json"
+    summary_path = sar_qa_dir / "sar_summary.csv"
+    nodata_audit_path = sar_qa_dir / "sar_nodata_audit.csv"
+    alignment_summary_path = sar_qa_dir / "sar_alignment_summary.json"
 
     write_json(
         pair_diagnostics_path,

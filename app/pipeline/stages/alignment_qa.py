@@ -10,6 +10,7 @@ import numpy as np
 from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError, StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import GridSpec, pixel_center_from_transform
 from app.services.storage import read_manifest
@@ -134,7 +135,7 @@ def write_alignment_outputs(
     audit_path = run_dir / ALIGNMENT_AUDIT_CSV_NAME
     summary_path = run_dir / ALIGNMENT_QA_JSON_NAME
     mask_selection_path = run_dir / ALIGNMENT_MASK_SELECTION_NAME
-    redacted_summary_path = run_dir / "qa" / "alignment" / ALIGNMENT_SUMMARY_REDACTED_NAME
+    redacted_summary_path = ensure_run_qa_dir(run_dir) / "alignment" / ALIGNMENT_SUMMARY_REDACTED_NAME
     redacted_summary_path.parent.mkdir(parents=True, exist_ok=True)
 
     redacted_summary = {

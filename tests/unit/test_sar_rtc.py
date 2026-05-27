@@ -563,6 +563,16 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert artifact_http_flags["sar_summary"] is False
         assert artifact_http_flags["sar_nodata_audit"] is False
         assert artifact_http_flags["sar_alignment_summary"] is False
+        assert {
+            artifact.relative_path
+            for artifact in result.artifacts
+            if artifact.name in {"sar_pair_diagnostics", "sar_summary", "sar_nodata_audit", "sar_alignment_summary"}
+        } == {
+            "QA/sar/sar_pair_diagnostics.json",
+            "QA/sar/sar_summary.csv",
+            "QA/sar/sar_nodata_audit.csv",
+            "QA/sar/sar_alignment_summary.json",
+        }
         assert result.metadata["band_names"] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
         assert result.metadata["sar_npy_artifact_names"] == [
             "sar_npy_VV_dB",
@@ -615,6 +625,12 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             assert array.shape == (640, 640)
 
         intermediate_dir = run_dir / NOTEBOOK_SAR_INTERMEDIATE_DIR
+        assert NOTEBOOK_SAR_INTERMEDIATE_DIR.startswith("QA/")
+        assert all(
+            artifact.relative_path.startswith("QA/sar/intermediates/")
+            for artifact in result.artifacts
+            if artifact.name.startswith("notebook_sar_intermediate")
+        )
         intermediate_manifest = json.loads((intermediate_dir / "sar_intermediate_manifest.json").read_text(encoding="utf-8"))
         assert intermediate_manifest["schema"] == "notebook_sar_intermediates_v1"
         assert intermediate_manifest["stages"]["per_image_products_db"]["status"] == "not_implemented_no_source_equivalent"
@@ -641,7 +657,7 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             np.load(run_dir / SAR_NPY_OUTPUT_DIR / "incidence.npy"),
         )
 
-        pair_diagnostics = json.loads((run_dir / "qa" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
+        pair_diagnostics = json.loads((run_dir / "QA" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
         assert pair_diagnostics["artifact_class"] == "FILESYSTEM_ONLY"
         assert pair_diagnostics["local_only"] is True
         assert pair_diagnostics["collection_id"] == S1_COLLECTION_ID
@@ -668,17 +684,17 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert "bounds" not in pair_diagnostics
         assert "transform" not in pair_diagnostics
 
-        with (run_dir / "qa" / "sar" / "sar_summary.csv").open("r", encoding="utf-8", newline="") as handle:
+        with (run_dir / "QA" / "sar" / "sar_summary.csv").open("r", encoding="utf-8", newline="") as handle:
             summary_rows = list(csv.DictReader(handle))
         assert [row["band_name"] for row in summary_rows] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
         assert all("mean" in row for row in summary_rows)
 
-        with (run_dir / "qa" / "sar" / "sar_nodata_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+        with (run_dir / "QA" / "sar" / "sar_nodata_audit.csv").open("r", encoding="utf-8", newline="") as handle:
             nodata_rows = list(csv.DictReader(handle))
         assert [row["band_name"] for row in nodata_rows] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
         assert all(set(row) == {"band_name", "total_pixels", "nodata_count", "nodata_fraction", "all_nodata"} for row in nodata_rows)
 
-        alignment_summary = json.loads((run_dir / "qa" / "sar" / "sar_alignment_summary.json").read_text(encoding="utf-8"))
+        alignment_summary = json.loads((run_dir / "QA" / "sar" / "sar_alignment_summary.json").read_text(encoding="utf-8"))
         assert alignment_summary["all_shapes_match"] is True
         assert alignment_summary["all_float32"] is True
         assert alignment_summary["expected_shape"] == [640, 640]

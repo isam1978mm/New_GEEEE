@@ -9,6 +9,7 @@ from PIL import Image
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
@@ -116,7 +117,7 @@ def compute_pca_anomaly(
 def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, report: dict[str, object]) -> dict[str, Path]:
     tif_path = run_dir / PCA_ANOMALY_TIF_NAME
     report_path = run_dir / PCA_REPORT_NAME
-    qa_path = run_dir / "qa" / "parity" / PCA_PARITY_QA_NAME
+    qa_path = ensure_run_qa_dir(run_dir) / "parity" / PCA_PARITY_QA_NAME
     qa_path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(anomaly.astype(np.float32)).save(tif_path, format="TIFF")
     write_raster_sidecar(

@@ -52,6 +52,7 @@ def test_build_object_products_finds_objects_clusters_and_pixel_space_only_rows(
 def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
+        (run_dir / "qa").mkdir()
         grid_spec = build_run_grid(35.59499, 36.12694)
         anomaly = np.zeros((grid_spec.size, grid_spec.size), dtype=np.float32)
         anomaly[10:18, 20:28] = 0.98
@@ -99,6 +100,9 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
         assert not (run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif").exists()
 
         report_manifest = json.loads((run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8"))
+        top_level_dirs = {path.name for path in run_dir.iterdir() if path.is_dir()}
+        assert "QA" in top_level_dirs
+        assert "qa" not in top_level_dirs
         assert report_manifest["schema"] == "notebook_report_640_manifest_v1"
         assert report_manifest["stage"] == "object_extract"
         assert set(report_manifest["reports"]) == {

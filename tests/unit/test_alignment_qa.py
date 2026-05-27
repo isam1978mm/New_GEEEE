@@ -62,7 +62,7 @@ def test_alignment_qa_stage_writes_reports_as_redacted_public() -> None:
         assert len(rows) == 2
         summary = json.loads((run_dir / "alignment_qa.json").read_text(encoding="utf-8"))
         assert summary["pass"] is True
-        redacted_summary = json.loads((run_dir / "qa" / "alignment" / "alignment_summary_redacted.json").read_text(encoding="utf-8"))
+        redacted_summary = json.loads((run_dir / "QA" / "alignment" / "alignment_summary_redacted.json").read_text(encoding="utf-8"))
         assert redacted_summary["pass"] is True
         assert "transform" not in redacted_summary
         assert "bounds" not in redacted_summary

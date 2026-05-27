@@ -161,7 +161,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         for name in INDEX_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
-        summary = json.loads((run_dir / "qa" / "stacks" / "s2_indices_summary.json").read_text(encoding="utf-8"))
+        summary = json.loads((run_dir / "QA" / "stacks" / "s2_indices_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "s2_indices"
         assert summary["index_bands"] == list(INDEX_NAMES)
         assert summary["source_bands"] == list(S2_SOURCE_BANDS)

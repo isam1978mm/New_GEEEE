@@ -12,6 +12,7 @@ from PIL import Image
 from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError, StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
@@ -322,7 +323,7 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
 
 
 def write_report_640_manifest(run_dir: Path) -> Path:
-    manifest_path = run_dir / REPORT_640_MANIFEST_RELATIVE_PATH
+    manifest_path = ensure_run_qa_dir(run_dir) / REPORT_640_MANIFEST_RELATIVE_PATH.name
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     reports = {
         filename: {

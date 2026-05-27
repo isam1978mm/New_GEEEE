@@ -31,9 +31,9 @@ def test_zero_shift_stage_accepts_grid_locked_outputs() -> None:
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert result.metadata["status"] == "grid_locked"
 
-        summary = json.loads((run_dir / "qa" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
+        summary = json.loads((run_dir / "QA" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
         assert summary["status"] == "grid_locked"
-        with (run_dir / "qa" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+        with (run_dir / "QA" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         artifact_names = {row["artifact_name"] for row in rows}
         assert {"dem.tif", "DEM_640.tif", "dem.npy"} <= artifact_names
@@ -57,10 +57,10 @@ def test_zero_shift_stage_raises_grid_drift_error_for_half_pixel_shift() -> None
         with pytest.raises(GridDriftError):
             asyncio.run(ZeroShiftStage(grid_spec=grid_spec).run(context))
 
-        summary = json.loads((run_dir / "qa" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
+        summary = json.loads((run_dir / "QA" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
         assert summary["status"] == "grid_drift_detected"
         assert "dem.tif" in summary["failing_artifacts"]
-        with (run_dir / "qa" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+        with (run_dir / "QA" / "grid_dem" / "drift_audit.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         dem_row = next(row for row in rows if row["artifact_name"] == "dem.tif")
         assert dem_row["passes_alignment"] == "false"

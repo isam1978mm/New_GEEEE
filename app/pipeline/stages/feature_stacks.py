@@ -11,6 +11,7 @@ from PIL import Image
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.storage import read_manifest
@@ -287,7 +288,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
 
     tensor_dir = run_dir / "stacks" / "tensor_support"
     optical_dir = run_dir / "stacks" / "optical_support"
-    qa_dir = run_dir / "qa" / "stacks"
+    qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
     tensor_dir.mkdir(parents=True, exist_ok=True)
     optical_dir.mkdir(parents=True, exist_ok=True)

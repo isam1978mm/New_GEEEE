@@ -166,7 +166,7 @@ def _write_fixture(
         ],
     )
     _write_summary(
-        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        app_run_dir / "QA" / "sar" / "sar_summary.csv",
         [
             {"band_name": "VV_dB", "min": "1.0", "max": "2.0", "mean": "1.5", "nodata_count": "0"},
             {"band_name": "VH_dB", "min": "1.0", "max": "2.0", "mean": "1.5", "nodata_count": "0"},

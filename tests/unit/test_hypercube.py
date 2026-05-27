@@ -77,7 +77,7 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         assert len(rows) == 3
         assert rows[-1]["band_name"] == "valid_mask"
         assert rows[-1]["source_file"] == "generated"
-        with (run_dir / "qa" / "parity" / "hypercube_audit.csv").open("r", encoding="utf-8", newline="") as handle:
+        with (run_dir / "QA" / "parity" / "hypercube_audit.csv").open("r", encoding="utf-8", newline="") as handle:
             audit_rows = list(csv.DictReader(handle))
         assert len(audit_rows) == 3
         assert audit_rows[-1]["band_name"] == "valid_mask"

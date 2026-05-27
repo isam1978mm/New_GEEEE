@@ -119,12 +119,12 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     await engine.dispose()
 
     name_to_path = {artifact.name: artifact.relative_path for artifact in artifacts}
-    assert name_to_path["grid_guard_summary"] == "qa/grid_dem/grid_guard_summary.json"
+    assert name_to_path["grid_guard_summary"] == "QA/grid_dem/grid_guard_summary.json"
     assert name_to_path["sar_npy_VV_dB"] == "npy_radar_bands/VV_dB.npy"
     assert name_to_path["sar_npy_VH_dB"] == "npy_radar_bands/VH_dB.npy"
     assert name_to_path["sar_npy_logRatio_dB"] == "npy_radar_bands/logRatio_dB.npy"
     assert name_to_path["sar_npy_incidence"] == "npy_radar_bands/incidence.npy"
-    assert name_to_path["sar_summary"] == "qa/sar/sar_summary.csv"
+    assert name_to_path["sar_summary"] == "QA/sar/sar_summary.csv"
     assert name_to_path["science_core_stack_npy"] == "stacks/tensor_support/science_core_stack.npy"
     assert name_to_path["ai_ready_support_stack_npy"] == "stacks/tensor_support/ai_ready_support_stack.npy"
     assert name_to_path["focus_zone_17m_npy"] == "full_job/focus/focus_zone_17m.npy"
@@ -135,8 +135,8 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["gps_point_comparison_json"] == "full_job/gps/gps_point_comparison.json"
     assert name_to_path["gps_point_comparison_csv"] == "full_job/gps/gps_point_comparison.csv"
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
-    assert name_to_path["parity_qa_summary"] == "qa/parity/parity_qa_summary.json"
-    assert name_to_path["thermal_summary"] == "qa/stacks/thermal_summary.json"
+    assert name_to_path["parity_qa_summary"] == "QA/parity/parity_qa_summary.json"
+    assert name_to_path["thermal_summary"] == "QA/stacks/thermal_summary.json"
 
 
 async def _create_database(settings: Settings) -> None:

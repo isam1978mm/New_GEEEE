@@ -10,6 +10,7 @@ from PIL import Image
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.storage import read_manifest
@@ -136,7 +137,7 @@ def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[s
     order_path = run_dir / HYPERCUBE_BAND_ORDER_NAME
     stats_path = run_dir / HYPERCUBE_STATS_NAME
     norm_params_path = run_dir / HYPERCUBE_NORM_PARAMS_NAME
-    audit_path = run_dir / "qa" / "parity" / HYPERCUBE_AUDIT_NAME
+    audit_path = ensure_run_qa_dir(run_dir) / "parity" / HYPERCUBE_AUDIT_NAME
     notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
     notebook_tif_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME
     notebook_npy_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME

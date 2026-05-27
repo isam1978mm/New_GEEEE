@@ -8,6 +8,7 @@ import numpy as np
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import NOTEBOOK_DEM_DIR_NAME, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 
@@ -177,7 +178,7 @@ def write_notebook_dem_outputs(
 
 
 def write_dem_derivatives_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float) -> Path:
-    qa_dir = run_dir / "qa" / "stacks"
+    qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "dem_derivatives_summary.json"
     band_summaries = {}

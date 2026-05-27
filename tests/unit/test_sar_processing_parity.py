@@ -324,7 +324,7 @@ def test_f24_report_finds_pair_median_first_divergence(tmp_path: Path) -> None:
     notebook_root = tmp_path / "NOTEBOOK_RUN"
     source_report_path = tmp_path / "source_report.json"
     notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
-    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
     _write_matching_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
     _write_source_gate_report(source_report_path)
     per_image = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -381,7 +381,7 @@ def test_f24_intermediate_comparison_ignores_manifest_nodata_fill(tmp_path: Path
     notebook_root = tmp_path / "NOTEBOOK_RUN"
     source_report_path = tmp_path / "source_report.json"
     notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
-    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
     _write_matching_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
     _write_source_gate_report(source_report_path)
     nodata = np.float32(-9999.0)
@@ -442,7 +442,7 @@ def test_f24_report_finds_local_rtc_first_divergence(tmp_path: Path) -> None:
     notebook_root = tmp_path / "NOTEBOOK_RUN"
     source_report_path = tmp_path / "source_report.json"
     notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
-    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
     _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
     _write_source_gate_report(source_report_path)
     match_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -486,7 +486,7 @@ def test_f24_report_blocks_first_divergence_when_earlier_app_intermediates_are_m
     notebook_root = tmp_path / "NOTEBOOK_RUN"
     source_report_path = tmp_path / "source_report.json"
     notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
-    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
     _write_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
     _write_source_gate_report(source_report_path)
     match_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -534,7 +534,7 @@ def test_f24_report_reports_no_first_divergence_when_all_stages_match(tmp_path: 
     notebook_root = tmp_path / "NOTEBOOK_RUN"
     source_report_path = tmp_path / "source_report.json"
     notebook_manifest = notebook_root / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
-    app_manifest = app_run_dir / "qa" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    app_manifest = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
     _write_matching_sar_fixture(app_run_dir=app_run_dir, notebook_root=notebook_root)
     _write_source_gate_report(source_report_path)
     match_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -640,7 +640,7 @@ def _write_sar_fixture(
     summary_relative_path: Path = Path("SUMMARY_RADAR_demo.csv"),
 ) -> None:
     notebook_summary_path = notebook_root / summary_relative_path
-    app_summary_path = app_run_dir / "qa" / "sar" / "sar_summary.csv"
+    app_summary_path = app_run_dir / "QA" / "sar" / "sar_summary.csv"
     notebook_summary_path.parent.mkdir(parents=True, exist_ok=True)
     app_summary_path.parent.mkdir(parents=True, exist_ok=True)
     _write_summary_csv(
@@ -711,7 +711,7 @@ def _write_f20_edge_angle_fixture(*, app_run_dir: Path, notebook_root: Path) -> 
         ],
     )
     _write_summary_csv(
-        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        app_run_dir / "QA" / "sar" / "sar_summary.csv",
         [
             {"band_name": "VV_dB", "min": "10.0", "max": "20.0", "mean": "11.278", "nodata_count": "0"},
             {"band_name": "VH_dB", "min": "5.0", "max": "10.0", "mean": "5.555", "nodata_count": "0"},
@@ -748,7 +748,7 @@ def _write_f21_broad_residual_fixture(*, app_run_dir: Path, notebook_root: Path)
         ],
     )
     _write_summary_csv(
-        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        app_run_dir / "QA" / "sar" / "sar_summary.csv",
         [
             {"band_name": "VV_dB", "min": "1.02", "max": "9.02", "mean": "5.02", "nodata_count": "0"},
             {"band_name": "VH_dB", "min": "11.02", "max": "19.02", "mean": "15.02", "nodata_count": "0"},
@@ -782,7 +782,7 @@ def _write_f23_processing_delta_fixture(*, app_run_dir: Path, notebook_root: Pat
         ],
     )
     _write_summary_csv(
-        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        app_run_dir / "QA" / "sar" / "sar_summary.csv",
         [
             {"band_name": "VV_dB", "min": "1.5", "max": "16.0", "mean": "8.625", "nodata_count": "0"},
             {"band_name": "VH_dB", "min": "1.0", "max": "16.0", "mean": "8.5", "nodata_count": "0"},
@@ -828,7 +828,7 @@ def _write_matching_sar_fixture(*, app_run_dir: Path, notebook_root: Path) -> No
         ],
     )
     _write_summary_csv(
-        app_run_dir / "qa" / "sar" / "sar_summary.csv",
+        app_run_dir / "QA" / "sar" / "sar_summary.csv",
         [
             {"band_name": "VV_dB", "min": "1.0", "max": "4.0", "mean": "2.5", "nodata_count": "0"},
             {"band_name": "VH_dB", "min": "1.0", "max": "4.0", "mean": "2.5", "nodata_count": "0"},
