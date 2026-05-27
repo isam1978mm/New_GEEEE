@@ -28,6 +28,7 @@
     pollTimerId: null,
     pollFailed: false,
     recentRuns: [],
+    currentOutputTreeRunId: null,
   };
 
   function isVisibleArtifact(artifact) {
@@ -59,6 +60,276 @@
       return "run artifact";
     }
     return ARTIFACT_DISPLAY_FILENAMES[artifact.name] || artifact.name;
+  }
+
+  function describeOutputGroup(item) {
+    if (!item || typeof item.relative_path !== "string") {
+      return "App-only extras";
+    }
+
+    const relativePath = item.relative_path;
+    if (relativePath.startsWith("REPORT_640_")) {
+      return "Reports";
+    }
+    if (relativePath.startsWith("DEM_GEO8_TIFS/")) {
+      return "DEM_GEO8_TIFS";
+    }
+    if (relativePath.startsWith("GEOTIFF_RADAR_BANDS/")) {
+      return "GEOTIFF_RADAR_BANDS";
+    }
+    if (relativePath.startsWith("NPY_RADAR_BANDS/")) {
+      return "NPY_RADAR_BANDS";
+    }
+    if (relativePath.startsWith("NPY_STACKS/")) {
+      return "NPY_STACKS";
+    }
+    if (relativePath.startsWith("QA/sar/intermediates/")) {
+      return "QA/sar/intermediates";
+    }
+    if (relativePath.startsWith("QA/")) {
+      return "QA";
+    }
+    if (relativePath.startsWith("objects/") || relativePath === "objects_index.csv" || relativePath === "clusters_summary.csv") {
+      return "Object extraction";
+    }
+    if (relativePath.includes("manifest")) {
+      return "Manifests";
+    }
+    return "App-only extras";
+  }
+
+  function formatFileSize(sizeBytes) {
+    if (!Number.isFinite(sizeBytes) || sizeBytes < 0) {
+      return "size unavailable";
+    }
+    if (sizeBytes < 1024) {
+      return `${sizeBytes} B`;
+    }
+    if (sizeBytes < 1024 * 1024) {
+      return `${(sizeBytes / 1024).toFixed(1)} KB`;
+    }
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function clearOutputTree() {
+    const outputTreeList = document.getElementById("output-tree-list");
+    const notImplementedList = document.getElementById("not-implemented-list");
+    const outputTreeCount = document.getElementById("output-tree-count");
+    if (!outputTreeList || !notImplementedList || !outputTreeCount) {
+      return;
+    }
+    outputTreeList.innerHTML = "";
+    notImplementedList.innerHTML = "";
+    outputTreeCount.textContent = "0 files";
+  }
+
+  function renderOutputTreeMessage(message) {
+    const outputTreeList = document.getElementById("output-tree-list");
+    const outputTreeCount = document.getElementById("output-tree-count");
+    if (!outputTreeList || !outputTreeCount) {
+      return;
+    }
+    outputTreeList.innerHTML = "";
+    outputTreeCount.textContent = "0 files";
+    const item = document.createElement("li");
+    item.className = "output-tree-empty";
+    item.textContent = message;
+    outputTreeList.appendChild(item);
+  }
+
+  function renderNotImplementedList(notImplemented) {
+    const list = document.getElementById("not-implemented-list");
+    if (!list) {
+      return;
+    }
+    list.innerHTML = "";
+
+    const entries = Array.isArray(notImplemented) ? notImplemented : [];
+    if (entries.length === 0) {
+      const item = document.createElement("li");
+      item.className = "output-tree-empty";
+      item.textContent = "No not-implemented outputs are reported for this run.";
+      list.appendChild(item);
+      return;
+    }
+
+    for (const entry of entries) {
+      if (!entry || typeof entry.filename !== "string" || typeof entry.relative_path !== "string") {
+        continue;
+      }
+      const item = document.createElement("li");
+      item.className = "not-implemented-card";
+
+      const head = document.createElement("div");
+      head.className = "not-implemented-head";
+
+      const name = document.createElement("span");
+      name.className = "not-implemented-name";
+      name.textContent = entry.filename;
+
+      const status = document.createElement("span");
+      status.className = "not-implemented-status";
+      status.textContent = "Not implemented in current app output set.";
+
+      head.appendChild(name);
+      head.appendChild(status);
+
+      const path = document.createElement("span");
+      path.className = "not-implemented-path";
+      path.textContent = entry.relative_path;
+
+      const meta = document.createElement("div");
+      meta.className = "not-implemented-meta";
+
+      const group = document.createElement("span");
+      group.className = "not-implemented-source";
+      group.textContent = describeOutputGroup(entry);
+
+      const source = document.createElement("span");
+      source.className = "not-implemented-source";
+      source.textContent = typeof entry.source === "string" ? `Source: ${entry.source}` : "";
+
+      meta.appendChild(group);
+      meta.appendChild(source);
+
+      item.appendChild(head);
+      item.appendChild(path);
+      item.appendChild(meta);
+      list.appendChild(item);
+    }
+  }
+
+  function renderOutputTree(payload) {
+    const outputTreeList = document.getElementById("output-tree-list");
+    const outputTreeCount = document.getElementById("output-tree-count");
+    if (!outputTreeList || !outputTreeCount) {
+      return;
+    }
+
+    const outputs = Array.isArray(payload && payload.outputs) ? payload.outputs : [];
+    const grouped = new Map();
+    for (const output of outputs) {
+      if (!output || typeof output.relative_path !== "string" || typeof output.filename !== "string") {
+        continue;
+      }
+      const groupLabel = describeOutputGroup(output);
+      if (!grouped.has(groupLabel)) {
+        grouped.set(groupLabel, []);
+      }
+      grouped.get(groupLabel).push(output);
+    }
+
+    outputTreeList.innerHTML = "";
+    outputTreeCount.textContent = `${outputs.length} file${outputs.length === 1 ? "" : "s"}`;
+
+    if (outputs.length === 0) {
+      renderOutputTreeMessage("No output files found for this run.");
+      renderNotImplementedList(payload && payload.not_implemented);
+      return;
+    }
+
+    for (const [groupLabel, groupOutputs] of grouped.entries()) {
+      const groupItem = document.createElement("li");
+      groupItem.className = "output-group";
+
+      const head = document.createElement("div");
+      head.className = "output-group-head";
+
+      const title = document.createElement("span");
+      title.className = "output-group-title";
+      title.textContent = groupLabel;
+
+      const count = document.createElement("span");
+      count.className = "output-group-count";
+      count.textContent = `${groupOutputs.length} file${groupOutputs.length === 1 ? "" : "s"}`;
+
+      head.appendChild(title);
+      head.appendChild(count);
+
+      const fileList = document.createElement("ul");
+      fileList.className = "output-file-list";
+
+      for (const output of groupOutputs) {
+        const fileItem = document.createElement("li");
+        fileItem.className = "output-file-card";
+
+        const fileHead = document.createElement("div");
+        fileHead.className = "output-file-head";
+
+        const name = document.createElement("span");
+        name.className = "output-file-name";
+        name.textContent = output.filename;
+
+        const type = document.createElement("span");
+        type.className = "output-file-type";
+        type.textContent = output.extension || output.file_type || "file";
+
+        fileHead.appendChild(name);
+        fileHead.appendChild(type);
+
+        const path = document.createElement("span");
+        path.className = "output-file-path";
+        path.textContent = output.relative_path;
+
+        const meta = document.createElement("div");
+        meta.className = "output-file-meta";
+
+        const size = document.createElement("span");
+        size.className = "output-file-size";
+        size.textContent = formatFileSize(Number(output.size_bytes));
+
+        const directory = document.createElement("span");
+        directory.className = "output-file-size";
+        directory.textContent = typeof output.directory === "string" && output.directory ? output.directory : "run root";
+
+        meta.appendChild(size);
+        meta.appendChild(directory);
+
+        fileItem.appendChild(fileHead);
+        fileItem.appendChild(path);
+        fileItem.appendChild(meta);
+
+        if (typeof output.download_url === "string" && output.download_url) {
+          const link = document.createElement("a");
+          link.className = "output-file-link";
+          link.href = output.download_url;
+          link.download = output.filename;
+          link.textContent = "Download";
+          fileItem.appendChild(link);
+        }
+
+        fileList.appendChild(fileItem);
+      }
+
+      groupItem.appendChild(head);
+      groupItem.appendChild(fileList);
+      outputTreeList.appendChild(groupItem);
+    }
+
+    renderNotImplementedList(payload && payload.not_implemented);
+  }
+
+  async function loadOutputTree(runId) {
+    state.currentOutputTreeRunId = runId;
+    renderOutputTreeMessage("Outputs are loading...");
+    renderNotImplementedList([]);
+
+    const response = await fetch(`/runs/${encodeURIComponent(runId)}/outputs`);
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (_error) {
+      payload = null;
+    }
+    if (!response.ok) {
+      const message = payload && typeof payload.message === "string" ? payload.message : "Could not load full output tree.";
+      throw new Error(message);
+    }
+    if (state.currentOutputTreeRunId !== runId) {
+      return null;
+    }
+    renderOutputTree(payload);
+    return payload;
   }
 
   function parseTargetInput() {
@@ -442,6 +713,8 @@
       detail: "Loading selected run.",
       showManualRefresh: false,
     });
+    renderOutputTreeMessage("Outputs are loading...");
+    renderNotImplementedList([]);
     renderArtifactMessage("Loading artifact status for the selected run.");
     if (feedback) {
       feedback.textContent = `Loading run: ${runId}`;
@@ -459,6 +732,8 @@
         showManualRefresh: true,
       });
       renderArtifactMessage("Artifact status is unavailable. Use manual refresh to retry.");
+      renderOutputTreeMessage("Could not load full output tree.");
+      renderNotImplementedList([]);
       if (feedback) {
         feedback.textContent = error instanceof Error ? error.message : "Run lookup failed.";
       }
@@ -520,6 +795,8 @@
 
     if (!isTerminalRunStatus(status)) {
       renderArtifactMessage("Artifacts are not ready while the run is queued or running.");
+      renderOutputTreeMessage("Full output tree is available after a completed run.");
+      renderNotImplementedList([]);
       clearRunPolling();
       state.pollTimerId = window.setTimeout(function () {
         void pollRunStatus(runId);
@@ -528,8 +805,16 @@
       clearRunPolling();
       if (status === "done") {
         renderArtifacts(runId, payload.artifacts);
+        try {
+          await loadOutputTree(runId);
+        } catch (_error) {
+          renderOutputTreeMessage("Could not load full output tree.");
+          renderNotImplementedList([]);
+        }
       } else {
         renderArtifactMessage("Artifacts are unavailable for this run state.");
+        renderOutputTreeMessage("Full output tree is unavailable for this run state.");
+        renderNotImplementedList([]);
       }
     }
 
@@ -549,6 +834,8 @@
         showManualRefresh: true,
       });
       renderArtifactMessage("Artifact status is unavailable. Use manual refresh to retry.");
+      renderOutputTreeMessage("Could not load full output tree.");
+      renderNotImplementedList([]);
       const feedback = document.getElementById("run-feedback");
       if (feedback) {
         feedback.textContent = error instanceof Error ? error.message : "Polling failed.";
@@ -574,6 +861,8 @@
     submitButton.disabled = true;
     feedback.textContent = "Queueing local run...";
     clearRunPolling();
+    renderOutputTreeMessage("Full output tree is available after a completed run.");
+    renderNotImplementedList([]);
     renderArtifactMessage("Artifacts are not ready while the run is queued or running.");
     setRunLifecycleView({
       runId: state.currentRunId || "Pending",
@@ -615,6 +904,8 @@
     } catch (error) {
       clearRunPolling();
       state.currentRunStatus = "failed";
+      renderOutputTreeMessage("Full output tree is unavailable because the run request failed.");
+      renderNotImplementedList([]);
       renderArtifactMessage("Artifacts are unavailable because the run request failed.");
       setRunLifecycleView({
         runId: state.currentRunId || "Not started",
@@ -676,6 +967,8 @@
     });
     renderStageProgress({ current_stage: null, stages: [] });
     renderStatusHistory({ history: [] });
+    renderOutputTreeMessage("Full output tree is available after a completed run.");
+    renderNotImplementedList([]);
     renderArtifactMessage("Artifacts will appear after a run completes.");
     void loadRecentRuns();
   }

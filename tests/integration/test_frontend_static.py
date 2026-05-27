@@ -25,6 +25,10 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "Status history" in response.text
     assert "status-history-list" in response.text
     assert "What outputs will I get?" in response.text
+    assert "Full operator output tree" in response.text
+    assert "The full local run tree appears here after a completed run." in response.text
+    assert "output-tree-list" in response.text
+    assert "not-implemented-list" in response.text
     assert "Run outputs" in response.text
     assert "Public-safe artifacts appear here when a run completes." in response.text
     assert "public-safe artifacts" in response.text
@@ -67,9 +71,12 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert 'fetch("/runs"' in js_response.text
     assert 'fetch("/runs")' in js_response.text
     assert "fetch(`/runs/${encodeURIComponent(runId)}`)" in js_response.text
+    assert "fetch(`/runs/${encodeURIComponent(runId)}/outputs`)" in js_response.text
     assert 'method: "POST"' in js_response.text
     assert "loadRecentRuns" in js_response.text
     assert "selectRun" in js_response.text
+    assert "loadOutputTree" in js_response.text
+    assert "renderOutputTree" in js_response.text
     assert "run-lookup-form" in js_response.text
     assert "run-history-list" in js_response.text
     assert "target-lat" in js_response.text
@@ -77,6 +84,7 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "renderStageProgress" in js_response.text
     assert "renderStatusHistory" in js_response.text
     assert "syncRecentRunFromDetail" in js_response.text
+    assert "describeOutputGroup" in js_response.text
     assert "describeArtifact" in js_response.text
     assert "displayArtifactName" in js_response.text
     assert "objects_index.csv" in js_response.text
@@ -108,9 +116,15 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert '/artifacts/' in js_response.text
     assert '/download/' in js_response.text
     assert 'artifacts/${encodeURIComponent(artifact.name)}/download/${encodeURIComponent(downloadFilename)}' in js_response.text
+    assert 'output.download_url' in js_response.text
     assert "link.download = displayArtifactName(artifact);" in js_response.text
     assert 'FILESYSTEM_ONLY' in js_response.text
     assert "experimental_" in js_response.text
+    assert "Outputs are loading..." in js_response.text
+    assert "No output files found for this run." in js_response.text
+    assert "Could not load full output tree." in js_response.text
+    assert "Not implemented in current app output set." in js_response.text
+    assert "REPORT_640_Pottery_Report.tif" not in js_response.text
     assert "sampleArtifacts" not in js_response.text
     assert "demo-run" not in js_response.text
     assert "Artifacts will appear after a run completes." in js_response.text
@@ -119,7 +133,7 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "Run completed with no public artifacts." not in js_response.text
     assert 'GeoJSON' not in js_response.text
     assert 'WKT' not in js_response.text
-    assert "relative_path" not in js_response.text
+    assert "relative_path" in js_response.text
     assert "display_label" not in js_response.text
     assert "run_id" not in js_response.text
     assert 'https://' not in js_response.text

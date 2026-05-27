@@ -124,6 +124,11 @@ def test_operator_output_download_preserves_real_filename_and_blocks_traversal()
         asyncio.run(_run_operator_output_download_guard_test(Path(temp_dir)))
 
 
+def test_operator_output_json_download_uses_attachment_response() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_operator_output_json_download_test(Path(temp_dir)))
+
+
 def test_operator_output_tree_missing_run_returns_safe_error() -> None:
     with TemporaryDirectory() as temp_dir:
         asyncio.run(_run_operator_output_missing_run_test(Path(temp_dir)))
@@ -462,5 +467,45 @@ async def _run_operator_output_missing_run_test(tmp_path: Path) -> None:
             "error": "run_not_found",
             "message": "Run is unavailable.",
         }
+    finally:
+        await engine.dispose()
+
+
+async def _run_operator_output_json_download_test(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    db_path = data_dir / "gee_screening.db"
+    settings = Settings(data_dir=data_dir, database_path=db_path)
+    app = create_app(settings)
+
+    engine = create_async_engine(settings.database_url, future=True)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        run_id = "run-1"
+        run_dir = data_dir / "runs" / run_id
+        (run_dir / "QA").mkdir(parents=True, exist_ok=True)
+        (run_dir / "QA" / "RUN_MANIFEST.json").write_text('{"manifest":"ok"}', encoding="utf-8")
+
+        async with session_factory() as session:
+            session.add(
+                Run(
+                    id=run_id,
+                    name="fixture",
+                    status=RunStatus.DONE,
+                    latitude=10.0,
+                    longitude=20.0,
+                )
+            )
+            await session.commit()
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.get(f"/runs/{run_id}/outputs/download/QA/RUN_MANIFEST.json")
+
+        assert response.status_code == 200
+        assert response.text == '{"manifest":"ok"}'
+        assert 'filename="RUN_MANIFEST.json"' in response.headers["content-disposition"]
+        assert "application/octet-stream" in response.headers["content-type"]
     finally:
         await engine.dispose()

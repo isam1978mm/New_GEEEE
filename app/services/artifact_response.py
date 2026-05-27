@@ -87,4 +87,4 @@ async def serve_operator_output_response(
     decision = can_serve_artifact(internal_artifact, settings)
     if not decision.allow:
         raise ArtifactServeViolation()
-    return FileResponse(path=artifact_path, filename=artifact_path.name)
+    return FileResponse(path=artifact_path, filename=artifact_path.name, media_type="application/octet-stream")
