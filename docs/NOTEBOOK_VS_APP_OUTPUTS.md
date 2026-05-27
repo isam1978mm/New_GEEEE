@@ -248,6 +248,10 @@ Fresh app run ID: `2ed977ce-8ded-42d8-9ea0-5fafdee9547a`
 
 Absolute local paths are intentionally omitted. The inventory below uses run-relative paths only.
 
+QA casing verification run ID: `86b6c713-21c6-4ece-8f43-0397ad0f7be2`
+
+The QA casing blocker found in the initial Post Phase 3A-3F audit is resolved by commit `04287a0` (`Canonicalize notebook QA output folder casing`). `QA/` is now the canonical notebook-compatible folder, lowercase `qa/` is no longer produced as a separate top-level folder, and notebook-compatible QA outputs land under `QA/`.
+
 ### Fresh Run Summary
 
 | Inventory | Count |
@@ -265,7 +269,7 @@ Top-level output groups observed:
 - `kmz/`
 - `npy_radar_bands/`
 - `objects/`
-- `qa/`
+- `QA/`
 - `stacks/`
 
 ### Newly Matched Notebook-Compatible Outputs
@@ -291,15 +295,15 @@ These outputs were missing or renamed-only in the Phase 1 inventory and now exis
 | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif` | `matched` | Notebook-compatible hypercube GeoTIFF exists. |
 | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy` | `matched` | Notebook-compatible hypercube NPY exists. |
 | `NPY_STACKS/RADAR_STACK_HWC_640_*.npy` | `matched` | Notebook-compatible radar stack NPY exists. |
-| `QA/QA_GRID_dx_m_640.tif` | `matched-with-case-warning` | File exists on this Windows audit run, but see case-sensitivity note below. |
-| `QA/QA_GRID_dy_m_640.tif` | `matched-with-case-warning` | File exists on this Windows audit run, but see case-sensitivity note below. |
-| `QA/QA_GRID_validmask_640.tif` | `matched-with-case-warning` | File exists on this Windows audit run, but see case-sensitivity note below. |
-| `QA/RUN_MANIFEST.json` | `matched-with-case-warning` | Manifest exists on this Windows audit run, but see case-sensitivity note below. |
-| `QA/sar/intermediates/sar_intermediate_manifest.json` | `matched-with-case-warning` | Manifest exists on this Windows audit run, but see case-sensitivity note below. |
-| `QA/sar/intermediates/post_rtc/final_VV_dB.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
-| `QA/sar/intermediates/post_rtc/final_VH_dB.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
-| `QA/sar/intermediates/post_rtc/final_logRatio_dB.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
-| `QA/sar/intermediates/post_rtc/final_angle.npy` | `matched-with-case-warning` | Post-RTC SAR intermediate exists. |
+| `QA/QA_GRID_dx_m_640.tif` | `matched` | File exists under canonical uppercase `QA/`. |
+| `QA/QA_GRID_dy_m_640.tif` | `matched` | File exists under canonical uppercase `QA/`. |
+| `QA/QA_GRID_validmask_640.tif` | `matched` | File exists under canonical uppercase `QA/`. |
+| `QA/RUN_MANIFEST.json` | `matched` | Manifest exists under canonical uppercase `QA/`. |
+| `QA/sar/intermediates/sar_intermediate_manifest.json` | `matched` | Manifest exists under canonical uppercase `QA/`. |
+| `QA/sar/intermediates/post_rtc/final_VV_dB.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
+| `QA/sar/intermediates/post_rtc/final_VH_dB.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
+| `QA/sar/intermediates/post_rtc/final_logRatio_dB.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
+| `QA/sar/intermediates/post_rtc/final_angle.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
 
 ### Remaining Missing Notebook Outputs
 
@@ -345,13 +349,20 @@ The fresh run still preserves app-only outputs, including:
 - `objects/object_mask.npy`
 - object patch arrays
 
-### Case-Sensitivity Issue
+### QA Casing Resolution
 
-The notebook contract expects uppercase `QA/` paths. This Windows audit run already had a lowercase `qa/` folder, and notebook-compatible `QA/...` writes resolved into that existing lowercase folder on the case-insensitive local filesystem.
+The notebook contract expects uppercase `QA/` paths. The original Post Phase 3A-3F audit found that notebook-compatible QA outputs resolved into an existing lowercase `qa/` folder on Windows.
 
-On Linux or VPS filesystems, `QA/` and `qa/` are distinct paths. Before claiming Linux-portable notebook tree parity, the app needs an explicit path-case decision:
+This is now fixed. Verification run `86b6c713-21c6-4ece-8f43-0397ad0f7be2` completed `done`, the physical top-level folder is `QA/`, and there is no separate lowercase `qa/` top-level folder.
 
-- either emit notebook-compatible QA files into an actual uppercase `QA/` directory without relying on Windows case-insensitive behavior
-- or revise the contract to accept lowercase `qa/` for app output while documenting the notebook path mapping
+Notebook-compatible QA outputs now land under:
+
+- `QA/QA_GRID_dx_m_640.tif`
+- `QA/QA_GRID_dy_m_640.tif`
+- `QA/QA_GRID_validmask_640.tif`
+- `QA/RUN_MANIFEST.json`
+- `QA/sar/intermediates/sar_intermediate_manifest.json`
+- `QA/sar/intermediates/post_rtc/*.npy`
+- `QA/REPORT_640_manifest.json`
 
 No pipeline or GRID behavior was changed during this audit.
