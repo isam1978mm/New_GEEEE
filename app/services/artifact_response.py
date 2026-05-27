@@ -5,10 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
+from app.db.models.enums import ArtifactClass
 from app.db.models.artifact import Artifact
 from app.errors import ArtifactNotFoundError, ArtifactServeViolation
 from app.schemas.artifact import ArtifactInternal
 from app.services.artifact_policy import can_serve_artifact
+from app.services.operator_outputs import resolve_operator_output_path
 from app.services.storage import resolve_run_artifact_path
 
 
@@ -66,3 +68,23 @@ async def serve_artifact_response(
         raise ArtifactNotFoundError()
 
     return FileResponse(path=artifact_path, filename=public_download_filename(artifact.name))
+
+
+async def serve_operator_output_response(
+    *,
+    run_id: str,
+    relative_path: str,
+    settings: Settings,
+) -> FileResponse:
+    artifact_path = resolve_operator_output_path(settings, run_id, relative_path)
+    internal_artifact = ArtifactInternal(
+        run_id=run_id,
+        name=artifact_path.name,
+        relative_path=relative_path,
+        artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+        http_servable=True,
+    )
+    decision = can_serve_artifact(internal_artifact, settings)
+    if not decision.allow:
+        raise ArtifactServeViolation()
+    return FileResponse(path=artifact_path, filename=artifact_path.name)
