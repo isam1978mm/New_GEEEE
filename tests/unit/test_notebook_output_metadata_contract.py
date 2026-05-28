@@ -51,8 +51,10 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
             "QA/QA_GRID_dy_m_640.tif": 1,
             "QA/QA_GRID_validmask_640.tif": 1,
             "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif": 1,
+            "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif": 1,
             "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif": 1,
             "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif": 1,
+            "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif": 1,
             "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif": 1,
         }
 

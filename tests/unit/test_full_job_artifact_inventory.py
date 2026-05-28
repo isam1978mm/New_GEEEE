@@ -113,8 +113,10 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         }
         assert _artifact_classes(secret_layers_result) == {
             "AI_READY_640_Secret_Gold_Halo": ArtifactClass.LOCAL_SENSITIVE,
+            "AI_READY_640_Secret_Silver_Oxide": ArtifactClass.LOCAL_SENSITIVE,
             "AI_READY_640_Secret_Tunnel_Ceiling": ArtifactClass.LOCAL_SENSITIVE,
             "AI_READY_640_Secret_Thermal_Inertia": ArtifactClass.LOCAL_SENSITIVE,
+            "AI_READY_640_Secret_Chemical_Protector": ArtifactClass.LOCAL_SENSITIVE,
             "AI_READY_640_Secret_Hidden_Doors": ArtifactClass.LOCAL_SENSITIVE,
             "secret_layers_manifest": ArtifactClass.FILESYSTEM_ONLY,
         }
@@ -262,8 +264,10 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "QA/sar/intermediates/sar_intermediate_manifest.json",
             "QA/stacks/secret_layers_manifest.json",
             "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
+            "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif",
             "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif",
             "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif",
+            "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif",
             "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
             "objects_index.csv",
             "clusters_summary.csv",

@@ -16,15 +16,17 @@ from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube
 from app.pipeline.stages.secret_layers import (
     SECRET_LAYER_SPECS,
     SecretLayersStage,
+    compute_secret_chemical_protector,
     compute_secret_gold_halo,
     compute_secret_hidden_doors,
+    compute_secret_silver_oxide,
     compute_secret_thermal_inertia,
     compute_secret_tunnel_ceiling,
 )
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 
 
-def test_secret_layers_stage_emits_four_implemented_and_two_not_implemented() -> None:
+def test_secret_layers_stage_emits_all_six_implemented() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         settings = _settings(run_dir)
@@ -40,36 +42,31 @@ def test_secret_layers_stage_emits_four_implemented_and_two_not_implemented() ->
 
         artifact_names = {a.name for a in result.artifacts}
         assert "AI_READY_640_Secret_Gold_Halo" in artifact_names
+        assert "AI_READY_640_Secret_Silver_Oxide" in artifact_names
         assert "AI_READY_640_Secret_Tunnel_Ceiling" in artifact_names
         assert "AI_READY_640_Secret_Thermal_Inertia" in artifact_names
+        assert "AI_READY_640_Secret_Chemical_Protector" in artifact_names
         assert "AI_READY_640_Secret_Hidden_Doors" in artifact_names
         assert "secret_layers_manifest" in artifact_names
 
         metadata = result.metadata
         assert set(metadata["implemented_layers"]) == {
             "AI_READY_640_Secret_Gold_Halo",
+            "AI_READY_640_Secret_Silver_Oxide",
             "AI_READY_640_Secret_Tunnel_Ceiling",
             "AI_READY_640_Secret_Thermal_Inertia",
+            "AI_READY_640_Secret_Chemical_Protector",
             "AI_READY_640_Secret_Hidden_Doors",
         }
-        assert set(metadata["not_implemented_layers"]) == {
-            "AI_READY_640_Secret_Silver_Oxide",
-            "AI_READY_640_Secret_Chemical_Protector",
-        }
+        assert metadata["not_implemented_layers"] == []
 
         for layer_name in metadata["implemented_layers"]:
             detail = metadata["layer_details"][layer_name]
             assert detail["status"] == "implemented"
             assert "formula" in detail
 
-        for layer_name in metadata["not_implemented_layers"]:
-            detail = metadata["layer_details"][layer_name]
-            assert detail["status"] == "not_implemented_no_source_equivalent"
-            assert "reason" in detail
-            assert "B1" in detail["reason"]
 
-
-def test_secret_layers_manifest_documents_implemented_and_not_implemented() -> None:
+def test_secret_layers_manifest_documents_all_six_implemented() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         settings = _settings(run_dir)
@@ -89,14 +86,16 @@ def test_secret_layers_manifest_documents_implemented_and_not_implemented() -> N
         assert manifest["schema"] == "secret_layers_manifest_v1"
         assert manifest["stage"] == "secret_layers"
         assert manifest["layer_count"] == 6
-        assert manifest["implemented_count"] == 4
-        assert manifest["not_implemented_count"] == 2
+        assert manifest["implemented_count"] == 6
+        assert manifest["not_implemented_count"] == 0
 
         implemented_names = {item["name"] for item in manifest["implemented"]}
         assert implemented_names == {
             "AI_READY_640_Secret_Gold_Halo",
+            "AI_READY_640_Secret_Silver_Oxide",
             "AI_READY_640_Secret_Tunnel_Ceiling",
             "AI_READY_640_Secret_Thermal_Inertia",
+            "AI_READY_640_Secret_Chemical_Protector",
             "AI_READY_640_Secret_Hidden_Doors",
         }
         for item in manifest["implemented"]:
@@ -107,15 +106,7 @@ def test_secret_layers_manifest_documents_implemented_and_not_implemented() -> N
             assert "output_path" in item
             assert item["output_path"].startswith("AI_READY_640/")
 
-        not_implemented_names = {item["name"] for item in manifest["not_implemented"]}
-        assert not_implemented_names == {
-            "AI_READY_640_Secret_Silver_Oxide",
-            "AI_READY_640_Secret_Chemical_Protector",
-        }
-        for item in manifest["not_implemented"]:
-            assert item["status"] == "not_implemented_no_source_equivalent"
-            assert "reason" in item
-            assert "B1" in item["reason"]
+        assert manifest["not_implemented"] == []
 
 
 def test_implemented_secret_layer_rasters_match_grid_contract() -> None:
@@ -134,8 +125,10 @@ def test_implemented_secret_layer_rasters_match_grid_contract() -> None:
 
         for layer_name in (
             "AI_READY_640_Secret_Gold_Halo",
+            "AI_READY_640_Secret_Silver_Oxide",
             "AI_READY_640_Secret_Tunnel_Ceiling",
             "AI_READY_640_Secret_Thermal_Inertia",
+            "AI_READY_640_Secret_Chemical_Protector",
             "AI_READY_640_Secret_Hidden_Doors",
         ):
             tif_path = run_dir / "AI_READY_640" / f"{layer_name}.tif"
@@ -154,7 +147,7 @@ def test_implemented_secret_layer_rasters_match_grid_contract() -> None:
             assert "C:\\" not in tags_text
 
 
-def test_not_implemented_layers_emit_no_fake_rasters() -> None:
+def test_all_secret_layer_rasters_exist_after_stage() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         settings = _settings(run_dir)
@@ -169,11 +162,15 @@ def test_not_implemented_layers_emit_no_fake_rasters() -> None:
         asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
 
         for layer_name in (
+            "AI_READY_640_Secret_Gold_Halo",
             "AI_READY_640_Secret_Silver_Oxide",
+            "AI_READY_640_Secret_Tunnel_Ceiling",
+            "AI_READY_640_Secret_Thermal_Inertia",
             "AI_READY_640_Secret_Chemical_Protector",
+            "AI_READY_640_Secret_Hidden_Doors",
         ):
             tif_path = run_dir / "AI_READY_640" / f"{layer_name}.tif"
-            assert not tif_path.exists(), f"Fake raster must not exist: {tif_path}"
+            assert tif_path.is_file(), f"Missing secret layer raster: {tif_path}"
 
 
 def test_gold_halo_formula_matches_notebook() -> None:
@@ -202,6 +199,32 @@ def test_thermal_inertia_formula_matches_notebook() -> None:
     result = compute_secret_thermal_inertia(lst, nodata=-9999.0, scale_m=10.0)
     # With uniform input, focal mean equals the input, so ratio is 1.0
     assert np.allclose(result, 1.0)
+
+
+def test_silver_oxide_formula_matches_notebook() -> None:
+    size = 64
+    b2 = np.ones((size, size), dtype=np.float32) * 0.4
+    b1 = np.ones((size, size), dtype=np.float32) * 0.2
+    cube = np.stack([
+        b2, np.zeros((size, size)), np.zeros((size, size)),
+        np.zeros((size, size)), np.zeros((size, size)), np.zeros((size, size)), b1
+    ], axis=-1)
+    result = compute_secret_silver_oxide(cube, nodata=-9999.0)
+    expected = np.float32(0.4 / (0.2 + 1e-10))
+    assert np.allclose(result, expected)
+
+
+def test_chemical_protector_formula_matches_notebook() -> None:
+    size = 64
+    b1 = np.ones((size, size), dtype=np.float32) * 0.2
+    b11 = np.ones((size, size), dtype=np.float32) * 0.4
+    cube = np.stack([
+        np.zeros((size, size)), np.zeros((size, size)), np.zeros((size, size)),
+        np.zeros((size, size)), b11, np.zeros((size, size)), b1
+    ], axis=-1)
+    result = compute_secret_chemical_protector(cube, nodata=-9999.0)
+    expected = np.float32(0.2 / (0.4 + 1e-10))
+    assert np.allclose(result, expected)
 
 
 def test_hidden_doors_produces_finite_output() -> None:

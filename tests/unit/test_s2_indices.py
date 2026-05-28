@@ -102,7 +102,7 @@ def test_build_s2_composite_uses_notebook_filters(monkeypatch: pytest.MonkeyPatc
     assert ("filterBounds", "grid-region") in calls
     assert ("filterDate", ("2022-01-01", "2026-02-28")) in calls
     assert ("filter", ("lt", "CLOUDY_PIXEL_PERCENTAGE", 3)) in calls
-    assert ("select", ["B2", "B3", "B4", "B8", "B11", "B12"]) in calls
+    assert ("select", ["B2", "B3", "B4", "B8", "B11", "B12", "B1"]) in calls
     assert ("median", None) in calls
 
 

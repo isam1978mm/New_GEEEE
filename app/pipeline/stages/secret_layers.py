@@ -26,7 +26,7 @@ from app.pipeline.stages.thermal import LST_TIF_NAME
 EPS = 1e-10
 SECRET_LAYER_OUTPUT_DIR = "AI_READY_640"
 
-# Band index mapping within the raw S2 cube: (B2, B3, B4, B8, B11, B12)
+# Band index mapping within the raw S2 cube: (B2, B3, B4, B8, B11, B12, B1)
 _S2_BAND_INDEX = {name: index for index, name in enumerate(S2_SOURCE_BANDS)}
 
 # --- Layer definitions -------------------------------------------------------
@@ -116,6 +116,26 @@ def compute_secret_gold_halo(s2_cube: np.ndarray, *, nodata: float) -> np.ndarra
     valid = (b12 != nodata) & (b8 != nodata) & np.isfinite(b12) & np.isfinite(b8)
     result = np.full(b12.shape, nodata, dtype=np.float32)
     result[valid] = (b12[valid] / (b8[valid] + EPS)).astype(np.float32)
+    return result
+
+
+def compute_secret_silver_oxide(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
+    """B2 / (B1 + eps)"""
+    b2 = s2_cube[:, :, _S2_BAND_INDEX["B2"]]
+    b1 = s2_cube[:, :, _S2_BAND_INDEX["B1"]]
+    valid = (b2 != nodata) & (b1 != nodata) & np.isfinite(b2) & np.isfinite(b1)
+    result = np.full(b2.shape, nodata, dtype=np.float32)
+    result[valid] = (b2[valid] / (b1[valid] + EPS)).astype(np.float32)
+    return result
+
+
+def compute_secret_chemical_protector(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
+    """B1 / (B11 + eps)"""
+    b1 = s2_cube[:, :, _S2_BAND_INDEX["B1"]]
+    b11 = s2_cube[:, :, _S2_BAND_INDEX["B11"]]
+    valid = (b1 != nodata) & (b11 != nodata) & np.isfinite(b1) & np.isfinite(b11)
+    result = np.full(b1.shape, nodata, dtype=np.float32)
+    result[valid] = (b1[valid] / (b11[valid] + EPS)).astype(np.float32)
     return result
 
 
@@ -280,6 +300,10 @@ class SecretLayersStage(Stage):
                 if s2_cube is None:
                     s2_cube = load_s2_raw_cube(context.run_dir)
                 array = compute_secret_gold_halo(s2_cube, nodata=nodata)
+            elif spec["name"] == "AI_READY_640_Secret_Silver_Oxide":
+                if s2_cube is None:
+                    s2_cube = load_s2_raw_cube(context.run_dir)
+                array = compute_secret_silver_oxide(s2_cube, nodata=nodata)
             elif spec["name"] == "AI_READY_640_Secret_Tunnel_Ceiling":
                 if s2_cube is None:
                     s2_cube = load_s2_raw_cube(context.run_dir)
@@ -288,6 +312,10 @@ class SecretLayersStage(Stage):
                 if lst is None:
                     lst = load_lst_array(context.run_dir, nodata=nodata)
                 array = compute_secret_thermal_inertia(lst, nodata=nodata, scale_m=scale_m)
+            elif spec["name"] == "AI_READY_640_Secret_Chemical_Protector":
+                if s2_cube is None:
+                    s2_cube = load_s2_raw_cube(context.run_dir)
+                array = compute_secret_chemical_protector(s2_cube, nodata=nodata)
             elif spec["name"] == "AI_READY_640_Secret_Hidden_Doors":
                 if dem is None:
                     dem = load_dem_array(context.run_dir)

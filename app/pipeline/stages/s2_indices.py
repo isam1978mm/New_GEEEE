@@ -18,8 +18,9 @@ from app.services.ee_session import initialize_ee_session
 DEFAULT_START = "2022-01-01"
 DEFAULT_END = "2026-02-28"
 DEFAULT_S2_CLOUD_MAX = 3
-S2_SOURCE_BANDS = ("B2", "B3", "B4", "B8", "B11", "B12")
+S2_SOURCE_BANDS = ("B2", "B3", "B4", "B8", "B11", "B12", "B1")
 INDEX_NAMES = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
+S2_RAW_CUBE_NPY_NAME = "s2_raw_cube.npy"
 
 
 class S2CubeFetcher(Protocol):
@@ -119,7 +120,8 @@ def deterministic_s2_cube_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
     b8 = np.float32(0.60) + cols * np.float32(0.00003)
     b11 = np.float32(0.40) + rows * np.float32(0.00001)
     b12 = np.float32(0.25) + cols * np.float32(0.00001)
-    return np.stack([b2, b3, b4, b8, b11, b12], axis=-1).astype(np.float32)
+    b1 = np.float32(0.15) + rows * np.float32(0.000015)
+    return np.stack([b2, b3, b4, b8, b11, b12, b1], axis=-1).astype(np.float32)
 
 
 def _safe_divide(
@@ -149,7 +151,7 @@ def _normalized_difference(a: np.ndarray, b: np.ndarray, *, nodata: float) -> np
 
 def compute_s2_indices(cube: np.ndarray, *, nodata: float) -> dict[str, np.ndarray]:
     if cube.shape[-1] != len(S2_SOURCE_BANDS):
-        raise ValueError("S2 cube must contain B2, B3, B4, B8, B11, and B12.")
+        raise ValueError("S2 cube must contain B1, B2, B3, B4, B8, B11, and B12.")
 
     b2 = cube[:, :, 0]
     b3 = cube[:, :, 1]
@@ -281,6 +283,9 @@ class S2IndicesStage(Stage):
             end_date=self.end_date,
             cloud_max=self.cloud_max,
         )
+        # Persist raw S2 band cube for downstream secret layers stage.
+        raw_cube_path = context.run_dir / S2_RAW_CUBE_NPY_NAME
+        np.save(raw_cube_path, cube.astype(np.float32))
         artifacts = [
             build_stage_artifact(
                 name=path.stem,
@@ -299,10 +304,20 @@ class S2IndicesStage(Stage):
                 http_servable=False,
             )
         )
+        artifacts.append(
+            build_stage_artifact(
+                name="s2_raw_cube",
+                relative_path=raw_cube_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=raw_cube_path.stat().st_size,
+                http_servable=False,
+            )
+        )
         return StageResult(
             artifacts=artifacts,
             metadata={
                 "band_names": list(INDEX_NAMES),
+                "source_bands": list(S2_SOURCE_BANDS),
                 "start_date": self.start_date,
                 "end_date": self.end_date,
                 "cloud_max": self.cloud_max,

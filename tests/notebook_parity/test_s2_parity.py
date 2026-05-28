@@ -98,7 +98,7 @@ def test_s2_parity_uses_notebook_collection_and_sampling_flow(monkeypatch) -> No
     assert ("filterBounds", "grid-region") in calls
     assert ("filterDate", (DEFAULT_START, DEFAULT_END)) in calls
     assert ("lt", ("CLOUDY_PIXEL_PERCENTAGE", 3)) in calls
-    assert ("select", ["B2", "B3", "B4", "B8", "B11", "B12"]) in calls
+    assert ("select", ["B2", "B3", "B4", "B8", "B11", "B12", "B1"]) in calls
     assert ("median", None) in calls
     assert ("reproject", {"crs": grid_spec.crs, "crsTransform": list(grid_spec.transform)}) in calls
     assert len([name for name, _value in calls if name == "sampleRectangle"]) == 4
