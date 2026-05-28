@@ -95,10 +95,6 @@ def test_notebook_compatible_npy_metadata_contract() -> None:
             "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy",
             "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy",
             "NPY_RADAR_BANDS/RADAR_VV_dB_640_app.npy",
-            "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
-            "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
-            "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
-            "QA/sar/intermediates/post_rtc/final_angle.npy",
         }
         observed_files = {path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_file()}
         assert notebook_band_paths <= observed_files
@@ -174,9 +170,10 @@ def test_notebook_compatible_csv_and_json_schema_contract() -> None:
             assert item["items"] == []
             assert isinstance(item["missing_reason"], str) and item["missing_reason"]
         post_rtc = intermediate_manifest["stages"]["post_rtc"]
-        assert set(post_rtc) == {"status", "bands"}
-        assert post_rtc["status"] == "implemented"
+        assert set(post_rtc) == {"status", "bands", "missing_reason"}
+        assert post_rtc["status"] == "not_implemented_no_source_equivalent"
         assert set(post_rtc["bands"]) == {"VV_dB", "VH_dB", "logRatio_dB", "angle"}
+        assert isinstance(post_rtc["missing_reason"], str) and post_rtc["missing_reason"]
         _assert_no_sensitive_text(intermediate_manifest_text, run_dir)
 
         with (run_dir / "objects_index.csv").open("r", encoding="utf-8", newline="") as handle:

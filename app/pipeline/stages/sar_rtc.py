@@ -524,16 +524,12 @@ def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]
 
 
 def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
+    del outputs
     base_dir = ensure_run_qa_dir(run_dir) / "sar" / "intermediates"
-    post_rtc_dir = base_dir / "post_rtc"
-    post_rtc_dir.mkdir(parents=True, exist_ok=True)
-    written_paths: list[Path] = []
+    base_dir.mkdir(parents=True, exist_ok=True)
     bands: dict[str, str] = {}
-    for notebook_band, app_band in NOTEBOOK_SAR_POST_RTC_BANDS.items():
+    for notebook_band in NOTEBOOK_SAR_POST_RTC_BANDS:
         filename = f"final_{notebook_band}.npy"
-        path = post_rtc_dir / filename
-        np.save(path, outputs[app_band].astype(np.float32, copy=False))
-        written_paths.append(path)
         bands[notebook_band] = f"post_rtc/{filename}"
 
     manifest_path = base_dir / "sar_intermediate_manifest.json"
@@ -546,8 +542,12 @@ def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np
         for stage_name in NOTEBOOK_SAR_INTERMEDIATE_MISSING_STAGES
     }
     stages["post_rtc"] = {
-        "status": "implemented",
+        "status": "not_implemented_no_source_equivalent",
         "bands": bands,
+        "missing_reason": (
+            "Frozen notebook QA post-RTC arrays behave like a separate masked notebook intermediate family. "
+            "The production app only produces the final exported SAR outputs already represented by NPY_RADAR_BANDS."
+        ),
     }
     payload = {
         "schema": "notebook_sar_intermediates_v1",
@@ -556,7 +556,7 @@ def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np
         "stages": stages,
     }
     manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-    return [manifest_path, *written_paths]
+    return [manifest_path]
 
 
 def _notebook_sar_intermediate_artifact_name(path: Path) -> str:

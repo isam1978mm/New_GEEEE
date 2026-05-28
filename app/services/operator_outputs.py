@@ -145,6 +145,18 @@ def _read_sar_intermediate_manifest(path: Path) -> list[OperatorOutputStatusPubl
             continue
         if stage_payload.get("status") != STATUS_NOT_IMPLEMENTED:
             continue
+        bands = stage_payload.get("bands")
+        if isinstance(bands, dict):
+            for relative_path in bands.values():
+                if not isinstance(relative_path, str):
+                    continue
+                items.append(
+                    _not_implemented_item(
+                        relative_path=f"QA/sar/intermediates/{relative_path}",
+                        source="QA/sar/intermediates/sar_intermediate_manifest.json",
+                    )
+                )
+            continue
         items.append(
             _not_implemented_item(
                 relative_path=f"QA/sar/intermediates/{stage_name}",

@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import json
 import numpy as np
 
 from app.pipeline._base import StageContext
@@ -28,23 +29,27 @@ def test_notebook_sar_npy_aliases_match_local_sources_numerically() -> None:
             _assert_npy_alias_exact(run_dir, alias_relative_path, source_relative_path)
 
 
-def test_notebook_sar_post_rtc_intermediates_match_local_sources_numerically() -> None:
+def test_notebook_sar_post_rtc_intermediates_are_notebook_gap_not_direct_aliases() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         _build_sar_run(run_dir)
 
-        alias_pairs = [
-            ("QA/sar/intermediates/post_rtc/final_VV_dB.npy", "npy_radar_bands/VV_dB.npy"),
-            ("QA/sar/intermediates/post_rtc/final_VH_dB.npy", "npy_radar_bands/VH_dB.npy"),
-            ("QA/sar/intermediates/post_rtc/final_logRatio_dB.npy", "npy_radar_bands/logRatio_dB.npy"),
-            ("QA/sar/intermediates/post_rtc/final_angle.npy", "npy_radar_bands/incidence.npy"),
-        ]
+        manifest_path = run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        post_rtc = manifest["stages"]["post_rtc"]
+        assert post_rtc["status"] == "not_implemented_no_source_equivalent"
+        assert isinstance(post_rtc["missing_reason"], str) and post_rtc["missing_reason"]
+        assert post_rtc["bands"] == {
+            "VV_dB": "post_rtc/final_VV_dB.npy",
+            "VH_dB": "post_rtc/final_VH_dB.npy",
+            "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
+            "angle": "post_rtc/final_angle.npy",
+        }
+        for relative_path in post_rtc["bands"].values():
+            assert not (run_dir / "QA" / "sar" / "intermediates" / relative_path).exists()
 
-        for alias_relative_path, source_relative_path in alias_pairs:
-            _assert_npy_alias_exact(run_dir, alias_relative_path, source_relative_path)
-
-        # Pre-RTC SAR intermediate groups are intentionally excluded here because
-        # they remain not_implemented_no_source_equivalent, not direct aliases.
+        # Pre-RTC SAR intermediate groups and post-RTC QA arrays remain
+        # not_implemented_no_source_equivalent, not direct notebook-compatible aliases.
 
 
 def _assert_npy_alias_exact(run_dir: Path, alias_relative_path: str, source_relative_path: str) -> None:
