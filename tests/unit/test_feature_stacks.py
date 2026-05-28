@@ -66,7 +66,6 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         notebook_radar_stack = np.load(notebook_radar_stack_path)
         assert notebook_radar_stack.dtype == np.float32
         assert notebook_radar_stack.shape == (grid_spec.size, grid_spec.size, 4)
-        np.testing.assert_array_equal(notebook_radar_stack, radar_linear_stack)
         radar_linear_sidecar = read_manifest(
             raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.tif")
         )
@@ -74,6 +73,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
 
         radar_db_stack = np.load(run_dir / "stacks" / "tensor_support" / "radar_db_support_stack.npy")
         assert radar_db_stack.shape == (grid_spec.size, grid_spec.size, 4)
+        np.testing.assert_array_equal(notebook_radar_stack, radar_db_stack)
         for band_index, band_name in enumerate(("VV_dB", "VH_dB", "logRatio_dB", "incidence")):
             source = np.load(run_dir / "npy_radar_bands" / f"{band_name}.npy")
             np.testing.assert_array_equal(radar_db_stack[:, :, band_index], source)

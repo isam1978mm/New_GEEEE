@@ -56,8 +56,9 @@ STACK_REFERENCE_CASES = [
             strict=True,
             raises=AssertionError,
             reason=(
-                "notebook reference and app radar stack NPY differ numerically; "
-                "observed max_error is about 41.161 and no stack math or tolerance change is approved"
+                "notebook reference and app radar stack NPY no longer have the wrong-source alias bug, "
+                "but a small reference residual remains; observed max_error is about 6.67572021484375e-06 "
+                "and no tolerance or SAR math change is approved"
             ),
         ),
     ),

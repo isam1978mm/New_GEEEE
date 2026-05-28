@@ -314,7 +314,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     np.save(stack_npy_path, cube)
     _save_multipage_tiff(radar_linear_tif_path, radar_linear_stack)
     np.save(radar_linear_npy_path, radar_linear_stack)
-    np.save(notebook_radar_stack_npy_path, radar_linear_stack)
+    np.save(notebook_radar_stack_npy_path, radar_db_stack)
     write_georeferenced_raster(radar_db_tif_path, radar_db_stack, grid_spec)
     np.save(radar_db_npy_path, radar_db_stack)
     _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)

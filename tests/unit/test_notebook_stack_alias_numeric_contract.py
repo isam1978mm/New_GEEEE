@@ -25,7 +25,7 @@ def test_notebook_stack_npy_aliases_match_local_sources_numerically() -> None:
 
         npy_alias_pairs = [
             ("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy", "hypercube.npy"),
-            ("NPY_STACKS/RADAR_STACK_HWC_640_app.npy", "stacks/tensor_support/radar_linear_support_stack.npy"),
+            ("NPY_STACKS/RADAR_STACK_HWC_640_app.npy", "stacks/tensor_support/radar_db_support_stack.npy"),
         ]
 
         for alias_relative_path, source_relative_path in npy_alias_pairs:
