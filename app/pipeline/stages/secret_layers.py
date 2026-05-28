@@ -76,7 +76,7 @@ SECRET_LAYER_SPECS = [
 def compute_hillshade_parameterized(
     dem: np.ndarray, *, nodata: float, scale_m: float, azimuth_deg: float, altitude_deg: float
 ) -> np.ndarray:
-    """Compute hillshade for arbitrary sun azimuth and altitude (in degrees)."""
+    """Compute EE-style hillshade for arbitrary sun azimuth and altitude (in degrees)."""
     dem_float = dem.astype(np.float32, copy=True)
     dem_float = np.where(dem_float == nodata, np.nan, dem_float)
     source_valid = np.isfinite(dem_float)
@@ -89,7 +89,7 @@ def compute_hillshade_parameterized(
         np.sin(altitude_rad) * np.cos(slope_rad)
         + np.cos(altitude_rad) * np.sin(slope_rad) * np.cos(azimuth_rad - aspect_rad)
     )
-    hillshade = np.clip(hillshade, 0.0, 1.0).astype(np.float32)
+    hillshade = (np.clip(hillshade, 0.0, 1.0) * np.float32(255.0)).astype(np.float32)
     hillshade[~source_valid] = nodata
     hillshade[~np.isfinite(hillshade)] = nodata
     return hillshade.astype(np.float32, copy=False)

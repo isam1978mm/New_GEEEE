@@ -16,6 +16,7 @@ from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube
 from app.pipeline.stages.secret_layers import (
     SECRET_LAYER_SPECS,
     SecretLayersStage,
+    compute_hillshade_parameterized,
     compute_secret_chemical_protector,
     compute_secret_gold_halo,
     compute_secret_hidden_doors,
@@ -234,6 +235,22 @@ def test_hidden_doors_produces_finite_output() -> None:
     assert result.shape == (size, size)
     assert np.isfinite(result).all()
     assert (result != -9999.0).all()
+    assert float(result.min()) >= -255.0
+    assert float(result.max()) <= 255.0
+
+
+def test_parameterized_hillshade_uses_ee_style_255_scale() -> None:
+    size = 32
+    dem = np.zeros((size, size), dtype=np.float32)
+    result = compute_hillshade_parameterized(
+        dem,
+        nodata=-9999.0,
+        scale_m=10.0,
+        azimuth_deg=315.0,
+        altitude_deg=35.0,
+    )
+    expected = np.float32(np.sin(np.deg2rad(35.0)) * 255.0)
+    assert np.allclose(result, expected)
 
 
 def test_secret_layer_specs_cover_all_six_layers() -> None:
