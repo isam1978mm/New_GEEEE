@@ -10,7 +10,7 @@ import numpy as np
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path
-from app.pipeline.stages.dem_derivatives import OUTPUT_NAMES, DemDerivativesStage, compute_dem_derivatives
+from app.pipeline.stages.dem_derivatives import OUTPUT_NAMES, DemDerivativesStage, compute_dem_derivatives, compute_hillshade
 from app.pipeline.stages.grid import build_run_grid
 from app.services.storage import read_manifest
 
@@ -41,6 +41,25 @@ def test_compute_dem_derivatives_propagates_nodata() -> None:
 
     for name in OUTPUT_NAMES:
         assert outputs[name][2, 2] == -9999.0
+
+
+def test_compute_hillshade_matches_notebook_azimuth_convention() -> None:
+    dem = np.array(
+        [
+            [100.0, 110.0, 120.0],
+            [100.0, 110.0, 120.0],
+            [100.0, 110.0, 120.0],
+        ],
+        dtype=np.float32,
+    )
+
+    hillshade = compute_hillshade(dem, nodata=-9999.0, scale_m=10.0)
+
+    expected_center = (
+        np.sin(np.deg2rad(45.0)) * np.cos(np.arctan(1.0))
+        + np.cos(np.deg2rad(45.0)) * np.sin(np.arctan(1.0)) * np.cos(np.deg2rad(45.0) - np.deg2rad(270.0))
+    )
+    assert np.isclose(hillshade[1, 1], expected_center, atol=1e-6)
 
 
 def test_dem_derivatives_stage_writes_classified_grid_aligned_outputs() -> None:

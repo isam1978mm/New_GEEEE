@@ -29,8 +29,9 @@ DEM_REFERENCE_PAIRS = [
             strict=True,
             raises=AssertionError,
             reason=(
-                "notebook reference hillshade and app-generated hillshade differ numerically; "
-                "observed max_error is about 0.863 and no tolerance or DEM math change is approved"
+                "notebook reference and app hillshade now match the corrected azimuth convention, "
+                "but a residual float-precision difference of about 1.8e-07 remains under zero tolerance; "
+                "no tolerance change is approved"
             ),
         ),
     ),

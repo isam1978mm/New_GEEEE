@@ -113,7 +113,7 @@ def compute_hillshade(dem: np.ndarray, *, nodata: float, scale_m: float) -> np.n
     dz_dy, dz_dx = np.gradient(dem_float, scale_m, scale_m)
     slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
     aspect_rad = np.arctan2(-dz_dx, dz_dy)
-    azimuth_rad = np.deg2rad(315.0)
+    azimuth_rad = np.deg2rad(45.0)
     altitude_rad = np.deg2rad(45.0)
     hillshade = (
         np.sin(altitude_rad) * np.cos(slope_rad)
