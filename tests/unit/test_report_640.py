@@ -14,6 +14,7 @@ from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.report_640 import (
     Report640Stage,
+    compute_report_mass_report,
     compute_report_pottery_report,
     compute_report_zero_point_targets,
 )
@@ -22,7 +23,7 @@ from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 
 
-def test_report_640_stage_emits_two_implemented_and_one_not_implemented() -> None:
+def test_report_640_stage_emits_three_implemented_reports() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         settings = _settings(run_dir)
@@ -39,22 +40,24 @@ def test_report_640_stage_emits_two_implemented_and_one_not_implemented() -> Non
 
         artifact_names = {a.name for a in result.artifacts}
         assert "REPORT_640_Pottery_Report" in artifact_names
+        assert "REPORT_640_Mass_Report" in artifact_names
         assert "REPORT_640_FINAL_Zero_Point_Targets" in artifact_names
         assert "REPORT_640_manifest" in artifact_names
 
         metadata = result.metadata
         assert set(metadata["implemented_reports"]) == {
             "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
         }
-        assert metadata["not_implemented_reports"] == ["REPORT_640_Mass_Report.tif"]
+        assert metadata["not_implemented_reports"] == []
 
         mass_detail = metadata["report_details"]["REPORT_640_Mass_Report"]
-        assert mass_detail["status"] == "not_implemented_no_source_equivalent"
-        assert "ST_B10" in mass_detail["reason"]
+        assert mass_detail["status"] == "implemented"
+        assert mass_detail["formula"] == "B12 * ST_B10 / 1000"
 
 
-def test_report_640_manifest_documents_implemented_and_not_implemented() -> None:
+def test_report_640_manifest_documents_three_implemented_reports() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         settings = _settings(run_dir)
@@ -83,9 +86,10 @@ def test_report_640_manifest_documents_implemented_and_not_implemented() -> None
         assert manifest["reports"]["REPORT_640_Pottery_Report.tif"]["status"] == "implemented"
         assert manifest["reports"]["REPORT_640_FINAL_Zero_Point_Targets.tif"]["status"] == "implemented"
         mass_report = manifest["reports"]["REPORT_640_Mass_Report.tif"]
-        assert mass_report["status"] == "not_implemented_no_source_equivalent"
-        assert mass_report["source_equivalent"] is None
-        assert isinstance(mass_report["reason"], str) and mass_report["reason"]
+        assert mass_report["status"] == "implemented"
+        assert mass_report["formula"] == "B12 * ST_B10 / 1000"
+        assert "s2_raw_cube.npy" in mass_report["source_equivalent"]
+        assert "st_b10_raw.npy" in mass_report["source_equivalent"]
 
 
 def test_implemented_report_rasters_match_grid_contract() -> None:
@@ -105,6 +109,7 @@ def test_implemented_report_rasters_match_grid_contract() -> None:
 
         for report_name in (
             "REPORT_640_Pottery_Report",
+            "REPORT_640_Mass_Report",
             "REPORT_640_FINAL_Zero_Point_Targets",
         ):
             tif_path = run_dir / f"{report_name}.tif"
@@ -122,7 +127,7 @@ def test_implemented_report_rasters_match_grid_contract() -> None:
             assert "C:\\" not in tags_text
 
 
-def test_mass_report_emits_no_fake_raster() -> None:
+def test_mass_report_raster_is_emitted_with_grid_contract() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         settings = _settings(run_dir)
@@ -138,7 +143,27 @@ def test_mass_report_emits_no_fake_raster() -> None:
         asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
 
         tif_path = run_dir / "REPORT_640_Mass_Report.tif"
-        assert not tif_path.exists(), f"Fake raster must not exist: {tif_path}"
+        assert tif_path.is_file()
+        with rasterio.open(tif_path) as dataset:
+            assert dataset.width == grid_spec.size
+            assert dataset.height == grid_spec.size
+            assert str(dataset.crs) == grid_spec.crs
+            assert dataset.count == 1
+            assert dataset.dtypes == ("float32",)
+            assert float(dataset.nodata) == float(grid_spec.nodata)
+
+
+def test_mass_report_formula_matches_notebook() -> None:
+    size = 64
+    b12 = np.ones((size, size), dtype=np.float32) * 0.5
+    st_b10 = np.ones((size, size), dtype=np.float32) * 200.0
+    cube = np.stack([
+        np.zeros((size, size)), np.zeros((size, size)), np.zeros((size, size)),
+        np.zeros((size, size)), np.zeros((size, size)), b12, np.zeros((size, size))
+    ], axis=-1)
+    result = compute_report_mass_report(cube, st_b10, nodata=-9999.0)
+    expected = np.float32((0.5 * 200.0) / 1000.0)
+    assert np.allclose(result, expected)
 
 
 def test_pottery_report_formula_matches_notebook() -> None:

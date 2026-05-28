@@ -15,8 +15,10 @@ from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.thermal import (
     DEFAULT_END,
     DEFAULT_START,
+    RAW_ST_B10_NPY_NAME,
     ThermalStage,
     build_landsat_lst_collection,
+    build_landsat_st_b10_collection,
     create_ee_lst_fetcher,
     deterministic_lst_fetcher,
 )
@@ -59,6 +61,42 @@ def test_build_landsat_lst_collection_uses_notebook_filters(monkeypatch: pytest.
     assert ("map", "prep_landsat_l2") in calls
 
 
+def test_build_landsat_st_b10_collection_uses_notebook_filters(monkeypatch: pytest.MonkeyPatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    calls: list[tuple[str, object]] = []
+
+    class FakeCollection:
+        def __init__(self, dataset):
+            calls.append(("ImageCollection", dataset))
+
+        def filterBounds(self, region):
+            calls.append(("filterBounds", region))
+            return self
+
+        def filterDate(self, start, end):
+            calls.append(("filterDate", (start, end)))
+            return self
+
+        def merge(self, other):
+            calls.append(("merge", other))
+            return self
+
+        def map(self, func):
+            calls.append(("map", func.__name__))
+            return self
+
+    monkeypatch.setattr("app.pipeline.stages.thermal.ee.ImageCollection", FakeCollection)
+    monkeypatch.setattr("app.pipeline.stages.thermal.build_grid_region", lambda _grid_spec: "grid-region")
+
+    build_landsat_st_b10_collection(grid_spec, start_date=DEFAULT_START, end_date=DEFAULT_END)
+
+    assert ("ImageCollection", "LANDSAT/LC08/C02/T1_L2") in calls
+    assert ("ImageCollection", "LANDSAT/LC09/C02/T1_L2") in calls
+    assert ("filterBounds", "grid-region") in calls
+    assert ("filterDate", (DEFAULT_START, DEFAULT_END)) in calls
+    assert ("map", "prep_landsat_st_b10") in calls
+
+
 def test_create_ee_lst_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyPatch) -> None:
     grid_spec = build_run_grid(35.59499, 36.12694)
     settings = _settings(Path("C:/tmp/gee-thermal-test"))
@@ -66,21 +104,31 @@ def test_create_ee_lst_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyP
     rectangle_calls: list[tuple[list[float], str, bool]] = []
 
     class FakeSampleResult:
+        def __init__(self, band_name):
+            self.band_name = band_name
+
         def getInfo(self):
-            return {"properties": {"LST_DAY_K": [[300.0] * 320 for _ in range(320)]}}
+            return {"properties": {self.band_name: [[300.0] * 320 for _ in range(320)]}}
 
     class FakeMappedCollection:
+        def __init__(self, band_name):
+            self.band_name = band_name
+
         def median(self):
-            return FakeImage()
+            return FakeImage(self.band_name)
 
     class FakeImage:
-        def rename(self, _name):
+        def __init__(self, band_name="LST_DAY_K"):
+            self.band_name = band_name
+
+        def rename(self, name):
+            self.band_name = name
             return self
 
         def sampleRectangle(self, *, region, defaultValue):
             assert region == "tile-region"
             assert defaultValue == grid_spec.nodata
-            return FakeSampleResult()
+            return FakeSampleResult(self.band_name)
 
     class FakeGeometry:
         @staticmethod
@@ -89,18 +137,21 @@ def test_create_ee_lst_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyP
             return "tile-region"
 
     monkeypatch.setattr("app.pipeline.stages.thermal.initialize_ee_session", lambda _settings: init_calls.append("init"))
-    monkeypatch.setattr("app.pipeline.stages.thermal.build_landsat_lst_collection", lambda *_args, **_kwargs: FakeMappedCollection())
+    monkeypatch.setattr("app.pipeline.stages.thermal.build_landsat_lst_collection", lambda *_args, **_kwargs: FakeMappedCollection("LST_DAY_K"))
+    monkeypatch.setattr("app.pipeline.stages.thermal.build_landsat_st_b10_collection", lambda *_args, **_kwargs: FakeMappedCollection("ST_B10_RAW"))
     monkeypatch.setattr("app.pipeline.stages.thermal.ee.Image", lambda image: image)
     monkeypatch.setattr("app.pipeline.stages.thermal.to_grid_lst", lambda image, _grid_spec: image)
     monkeypatch.setattr("app.pipeline.stages.thermal.finalize_for_sample", lambda image, _grid_spec: image)
     monkeypatch.setattr("app.pipeline.stages.thermal.ee.Geometry", FakeGeometry)
 
     fetcher = create_ee_lst_fetcher(settings, grid_spec)
-    lst = fetcher(grid_spec=grid_spec)
+    outputs = fetcher(grid_spec=grid_spec)
 
     assert init_calls == ["init"]
-    assert lst.shape == (640, 640)
-    assert lst.dtype == np.float32
+    assert outputs.lst.shape == (640, 640)
+    assert outputs.lst.dtype == np.float32
+    assert outputs.st_b10_raw.shape == (640, 640)
+    assert outputs.st_b10_raw.dtype == np.float32
     assert len(rectangle_calls) == 4
 
 
@@ -112,11 +163,13 @@ def test_thermal_stage_writes_classified_grid_aligned_output() -> None:
 
         result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["lst", "thermal_summary"]
+        assert [artifact.name for artifact in result.artifacts] == ["lst", "thermal_summary", "st_b10_raw"]
         assert result.artifacts[0].artifact_class == ArtifactClass.LOCAL_SENSITIVE
         assert result.artifacts[1].artifact_class == ArtifactClass.FILESYSTEM_ONLY
+        assert result.artifacts[2].artifact_class == ArtifactClass.FILESYSTEM_ONLY
         sidecar = read_manifest(raster_sidecar_path(run_dir / "lst.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        assert np.load(run_dir / RAW_ST_B10_NPY_NAME).shape == (grid_spec.size, grid_spec.size)
         summary = json.loads((run_dir / "QA" / "stacks" / "thermal_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "thermal"
         assert summary["start_date"] == DEFAULT_START

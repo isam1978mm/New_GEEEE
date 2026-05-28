@@ -50,7 +50,7 @@ def test_phase5_numeric_output_parity_summary_reports_classified_exceptions(tmp_
                 "stage": "report_640",
                 "reports": {
                     "REPORT_640_Pottery_Report.tif": {"status": "implemented", "formula": "B12 / B11", "source_equivalent": "s2_raw_cube.npy"},
-                    "REPORT_640_Mass_Report.tif": {"status": "not_implemented_no_source_equivalent", "source_equivalent": None, "reason": "Raw ST_B10 not available"},
+                    "REPORT_640_Mass_Report.tif": {"status": "implemented", "formula": "B12 * ST_B10 / 1000", "source_equivalent": "s2_raw_cube.npy + .internal/st_b10_raw.npy"},
                     "REPORT_640_FINAL_Zero_Point_Targets.tif": {"status": "implemented", "formula": "threshold_intersection", "source_equivalent": "s2_raw_cube.npy"},
                 }
             }
@@ -58,6 +58,7 @@ def test_phase5_numeric_output_parity_summary_reports_classified_exceptions(tmp_
         encoding="utf-8",
     )
     _write_geotiff(app_run_dir / "REPORT_640_Pottery_Report.tif", value=1.0, dtype="float32", nodata=-9999.0)
+    _write_geotiff(app_run_dir / "REPORT_640_Mass_Report.tif", value=1.0, dtype="float32", nodata=-9999.0)
     _write_geotiff(app_run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif", value=1.0, dtype="float32", nodata=-9999.0)
     (app_run_dir / "QA" / "sar" / "intermediates").mkdir(parents=True, exist_ok=True)
     (app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json").write_text(
@@ -131,13 +132,11 @@ def test_phase5_numeric_output_parity_summary_reports_classified_exceptions(tmp_
     for entry in entries:
         if entry["relative_path"] in {
             "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
         }:
             assert entry["status"] == "implemented"
             assert entry["file_exists"] is True
-        elif entry["relative_path"] == "REPORT_640_Mass_Report.tif":
-            assert entry["status"] == "not_implemented_no_source_equivalent"
-            assert entry["file_exists"] is False
         else:
             assert entry["status"] == "not_implemented_no_source_equivalent"
             assert entry["file_exists"] is False
@@ -170,16 +169,16 @@ def test_phase5_numeric_output_parity_summary_resolves_sar_geotiff_reference_by_
                 "stage": "report_640",
                 "reports": {
                     "REPORT_640_Pottery_Report.tif": {"status": "implemented", "formula": "B12 / B11", "source_equivalent": "s2_raw_cube.npy"},
-                    "REPORT_640_Mass_Report.tif": {"status": "not_implemented_no_source_equivalent", "source_equivalent": None, "reason": "Raw ST_B10 not available"},
+                    "REPORT_640_Mass_Report.tif": {"status": "implemented", "formula": "B12 * ST_B10 / 1000", "source_equivalent": "s2_raw_cube.npy + .internal/st_b10_raw.npy"},
                     "REPORT_640_FINAL_Zero_Point_Targets.tif": {"status": "implemented", "formula": "threshold_intersection", "source_equivalent": "s2_raw_cube.npy"},
                 }
             }
         ),
         encoding="utf-8",
     )
-    (app_run_dir / "REPORT_640").mkdir(parents=True, exist_ok=True)
-    _write_geotiff(app_run_dir / "REPORT_640" / "REPORT_640_Pottery_Report.tif", value=1.0, dtype="float32", nodata=-9999.0)
-    _write_geotiff(app_run_dir / "REPORT_640" / "REPORT_640_FINAL_Zero_Point_Targets.tif", value=1.0, dtype="float32", nodata=-9999.0)
+    _write_geotiff(app_run_dir / "REPORT_640_Pottery_Report.tif", value=1.0, dtype="float32", nodata=-9999.0)
+    _write_geotiff(app_run_dir / "REPORT_640_Mass_Report.tif", value=1.0, dtype="float32", nodata=-9999.0)
+    _write_geotiff(app_run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif", value=1.0, dtype="float32", nodata=-9999.0)
     (app_run_dir / "QA" / "sar" / "intermediates").mkdir(parents=True, exist_ok=True)
     (app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json").write_text(
         json.dumps(

@@ -12,6 +12,7 @@ from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.s2_indices import S2_SOURCE_BANDS, S2_RAW_CUBE_NPY_NAME
+from app.pipeline.stages.thermal import RAW_ST_B10_NPY_NAME
 
 EPS = 1e-10
 REPORT_640_MANIFEST_NAME = "REPORT_640_manifest.json"
@@ -26,6 +27,13 @@ def load_s2_raw_cube(run_dir: Path) -> np.ndarray:
     return np.load(path)
 
 
+def load_st_b10_raw(run_dir: Path) -> np.ndarray:
+    path = run_dir / RAW_ST_B10_NPY_NAME
+    if not path.is_file():
+        raise StageError("Raw ST_B10 source is required before report_640 stage.")
+    return np.load(path)
+
+
 def compute_report_pottery_report(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
     """B12 / B11"""
     b12 = s2_cube[:, :, _S2_BAND_INDEX["B12"]]
@@ -33,6 +41,20 @@ def compute_report_pottery_report(s2_cube: np.ndarray, *, nodata: float) -> np.n
     valid = (b12 != nodata) & (b11 != nodata) & np.isfinite(b12) & np.isfinite(b11) & (b11 != 0.0)
     result = np.full(b12.shape, nodata, dtype=np.float32)
     result[valid] = (b12[valid] / b11[valid]).astype(np.float32)
+    return result
+
+
+def compute_report_mass_report(s2_cube: np.ndarray, st_b10_raw: np.ndarray, *, nodata: float) -> np.ndarray:
+    """B12 * ST_B10 / 1000"""
+    b12 = s2_cube[:, :, _S2_BAND_INDEX["B12"]]
+    valid = (
+        (b12 != nodata)
+        & (st_b10_raw != nodata)
+        & np.isfinite(b12)
+        & np.isfinite(st_b10_raw)
+    )
+    result = np.full(b12.shape, nodata, dtype=np.float32)
+    result[valid] = ((b12[valid] * st_b10_raw[valid]) / np.float32(1000.0)).astype(np.float32)
     return result
 
 
@@ -132,9 +154,9 @@ class Report640Stage(Stage):
     async def run(self, context: StageContext) -> StageResult:
         nodata = self.grid_spec.nodata
         s2_cube = load_s2_raw_cube(context.run_dir)
+        st_b10_raw = load_st_b10_raw(context.run_dir)
 
         implemented_specs: list[dict] = []
-        not_implemented_specs: list[dict] = []
         artifacts = []
         layer_metadata: dict[str, dict] = {}
 
@@ -162,14 +184,28 @@ class Report640Stage(Stage):
         layer_metadata["REPORT_640_Pottery_Report"] = {"status": "implemented", "formula": "B12 / B11"}
 
         # Mass_Report
-        not_implemented_specs.append({
+        array = compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
+        if array.shape[:2] != expected_shape:
+            raise StageError(f"REPORT_640_Mass_Report shape {array.shape[:2]} != expected {expected_shape}")
+        tif_path = write_report_640_output(
+            context.run_dir, self.grid_spec, "REPORT_640_Mass_Report", array
+        )
+        artifacts.append(
+            build_stage_artifact(
+                name="REPORT_640_Mass_Report",
+                relative_path=tif_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=tif_path.stat().st_size,
+            )
+        )
+        implemented_specs.append({
             "filename": "REPORT_640_Mass_Report.tif",
             "formula": "B12 * ST_B10 / 1000",
-            "reason": "Raw ST_B10 not available; app thermal stage outputs LST in Kelvin, not raw ST_B10 DN",
+            "source_equivalent": f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}",
         })
         layer_metadata["REPORT_640_Mass_Report"] = {
-            "status": "not_implemented_no_source_equivalent",
-            "reason": "Raw ST_B10 not available; app thermal stage outputs LST in Kelvin, not raw ST_B10 DN",
+            "status": "implemented",
+            "formula": "B12 * ST_B10 / 1000",
         }
 
         # FINAL_Zero_Point_Targets
@@ -200,7 +236,7 @@ class Report640Stage(Stage):
         manifest_path = write_report_640_manifest(
             context.run_dir,
             implemented=implemented_specs,
-            not_implemented=not_implemented_specs,
+            not_implemented=[],
         )
         artifacts.append(
             build_stage_artifact(
@@ -216,7 +252,7 @@ class Report640Stage(Stage):
             artifacts=artifacts,
             metadata={
                 "implemented_reports": [spec["filename"] for spec in implemented_specs],
-                "not_implemented_reports": [spec["filename"] for spec in not_implemented_specs],
+                "not_implemented_reports": [],
                 "report_details": layer_metadata,
             },
         )

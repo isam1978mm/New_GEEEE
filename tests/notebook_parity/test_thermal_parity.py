@@ -35,11 +35,17 @@ def test_thermal_parity_uses_notebook_landsat_lst_sequence(monkeypatch) -> None:
             return self
 
     class FakeSampleResult:
+        def __init__(self, band_name):
+            self.band_name = band_name
+
         def getInfo(self):
             calls.append(("getInfo", None))
-            return {"properties": {"LST_DAY_K": [[300.0] * 320 for _ in range(320)]}}
+            return {"properties": {self.band_name: [[300.0] * 320 for _ in range(320)]}}
 
     class FakeImage:
+        def __init__(self):
+            self.band_name = "LST_DAY_K"
+
         def select(self, name):
             calls.append(("select", name))
             return self if name == "ST_B10" else FakeMask(name)
@@ -54,6 +60,7 @@ def test_thermal_parity_uses_notebook_landsat_lst_sequence(monkeypatch) -> None:
 
         def rename(self, value):
             calls.append(("rename", value))
+            self.band_name = value
             return self
 
         def updateMask(self, mask):
@@ -82,7 +89,7 @@ def test_thermal_parity_uses_notebook_landsat_lst_sequence(monkeypatch) -> None:
 
         def sampleRectangle(self, *, region, defaultValue):
             calls.append(("sampleRectangle", {"region": region, "defaultValue": defaultValue}))
-            return FakeSampleResult()
+            return FakeSampleResult(self.band_name)
 
     class FakeCollection:
         def __init__(self, dataset):
@@ -124,10 +131,11 @@ def test_thermal_parity_uses_notebook_landsat_lst_sequence(monkeypatch) -> None:
     grid_image = to_grid_lst(collection.median().rename("LST_DAY_K"), grid_spec)
     sampled_image = finalize_for_sample(grid_image, grid_spec)
     fetcher = create_ee_lst_fetcher(_settings(), grid_spec, start_date=DEFAULT_START, end_date=DEFAULT_END)
-    lst = fetcher(grid_spec=grid_spec)
+    outputs = fetcher(grid_spec=grid_spec)
 
     assert ThermalStage.parity_category is ParityCategory.PARITY_REPRODUCES
-    assert lst.shape == (640, 640)
+    assert outputs.lst.shape == (640, 640)
+    assert outputs.st_b10_raw.shape == (640, 640)
     assert ("ImageCollection", "LANDSAT/LC08/C02/T1_L2") in calls
     assert ("ImageCollection", "LANDSAT/LC09/C02/T1_L2") in calls
     assert ("filterDate", (DEFAULT_START, DEFAULT_END)) in calls
@@ -140,7 +148,7 @@ def test_thermal_parity_uses_notebook_landsat_lst_sequence(monkeypatch) -> None:
     assert ("rename", "LST_DAY_K") in calls
     assert ("median", None) in calls
     assert ("reproject", {"crs": grid_spec.crs, "crsTransform": list(grid_spec.transform)}) in calls
-    assert len([name for name, _value in calls if name == "sampleRectangle"]) == 4
+    assert len([name for name, _value in calls if name == "sampleRectangle"]) == 8
     assert sampled_image is not None
 
 

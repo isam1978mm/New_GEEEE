@@ -546,7 +546,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
         with TestClient(app, raise_server_exceptions=False) as client:
             tree_response = client.get(f"/runs/{run_id}/outputs")
             implemented_download = client.get(f"/runs/{run_id}/outputs/download/QA/RUN_MANIFEST.json")
-            not_implemented_download = client.get(f"/runs/{run_id}/outputs/download/REPORT_640_Mass_Report.tif")
+            mass_report_download = client.get(f"/runs/{run_id}/outputs/download/REPORT_640_Mass_Report.tif")
             stale_post_rtc_download = client.get(
                 f"/runs/{run_id}/outputs/download/QA/sar/intermediates/post_rtc/final_VV_dB.npy"
             )
@@ -598,6 +598,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif",
             "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
             "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
             "objects_index.csv",
             "clusters_summary.csv",
@@ -605,7 +606,6 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "alignment_qa.json",
         } <= output_paths
         assert {
-            "REPORT_640_Mass_Report.tif",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
@@ -631,11 +631,8 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
 
         assert implemented_download.status_code == 200
         assert 'filename="RUN_MANIFEST.json"' in implemented_download.headers["content-disposition"]
-        assert not_implemented_download.status_code == 404
-        assert not_implemented_download.json() == {
-            "error": "artifact_unavailable",
-            "message": "Artifact is unavailable.",
-        }
+        assert mass_report_download.status_code == 200
+        assert 'filename="REPORT_640_Mass_Report.tif"' in mass_report_download.headers["content-disposition"]
         assert stale_post_rtc_download.status_code == 404
         assert stale_post_rtc_download.json() == {
             "error": "artifact_unavailable",
@@ -686,6 +683,7 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif": b"chemical",
         "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif": b"hidden",
         "REPORT_640_Pottery_Report.tif": b"pottery",
+        "REPORT_640_Mass_Report.tif": b"mass",
         "REPORT_640_FINAL_Zero_Point_Targets.tif": b"zero",
         ".env": b"SECRET=blocked",
         "PATH_MAP.local.json": b'{"path":"blocked"}',
@@ -703,7 +701,7 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
                 "stage": "report_640",
                 "reports": {
                     "REPORT_640_Pottery_Report.tif": {"status": "implemented", "formula": "B12 / B11", "source_equivalent": "s2_raw_cube.npy"},
-                    "REPORT_640_Mass_Report.tif": {"status": "not_implemented_no_source_equivalent", "source_equivalent": None, "reason": "Raw ST_B10 not available"},
+                    "REPORT_640_Mass_Report.tif": {"status": "implemented", "formula": "B12 * ST_B10 / 1000", "source_equivalent": "s2_raw_cube.npy + .internal/st_b10_raw.npy"},
                     "REPORT_640_FINAL_Zero_Point_Targets.tif": {"status": "implemented", "formula": "threshold_intersection", "source_equivalent": "s2_raw_cube.npy"},
                 }
             }

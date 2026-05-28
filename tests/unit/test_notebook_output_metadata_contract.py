@@ -23,6 +23,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
+from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -56,6 +57,9 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
             "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif": 1,
             "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif": 1,
             "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif": 1,
+            "REPORT_640_Pottery_Report.tif": 1,
+            "REPORT_640_Mass_Report.tif": 1,
+            "REPORT_640_FINAL_Zero_Point_Targets.tif": 1,
         }
 
         for relative_path, expected_count in expected_band_counts.items():
@@ -143,17 +147,19 @@ def test_notebook_compatible_csv_and_json_schema_contract() -> None:
         report_manifest_text = (run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8")
         report_manifest = json.loads(report_manifest_text)
         assert report_manifest["schema"] == "notebook_report_640_manifest_v1"
-        assert report_manifest["stage"] == "object_extract"
+        assert report_manifest["stage"] == "report_640"
         assert set(report_manifest["reports"]) == {
             "REPORT_640_Pottery_Report.tif",
             "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
         }
-        for item in report_manifest["reports"].values():
-            assert set(item) == {"status", "source_equivalent", "reason"}
-            assert item["status"] == "not_implemented_no_source_equivalent"
-            assert item["source_equivalent"] is None
-            assert isinstance(item["reason"], str) and item["reason"]
+        assert report_manifest["reports"]["REPORT_640_Pottery_Report.tif"]["status"] == "implemented"
+        assert report_manifest["reports"]["REPORT_640_FINAL_Zero_Point_Targets.tif"]["status"] == "implemented"
+        mass_report = report_manifest["reports"]["REPORT_640_Mass_Report.tif"]
+        assert mass_report["status"] == "implemented"
+        assert mass_report["formula"] == "B12 * ST_B10 / 1000"
+        assert "s2_raw_cube.npy" in mass_report["source_equivalent"]
+        assert "st_b10_raw.npy" in mass_report["source_equivalent"]
         _assert_no_sensitive_text(report_manifest_text, run_dir)
 
         intermediate_manifest_text = (run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json").read_text(
@@ -252,6 +258,7 @@ def _build_full_deterministic_run(run_dir: Path):
     asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
     asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
     asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
+    asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
     asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
     asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
     asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))

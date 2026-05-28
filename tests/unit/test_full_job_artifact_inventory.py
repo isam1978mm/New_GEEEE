@@ -112,6 +112,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(thermal_result) == {
             "lst": ArtifactClass.LOCAL_SENSITIVE,
             "thermal_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "st_b10_raw": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(secret_layers_result) == {
             "AI_READY_640_Secret_Gold_Halo": ArtifactClass.LOCAL_SENSITIVE,
@@ -124,6 +125,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         }
         assert _artifact_classes(report_640_result) == {
             "REPORT_640_Pottery_Report": ArtifactClass.LOCAL_SENSITIVE,
+            "REPORT_640_Mass_Report": ArtifactClass.LOCAL_SENSITIVE,
             "REPORT_640_FINAL_Zero_Point_Targets": ArtifactClass.LOCAL_SENSITIVE,
             "REPORT_640_manifest": ArtifactClass.FILESYSTEM_ONLY,
         }
@@ -277,6 +279,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif",
             "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
             "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
             "objects_index.csv",
             "clusters_summary.csv",
@@ -298,9 +301,10 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             for name, item in report_manifest["reports"].items()
             if item["status"] == "implemented"
         }
-        assert not_implemented_reports == {"REPORT_640_Mass_Report.tif"}
+        assert not_implemented_reports == set()
         assert implemented_reports == {
             "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
         }
 

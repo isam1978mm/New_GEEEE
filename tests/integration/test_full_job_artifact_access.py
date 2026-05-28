@@ -25,6 +25,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
+from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -67,6 +68,7 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
                 "object_mask",
                 "parity_qa_summary",
                 "thermal_summary",
+                "st_b10_raw",
             ]
             blocked_responses = {
                 name: client.get(f"/runs/{run_id}/artifacts/{name}")
@@ -97,6 +99,7 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
         assert "object_mask" not in public_names
         assert "parity_qa_summary" not in public_names
         assert "thermal_summary" not in public_names
+        assert "st_b10_raw" not in public_names
         assert "VV_dB" not in public_names
         assert "lst" not in public_names
 
@@ -138,6 +141,7 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
     assert name_to_path["parity_qa_summary"] == "QA/parity/parity_qa_summary.json"
     assert name_to_path["thermal_summary"] == "QA/stacks/thermal_summary.json"
+    assert name_to_path["st_b10_raw"] == ".internal/st_b10_raw.npy"
 
 
 async def _create_database(settings: Settings) -> None:
@@ -178,6 +182,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             DemDerivativesStage(grid_spec=grid_spec),
             ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher),
             SecretLayersStage(grid_spec=grid_spec),
+            Report640Stage(grid_spec=grid_spec),
             FeatureStacksStage(grid_spec=grid_spec),
             FocusMaskStage(grid_spec=grid_spec),
             LocationExportsStage(grid_spec=grid_spec),
