@@ -33,7 +33,6 @@ Examples include:
 - notebook-compatible SAR GeoTIFF aliases vs existing SAR GeoTIFF outputs
 - notebook-compatible SAR NPY aliases vs existing SAR NPY outputs
 - notebook-compatible stack aliases vs existing stack outputs
-- notebook-compatible post-RTC SAR intermediate aliases vs existing SAR arrays
 
 Goal:
 
@@ -95,14 +94,18 @@ The current Phase 5E reference-parity classification is:
 - DEM: `hillshade_0to1_640.tif` is a known strict `xfail`
 - SAR: 8 band outputs pass
 - STACKS: 3 outputs are known strict `xfail`
-- QA: 3 grid outputs pass
-- QA: 4 post-RTC SAR intermediate arrays are known strict `xfail`
+- QA grid: 3 outputs pass
+- QA post-RTC SAR intermediates: `not_implemented_no_source_equivalent`
+- QA post-RTC SAR intermediates: contract-ambiguous notebook intermediate family
 - `REPORT_640`: the three root report GeoTIFFs remain `not_implemented_no_source_equivalent`
 
 Verification notes:
 
 - the frozen notebook reference bundle is compared only against a matching notebook-grid app run
 - arbitrary fresh production-grid UI runs are not accepted as Phase 5E proof
+- app final SAR outputs already pass reference parity through `GEOTIFF_RADAR_BANDS/*`, `NPY_RADAR_BANDS/*`, and `npy_radar_bands/*`
+- frozen QA post-RTC reference arrays are inconsistent with those final SAR output families
+- the app no longer presents QA post-RTC arrays as implemented notebook-compatible outputs
 - `REPORT_640` remains manifest/API verified as not implemented; no fake report rasters are created
 - Phase 5E has not approved any math changes
 - Phase 5E has not approved any tolerance changes
@@ -111,7 +114,14 @@ Future fix candidates:
 
 - hillshade parity
 - stack 21-band/layout parity
-- post-RTC intermediate parity
+- QA post-RTC intermediate contract/provenance
+- `REPORT_640` generation
+
+Current known blockers:
+
+- hillshade reference provenance
+- `FINAL_TESLA` / Secret-layer / `REPORT_640` generation
+- QA post-RTC intermediate contract/provenance
 - `REPORT_640` generation
 
 ## Hillshade Reference Provenance Blocker

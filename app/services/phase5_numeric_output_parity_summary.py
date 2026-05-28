@@ -58,10 +58,6 @@ PHASE5D_ALIAS_CASES: tuple[Phase5Case, ...] = (
     Phase5Case("stacks", "hypercube tif alias", "raster_alias", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif", "hypercube.tif"),
     Phase5Case("stacks", "hypercube npy alias", "npy_alias", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy", "hypercube.npy"),
     Phase5Case("stacks", "radar stack alias", "npy_alias", "NPY_STACKS/RADAR_STACK_HWC_640_app.npy", "stacks/tensor_support/radar_linear_support_stack.npy"),
-    Phase5Case("qa_post_rtc", "post_rtc VV_dB alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_VV_dB.npy", "npy_radar_bands/VV_dB.npy"),
-    Phase5Case("qa_post_rtc", "post_rtc VH_dB alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_VH_dB.npy", "npy_radar_bands/VH_dB.npy"),
-    Phase5Case("qa_post_rtc", "post_rtc logRatio alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy", "npy_radar_bands/logRatio_dB.npy"),
-    Phase5Case("qa_post_rtc", "post_rtc angle alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_angle.npy", "npy_radar_bands/incidence.npy"),
 )
 
 PHASE5E_REFERENCE_CASES: tuple[Phase5Case, ...] = (
@@ -117,52 +113,19 @@ PHASE5E_REFERENCE_CASES: tuple[Phase5Case, ...] = (
     Phase5Case("qa", "QA dx reference", "raster_reference", "QA/QA_GRID_dx_m_640.tif", "QA/QA_GRID_dx_m_640.tif", allow_validmask_representation_diff=False),
     Phase5Case("qa", "QA dy reference", "raster_reference", "QA/QA_GRID_dy_m_640.tif", "QA/QA_GRID_dy_m_640.tif", allow_validmask_representation_diff=False),
     Phase5Case("qa", "QA validmask reference", "raster_reference", "QA/QA_GRID_validmask_640.tif", "QA/QA_GRID_validmask_640.tif", allow_validmask_representation_diff=True),
-    Phase5Case(
-        "qa",
-        "post_rtc VV_dB reference",
-        "npy_reference",
-        "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
-        "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
-        tolerance=1e-4,
-        expected="xfail",
-        xfail_reason="known post-RTC numeric mismatch",
-    ),
-    Phase5Case(
-        "qa",
-        "post_rtc VH_dB reference",
-        "npy_reference",
-        "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
-        "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
-        tolerance=1e-4,
-        expected="xfail",
-        xfail_reason="known post-RTC numeric mismatch",
-    ),
-    Phase5Case(
-        "qa",
-        "post_rtc logRatio reference",
-        "npy_reference",
-        "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
-        "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
-        tolerance=1e-4,
-        expected="xfail",
-        xfail_reason="known post-RTC numeric mismatch",
-    ),
-    Phase5Case(
-        "qa",
-        "post_rtc angle reference",
-        "npy_reference",
-        "QA/sar/intermediates/post_rtc/final_angle.npy",
-        "QA/sar/intermediates/post_rtc/final_angle.npy",
-        tolerance=1e-4,
-        expected="xfail",
-        xfail_reason="known post-RTC numeric mismatch",
-    ),
 )
 
 REPORT_640_OUTPUTS = (
     "REPORT_640_Pottery_Report.tif",
     "REPORT_640_Mass_Report.tif",
     "REPORT_640_FINAL_Zero_Point_Targets.tif",
+)
+
+QA_POST_RTC_NOT_IMPLEMENTED_OUTPUTS = (
+    "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+    "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
+    "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
+    "QA/sar/intermediates/post_rtc/final_angle.npy",
 )
 
 
@@ -203,7 +166,7 @@ def build_phase5_numeric_output_parity_summary(
     reference_results = [
         _evaluate_case(case, app_run_dir=app_run_dir, notebook_root=notebook_reference_bundle_dir) for case in reference_cases
     ]
-    not_implemented = _evaluate_report_not_implemented(app_run_dir)
+    not_implemented = _evaluate_known_not_implemented(app_run_dir)
 
     alias_status = _aggregate_case_status(alias_results, allow_expected_xfails=False)
     reference_status = _aggregate_case_status(reference_results, allow_expected_xfails=True)
@@ -351,6 +314,13 @@ def _compare_npy(left_path: Path, right_path: Path, tolerance: float) -> dict[st
     return {"pass": True, "max_error": max_error}
 
 
+def _evaluate_known_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
+    return [
+        *_evaluate_report_not_implemented(app_run_dir),
+        *_evaluate_qa_post_rtc_not_implemented(app_run_dir),
+    ]
+
+
 def _evaluate_report_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
     manifest_path = app_run_dir / "QA" / "REPORT_640_manifest.json"
     if not manifest_path.is_file():
@@ -360,6 +330,27 @@ def _evaluate_report_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for name in REPORT_640_OUTPUTS:
         status = reports.get(name, {}).get("status")
+        file_exists = (app_run_dir / name).is_file()
+        results.append(
+            {
+                "relative_path": name,
+                "status": status if status == "not_implemented_no_source_equivalent" and not file_exists else "fail",
+                "file_exists": file_exists,
+            }
+        )
+    return results
+
+
+def _evaluate_qa_post_rtc_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
+    manifest_path = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
+    if not manifest_path.is_file():
+        return [{"relative_path": name, "status": "missing_manifest"} for name in QA_POST_RTC_NOT_IMPLEMENTED_OUTPUTS]
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    stages = payload.get("stages", {})
+    post_rtc = stages.get("post_rtc", {}) if isinstance(stages, dict) else {}
+    status = post_rtc.get("status") if isinstance(post_rtc, dict) else None
+    results: list[dict[str, Any]] = []
+    for name in QA_POST_RTC_NOT_IMPLEMENTED_OUTPUTS:
         file_exists = (app_run_dir / name).is_file()
         results.append(
             {

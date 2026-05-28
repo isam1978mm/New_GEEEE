@@ -55,6 +55,26 @@ def test_phase5_numeric_output_parity_summary_reports_classified_exceptions(tmp_
         ),
         encoding="utf-8",
     )
+    (app_run_dir / "QA" / "sar" / "intermediates").mkdir(parents=True, exist_ok=True)
+    (app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json").write_text(
+        json.dumps(
+            {
+                "stages": {
+                    "post_rtc": {
+                        "status": "not_implemented_no_source_equivalent",
+                        "bands": {
+                            "VV_dB": "post_rtc/final_VV_dB.npy",
+                            "VH_dB": "post_rtc/final_VH_dB.npy",
+                            "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
+                            "angle": "post_rtc/final_angle.npy",
+                        },
+                        "missing_reason": "contract-ambiguous notebook intermediate family",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
 
     alias_cases = (
         Phase5Case("alias", "alias pass", "raster_alias", "alias_left.tif", "alias_right.tif"),
@@ -98,6 +118,10 @@ def test_phase5_numeric_output_parity_summary_reports_classified_exceptions(tmp_
         "REPORT_640_Pottery_Report.tif",
         "REPORT_640_Mass_Report.tif",
         "REPORT_640_FINAL_Zero_Point_Targets.tif",
+        "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+        "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
+        "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
+        "QA/sar/intermediates/post_rtc/final_angle.npy",
     }
     assert all(entry["status"] == "not_implemented_no_source_equivalent" for entry in entries)
     assert all(entry["file_exists"] is False for entry in entries)
@@ -130,6 +154,26 @@ def test_phase5_numeric_output_parity_summary_resolves_sar_geotiff_reference_by_
                     "REPORT_640_Pottery_Report.tif": {"status": "not_implemented_no_source_equivalent"},
                     "REPORT_640_Mass_Report.tif": {"status": "not_implemented_no_source_equivalent"},
                     "REPORT_640_FINAL_Zero_Point_Targets.tif": {"status": "not_implemented_no_source_equivalent"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (app_run_dir / "QA" / "sar" / "intermediates").mkdir(parents=True, exist_ok=True)
+    (app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json").write_text(
+        json.dumps(
+            {
+                "stages": {
+                    "post_rtc": {
+                        "status": "not_implemented_no_source_equivalent",
+                        "bands": {
+                            "VV_dB": "post_rtc/final_VV_dB.npy",
+                            "VH_dB": "post_rtc/final_VH_dB.npy",
+                            "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
+                            "angle": "post_rtc/final_angle.npy",
+                        },
+                        "missing_reason": "contract-ambiguous notebook intermediate family",
+                    }
                 }
             }
         ),
