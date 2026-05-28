@@ -163,7 +163,11 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
         }
         for item in notebook_outputs.values():
-            assert isinstance(item["reason"], str) and item["reason"]
+            reason = item["reason"]
+            assert isinstance(reason, str) and reason
+            assert "AI_READY_640_Secret_*" in reason
+            assert "REPORT_640_*" in reason
+            assert "21-channel science product" in reason
         assert _artifact_classes(pca_result) == {
             "pca_anomaly_tif": ArtifactClass.LOCAL_SENSITIVE,
             "pca_eigenvalues": ArtifactClass.LOCAL_SENSITIVE,
