@@ -19,6 +19,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
+from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import INDEX_NAMES, S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -41,6 +42,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         dem_derivatives_result = asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         thermal_result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
         secret_layers_result = asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
+        report_640_result = asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
         feature_stacks_result = asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
         focus_mask_result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         location_exports_result = asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
@@ -120,6 +122,11 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "AI_READY_640_Secret_Hidden_Doors": ArtifactClass.LOCAL_SENSITIVE,
             "secret_layers_manifest": ArtifactClass.FILESYSTEM_ONLY,
         }
+        assert _artifact_classes(report_640_result) == {
+            "REPORT_640_Pottery_Report": ArtifactClass.LOCAL_SENSITIVE,
+            "REPORT_640_FINAL_Zero_Point_Targets": ArtifactClass.LOCAL_SENSITIVE,
+            "REPORT_640_manifest": ArtifactClass.FILESYSTEM_ONLY,
+        }
         assert _artifact_classes(feature_stacks_result) == {
             "science_core_stack_tif": ArtifactClass.FILESYSTEM_ONLY,
             "science_core_stack_npy": ArtifactClass.FILESYSTEM_ONLY,
@@ -189,7 +196,6 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert object_classes["objects_index"] == ArtifactClass.REDACTED_PUBLIC
         assert object_classes["clusters_summary"] == ArtifactClass.REDACTED_PUBLIC
         assert object_classes["object_mask"] == ArtifactClass.FILESYSTEM_ONLY
-        assert object_classes["notebook_REPORT_640_manifest"] == ArtifactClass.FILESYSTEM_ONLY
         patch_names = [name for name in object_classes if name.startswith("object_patch_")]
         assert patch_names
         assert all(object_classes[name] == ArtifactClass.FILESYSTEM_ONLY for name in patch_names)
@@ -216,6 +222,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
         asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
         asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
+        asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
         asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
         asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
@@ -269,6 +276,8 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif",
             "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif",
             "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
+            "REPORT_640_Pottery_Report.tif",
+            "REPORT_640_FINAL_Zero_Point_Targets.tif",
             "objects_index.csv",
             "clusters_summary.csv",
             "objects/object_mask.npy",
@@ -277,13 +286,21 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
         assert not any(path.startswith("qa/") for path in observed_files)
 
         report_manifest = json.loads((run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8"))
-        assert {
+        assert report_manifest["schema"] == "notebook_report_640_manifest_v1"
+        assert report_manifest["stage"] == "report_640"
+        not_implemented_reports = {
             name
             for name, item in report_manifest["reports"].items()
             if item["status"] == "not_implemented_no_source_equivalent"
-        } == {
+        }
+        implemented_reports = {
+            name
+            for name, item in report_manifest["reports"].items()
+            if item["status"] == "implemented"
+        }
+        assert not_implemented_reports == {"REPORT_640_Mass_Report.tif"}
+        assert implemented_reports == {
             "REPORT_640_Pottery_Report.tif",
-            "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
         }
 
