@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
+import rasterio
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
@@ -15,11 +16,18 @@ from app.pipeline.stages.hypercube import (
     NOTEBOOK_HYPERCUBE_NPY_NAME,
     NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
     NOTEBOOK_HYPERCUBE_TIF_NAME,
-    NOTEBOOK_FINAL_TESLA_REASON,
+    NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY,
+    NOTEBOOK_FINAL_TESLA_LAYER_ORDER,
+    NOTEBOOK_PATCHED_14B_REASON,
     NOTEBOOK_STACK_OUTPUT_DIR,
     HypercubeStage,
     build_hypercube_products,
 )
+from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
+from app.pipeline.stages.report_640 import Report640Stage
+from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
+from app.pipeline.stages.secret_layers import SecretLayersStage
+from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.services.storage import read_manifest
 
 
@@ -92,21 +100,77 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME).exists()
         assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME).exists()
         assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME).exists()
-        assert result.metadata["notebook_output_statuses"] == [
+        statuses = result.metadata["notebook_output_statuses"]
+        assert statuses[0]["filename"] == NOTEBOOK_HYPERCUBE_TIF_NAME
+        assert statuses[0]["status"] == "not_implemented_no_source_equivalent"
+        assert "missing required source rasters" in statuses[0]["reason"]
+        assert statuses[1]["filename"] == NOTEBOOK_HYPERCUBE_NPY_NAME
+        assert statuses[1]["status"] == "not_implemented_no_source_equivalent"
+        assert "missing required source rasters" in statuses[1]["reason"]
+        assert statuses[2] == {
+            "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+            "status": "not_implemented_no_source_equivalent",
+            "reason": NOTEBOOK_PATCHED_14B_REASON,
+        }
+
+
+def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
+        asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
+        result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
+
+        notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+        tif_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME
+        npy_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME
+        assert tif_path.is_file()
+        assert npy_path.is_file()
+        assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME).exists()
+
+        tensor = np.load(npy_path)
+        assert tensor.shape == (9, grid_spec.size, grid_spec.size)
+        assert tensor.dtype == np.float32
+
+        with rasterio.open(tif_path) as dataset:
+            assert dataset.count == 9
+            assert dataset.dtypes == ("float32",) * 9
+            assert float(dataset.nodata) == float(grid_spec.nodata)
+            assert str(dataset.crs) == grid_spec.crs
+            assert dataset.descriptions == tuple(name for name, _relative_path in NOTEBOOK_FINAL_TESLA_LAYER_ORDER)
+
+        sidecar = read_manifest(raster_sidecar_path(tif_path))
+        assert sidecar["transform"] == grid_spec.manifest.crs_transform
+
+        artifact_names = [artifact.name for artifact in result.artifacts]
+        assert "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif" in artifact_names
+        assert "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy" in artifact_names
+
+        statuses = result.metadata["notebook_output_statuses"]
+        assert statuses == [
             {
                 "filename": NOTEBOOK_HYPERCUBE_TIF_NAME,
-                "status": "not_implemented_no_source_equivalent",
-                "reason": NOTEBOOK_FINAL_TESLA_REASON,
+                "status": "implemented",
+                "source_family": NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY,
+                "source_layer_order": [name for name, _relative_path in NOTEBOOK_FINAL_TESLA_LAYER_ORDER],
             },
             {
                 "filename": NOTEBOOK_HYPERCUBE_NPY_NAME,
-                "status": "not_implemented_no_source_equivalent",
-                "reason": NOTEBOOK_FINAL_TESLA_REASON,
+                "status": "implemented",
+                "source_family": NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY,
+                "source_layer_order": [name for name, _relative_path in NOTEBOOK_FINAL_TESLA_LAYER_ORDER],
+                "layout": "CHW",
             },
             {
                 "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
                 "status": "not_implemented_no_source_equivalent",
-                "reason": NOTEBOOK_FINAL_TESLA_REASON,
+                "reason": NOTEBOOK_PATCHED_14B_REASON,
             },
         ]
 

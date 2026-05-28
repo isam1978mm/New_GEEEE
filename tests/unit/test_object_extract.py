@@ -69,7 +69,6 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
         assert result.artifacts[1].artifact_class == ArtifactClass.REDACTED_PUBLIC
         assert result.artifacts[2].artifact_class == ArtifactClass.FILESYSTEM_ONLY
         assert all(artifact.http_servable is False for artifact in result.artifacts[2:])
-        assert "notebook_REPORT_640_manifest" in artifact_names
         assert any(name.startswith("object_patch_") for name in artifact_names[3:])
 
         with (run_dir / "objects_index.csv").open("r", encoding="utf-8", newline="") as handle:
@@ -98,24 +97,6 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
         assert not (run_dir / "REPORT_640_Pottery_Report.tif").exists()
         assert not (run_dir / "REPORT_640_Mass_Report.tif").exists()
         assert not (run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif").exists()
-
-        report_manifest = json.loads((run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8"))
-        top_level_dirs = {path.name for path in run_dir.iterdir() if path.is_dir()}
-        assert "QA" in top_level_dirs
-        assert "qa" not in top_level_dirs
-        assert report_manifest["schema"] == "notebook_report_640_manifest_v1"
-        assert report_manifest["stage"] == "object_extract"
-        assert set(report_manifest["reports"]) == {
-            "REPORT_640_Pottery_Report.tif",
-            "REPORT_640_Mass_Report.tif",
-            "REPORT_640_FINAL_Zero_Point_Targets.tif",
-        }
-        for report in report_manifest["reports"].values():
-            assert report == {
-                "status": "not_implemented_no_source_equivalent",
-                "source_equivalent": None,
-                "reason": "No real app raster equivalent exists in the current object/PCA/focus/alignment output set.",
-            }
 
 
 def test_object_extract_stage_raises_for_grid_drift() -> None:

@@ -48,6 +48,7 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
             "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_app.tif": 1,
             "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_app.tif": 1,
             "GEOTIFF_RADAR_BANDS/RADAR_angle_640_app.tif": 1,
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif": 9,
             "QA/QA_GRID_dx_m_640.tif": 1,
             "QA/QA_GRID_dy_m_640.tif": 1,
             "QA/QA_GRID_validmask_640.tif": 1,
@@ -100,6 +101,12 @@ def test_notebook_compatible_npy_metadata_contract() -> None:
         assert radar_stack.shape == (grid_spec.size, grid_spec.size, 4)
         assert radar_stack.dtype != object
         assert np.isfinite(radar_stack).all()
+
+        final_tesla = np.load(run_dir / "NPY_STACKS" / "FINAL_TESLA_V7_2_HYPERCUBE.npy")
+        assert final_tesla.dtype == np.float32
+        assert final_tesla.shape == (9, grid_spec.size, grid_spec.size)
+        assert final_tesla.dtype != object
+        assert np.isfinite(final_tesla).all()
 
         notebook_band_paths = {
             "NPY_RADAR_BANDS/RADAR_angle_640_app.npy",

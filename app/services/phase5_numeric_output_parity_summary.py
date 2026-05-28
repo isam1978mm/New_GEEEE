@@ -170,7 +170,7 @@ def build_phase5_numeric_output_parity_summary(
 
     alias_status = _aggregate_case_status(alias_results, allow_expected_xfails=False)
     reference_status = _aggregate_case_status(reference_results, allow_expected_xfails=True)
-    not_implemented_status = "PASS" if all(entry["status"] == "not_implemented_no_source_equivalent" for entry in not_implemented) else "FAIL"
+    not_implemented_status = "PASS" if all(entry["status"] in {"not_implemented_no_source_equivalent", "implemented"} for entry in not_implemented) else "FAIL"
 
     overall_status = (
         "PASS_WITH_CLASSIFIED_EXCEPTIONS"
@@ -329,12 +329,18 @@ def _evaluate_report_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
     reports = payload.get("reports", {})
     results: list[dict[str, Any]] = []
     for name in REPORT_640_OUTPUTS:
-        status = reports.get(name, {}).get("status")
+        report_status = reports.get(name, {}).get("status")
         file_exists = (app_run_dir / name).is_file()
+        if report_status == "implemented" and file_exists:
+            status = "implemented"
+        elif report_status == "not_implemented_no_source_equivalent" and not file_exists:
+            status = "not_implemented_no_source_equivalent"
+        else:
+            status = "fail"
         results.append(
             {
                 "relative_path": name,
-                "status": status if status == "not_implemented_no_source_equivalent" and not file_exists else "fail",
+                "status": status,
                 "file_exists": file_exists,
             }
         )

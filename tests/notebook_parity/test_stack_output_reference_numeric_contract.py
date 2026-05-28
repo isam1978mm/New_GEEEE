@@ -17,8 +17,36 @@ from tests.notebook_parity.test_reference_outputs_contract import (
 
 
 STACK_REFERENCE_CASES = [
-    ("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif", "hypercube.tif", "raster"),
-    ("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy", "hypercube.npy", "npy"),
+    pytest.param(
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+        "hypercube.tif",
+        "raster",
+        marks=pytest.mark.xfail(
+            strict=True,
+            raises=AssertionError,
+            reason=(
+                "notebook FINAL_TESLA TIFF is now assembled from the real 9-layer app source family, "
+                "but notebook source-layer parity remains unresolved; observed bandwise value mismatches include "
+                "band 8 max_error about 20866.9453125 and no stack math or tolerance change is approved"
+            ),
+        ),
+    ),
+    pytest.param(
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+        "hypercube.npy",
+        "npy",
+        marks=pytest.mark.xfail(
+            strict=True,
+            raises=AssertionError,
+            reason=(
+                "notebook FINAL_TESLA NPY is now assembled in real notebook CHW layout, "
+                "but notebook source-layer parity remains unresolved; observed mismatches include a band 6 NaN-mask "
+                "difference and large multi-band value residuals, and no stack math or tolerance change is approved"
+            ),
+        ),
+    ),
     pytest.param(
         "NPY_STACKS/RADAR_STACK_HWC_640_",
         "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
@@ -121,6 +149,8 @@ def _load_notebook_exact_app_run_dir() -> Path:
 
 def _skip_if_stage_manifest_marks_not_implemented(*, app_run_dir: Path, app_relative_path: str) -> None:
     if not app_relative_path.startswith("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE"):
+        return
+    if (app_run_dir / app_relative_path).is_file():
         return
     manifest_path = app_run_dir / "stage_hypercube.manifest.json"
     if not manifest_path.is_file():

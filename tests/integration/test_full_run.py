@@ -25,6 +25,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
+from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -111,6 +112,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             DemDerivativesStage(grid_spec=grid_spec),
             ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher),
             SecretLayersStage(grid_spec=grid_spec),
+            Report640Stage(grid_spec=grid_spec),
             FeatureStacksStage(grid_spec=grid_spec),
             FocusMaskStage(grid_spec=grid_spec),
             LocationExportsStage(grid_spec=grid_spec),
@@ -124,7 +126,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
     )
     records = await orchestrator.run_run(run_id)
 
-    assert len(records) == 17
+    assert len(records) == 18
 
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))

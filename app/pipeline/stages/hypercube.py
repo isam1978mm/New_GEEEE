@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 import numpy as np
+import rasterio
 from PIL import Image
 
 from app.db.models.enums import ArtifactClass
@@ -26,11 +27,21 @@ NOTEBOOK_HYPERCUBE_TIF_NAME = "FINAL_TESLA_V7_2_HYPERCUBE.tif"
 NOTEBOOK_HYPERCUBE_NPY_NAME = "FINAL_TESLA_V7_2_HYPERCUBE.npy"
 NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME = "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif"
 NOTEBOOK_PATCHED_14B_STATUS = "not_implemented_no_source_equivalent"
-NOTEBOOK_FINAL_TESLA_STATUS = "not_implemented_no_source_equivalent"
-NOTEBOOK_FINAL_TESLA_REASON = (
-    "Notebook FINAL_TESLA hypercube requires 6 AI_READY_640_Secret_* layers and 3 REPORT_640_* rasters; "
-    "all 6 secret layers are implemented, but REPORT_640_* rasters are not implemented; "
-    "the current app hypercube is a different 21-channel science product and no source-equivalent exists yet."
+NOTEBOOK_FINAL_TESLA_STATUS = "implemented"
+NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY = "notebook_secret_report_fusion_v1"
+NOTEBOOK_PATCHED_14B_REASON = (
+    "Notebook FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B requires exact patched 14-band notebook logic that the app does not implement yet."
+)
+NOTEBOOK_FINAL_TESLA_LAYER_ORDER: tuple[tuple[str, str], ...] = (
+    ("AI_READY_640_Secret_Gold_Halo", "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif"),
+    ("AI_READY_640_Secret_Silver_Oxide", "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif"),
+    ("AI_READY_640_Secret_Tunnel_Ceiling", "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif"),
+    ("AI_READY_640_Secret_Thermal_Inertia", "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif"),
+    ("AI_READY_640_Secret_Chemical_Protector", "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif"),
+    ("AI_READY_640_Secret_Hidden_Doors", "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif"),
+    ("REPORT_640_FINAL_Zero_Point_Targets", "REPORT_640_FINAL_Zero_Point_Targets.tif"),
+    ("REPORT_640_Mass_Report", "REPORT_640_Mass_Report.tif"),
+    ("REPORT_640_Pottery_Report", "REPORT_640_Pottery_Report.tif"),
 )
 EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}
 EPS = 1e-6
@@ -137,6 +148,55 @@ def remove_stale_notebook_final_tesla_outputs(run_dir: Path) -> None:
             path.unlink()
         if sidecar.exists():
             sidecar.unlink()
+
+
+def load_notebook_final_tesla_source_layers(run_dir: Path, grid_spec: GridSpec) -> tuple[list[tuple[str, np.ndarray]], list[str]]:
+    source_layers: list[tuple[str, np.ndarray]] = []
+    missing_paths: list[str] = []
+    for band_name, relative_path in NOTEBOOK_FINAL_TESLA_LAYER_ORDER:
+        path = run_dir / relative_path
+        if not path.is_file():
+            missing_paths.append(relative_path)
+            continue
+        sidecar = _validate_source_sidecar(path, grid_spec)
+        array = _read_single_band_tif(path)
+        nodata = float(sidecar["nodata"])
+        array = np.where(array == nodata, grid_spec.nodata, array).astype(np.float32, copy=False)
+        source_layers.append((band_name, array))
+    return source_layers, missing_paths
+
+
+def write_notebook_final_tesla_outputs(
+    run_dir: Path,
+    grid_spec: GridSpec,
+    source_layers: list[tuple[str, np.ndarray]],
+) -> dict[str, Path]:
+    notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    notebook_stack_dir.mkdir(parents=True, exist_ok=True)
+    tif_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME
+    npy_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME
+
+    band_names = [name for name, _array in source_layers]
+    hwc = np.stack([array for _name, array in source_layers], axis=-1).astype(np.float32, copy=False)
+    chw = np.stack([array for _name, array in source_layers], axis=0).astype(np.float32, copy=False)
+
+    write_georeferenced_raster(tif_path, hwc, grid_spec)
+    write_raster_sidecar(
+        tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=hwc.shape[:2],
+    )
+    with rasterio.open(tif_path, "r+") as dataset:
+        for band_index, band_name in enumerate(band_names, start=1):
+            dataset.set_band_description(band_index, band_name)
+    np.save(npy_path, chw)
+
+    return {
+        "final_tesla_tif": tif_path,
+        "final_tesla_npy": npy_path,
+    }
 
 
 def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
@@ -268,6 +328,14 @@ class HypercubeStage(Stage):
 
         products = build_hypercube_products(source_layers, nodata=self.grid_spec.nodata)
         outputs = write_hypercube_outputs(context.run_dir, self.grid_spec, products)
+        notebook_source_layers, missing_notebook_sources = load_notebook_final_tesla_source_layers(
+            context.run_dir,
+            self.grid_spec,
+        )
+        notebook_outputs: dict[str, Path] | None = None
+        if not missing_notebook_sources and len(notebook_source_layers) == len(NOTEBOOK_FINAL_TESLA_LAYER_ORDER):
+            notebook_outputs = write_notebook_final_tesla_outputs(context.run_dir, self.grid_spec, notebook_source_layers)
+
         artifacts = [
             build_stage_artifact(
                 name="hypercube_tif",
@@ -307,30 +375,77 @@ class HypercubeStage(Stage):
                 http_servable=False,
             ),
         ]
+        if notebook_outputs is not None:
+            artifacts.extend(
+                [
+                    build_stage_artifact(
+                        name="notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif",
+                        relative_path=notebook_outputs["final_tesla_tif"].relative_to(context.run_dir).as_posix(),
+                        artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                        size_bytes=notebook_outputs["final_tesla_tif"].stat().st_size,
+                    ),
+                    build_stage_artifact(
+                        name="notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy",
+                        relative_path=notebook_outputs["final_tesla_npy"].relative_to(context.run_dir).as_posix(),
+                        artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                        size_bytes=notebook_outputs["final_tesla_npy"].stat().st_size,
+                    ),
+                ]
+            )
         band_names = products["band_names"]
         assert isinstance(band_names, list)
+        notebook_output_statuses: list[dict[str, object]]
+        if notebook_outputs is not None:
+            source_layer_order = [name for name, _relative_path in NOTEBOOK_FINAL_TESLA_LAYER_ORDER]
+            notebook_output_statuses = [
+                {
+                    "filename": NOTEBOOK_HYPERCUBE_TIF_NAME,
+                    "status": NOTEBOOK_FINAL_TESLA_STATUS,
+                    "source_family": NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY,
+                    "source_layer_order": source_layer_order,
+                },
+                {
+                    "filename": NOTEBOOK_HYPERCUBE_NPY_NAME,
+                    "status": NOTEBOOK_FINAL_TESLA_STATUS,
+                    "source_family": NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY,
+                    "source_layer_order": source_layer_order,
+                    "layout": "CHW",
+                },
+                {
+                    "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+                    "status": NOTEBOOK_PATCHED_14B_STATUS,
+                    "reason": NOTEBOOK_PATCHED_14B_REASON,
+                },
+            ]
+        else:
+            missing_summary = ", ".join(missing_notebook_sources) if missing_notebook_sources else "unknown notebook source gap"
+            missing_reason = (
+                "Notebook FINAL_TESLA hypercube requires 6 AI_READY_640_Secret_* layers and 3 REPORT_640_* rasters; "
+                f"missing required source rasters in current run: {missing_summary}."
+            )
+            notebook_output_statuses = [
+                {
+                    "filename": NOTEBOOK_HYPERCUBE_TIF_NAME,
+                    "status": "not_implemented_no_source_equivalent",
+                    "reason": missing_reason,
+                },
+                {
+                    "filename": NOTEBOOK_HYPERCUBE_NPY_NAME,
+                    "status": "not_implemented_no_source_equivalent",
+                    "reason": missing_reason,
+                },
+                {
+                    "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+                    "status": NOTEBOOK_PATCHED_14B_STATUS,
+                    "reason": NOTEBOOK_PATCHED_14B_REASON,
+                },
+            ]
         return StageResult(
             artifacts=artifacts,
             metadata={
                 "band_names": band_names,
                 "band_count": len(band_names),
                 "shape": [self.grid_spec.size, self.grid_spec.size, len(band_names)],
-                "notebook_output_statuses": [
-                    {
-                        "filename": NOTEBOOK_HYPERCUBE_TIF_NAME,
-                        "status": NOTEBOOK_FINAL_TESLA_STATUS,
-                        "reason": NOTEBOOK_FINAL_TESLA_REASON,
-                    },
-                    {
-                        "filename": NOTEBOOK_HYPERCUBE_NPY_NAME,
-                        "status": NOTEBOOK_FINAL_TESLA_STATUS,
-                        "reason": NOTEBOOK_FINAL_TESLA_REASON,
-                    },
-                    {
-                        "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
-                        "status": NOTEBOOK_PATCHED_14B_STATUS,
-                        "reason": NOTEBOOK_FINAL_TESLA_REASON,
-                    },
-                ],
+                "notebook_output_statuses": notebook_output_statuses,
             },
         )

@@ -25,6 +25,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
+from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage
 from app.pipeline.stages.sar_rtc import SarRtcStage
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -48,6 +49,7 @@ SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("dem_derivatives", "DEM derivatives"),
     ("thermal", "Thermal"),
     ("secret_layers", "Secret layers"),
+    ("report_640", "Report 640"),
     ("feature_stacks", "Feature stacks"),
     ("focus_mask", "Focus mask"),
     ("location_exports", "Location exports"),
@@ -173,6 +175,7 @@ async def run_core_pipeline_for_run(
                     DemDerivativesStage(grid_spec=grid_spec),
                     ThermalStage(grid_spec=grid_spec),
                     SecretLayersStage(grid_spec=grid_spec),
+                    Report640Stage(grid_spec=grid_spec),
                     FeatureStacksStage(grid_spec=grid_spec),
                     FocusMaskStage(grid_spec=grid_spec),
                     LocationExportsStage(grid_spec=grid_spec),
