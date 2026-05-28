@@ -421,8 +421,8 @@ async def _run_operator_output_download_guard_test(tmp_path: Path) -> None:
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
-        (run_dir / "NPY_STACKS").mkdir(parents=True, exist_ok=True)
-        (run_dir / "NPY_STACKS" / "FINAL_TESLA_V7_2_HYPERCUBE.npy").write_bytes(b"stack")
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "hypercube.npy").write_bytes(b"stack")
 
         async with session_factory() as session:
             session.add(
@@ -437,14 +437,12 @@ async def _run_operator_output_download_guard_test(tmp_path: Path) -> None:
             await session.commit()
 
         with TestClient(app, raise_server_exceptions=False) as client:
-            download_response = client.get(
-                f"/runs/{run_id}/outputs/download/NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy"
-            )
+            download_response = client.get(f"/runs/{run_id}/outputs/download/hypercube.npy")
             traversal_response = client.get(f"/runs/{run_id}/outputs/download/..%2Fgrid_manifest.json")
 
         assert download_response.status_code == 200
         assert download_response.content == b"stack"
-        assert 'filename="FINAL_TESLA_V7_2_HYPERCUBE.npy"' in download_response.headers["content-disposition"]
+        assert 'filename="hypercube.npy"' in download_response.headers["content-disposition"]
         assert traversal_response.status_code == 404
         assert traversal_response.json() == {
             "error": "artifact_unavailable",
@@ -583,8 +581,6 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy",
             "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy",
             "NPY_RADAR_BANDS/RADAR_angle_640_app.npy",
-            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
-            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
             "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
             "QA/QA_GRID_dx_m_640.tif",
             "QA/QA_GRID_dy_m_640.tif",
@@ -604,6 +600,8 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "REPORT_640_Pottery_Report.tif",
             "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
             "QA/sar/intermediates/per_image_products_db",
             "QA/sar/intermediates/pair_median",
@@ -648,8 +646,6 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy": b"npy-vh",
         "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy": b"npy-log",
         "NPY_RADAR_BANDS/RADAR_angle_640_app.npy": b"npy-angle",
-        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif": b"cube-tif",
-        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy": b"cube-npy",
         "NPY_STACKS/RADAR_STACK_HWC_640_app.npy": b"radar-stack",
         "QA/QA_GRID_dx_m_640.tif": b"dx",
         "QA/QA_GRID_dy_m_640.tif": b"dy",
@@ -715,8 +711,23 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         json.dumps(
             {
                 "metadata": {
-                    "notebook_patched_14b_filename": "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
-                    "notebook_patched_14b_status": "not_implemented_no_source_equivalent",
+                    "notebook_output_statuses": [
+                        {
+                            "filename": "FINAL_TESLA_V7_2_HYPERCUBE.tif",
+                            "status": "not_implemented_no_source_equivalent",
+                            "reason": "No source-equivalent exists yet.",
+                        },
+                        {
+                            "filename": "FINAL_TESLA_V7_2_HYPERCUBE.npy",
+                            "status": "not_implemented_no_source_equivalent",
+                            "reason": "No source-equivalent exists yet.",
+                        },
+                        {
+                            "filename": "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+                            "status": "not_implemented_no_source_equivalent",
+                            "reason": "No source-equivalent exists yet.",
+                        },
+                    ],
                 }
             }
         ),

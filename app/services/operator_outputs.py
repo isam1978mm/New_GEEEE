@@ -36,23 +36,29 @@ STATUS_NOT_IMPLEMENTED = "not_implemented_no_source_equivalent"
 
 def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOutputTreePublic:
     run_dir = get_run_dir(settings, run_id)
+    not_implemented = _collect_not_implemented(settings=settings, run_id=run_id)
+    not_implemented_paths = {item.relative_path for item in not_implemented}
     outputs: list[OperatorOutputFilePublic] = []
     if run_dir.is_dir():
         for path in sorted((item for item in run_dir.rglob("*") if item.is_file()), key=_relative_sort_key(run_dir)):
             relative_path = path.relative_to(run_dir).as_posix()
             if not is_safe_operator_output_relative_path(relative_path):
                 continue
+            if relative_path in not_implemented_paths:
+                continue
             outputs.append(_to_output_file(run_id=run_id, run_dir=run_dir, path=path))
 
     return OperatorOutputTreePublic(
         run_id=run_id,
         outputs=outputs,
-        not_implemented=_collect_not_implemented(settings=settings, run_id=run_id),
+        not_implemented=not_implemented,
     )
 
 
 def resolve_operator_output_path(settings: Settings, run_id: str, relative_path: str) -> Path:
     if not is_safe_operator_output_relative_path(relative_path):
+        raise ArtifactServeViolation()
+    if relative_path in {item.relative_path for item in _collect_not_implemented(settings=settings, run_id=run_id)}:
         raise ArtifactServeViolation()
     path = resolve_run_artifact_path(settings, run_id, relative_path)
     if not path.is_file():
@@ -153,11 +159,19 @@ def _read_hypercube_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
     metadata = payload.get("metadata") if isinstance(payload, dict) else None
     if not isinstance(metadata, dict):
         return []
-    filename = metadata.get("notebook_patched_14b_filename")
-    status = metadata.get("notebook_patched_14b_status")
-    if not isinstance(filename, str) or status != STATUS_NOT_IMPLEMENTED:
+    notebook_statuses = metadata.get("notebook_output_statuses")
+    if not isinstance(notebook_statuses, list):
         return []
-    return [_not_implemented_item(relative_path=f"NPY_STACKS/{filename}", source="stage_hypercube.manifest.json")]
+    items: list[OperatorOutputStatusPublic] = []
+    for item in notebook_statuses:
+        if not isinstance(item, dict):
+            continue
+        filename = item.get("filename")
+        status = item.get("status")
+        if not isinstance(filename, str) or status != STATUS_NOT_IMPLEMENTED:
+            continue
+        items.append(_not_implemented_item(relative_path=f"NPY_STACKS/{filename}", source="stage_hypercube.manifest.json"))
+    return items
 
 
 def _not_implemented_item(*, relative_path: str, source: str) -> OperatorOutputStatusPublic:

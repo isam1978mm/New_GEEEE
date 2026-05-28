@@ -11,7 +11,15 @@ from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
 from app.pipeline.stages.grid import build_run_grid
-from app.pipeline.stages.hypercube import NOTEBOOK_STACK_OUTPUT_DIR, HypercubeStage, build_hypercube_products
+from app.pipeline.stages.hypercube import (
+    NOTEBOOK_HYPERCUBE_NPY_NAME,
+    NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+    NOTEBOOK_HYPERCUBE_TIF_NAME,
+    NOTEBOOK_FINAL_TESLA_REASON,
+    NOTEBOOK_STACK_OUTPUT_DIR,
+    HypercubeStage,
+    build_hypercube_products,
+)
 from app.services.storage import read_manifest
 
 
@@ -51,8 +59,6 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         assert [artifact.name for artifact in result.artifacts] == [
             "hypercube_tif",
             "hypercube_npy",
-            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif",
-            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy",
             "hypercube_band_order",
             "hypercube_band_stats",
             "hypercube_norm_params",
@@ -62,8 +68,6 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         assert artifact_classes == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_npy": ArtifactClass.LOCAL_SENSITIVE,
-            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif": ArtifactClass.LOCAL_SENSITIVE,
-            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_band_order": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_band_stats": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_norm_params": ArtifactClass.LOCAL_SENSITIVE,
@@ -85,19 +89,26 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
 
         notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
-        notebook_hypercube_tif = notebook_stack_dir / "FINAL_TESLA_V7_2_HYPERCUBE.tif"
-        notebook_hypercube_npy = notebook_stack_dir / "FINAL_TESLA_V7_2_HYPERCUBE.npy"
-        assert notebook_hypercube_tif.is_file()
-        assert notebook_hypercube_npy.is_file()
-        notebook_sidecar = read_manifest(raster_sidecar_path(notebook_hypercube_tif))
-        assert notebook_sidecar["transform"] == grid_spec.manifest.crs_transform
-        assert notebook_sidecar["height"] == grid_spec.size
-        assert notebook_sidecar["width"] == grid_spec.size
-        notebook_cube = np.load(notebook_hypercube_npy)
-        assert notebook_cube.dtype == np.float32
-        assert notebook_cube.shape == (grid_spec.size, grid_spec.size, 3)
-        assert not (notebook_stack_dir / "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif").exists()
-        assert result.metadata["notebook_patched_14b_status"] == "not_implemented_no_source_equivalent"
+        assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME).exists()
+        assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME).exists()
+        assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME).exists()
+        assert result.metadata["notebook_output_statuses"] == [
+            {
+                "filename": NOTEBOOK_HYPERCUBE_TIF_NAME,
+                "status": "not_implemented_no_source_equivalent",
+                "reason": NOTEBOOK_FINAL_TESLA_REASON,
+            },
+            {
+                "filename": NOTEBOOK_HYPERCUBE_NPY_NAME,
+                "status": "not_implemented_no_source_equivalent",
+                "reason": NOTEBOOK_FINAL_TESLA_REASON,
+            },
+            {
+                "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+                "status": "not_implemented_no_source_equivalent",
+                "reason": NOTEBOOK_FINAL_TESLA_REASON,
+            },
+        ]
 
 
 def _write_source_raster(path: Path, array: np.ndarray, grid_spec) -> None:

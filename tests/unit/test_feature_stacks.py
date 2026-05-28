@@ -63,6 +63,8 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert float(radar_linear_stack[:, :, 0].min()) >= 0.0
         notebook_radar_stack_path = run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "RADAR_STACK_HWC_640_app.npy"
         assert notebook_radar_stack_path.is_file()
+        assert not (run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "FINAL_TESLA_V7_2_HYPERCUBE.tif").exists()
+        assert not (run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "FINAL_TESLA_V7_2_HYPERCUBE.npy").exists()
         notebook_radar_stack = np.load(notebook_radar_stack_path)
         assert notebook_radar_stack.dtype == np.float32
         assert notebook_radar_stack.shape == (grid_spec.size, grid_spec.size, 4)

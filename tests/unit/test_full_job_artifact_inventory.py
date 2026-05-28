@@ -151,13 +151,23 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(hypercube_result) == {
             "hypercube_tif": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_npy": ArtifactClass.LOCAL_SENSITIVE,
-            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif": ArtifactClass.LOCAL_SENSITIVE,
-            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_band_order": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_band_stats": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_norm_params": ArtifactClass.LOCAL_SENSITIVE,
             "hypercube_audit": ArtifactClass.FILESYSTEM_ONLY,
         }
+        notebook_outputs = {
+            item["filename"]: item
+            for item in hypercube_result.metadata["notebook_output_statuses"]
+            if item["status"] == "not_implemented_no_source_equivalent"
+        }
+        assert set(notebook_outputs) == {
+            "FINAL_TESLA_V7_2_HYPERCUBE.tif",
+            "FINAL_TESLA_V7_2_HYPERCUBE.npy",
+            "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+        }
+        for item in notebook_outputs.values():
+            assert isinstance(item["reason"], str) and item["reason"]
         assert _artifact_classes(pca_result) == {
             "pca_anomaly_tif": ArtifactClass.LOCAL_SENSITIVE,
             "pca_eigenvalues": ArtifactClass.LOCAL_SENSITIVE,
@@ -232,8 +242,6 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy",
             "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy",
             "NPY_RADAR_BANDS/RADAR_angle_640_app.npy",
-            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
-            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
             "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
             "QA/QA_GRID_dx_m_640.tif",
             "QA/QA_GRID_dy_m_640.tif",

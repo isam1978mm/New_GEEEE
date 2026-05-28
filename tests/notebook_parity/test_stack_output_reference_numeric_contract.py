@@ -17,36 +17,8 @@ from tests.notebook_parity.test_reference_outputs_contract import (
 
 
 STACK_REFERENCE_CASES = [
-    pytest.param(
-        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
-        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
-        "hypercube.tif",
-        "raster",
-        marks=pytest.mark.xfail(
-            strict=True,
-            raises=AssertionError,
-            reason=(
-                "notebook reference and app hypercube TIFF differ in metadata: "
-                "app output has 9 bands while notebook reference has 21 bands; "
-                "no stack math or tolerance change is approved"
-            ),
-        ),
-    ),
-    pytest.param(
-        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
-        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
-        "hypercube.npy",
-        "npy",
-        marks=pytest.mark.xfail(
-            strict=True,
-            raises=AssertionError,
-            reason=(
-                "notebook reference and app hypercube NPY differ in layout: "
-                "app output is CHW 9-band while notebook reference is HWC 21-band; "
-                "no stack math or tolerance change is approved"
-            ),
-        ),
-    ),
+    ("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif", "hypercube.tif", "raster"),
+    ("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy", "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy", "hypercube.npy", "npy"),
     pytest.param(
         "NPY_STACKS/RADAR_STACK_HWC_640_",
         "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
@@ -82,6 +54,7 @@ def test_stack_outputs_match_frozen_reference_or_skip(
         reference_path = _resolve_reference_file(manifest, reference_locator)
 
     app_path = app_run_dir / app_relative_path
+    _skip_if_stage_manifest_marks_not_implemented(app_run_dir=app_run_dir, app_relative_path=app_relative_path)
     if not app_path.is_file():
         pytest.skip(f"Matching notebook-grid app output is missing required file: {app_relative_path}")
 
@@ -144,6 +117,27 @@ def _load_notebook_exact_app_run_dir() -> Path:
     if not path.is_dir():
         pytest.skip("Matching notebook-grid app run path is configured but is not a readable directory.")
     return path
+
+
+def _skip_if_stage_manifest_marks_not_implemented(*, app_run_dir: Path, app_relative_path: str) -> None:
+    if not app_relative_path.startswith("NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE"):
+        return
+    manifest_path = app_run_dir / "stage_hypercube.manifest.json"
+    if not manifest_path.is_file():
+        return
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        return
+    statuses = metadata.get("notebook_output_statuses")
+    if not isinstance(statuses, list):
+        return
+    target_name = Path(app_relative_path).name
+    for item in statuses:
+        if not isinstance(item, dict):
+            continue
+        if item.get("filename") == target_name and item.get("status") == "not_implemented_no_source_equivalent":
+            pytest.skip(f"Notebook output family is not implemented for app parity: {target_name}")
 
 
 def _assert_raster_matches_reference(*, label: str, reference_path: Path, app_path: Path, tolerance: float) -> None:

@@ -35,7 +35,6 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
         run_dir = Path(temp_dir)
         grid_spec = _build_full_deterministic_run(run_dir)
 
-        radar_cube = np.load(run_dir / "NPY_STACKS" / "FINAL_TESLA_V7_2_HYPERCUBE.npy")
         expected_band_counts = {
             "DEM_GEO8_TIFS/DEM_640.tif": 1,
             "DEM_GEO8_TIFS/slope_deg_640.tif": 1,
@@ -47,7 +46,6 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
             "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_app.tif": 1,
             "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_app.tif": 1,
             "GEOTIFF_RADAR_BANDS/RADAR_angle_640_app.tif": 1,
-            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif": int(radar_cube.shape[-1]),
             "QA/QA_GRID_dx_m_640.tif": 1,
             "QA/QA_GRID_dy_m_640.tif": 1,
             "QA/QA_GRID_validmask_640.tif": 1,
@@ -85,13 +83,6 @@ def test_notebook_compatible_npy_metadata_contract() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         grid_spec = _build_full_deterministic_run(run_dir)
-
-        notebook_hypercube = np.load(run_dir / "NPY_STACKS" / "FINAL_TESLA_V7_2_HYPERCUBE.npy")
-        with (run_dir / "hypercube_band_order.csv").open("r", encoding="utf-8", newline="") as handle:
-            hypercube_band_rows = list(csv.DictReader(handle))
-        assert notebook_hypercube.dtype == np.float32
-        assert notebook_hypercube.shape == (grid_spec.size, grid_spec.size, len(hypercube_band_rows))
-        assert notebook_hypercube.dtype != object
 
         radar_stack = np.load(run_dir / "NPY_STACKS" / "RADAR_STACK_HWC_640_app.npy")
         assert radar_stack.dtype == np.float32
