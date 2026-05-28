@@ -151,11 +151,12 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == [*INDEX_NAMES, "s2_indices_summary"]
+        assert [artifact.name for artifact in result.artifacts] == [*INDEX_NAMES, "s2_indices_summary", "s2_raw_cube"]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
         for name in INDEX_NAMES:
             assert artifact_classes[name] == ArtifactClass.LOCAL_SENSITIVE
         assert artifact_classes["s2_indices_summary"] == ArtifactClass.FILESYSTEM_ONLY
+        assert artifact_classes["s2_raw_cube"] == ArtifactClass.FILESYSTEM_ONLY
         assert result.metadata["band_names"] == list(INDEX_NAMES)
 
         for name in INDEX_NAMES:

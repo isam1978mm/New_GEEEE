@@ -27,6 +27,7 @@ from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.s2_indices import S2IndicesStage
 from app.pipeline.stages.sar_rtc import SarRtcStage
+from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
@@ -46,6 +47,7 @@ SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("s2_indices", "Sentinel-2 indices"),
     ("dem_derivatives", "DEM derivatives"),
     ("thermal", "Thermal"),
+    ("secret_layers", "Secret layers"),
     ("feature_stacks", "Feature stacks"),
     ("focus_mask", "Focus mask"),
     ("location_exports", "Location exports"),
@@ -170,6 +172,7 @@ async def run_core_pipeline_for_run(
                     S2IndicesStage(grid_spec=grid_spec),
                     DemDerivativesStage(grid_spec=grid_spec),
                     ThermalStage(grid_spec=grid_spec),
+                    SecretLayersStage(grid_spec=grid_spec),
                     FeatureStacksStage(grid_spec=grid_spec),
                     FocusMaskStage(grid_spec=grid_spec),
                     LocationExportsStage(grid_spec=grid_spec),

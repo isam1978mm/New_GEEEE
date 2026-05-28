@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+
+def _sanitized_subprocess_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env.pop("APP_NOTEBOOK_OUTPUT_RUN_DIR", None)
+    env.pop("NOTEBOOK_REFERENCE_BUNDLE_DIR", None)
+    return env
 
 
 def test_report_phase5_numeric_output_parity_writes_json_only_when_requested(tmp_path: Path) -> None:
@@ -32,6 +40,7 @@ def test_report_phase5_numeric_output_parity_writes_json_only_when_requested(tmp
         capture_output=True,
         text=True,
         check=True,
+        env=_sanitized_subprocess_env(),
     )
 
     stdout_payload = json.loads(result.stdout)
@@ -54,6 +63,7 @@ def test_report_phase5_numeric_output_parity_uses_config_required_when_env_missi
         capture_output=True,
         text=True,
         check=True,
+        env=_sanitized_subprocess_env(),
     )
 
     payload = json.loads(result.stdout)

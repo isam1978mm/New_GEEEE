@@ -25,6 +25,7 @@ from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
+from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.services.storage import read_manifest
@@ -49,6 +50,10 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
             "QA/QA_GRID_dx_m_640.tif": 1,
             "QA/QA_GRID_dy_m_640.tif": 1,
             "QA/QA_GRID_validmask_640.tif": 1,
+            "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif": 1,
+            "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif": 1,
+            "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif": 1,
+            "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif": 1,
         }
 
         for relative_path, expected_count in expected_band_counts.items():
@@ -244,6 +249,7 @@ def _build_full_deterministic_run(run_dir: Path):
     asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
     asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
     asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+    asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
     asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
     asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
     asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))

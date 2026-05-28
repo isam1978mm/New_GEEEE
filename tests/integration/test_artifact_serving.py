@@ -590,6 +590,11 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "QA/QA_GRID_validmask_640.tif",
             "QA/RUN_MANIFEST.json",
             "QA/sar/intermediates/sar_intermediate_manifest.json",
+            "QA/stacks/secret_layers_manifest.json",
+            "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
+            "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif",
+            "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif",
+            "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
             "objects_index.csv",
             "clusters_summary.csv",
             "objects/object_mask.npy",
@@ -610,6 +615,8 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
             "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
             "QA/sar/intermediates/post_rtc/final_angle.npy",
+            "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif",
+            "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif",
         } <= not_implemented_paths
         assert not any(path.startswith("qa/") for path in output_paths | not_implemented_paths)
         assert all(item["status"] == "implemented" for item in outputs)
@@ -672,6 +679,10 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "QA/sar/sar_summary.csv": b"band_name,mean\nVV_dB,1\n",
         "full_job/field_ops/field_ops_report.json": b'{"field_ops": true}',
         "kmz/site_location.kmz": b"kmz",
+        "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif": b"gold",
+        "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif": b"tunnel",
+        "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif": b"thermal",
+        "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif": b"hidden",
         ".env": b"SECRET=blocked",
         "PATH_MAP.local.json": b'{"path":"blocked"}',
         "service-account.json": b"blocked",
@@ -712,6 +723,30 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
                         "missing_reason": "Frozen QA post-RTC notebook family is not source-equivalent to the app final SAR export family.",
                     },
                 }
+            }
+        ),
+        encoding="utf-8",
+    )
+    secret_layers_manifest_path = run_dir / "QA" / "stacks" / "secret_layers_manifest.json"
+    secret_layers_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    secret_layers_manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "secret_layers_manifest_v1",
+                "stage": "secret_layers",
+                "layer_count": 6,
+                "implemented_count": 4,
+                "not_implemented_count": 2,
+                "implemented": [
+                    {"name": "AI_READY_640_Secret_Gold_Halo", "formula": "B12 / (B8 + eps)", "status": "implemented"},
+                    {"name": "AI_READY_640_Secret_Tunnel_Ceiling", "formula": "B8 - B4", "status": "implemented"},
+                    {"name": "AI_READY_640_Secret_Thermal_Inertia", "formula": "l9_col / focal_mean(l9_col, 500m)", "status": "implemented"},
+                    {"name": "AI_READY_640_Secret_Hidden_Doors", "formula": "hillshade(315,35) - hillshade(135,35)", "status": "implemented"},
+                ],
+                "not_implemented": [
+                    {"name": "AI_READY_640_Secret_Silver_Oxide", "formula": "B2 / (B1 + eps)", "status": "not_implemented_no_source_equivalent", "reason": "Raw S2 band(s) B1 not available"},
+                    {"name": "AI_READY_640_Secret_Chemical_Protector", "formula": "B1 / (B11 + eps)", "status": "not_implemented_no_source_equivalent", "reason": "Raw S2 band(s) B1 not available"},
+                ],
             }
         ),
         encoding="utf-8",

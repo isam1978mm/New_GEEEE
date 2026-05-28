@@ -21,6 +21,7 @@ from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.s2_indices import INDEX_NAMES, S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
+from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 
@@ -39,6 +40,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         s2_result = asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
         dem_derivatives_result = asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         thermal_result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        secret_layers_result = asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
         feature_stacks_result = asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
         focus_mask_result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         location_exports_result = asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
@@ -93,6 +95,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(s2_result) == {
             **{name: ArtifactClass.LOCAL_SENSITIVE for name in INDEX_NAMES},
             "s2_indices_summary": ArtifactClass.FILESYSTEM_ONLY,
+            "s2_raw_cube": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(dem_derivatives_result) == {
             **{name: ArtifactClass.LOCAL_SENSITIVE for name in DEM_DERIVATIVE_NAMES},
@@ -107,6 +110,13 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert _artifact_classes(thermal_result) == {
             "lst": ArtifactClass.LOCAL_SENSITIVE,
             "thermal_summary": ArtifactClass.FILESYSTEM_ONLY,
+        }
+        assert _artifact_classes(secret_layers_result) == {
+            "AI_READY_640_Secret_Gold_Halo": ArtifactClass.LOCAL_SENSITIVE,
+            "AI_READY_640_Secret_Tunnel_Ceiling": ArtifactClass.LOCAL_SENSITIVE,
+            "AI_READY_640_Secret_Thermal_Inertia": ArtifactClass.LOCAL_SENSITIVE,
+            "AI_READY_640_Secret_Hidden_Doors": ArtifactClass.LOCAL_SENSITIVE,
+            "secret_layers_manifest": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(feature_stacks_result) == {
             "science_core_stack_tif": ArtifactClass.FILESYSTEM_ONLY,
@@ -203,6 +213,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
         asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
         asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
         asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
         asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
         asyncio.run(LocationExportsStage(grid_spec=grid_spec).run(context))
@@ -249,6 +260,11 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "QA/RUN_MANIFEST.json",
             "QA/REPORT_640_manifest.json",
             "QA/sar/intermediates/sar_intermediate_manifest.json",
+            "QA/stacks/secret_layers_manifest.json",
+            "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
+            "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif",
+            "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif",
+            "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
             "objects_index.csv",
             "clusters_summary.csv",
             "objects/object_mask.npy",

@@ -29,6 +29,9 @@ NOTEBOOK_PATCHED_14B_STATUS = "not_implemented_no_source_equivalent"
 NOTEBOOK_FINAL_TESLA_STATUS = "not_implemented_no_source_equivalent"
 NOTEBOOK_FINAL_TESLA_REASON = (
     "Notebook FINAL_TESLA hypercube requires 6 AI_READY_640_Secret_* layers and 3 REPORT_640_* rasters; "
+    "4 of 6 secret layers are implemented (Gold_Halo, Tunnel_Ceiling, Thermal_Inertia, Hidden_Doors), "
+    "2 remain not_implemented_no_source_equivalent (Silver_Oxide, Chemical_Protector due to missing B1), "
+    "and REPORT_640_* rasters are not implemented; "
     "the current app hypercube is a different 21-channel science product and no source-equivalent exists yet."
 )
 EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}

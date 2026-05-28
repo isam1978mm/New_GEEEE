@@ -27,7 +27,6 @@ SENSITIVE_NAME_PARTS = (
     "service_account",
     "credential",
     "credentials",
-    "secret",
     "private-key",
     "private_key",
 )
@@ -85,8 +84,15 @@ def is_safe_operator_output_relative_path(relative_path: str) -> bool:
         return False
     if any(part.endswith(SENSITIVE_SUFFIXES) for part in lowered_parts):
         return False
-    if any(any(token in part for token in SENSITIVE_NAME_PARTS) for part in lowered_parts):
-        return False
+    for part in lowered_parts:
+        for token in SENSITIVE_NAME_PARTS:
+            if token in part:
+                return False
+        if "secret" in part:
+            # Allow known notebook-compatible secret layer names and manifest
+            if part.startswith("ai_ready_640_secret_") or part == "secret_layers_manifest.json":
+                continue
+            return False
     return True
 
 
@@ -115,6 +121,7 @@ def _collect_not_implemented(*, settings: Settings, run_id: str) -> list[Operato
     items.extend(_read_report_640_manifest(run_dir / "QA" / "REPORT_640_manifest.json"))
     items.extend(_read_sar_intermediate_manifest(run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"))
     items.extend(_read_hypercube_manifest(run_dir / "stage_hypercube.manifest.json"))
+    items.extend(_read_secret_layers_manifest(run_dir / "QA" / "stacks" / "secret_layers_manifest.json"))
     return sorted(items, key=lambda item: item.relative_path)
 
 
@@ -183,6 +190,30 @@ def _read_hypercube_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
         if not isinstance(filename, str) or status != STATUS_NOT_IMPLEMENTED:
             continue
         items.append(_not_implemented_item(relative_path=f"NPY_STACKS/{filename}", source="stage_hypercube.manifest.json"))
+    return items
+
+
+def _read_secret_layers_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
+    payload = _read_json(path)
+    if not isinstance(payload, dict):
+        return []
+    not_implemented = payload.get("not_implemented")
+    if not isinstance(not_implemented, list):
+        return []
+    items: list[OperatorOutputStatusPublic] = []
+    for layer in not_implemented:
+        if not isinstance(layer, dict):
+            continue
+        name = layer.get("name")
+        status = layer.get("status")
+        if not isinstance(name, str) or status != STATUS_NOT_IMPLEMENTED:
+            continue
+        items.append(
+            _not_implemented_item(
+                relative_path=f"AI_READY_640/{name}.tif",
+                source="QA/stacks/secret_layers_manifest.json",
+            )
+        )
     return items
 
 

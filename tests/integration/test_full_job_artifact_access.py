@@ -27,6 +27,7 @@ from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
+from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.services.storage import ensure_data_dirs
@@ -176,6 +177,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher),
             DemDerivativesStage(grid_spec=grid_spec),
             ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher),
+            SecretLayersStage(grid_spec=grid_spec),
             FeatureStacksStage(grid_spec=grid_spec),
             FocusMaskStage(grid_spec=grid_spec),
             LocationExportsStage(grid_spec=grid_spec),
