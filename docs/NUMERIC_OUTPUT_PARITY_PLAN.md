@@ -114,6 +114,23 @@ Future fix candidates:
 - post-RTC intermediate parity
 - `REPORT_640` generation
 
+## Hillshade Reference Provenance Blocker
+
+Current status:
+
+- app hillshade matches the current literal notebook hillshade expression
+- frozen reference hillshade is not exactly reproducible from the current notebook expression
+- the remaining residual max error is about `1.8e-07`
+- no tolerance is approved
+- no app-side guesswork is approved
+
+Accepted resolution paths:
+
+- recover the original notebook/reference generation environment and prove it reproduces the frozen hillshade artifact exactly
+- or regenerate the frozen hillshade reference through an approved reference-refresh process
+
+Until reference provenance is resolved, hillshade remains a strict `xfail`.
+
 ## Phase 5F: Parity Report Integration
 
 Phase 5F integrates the earlier evidence into one local operator-facing report.
