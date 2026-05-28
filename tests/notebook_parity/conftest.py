@@ -67,6 +67,7 @@ PARITY_TEST_REGISTRY: dict[str, ParityRegistryEntry] = {
 CONTRACT_LEVEL_PARITY_TEST_FILES = {
     "test_reference_outputs_contract.py",
     "test_dem_output_reference_numeric_contract.py",
+    "test_qa_output_reference_numeric_contract.py",
     "test_sar_output_reference_numeric_contract.py",
     "test_stack_output_reference_numeric_contract.py",
 }
