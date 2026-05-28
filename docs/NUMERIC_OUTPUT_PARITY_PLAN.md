@@ -85,11 +85,34 @@ Rules:
 - do not use arbitrary fresh production-grid UI runs for notebook reference parity
 - if either path is missing, Phase 5E tests should skip or xfail as config-required
 
-Current Phase 5E-1 status:
+`APP_NOTEBOOK_OUTPUT_RUN_DIR` must be configured locally and must not be committed.
 
-- the DEM reference numeric parity test exists
-- it is config-required until `APP_NOTEBOOK_OUTPUT_RUN_DIR` points to a matching notebook-grid app run
-- no numeric pass is claimed yet
+## Current Phase 5E Status
+
+The current Phase 5E reference-parity classification is:
+
+- DEM: 5 outputs pass
+- DEM: `hillshade_0to1_640.tif` is a known strict `xfail`
+- SAR: 8 band outputs pass
+- STACKS: 3 outputs are known strict `xfail`
+- QA: 3 grid outputs pass
+- QA: 4 post-RTC SAR intermediate arrays are known strict `xfail`
+- `REPORT_640`: the three root report GeoTIFFs remain `not_implemented_no_source_equivalent`
+
+Verification notes:
+
+- the frozen notebook reference bundle is compared only against a matching notebook-grid app run
+- arbitrary fresh production-grid UI runs are not accepted as Phase 5E proof
+- `REPORT_640` remains manifest/API verified as not implemented; no fake report rasters are created
+- Phase 5E has not approved any math changes
+- Phase 5E has not approved any tolerance changes
+
+Future fix candidates:
+
+- hillshade parity
+- stack 21-band/layout parity
+- post-RTC intermediate parity
+- `REPORT_640` generation
 
 ## Phase 5F: Parity Report Integration
 
