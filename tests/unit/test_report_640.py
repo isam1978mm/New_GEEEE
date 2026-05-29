@@ -13,10 +13,17 @@ from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.report_640 import (
+    NOTEBOOK_REPORT_S2_CLOUD_MAX,
+    NOTEBOOK_REPORT_S2_END,
+    NOTEBOOK_REPORT_S2_SOURCE_BANDS,
+    NOTEBOOK_REPORT_S2_START,
     Report640Stage,
+    build_notebook_report_pottery_image,
+    build_notebook_report_s2_composite,
     compute_report_mass_report,
     compute_report_pottery_report,
     compute_report_zero_point_targets,
+    create_ee_notebook_report_pottery_fetcher,
 )
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -90,6 +97,178 @@ def test_report_640_manifest_documents_three_implemented_reports() -> None:
         assert mass_report["formula"] == "B12 * ST_B10 / 1000"
         assert "s2_raw_cube.npy" in mass_report["source_equivalent"]
         assert "st_b10_raw.npy" in mass_report["source_equivalent"]
+
+
+def test_notebook_report_s2_composite_uses_report_provenance(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    calls: list[tuple[str, object]] = []
+
+    class FakeFilter:
+        @staticmethod
+        def lt(name, value):
+            return ("lt", name, value)
+
+    class FakeCollection:
+        def filterBounds(self, region):
+            calls.append(("filterBounds", region))
+            return self
+
+        def filterDate(self, start, end):
+            calls.append(("filterDate", (start, end)))
+            return self
+
+        def filter(self, predicate):
+            calls.append(("filter", predicate))
+            return self
+
+        def select(self, bands):
+            calls.append(("select", bands))
+            return self
+
+        def median(self):
+            calls.append(("median", None))
+            return self
+
+    monkeypatch.setattr("app.pipeline.stages.report_640.ee.Filter", FakeFilter)
+    monkeypatch.setattr(
+        "app.pipeline.stages.report_640.ee.ImageCollection",
+        lambda dataset: calls.append(("ImageCollection", dataset)) or FakeCollection(),
+    )
+    monkeypatch.setattr("app.pipeline.stages.report_640.build_grid_region", lambda _grid_spec: "grid-region")
+
+    build_notebook_report_s2_composite(grid_spec)
+
+    assert ("ImageCollection", "COPERNICUS/S2_SR_HARMONIZED") in calls
+    assert ("filterBounds", "grid-region") in calls
+    assert ("filterDate", (NOTEBOOK_REPORT_S2_START, NOTEBOOK_REPORT_S2_END)) in calls
+    assert ("filter", ("lt", "CLOUDY_PIXEL_PERCENTAGE", NOTEBOOK_REPORT_S2_CLOUD_MAX)) in calls
+    assert ("select", list(NOTEBOOK_REPORT_S2_SOURCE_BANDS)) in calls
+    assert ("median", None) in calls
+
+
+def test_notebook_report_pottery_image_builds_ee_formula(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    operations: list[str] = []
+
+    class FakeBand:
+        def __init__(self, name):
+            self.name = name
+
+        def divide(self, other):
+            operations.append(f"{self.name}.divide({other.name})")
+            return FakeBand(f"{self.name}/{other.name}")
+
+        def rename(self, name):
+            operations.append(f"{self.name}.rename({name})")
+            return FakeImage(name)
+
+    class FakeS2:
+        def select(self, name):
+            operations.append(f"select({name})")
+            return FakeBand(name)
+
+    class FakeImage:
+        def __init__(self, name):
+            self.name = name
+
+        def toFloat(self):
+            operations.append("toFloat")
+            return self
+
+        def reproject(self, *, crs, crsTransform):
+            operations.append(f"reproject({crs})")
+            assert crs == grid_spec.crs
+            assert crsTransform == list(grid_spec.transform)
+            return self
+
+        def clip(self, region):
+            operations.append(f"clip({region})")
+            return self
+
+    monkeypatch.setattr("app.pipeline.stages.report_640.build_notebook_report_s2_composite", lambda _grid_spec: FakeS2())
+    monkeypatch.setattr("app.pipeline.stages.report_640.build_grid_region", lambda _grid_spec: "grid-region")
+
+    build_notebook_report_pottery_image(grid_spec)
+
+    assert "B12.divide(B11)" in operations
+    assert "B12/B11.rename(REPORT_640_Pottery_Report)" in operations
+    assert "toFloat" in operations
+
+
+def test_create_ee_notebook_report_pottery_fetcher_uses_sample_rectangle(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    settings = _settings(Path("C:/tmp/gee-report-pottery-test"))
+    init_calls: list[str] = []
+    rectangle_calls: list[tuple[list[float], str, bool]] = []
+
+    class FakeSampleResult:
+        def getInfo(self):
+            return {"properties": {"REPORT_640_Pottery_Report": [[7.0] * 320 for _ in range(320)]}}
+
+    class FakeImage:
+        def sampleRectangle(self, *, region, defaultValue):
+            assert region == "tile-region"
+            assert defaultValue == grid_spec.nodata
+            return FakeSampleResult()
+
+    class FakeGeometry:
+        @staticmethod
+        def Rectangle(coords, crs, geodesic):
+            rectangle_calls.append((coords, crs, geodesic))
+            return "tile-region"
+
+    monkeypatch.setattr("app.pipeline.stages.report_640.initialize_ee_session", lambda _settings: init_calls.append("init"))
+    monkeypatch.setattr("app.pipeline.stages.report_640.build_notebook_report_pottery_image", lambda _grid_spec: FakeImage())
+    monkeypatch.setattr("app.pipeline.stages.report_640.ee.Geometry", FakeGeometry)
+
+    fetcher = create_ee_notebook_report_pottery_fetcher(settings, grid_spec)
+    array = fetcher(grid_spec=grid_spec)
+
+    assert init_calls == ["init"]
+    assert array.shape == (640, 640)
+    assert array.dtype == np.float32
+    assert array[0, 0] == np.float32(7.0)
+    assert len(rectangle_calls) == 4
+
+
+def test_report_640_stage_uses_pottery_fetcher_only_for_pottery_report() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        settings = _settings(run_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=settings, run_dir=run_dir)
+        calls: list[str] = []
+        pottery = np.full((grid_spec.size, grid_spec.size), 7.0, dtype=np.float32)
+
+        def pottery_fetcher(*, grid_spec):
+            calls.append(grid_spec.crs)
+            return pottery
+
+        asyncio.run(GridStage(latitude=35.59499, longitude=36.12694).run(context))
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
+        asyncio.run(Report640Stage(grid_spec=grid_spec, pottery_fetcher=pottery_fetcher).run(context))
+
+        with rasterio.open(run_dir / "REPORT_640_Pottery_Report.tif") as dataset:
+            assert dataset.read(1)[0, 0] == np.float32(7.0)
+
+        with rasterio.open(run_dir / "REPORT_640_Mass_Report.tif") as dataset:
+            assert dataset.read(1)[0, 0] != np.float32(7.0)
+
+        with rasterio.open(run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif") as dataset:
+            assert dataset.read(1)[0, 0] in {np.float32(0.0), np.float32(1.0)}
+
+        manifest = json.loads((run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8"))
+        pottery_report = manifest["reports"]["REPORT_640_Pottery_Report.tif"]
+        mass_report = manifest["reports"]["REPORT_640_Mass_Report.tif"]
+        zero_report = manifest["reports"]["REPORT_640_FINAL_Zero_Point_Targets.tif"]
+        assert pottery_report["source_provenance"] == "notebook_report_s2"
+        assert mass_report["source_equivalent"] != "notebook_report_s2"
+        assert zero_report["source_equivalent"] != "notebook_report_s2"
+        assert calls == [grid_spec.crs]
 
 
 def test_implemented_report_rasters_match_grid_contract() -> None:

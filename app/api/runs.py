@@ -25,7 +25,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
-from app.pipeline.stages.report_640 import Report640Stage
+from app.pipeline.stages.report_640 import Report640Stage, create_ee_notebook_report_pottery_fetcher
 from app.pipeline.stages.s2_indices import S2IndicesStage
 from app.pipeline.stages.sar_rtc import SarRtcStage
 from app.pipeline.stages.secret_layers import (
@@ -183,7 +183,10 @@ async def run_core_pipeline_for_run(
                         hidden_doors_fetcher=create_ee_hidden_doors_fetcher(settings, grid_spec),
                         secret_s2_layer_fetcher=create_ee_notebook_secret_s2_layer_fetcher(settings, grid_spec),
                     ),
-                    Report640Stage(grid_spec=grid_spec),
+                    Report640Stage(
+                        grid_spec=grid_spec,
+                        pottery_fetcher=create_ee_notebook_report_pottery_fetcher(settings, grid_spec),
+                    ),
                     FeatureStacksStage(grid_spec=grid_spec),
                     FocusMaskStage(grid_spec=grid_spec),
                     LocationExportsStage(grid_spec=grid_spec),
