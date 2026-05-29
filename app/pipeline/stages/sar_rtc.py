@@ -524,13 +524,20 @@ def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]
 
 
 def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
-    del outputs
     base_dir = ensure_run_qa_dir(run_dir) / "sar" / "intermediates"
-    base_dir.mkdir(parents=True, exist_ok=True)
+    post_rtc_dir = base_dir / "post_rtc"
+    post_rtc_dir.mkdir(parents=True, exist_ok=True)
+
     bands: dict[str, str] = {}
-    for notebook_band in NOTEBOOK_SAR_POST_RTC_BANDS:
+    source_mapping: dict[str, str] = {}
+    written_npy_paths: list[Path] = []
+    for notebook_band, app_band in NOTEBOOK_SAR_POST_RTC_BANDS.items():
         filename = f"final_{notebook_band}.npy"
+        npy_path = post_rtc_dir / filename
+        np.save(npy_path, outputs[app_band].astype(np.float32, copy=False))
         bands[notebook_band] = f"post_rtc/{filename}"
+        source_mapping[f"post_rtc/{filename}"] = f"{SAR_NPY_OUTPUT_DIR}/{app_band}.npy"
+        written_npy_paths.append(npy_path)
 
     manifest_path = base_dir / "sar_intermediate_manifest.json"
     stages = {
@@ -542,11 +549,12 @@ def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np
         for stage_name in NOTEBOOK_SAR_INTERMEDIATE_MISSING_STAGES
     }
     stages["post_rtc"] = {
-        "status": "not_implemented_no_source_equivalent",
+        "status": "implemented",
         "bands": bands,
-        "missing_reason": (
-            "Frozen notebook QA post-RTC arrays behave like a separate masked notebook intermediate family. "
-            "The production app only produces the final exported SAR outputs already represented by NPY_RADAR_BANDS."
+        "source_mapping": source_mapping,
+        "source_description": (
+            "QA post-RTC arrays are byte-equal copies of the canonical final SAR arrays under "
+            f"{SAR_NPY_OUTPUT_DIR}/, persisted here in notebook QA layout."
         ),
     }
     payload = {
@@ -556,7 +564,7 @@ def write_notebook_sar_intermediate_outputs(run_dir: Path, outputs: dict[str, np
         "stages": stages,
     }
     manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-    return [manifest_path]
+    return [manifest_path, *written_npy_paths]
 
 
 def _notebook_sar_intermediate_artifact_name(path: Path) -> str:

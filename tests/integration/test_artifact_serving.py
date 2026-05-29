@@ -547,7 +547,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             tree_response = client.get(f"/runs/{run_id}/outputs")
             implemented_download = client.get(f"/runs/{run_id}/outputs/download/QA/RUN_MANIFEST.json")
             mass_report_download = client.get(f"/runs/{run_id}/outputs/download/REPORT_640_Mass_Report.tif")
-            stale_post_rtc_download = client.get(
+            post_rtc_download = client.get(
                 f"/runs/{run_id}/outputs/download/QA/sar/intermediates/post_rtc/final_VV_dB.npy"
             )
 
@@ -593,6 +593,10 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "QA/QA_GRID_validmask_640.tif",
             "QA/RUN_MANIFEST.json",
             "QA/sar/intermediates/sar_intermediate_manifest.json",
+            "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_angle.npy",
             "QA/stacks/secret_layers_manifest.json",
             "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
             "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif",
@@ -613,11 +617,13 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "QA/sar/intermediates/pair_median",
             "QA/sar/intermediates/final_median_pre_rtc",
             "QA/sar/intermediates/post_sample_pre_rtc",
+        } <= not_implemented_paths
+        assert not (not_implemented_paths & {
             "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
             "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
             "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
             "QA/sar/intermediates/post_rtc/final_angle.npy",
-        } <= not_implemented_paths
+        })
         assert not any(path.startswith("qa/") for path in output_paths | not_implemented_paths)
         assert all(item["status"] == "implemented" for item in outputs)
         assert all(item["download_url"].startswith(f"/runs/{run_id}/outputs/download/") for item in outputs)
@@ -633,11 +639,9 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
         assert 'filename="RUN_MANIFEST.json"' in implemented_download.headers["content-disposition"]
         assert mass_report_download.status_code == 200
         assert 'filename="REPORT_640_Mass_Report.tif"' in mass_report_download.headers["content-disposition"]
-        assert stale_post_rtc_download.status_code == 404
-        assert stale_post_rtc_download.json() == {
-            "error": "artifact_unavailable",
-            "message": "Artifact is unavailable.",
-        }
+        assert post_rtc_download.status_code == 200
+        assert 'filename="final_VV_dB.npy"' in post_rtc_download.headers["content-disposition"]
+        assert post_rtc_download.content == b"final-vv"
     finally:
         await engine.dispose()
 
@@ -666,10 +670,10 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "QA/QA_GRID_dy_m_640.tif": b"dy",
         "QA/QA_GRID_validmask_640.tif": b"mask",
         "QA/RUN_MANIFEST.json": b'{"manifest":"ok"}',
-        "QA/sar/intermediates/post_rtc/final_VV_dB.npy": b"stale-final-vv",
-        "QA/sar/intermediates/post_rtc/final_VH_dB.npy": b"stale-final-vh",
-        "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy": b"stale-final-log",
-        "QA/sar/intermediates/post_rtc/final_angle.npy": b"stale-final-angle",
+        "QA/sar/intermediates/post_rtc/final_VV_dB.npy": b"final-vv",
+        "QA/sar/intermediates/post_rtc/final_VH_dB.npy": b"final-vh",
+        "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy": b"final-log",
+        "QA/sar/intermediates/post_rtc/final_angle.npy": b"final-angle",
         "objects_index.csv": b"object_id\n1\n",
         "clusters_summary.csv": b"cluster_id\n1\n",
         "objects/object_mask.npy": b"mask",
@@ -720,14 +724,20 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
                     "final_median_pre_rtc": {"status": "not_implemented_no_source_equivalent"},
                     "post_sample_pre_rtc": {"status": "not_implemented_no_source_equivalent"},
                     "post_rtc": {
-                        "status": "not_implemented_no_source_equivalent",
+                        "status": "implemented",
                         "bands": {
                             "VV_dB": "post_rtc/final_VV_dB.npy",
                             "VH_dB": "post_rtc/final_VH_dB.npy",
                             "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
                             "angle": "post_rtc/final_angle.npy",
                         },
-                        "missing_reason": "Frozen QA post-RTC notebook family is not source-equivalent to the app final SAR export family.",
+                        "source_mapping": {
+                            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
+                            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
+                            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
+                            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+                        },
+                        "source_description": "QA post-RTC arrays are byte-equal copies of the canonical final SAR arrays under npy_radar_bands/.",
                     },
                 }
             }

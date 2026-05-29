@@ -1306,13 +1306,13 @@
       "size_bytes": 1638528
     },
     {
-      "artifact_family": "experimental_tail",
+      "artifact_family": "sar_npy_bands",
       "artifact_id": "file_000131",
       "artifact_name": "final_angle.npy",
-      "artifact_role": "unknown",
+      "artifact_role": "angle",
       "extension": "npy",
       "redacted_path": "redacted/file_000131_npy",
-      "sha256": "58e2a8edb8dc56005a3d145cdd4e2c5c7915a26871d6b3cea8e80bf078e33109",
+      "sha256": "1e5f114fa1dc0e9becfe4d83cf69c1f9423cde6ffe9c048f83c0a39e99e27b8e",
       "size_bytes": 1638528
     },
     {
@@ -1322,7 +1322,7 @@
       "artifact_role": "logratio_db",
       "extension": "npy",
       "redacted_path": "redacted/file_000132_npy",
-      "sha256": "fe23584a766012d070424d34d01dab5d31a71901ac91971010249078df2ee74c",
+      "sha256": "9c12b48a2e13bb67b8be7f729bbe8371bb712c0a67ab35f0dbb45d413dcc7ead",
       "size_bytes": 1638528
     },
     {
@@ -1332,7 +1332,7 @@
       "artifact_role": "vh_db",
       "extension": "npy",
       "redacted_path": "redacted/file_000133_npy",
-      "sha256": "654b36ea24607921e1ff3428e29bb8e63106918c4b1dc4324709ee9f5a46d3df",
+      "sha256": "5c83c500f9af5b7706906bb18d751112dbfc9bfa1312e0e35912e9cefe1f6507",
       "size_bytes": 1638528
     },
     {
@@ -1342,7 +1342,7 @@
       "artifact_role": "vv_db",
       "extension": "npy",
       "redacted_path": "redacted/file_000134_npy",
-      "sha256": "ad8a2f8f068245e3dbe26a92e7de314dba85397f566cb48fdce11a34e159a53d",
+      "sha256": "14392423eaafca25fdaebf1687bd82c8c7152e61b2f4c0cd572e67349e8f4512",
       "size_bytes": 1638528
     },
     {

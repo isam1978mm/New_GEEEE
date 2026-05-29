@@ -191,10 +191,16 @@ def test_notebook_compatible_csv_and_json_schema_contract() -> None:
             assert item["items"] == []
             assert isinstance(item["missing_reason"], str) and item["missing_reason"]
         post_rtc = intermediate_manifest["stages"]["post_rtc"]
-        assert set(post_rtc) == {"status", "bands", "missing_reason"}
-        assert post_rtc["status"] == "not_implemented_no_source_equivalent"
+        assert set(post_rtc) == {"status", "bands", "source_mapping", "source_description"}
+        assert post_rtc["status"] == "implemented"
         assert set(post_rtc["bands"]) == {"VV_dB", "VH_dB", "logRatio_dB", "angle"}
-        assert isinstance(post_rtc["missing_reason"], str) and post_rtc["missing_reason"]
+        assert set(post_rtc["source_mapping"]) == {
+            "post_rtc/final_VV_dB.npy",
+            "post_rtc/final_VH_dB.npy",
+            "post_rtc/final_logRatio_dB.npy",
+            "post_rtc/final_angle.npy",
+        }
+        assert isinstance(post_rtc["source_description"], str) and post_rtc["source_description"]
         _assert_no_sensitive_text(intermediate_manifest_text, run_dir)
 
         with (run_dir / "objects_index.csv").open("r", encoding="utf-8", newline="") as handle:

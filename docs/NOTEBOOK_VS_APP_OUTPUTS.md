@@ -141,7 +141,7 @@ For repeated notebook families, one row may represent a concrete filename patter
 | `pair_median` arrays | `QA/sar/intermediates/pair_median/pair{0..3}_{VV_dB|VH_dB|angle}.npy` |  | `missing-in-app` | no | 12 notebook SAR intermediate arrays were not found in the fresh app run. |
 | `final_median_pre_rtc` arrays | `QA/sar/intermediates/final_median_pre_rtc/final_{VV_dB|VH_dB|angle}.npy` |  | `missing-in-app` | no | 3 notebook SAR intermediate arrays were not found in the fresh app run. |
 | `post_sample_pre_rtc` arrays | `QA/sar/intermediates/post_sample_pre_rtc/final_{VV_dB|VH_dB|angle}.npy` |  | `missing-in-app` | no | 3 notebook SAR intermediate arrays were not found in the fresh app run. |
-| `post_rtc` arrays | `QA/sar/intermediates/post_rtc/final_{VV_dB|VH_dB|logRatio_dB|angle}.npy` |  | `missing-in-app` | no | 4 notebook SAR intermediate arrays were not found in the fresh app run. |
+| `post_rtc` arrays | `QA/sar/intermediates/post_rtc/final_{VV_dB|VH_dB|logRatio_dB|angle}.npy` | `npy_radar_bands/{VV_dB|VH_dB|logRatio_dB|incidence}.npy` | `matched-via-alias` | yes | Persisted by the SAR stage as byte-equal copies of the canonical final SAR arrays under `npy_radar_bands/`; see `sar_intermediate_manifest.json#stages.post_rtc.source_mapping`. |
 | `sar_intermediate_manifest.json` | `QA/sar/intermediates/sar_intermediate_manifest.json` |  | `missing-in-app` | no | This fresh app run did not export the notebook-style SAR intermediate manifest. |
 | empty notebook `SAR/` folder | `SAR/` |  | `intentionally-different` | no | Empty notebook folder is not reproduced by the app run. |
 | empty notebook `THERM/` folder | `THERM/` |  | `intentionally-different` | no | Empty notebook folder is not reproduced by the app run. |
@@ -300,10 +300,10 @@ These outputs were missing or renamed-only in the Phase 1 inventory and now exis
 | `QA/QA_GRID_validmask_640.tif` | `matched` | File exists under canonical uppercase `QA/`. |
 | `QA/RUN_MANIFEST.json` | `matched` | Manifest exists under canonical uppercase `QA/`. |
 | `QA/sar/intermediates/sar_intermediate_manifest.json` | `matched` | Manifest exists under canonical uppercase `QA/`. |
-| `QA/sar/intermediates/post_rtc/final_VV_dB.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
-| `QA/sar/intermediates/post_rtc/final_VH_dB.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
-| `QA/sar/intermediates/post_rtc/final_logRatio_dB.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
-| `QA/sar/intermediates/post_rtc/final_angle.npy` | `matched` | Post-RTC SAR intermediate exists under canonical uppercase `QA/`. |
+| `QA/sar/intermediates/post_rtc/final_VV_dB.npy` | `matched` | Post-RTC SAR intermediate is a byte-equal copy of `npy_radar_bands/VV_dB.npy`. |
+| `QA/sar/intermediates/post_rtc/final_VH_dB.npy` | `matched` | Post-RTC SAR intermediate is a byte-equal copy of `npy_radar_bands/VH_dB.npy`. |
+| `QA/sar/intermediates/post_rtc/final_logRatio_dB.npy` | `matched` | Post-RTC SAR intermediate is a byte-equal copy of `npy_radar_bands/logRatio_dB.npy`. |
+| `QA/sar/intermediates/post_rtc/final_angle.npy` | `matched` | Post-RTC SAR intermediate is a byte-equal copy of `npy_radar_bands/incidence.npy`. |
 
 ### Remaining Missing Notebook Outputs
 

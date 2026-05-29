@@ -89,6 +89,10 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "notebook_sar_npy_RADAR_logRatio_dB_640": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_sar_npy_RADAR_angle_640": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_sar_intermediate_manifest": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_VV_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_VH_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_logRatio_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_angle": ArtifactClass.FILESYSTEM_ONLY,
             "sar_pair_diagnostics": ArtifactClass.FILESYSTEM_ONLY,
             "sar_summary": ArtifactClass.FILESYSTEM_ONLY,
             "sar_nodata_audit": ArtifactClass.FILESYSTEM_ONLY,
@@ -271,6 +275,10 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "QA/RUN_MANIFEST.json",
             "QA/REPORT_640_manifest.json",
             "QA/sar/intermediates/sar_intermediate_manifest.json",
+            "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
+            "QA/sar/intermediates/post_rtc/final_angle.npy",
             "QA/stacks/secret_layers_manifest.json",
             "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
             "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif",
@@ -315,14 +323,20 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
         assert sar_manifest["stages"]["pair_median"]["status"] == "not_implemented_no_source_equivalent"
         assert sar_manifest["stages"]["final_median_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
         assert sar_manifest["stages"]["post_sample_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
-        assert sar_manifest["stages"]["post_rtc"]["status"] == "not_implemented_no_source_equivalent"
+        assert sar_manifest["stages"]["post_rtc"]["status"] == "implemented"
         assert sar_manifest["stages"]["post_rtc"]["bands"] == {
             "VV_dB": "post_rtc/final_VV_dB.npy",
             "VH_dB": "post_rtc/final_VH_dB.npy",
             "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
             "angle": "post_rtc/final_angle.npy",
         }
-        assert isinstance(sar_manifest["stages"]["post_rtc"]["missing_reason"], str)
+        assert sar_manifest["stages"]["post_rtc"]["source_mapping"] == {
+            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
+            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
+            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
+            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+        }
+        assert isinstance(sar_manifest["stages"]["post_rtc"]["source_description"], str)
 
 def _artifact_classes(result) -> dict[str, ArtifactClass]:
     return {artifact.name: artifact.artifact_class for artifact in result.artifacts}

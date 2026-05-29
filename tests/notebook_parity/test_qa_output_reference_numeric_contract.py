@@ -59,13 +59,20 @@ def test_post_rtc_sar_intermediates_match_frozen_reference_or_skip(
     reference_relative_path: str,
     tolerance_name: str,
 ) -> None:
-    del tolerance_name
     manifest = load_reference_manifest()
     verify_manifest_checksums(manifest)
-    _resolve_reference_file(manifest, reference_relative_path)
-    pytest.skip(
-        "QA post-RTC SAR intermediate arrays are currently classified as not_implemented_no_source_equivalent, "
-        "not notebook-compatible final-output references."
+    app_run_dir = _load_notebook_exact_app_run_dir()
+
+    reference_path = _resolve_reference_file(manifest, reference_relative_path)
+    app_path = app_run_dir / reference_relative_path
+    if not app_path.is_file():
+        pytest.skip(f"Matching notebook-grid app output is missing required file: {reference_relative_path}")
+
+    _assert_npy_matches_reference(
+        label=reference_relative_path,
+        reference_path=reference_path,
+        app_path=app_path,
+        tolerance=tolerance_for(tolerance_name),
     )
 
 

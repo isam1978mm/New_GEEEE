@@ -55,6 +55,10 @@ PHASE5D_ALIAS_CASES: tuple[Phase5Case, ...] = (
     Phase5Case("sar_npy", "VH_dB npy alias", "npy_alias", "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy", "npy_radar_bands/VH_dB.npy"),
     Phase5Case("sar_npy", "logRatio_dB npy alias", "npy_alias", "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy", "npy_radar_bands/logRatio_dB.npy"),
     Phase5Case("sar_npy", "angle npy alias", "npy_alias", "NPY_RADAR_BANDS/RADAR_angle_640_app.npy", "npy_radar_bands/incidence.npy"),
+    Phase5Case("sar_post_rtc", "post_rtc VV_dB alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_VV_dB.npy", "npy_radar_bands/VV_dB.npy"),
+    Phase5Case("sar_post_rtc", "post_rtc VH_dB alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_VH_dB.npy", "npy_radar_bands/VH_dB.npy"),
+    Phase5Case("sar_post_rtc", "post_rtc logRatio_dB alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy", "npy_radar_bands/logRatio_dB.npy"),
+    Phase5Case("sar_post_rtc", "post_rtc angle alias", "npy_alias", "QA/sar/intermediates/post_rtc/final_angle.npy", "npy_radar_bands/incidence.npy"),
     Phase5Case("stacks", "radar stack alias", "npy_alias", "NPY_STACKS/RADAR_STACK_HWC_640_app.npy", "stacks/tensor_support/radar_db_support_stack.npy"),
 )
 
@@ -111,7 +115,7 @@ REPORT_640_OUTPUTS = (
     "REPORT_640_FINAL_Zero_Point_Targets.tif",
 )
 
-QA_POST_RTC_NOT_IMPLEMENTED_OUTPUTS = (
+QA_POST_RTC_OUTPUTS = (
     "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
     "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
     "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
@@ -307,7 +311,7 @@ def _compare_npy(left_path: Path, right_path: Path, tolerance: float) -> dict[st
 def _evaluate_known_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
     return [
         *_evaluate_report_not_implemented(app_run_dir),
-        *_evaluate_qa_post_rtc_not_implemented(app_run_dir),
+        *_evaluate_qa_post_rtc(app_run_dir),
     ]
 
 
@@ -337,21 +341,27 @@ def _evaluate_report_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
     return results
 
 
-def _evaluate_qa_post_rtc_not_implemented(app_run_dir: Path) -> list[dict[str, Any]]:
+def _evaluate_qa_post_rtc(app_run_dir: Path) -> list[dict[str, Any]]:
     manifest_path = app_run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"
     if not manifest_path.is_file():
-        return [{"relative_path": name, "status": "missing_manifest"} for name in QA_POST_RTC_NOT_IMPLEMENTED_OUTPUTS]
+        return [{"relative_path": name, "status": "missing_manifest"} for name in QA_POST_RTC_OUTPUTS]
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     stages = payload.get("stages", {})
     post_rtc = stages.get("post_rtc", {}) if isinstance(stages, dict) else {}
     status = post_rtc.get("status") if isinstance(post_rtc, dict) else None
     results: list[dict[str, Any]] = []
-    for name in QA_POST_RTC_NOT_IMPLEMENTED_OUTPUTS:
+    for name in QA_POST_RTC_OUTPUTS:
         file_exists = (app_run_dir / name).is_file()
+        if status == "implemented" and file_exists:
+            entry_status = "implemented"
+        elif status == "not_implemented_no_source_equivalent" and not file_exists:
+            entry_status = "not_implemented_no_source_equivalent"
+        else:
+            entry_status = "fail"
         results.append(
             {
                 "relative_path": name,
-                "status": status if status == "not_implemented_no_source_equivalent" and not file_exists else "fail",
+                "status": entry_status,
                 "file_exists": file_exists,
             }
         )

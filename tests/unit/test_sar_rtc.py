@@ -507,6 +507,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_sar_npy_RADAR_logRatio_dB_640",
             "notebook_sar_npy_RADAR_angle_640",
             "notebook_sar_intermediate_manifest",
+            "notebook_sar_intermediate_post_rtc_VV_dB",
+            "notebook_sar_intermediate_post_rtc_VH_dB",
+            "notebook_sar_intermediate_post_rtc_logRatio_dB",
+            "notebook_sar_intermediate_post_rtc_angle",
             "sar_pair_diagnostics",
             "sar_summary",
             "sar_nodata_audit",
@@ -531,6 +535,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_sar_npy_RADAR_logRatio_dB_640": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_sar_npy_RADAR_angle_640": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_sar_intermediate_manifest": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_VV_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_VH_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_logRatio_dB": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_sar_intermediate_post_rtc_angle": ArtifactClass.FILESYSTEM_ONLY,
             "sar_pair_diagnostics": ArtifactClass.FILESYSTEM_ONLY,
             "sar_summary": ArtifactClass.FILESYSTEM_ONLY,
             "sar_nodata_audit": ArtifactClass.FILESYSTEM_ONLY,
@@ -545,6 +553,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_sar_npy_RADAR_logRatio_dB_640",
             "notebook_sar_npy_RADAR_angle_640",
             "notebook_sar_intermediate_manifest",
+            "notebook_sar_intermediate_post_rtc_VV_dB",
+            "notebook_sar_intermediate_post_rtc_VH_dB",
+            "notebook_sar_intermediate_post_rtc_logRatio_dB",
+            "notebook_sar_intermediate_post_rtc_angle",
         ):
             assert artifact_http_flags[artifact_name] is False
         assert artifact_http_flags["sar_pair_diagnostics"] is False
@@ -625,20 +637,38 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
         assert intermediate_manifest["stages"]["pair_median"]["status"] == "not_implemented_no_source_equivalent"
         assert intermediate_manifest["stages"]["final_median_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
         assert intermediate_manifest["stages"]["post_sample_pre_rtc"]["status"] == "not_implemented_no_source_equivalent"
-        assert intermediate_manifest["stages"]["post_rtc"]["status"] == "not_implemented_no_source_equivalent"
+        assert intermediate_manifest["stages"]["post_rtc"]["status"] == "implemented"
         assert intermediate_manifest["stages"]["post_rtc"]["bands"] == {
             "VV_dB": "post_rtc/final_VV_dB.npy",
             "VH_dB": "post_rtc/final_VH_dB.npy",
             "logRatio_dB": "post_rtc/final_logRatio_dB.npy",
             "angle": "post_rtc/final_angle.npy",
         }
-        assert isinstance(intermediate_manifest["stages"]["post_rtc"]["missing_reason"], str)
+        assert intermediate_manifest["stages"]["post_rtc"]["source_mapping"] == {
+            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
+            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
+            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
+            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+        }
+        assert isinstance(intermediate_manifest["stages"]["post_rtc"]["source_description"], str)
         serialized_intermediate_manifest = json.dumps(intermediate_manifest, sort_keys=True)
         assert "bounds" not in serialized_intermediate_manifest
         assert "transform" not in serialized_intermediate_manifest
         assert "C:\\" not in serialized_intermediate_manifest
-        for filename in ("final_VV_dB.npy", "final_VH_dB.npy", "final_logRatio_dB.npy", "final_angle.npy"):
-            assert not (intermediate_dir / "post_rtc" / filename).exists()
+        post_rtc_filenames_to_source = {
+            "final_VV_dB.npy": "VV_dB.npy",
+            "final_VH_dB.npy": "VH_dB.npy",
+            "final_logRatio_dB.npy": "logRatio_dB.npy",
+            "final_angle.npy": "incidence.npy",
+        }
+        for filename, source_filename in post_rtc_filenames_to_source.items():
+            intermediate_path = intermediate_dir / "post_rtc" / filename
+            assert intermediate_path.is_file()
+            intermediate_array = np.load(intermediate_path)
+            source_array = np.load(run_dir / SAR_NPY_OUTPUT_DIR / source_filename)
+            assert intermediate_array.dtype == np.float32
+            assert intermediate_array.shape == (640, 640)
+            np.testing.assert_array_equal(intermediate_array, source_array)
 
         pair_diagnostics = json.loads((run_dir / "QA" / "sar" / "sar_pair_diagnostics.json").read_text(encoding="utf-8"))
         assert pair_diagnostics["artifact_class"] == "FILESYSTEM_ONLY"
