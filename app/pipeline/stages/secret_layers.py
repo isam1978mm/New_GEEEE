@@ -10,24 +10,31 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Protocol
 
+import ee
 import numpy as np
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.qa_paths import ensure_run_qa_dir
-from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
+from app.pipeline.stages.dem import build_dem_tile_requests, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.dem_derivatives import box_mean_nanaware
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.s2_indices import S2_SOURCE_BANDS, S2_RAW_CUBE_NPY_NAME
 from app.pipeline.stages.thermal import LST_TIF_NAME
+from app.services.ee_session import initialize_ee_session
 
 EPS = 1e-10
 SECRET_LAYER_OUTPUT_DIR = "AI_READY_640"
 
 # Band index mapping within the raw S2 cube: (B2, B3, B4, B8, B11, B12, B1)
 _S2_BAND_INDEX = {name: index for index, name in enumerate(S2_SOURCE_BANDS)}
+
+
+class HiddenDoorsFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
 # --- Layer definitions -------------------------------------------------------
 
@@ -176,6 +183,51 @@ def compute_secret_hidden_doors(
     return result
 
 
+def build_grid_region(grid_spec: GridSpec):
+    scale_x, _, xmin, _, scale_y, ymax = grid_spec.transform
+    xmax = xmin + grid_spec.size * scale_x
+    ymin = ymax + grid_spec.size * scale_y
+    return ee.Geometry.Rectangle([xmin, ymin, xmax, ymax], grid_spec.crs, False)
+
+
+def build_ee_hidden_doors_image(grid_spec: GridSpec):
+    roi = build_grid_region(grid_spec)
+    srtm_dem = ee.Image("USGS/SRTMGL1_003").clip(roi)
+    hidden_doors = (
+        ee.Terrain.hillshade(srtm_dem, 315, 35)
+        .subtract(ee.Terrain.hillshade(srtm_dem, 135, 35))
+        .rename("Secret_Hidden_Doors")
+        .float()
+        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
+    )
+    return hidden_doors
+
+
+def create_ee_hidden_doors_fetcher(settings, grid_spec: GridSpec) -> HiddenDoorsFetcher:
+    initialize_ee_session(settings)
+    hidden_doors_image = build_ee_hidden_doors_image(grid_spec)
+    requests = build_dem_tile_requests(grid_spec)
+
+    def fetch_hidden_doors(*, grid_spec: GridSpec) -> np.ndarray:
+        array = np.full((grid_spec.size, grid_spec.size), np.nan, dtype=np.float32)
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle([request.xmin, request.ymin, request.xmax, request.ymax], grid_spec.crs, False)
+            rect = hidden_doors_image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            tile = np.array(rect["properties"]["Secret_Hidden_Doors"], dtype=np.float32)[: request.size, : request.size]
+            if tile.shape != (request.size, request.size):
+                raise StageError(
+                    f"EE Secret_Hidden_Doors tile ({request.tile_row},{request.tile_col}) returned shape {tile.shape}, "
+                    f"expected {(request.size, request.size)}."
+                )
+            tile[tile == grid_spec.nodata] = np.nan
+            row_start = request.tile_row * request.size
+            col_start = request.tile_col * request.size
+            array[row_start : row_start + request.size, col_start : col_start + request.size] = tile
+        return array
+
+    return fetch_hidden_doors
+
+
 # --- Source loading -----------------------------------------------------------
 
 
@@ -262,8 +314,9 @@ class SecretLayersStage(Stage):
     name = "secret_layers"
     parity_category = ParityCategory.PARITY_REPRODUCES
 
-    def __init__(self, *, grid_spec: GridSpec) -> None:
+    def __init__(self, *, grid_spec: GridSpec, hidden_doors_fetcher: HiddenDoorsFetcher | None = None) -> None:
         self.grid_spec = grid_spec
+        self.hidden_doors_fetcher = hidden_doors_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
         available_s2_bands = set(S2_SOURCE_BANDS)
@@ -317,9 +370,12 @@ class SecretLayersStage(Stage):
                     s2_cube = load_s2_raw_cube(context.run_dir)
                 array = compute_secret_chemical_protector(s2_cube, nodata=nodata)
             elif spec["name"] == "AI_READY_640_Secret_Hidden_Doors":
-                if dem is None:
-                    dem = load_dem_array(context.run_dir)
-                array = compute_secret_hidden_doors(dem, nodata=nodata, scale_m=scale_m)
+                if self.hidden_doors_fetcher is not None:
+                    array = self.hidden_doors_fetcher(grid_spec=self.grid_spec)
+                else:
+                    if dem is None:
+                        dem = load_dem_array(context.run_dir)
+                    array = compute_secret_hidden_doors(dem, nodata=nodata, scale_m=scale_m)
             else:
                 # Should not reach here for implemented layers
                 continue

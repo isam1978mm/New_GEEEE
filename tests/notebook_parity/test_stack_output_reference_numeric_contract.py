@@ -42,8 +42,9 @@ STACK_REFERENCE_CASES = [
             raises=AssertionError,
             reason=(
                 "notebook FINAL_TESLA NPY is now assembled in real notebook CHW layout, "
-                "but notebook source-layer parity remains unresolved; observed mismatches include a band 6 NaN-mask "
-                "difference and large multi-band value residuals, and no stack math or tolerance change is approved"
+                "and Secret_Hidden_Doors now matches the frozen reference, but other source-layer parity remains "
+                "unresolved; observed residuals include band 8 max_error about 20866.9453125 and no stack math "
+                "or tolerance change is approved"
             ),
         ),
     ),

@@ -174,6 +174,36 @@ def test_all_secret_layer_rasters_exist_after_stage() -> None:
             assert tif_path.is_file(), f"Missing secret layer raster: {tif_path}"
 
 
+def test_hidden_doors_can_use_external_ee_derived_fetcher() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        settings = _settings(run_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=settings, run_dir=run_dir)
+        hidden_doors = np.full((grid_spec.size, grid_spec.size), 42.0, dtype=np.float32)
+        calls: list[str] = []
+
+        def hidden_doors_fetcher(*, grid_spec):
+            calls.append(grid_spec.crs)
+            return hidden_doors
+
+        asyncio.run(GridStage(latitude=35.59499, longitude=36.12694).run(context))
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(SecretLayersStage(grid_spec=grid_spec, hidden_doors_fetcher=hidden_doors_fetcher).run(context))
+
+        with rasterio.open(run_dir / "AI_READY_640" / "AI_READY_640_Secret_Hidden_Doors.tif") as dataset:
+            array = dataset.read(1)
+            assert np.array_equal(array, hidden_doors)
+            assert float(dataset.nodata) == float(grid_spec.nodata)
+            assert dataset.width == grid_spec.size
+            assert dataset.height == grid_spec.size
+
+        assert calls == [grid_spec.crs]
+
+
 def test_gold_halo_formula_matches_notebook() -> None:
     size = 64
     b12 = np.ones((size, size), dtype=np.float32) * 0.5
