@@ -25,7 +25,11 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
-from app.pipeline.stages.report_640 import Report640Stage, create_ee_notebook_report_pottery_fetcher
+from app.pipeline.stages.report_640 import (
+    Report640Stage,
+    create_ee_notebook_report_mass_fetcher,
+    create_ee_notebook_report_pottery_fetcher,
+)
 from app.pipeline.stages.s2_indices import S2IndicesStage
 from app.pipeline.stages.sar_rtc import SarRtcStage
 from app.pipeline.stages.secret_layers import (
@@ -34,6 +38,7 @@ from app.pipeline.stages.secret_layers import (
     create_ee_notebook_secret_s2_layer_fetcher,
 )
 from app.pipeline.stages.thermal import ThermalStage
+from app.pipeline.stages.thermal import create_ee_notebook_thermal_inertia_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
 from app.schemas.run import RunCreate, RunDetailPublic, RunHistoryEventPublic, RunPublic, RunStageProgressPublic
@@ -182,10 +187,12 @@ async def run_core_pipeline_for_run(
                         grid_spec=grid_spec,
                         hidden_doors_fetcher=create_ee_hidden_doors_fetcher(settings, grid_spec),
                         secret_s2_layer_fetcher=create_ee_notebook_secret_s2_layer_fetcher(settings, grid_spec),
+                        thermal_inertia_fetcher=create_ee_notebook_thermal_inertia_fetcher(settings, grid_spec),
                     ),
                     Report640Stage(
                         grid_spec=grid_spec,
                         pottery_fetcher=create_ee_notebook_report_pottery_fetcher(settings, grid_spec),
+                        mass_fetcher=create_ee_notebook_report_mass_fetcher(settings, grid_spec),
                     ),
                     FeatureStacksStage(grid_spec=grid_spec),
                     FocusMaskStage(grid_spec=grid_spec),

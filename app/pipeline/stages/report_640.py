@@ -14,7 +14,10 @@ from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import build_dem_tile_requests, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.s2_indices import S2_SOURCE_BANDS, S2_RAW_CUBE_NPY_NAME
-from app.pipeline.stages.thermal import RAW_ST_B10_NPY_NAME
+from app.pipeline.stages.thermal import (
+    build_notebook_l9_st_b10_image,
+    RAW_ST_B10_NPY_NAME,
+)
 from app.services.ee_session import initialize_ee_session
 
 EPS = 1e-10
@@ -24,11 +27,16 @@ NOTEBOOK_REPORT_S2_END = "2026-03-01"
 NOTEBOOK_REPORT_S2_CLOUD_MAX = 10
 NOTEBOOK_REPORT_S2_SOURCE_BANDS = ("B11", "B12")
 REPORT_POTTERY_NAME = "REPORT_640_Pottery_Report"
+REPORT_MASS_NAME = "REPORT_640_Mass_Report"
 
 _S2_BAND_INDEX = {name: index for index, name in enumerate(S2_SOURCE_BANDS)}
 
 
 class ReportPotteryFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
+
+class ReportMassFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
 
@@ -133,6 +141,17 @@ def build_notebook_report_pottery_image(grid_spec: GridSpec):
     )
 
 
+def build_notebook_report_mass_image(grid_spec: GridSpec):
+    s2_col = build_notebook_report_s2_composite(grid_spec)
+    l9_col = build_notebook_l9_st_b10_image(grid_spec)
+    mass = s2_col.select("B12").multiply(l9_col.select("ST_B10")).divide(1000).rename(REPORT_MASS_NAME)
+    return (
+        mass.toFloat()
+        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
+        .clip(build_grid_region(grid_spec))
+    )
+
+
 def create_ee_notebook_report_pottery_fetcher(settings, grid_spec: GridSpec) -> ReportPotteryFetcher:
     initialize_ee_session(settings)
     pottery_image = build_notebook_report_pottery_image(grid_spec)
@@ -155,6 +174,30 @@ def create_ee_notebook_report_pottery_fetcher(settings, grid_spec: GridSpec) -> 
         return array
 
     return fetch_pottery
+
+
+def create_ee_notebook_report_mass_fetcher(settings, grid_spec: GridSpec) -> ReportMassFetcher:
+    initialize_ee_session(settings)
+    mass_image = build_notebook_report_mass_image(grid_spec)
+    requests = build_dem_tile_requests(grid_spec)
+
+    def fetch_mass(*, grid_spec: GridSpec) -> np.ndarray:
+        array = np.full((grid_spec.size, grid_spec.size), grid_spec.nodata, dtype=np.float32)
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle([request.xmin, request.ymin, request.xmax, request.ymax], grid_spec.crs, False)
+            rect = mass_image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            tile = np.array(rect["properties"][REPORT_MASS_NAME], dtype=np.float32)[: request.size, : request.size]
+            if tile.shape != (request.size, request.size):
+                raise StageError(
+                    f"EE notebook report Mass tile ({request.tile_row},{request.tile_col}) returned shape {tile.shape}, "
+                    f"expected {(request.size, request.size)}."
+                )
+            row_start = request.tile_row * request.size
+            col_start = request.tile_col * request.size
+            array[row_start : row_start + request.size, col_start : col_start + request.size] = tile
+        return array
+
+    return fetch_mass
 
 
 def write_report_640_output(
@@ -213,9 +256,16 @@ class Report640Stage(Stage):
     name = "report_640"
     parity_category = ParityCategory.PARITY_REPRODUCES
 
-    def __init__(self, *, grid_spec: GridSpec, pottery_fetcher: ReportPotteryFetcher | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        grid_spec: GridSpec,
+        pottery_fetcher: ReportPotteryFetcher | None = None,
+        mass_fetcher: ReportMassFetcher | None = None,
+    ) -> None:
         self.grid_spec = grid_spec
         self.pottery_fetcher = pottery_fetcher
+        self.mass_fetcher = mass_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
         nodata = self.grid_spec.nodata
@@ -255,7 +305,7 @@ class Report640Stage(Stage):
         }
 
         # Mass_Report
-        array = compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
+        array = self.mass_fetcher(grid_spec=self.grid_spec) if self.mass_fetcher is not None else compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
         if array.shape[:2] != expected_shape:
             raise StageError(f"REPORT_640_Mass_Report shape {array.shape[:2]} != expected {expected_shape}")
         tif_path = write_report_640_output(
@@ -272,11 +322,13 @@ class Report640Stage(Stage):
         implemented_specs.append({
             "filename": "REPORT_640_Mass_Report.tif",
             "formula": "B12 * ST_B10 / 1000",
-            "source_equivalent": f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}",
+            "source_equivalent": "notebook_report_s2 + notebook_l9_st_b10" if self.mass_fetcher is not None else f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}",
+            "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
         })
         layer_metadata["REPORT_640_Mass_Report"] = {
             "status": "implemented",
             "formula": "B12 * ST_B10 / 1000",
+            "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
         }
 
         # FINAL_Zero_Point_Targets

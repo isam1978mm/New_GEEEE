@@ -52,6 +52,10 @@ class SecretS2CubeFetcher(Protocol):
 class SecretS2LayerFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> dict[str, np.ndarray]: ...
 
+
+class ThermalInertiaFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
 # --- Layer definitions -------------------------------------------------------
 
 SECRET_LAYER_SPECS = [
@@ -447,11 +451,13 @@ class SecretLayersStage(Stage):
         hidden_doors_fetcher: HiddenDoorsFetcher | None = None,
         secret_s2_cube_fetcher: SecretS2CubeFetcher | None = None,
         secret_s2_layer_fetcher: SecretS2LayerFetcher | None = None,
+        thermal_inertia_fetcher: ThermalInertiaFetcher | None = None,
     ) -> None:
         self.grid_spec = grid_spec
         self.hidden_doors_fetcher = hidden_doors_fetcher
         self.secret_s2_cube_fetcher = secret_s2_cube_fetcher
         self.secret_s2_layer_fetcher = secret_s2_layer_fetcher
+        self.thermal_inertia_fetcher = thermal_inertia_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
         s2_band_names = NOTEBOOK_SECRET_S2_SOURCE_BANDS if self.secret_s2_cube_fetcher is not None else S2_SOURCE_BANDS
@@ -526,9 +532,12 @@ class SecretLayersStage(Stage):
                         )
                     array = compute_secret_tunnel_ceiling(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Thermal_Inertia":
-                if lst is None:
-                    lst = load_lst_array(context.run_dir, nodata=nodata)
-                array = compute_secret_thermal_inertia(lst, nodata=nodata, scale_m=scale_m)
+                if self.thermal_inertia_fetcher is not None:
+                    array = self.thermal_inertia_fetcher(grid_spec=self.grid_spec)
+                else:
+                    if lst is None:
+                        lst = load_lst_array(context.run_dir, nodata=nodata)
+                    array = compute_secret_thermal_inertia(lst, nodata=nodata, scale_m=scale_m)
             elif spec["name"] == "AI_READY_640_Secret_Chemical_Protector":
                 if self.secret_s2_layer_fetcher is not None:
                     if s2_layers is None:
@@ -583,6 +592,8 @@ class SecretLayersStage(Stage):
                     if spec["name"] in S2_SECRET_LAYER_NAMES
                     and (self.secret_s2_cube_fetcher is not None or self.secret_s2_layer_fetcher is not None)
                     else spec["source_type"]
+                    if spec["name"] != "AI_READY_640_Secret_Thermal_Inertia" or self.thermal_inertia_fetcher is None
+                    else "notebook_l9_st_b10"
                 ),
             })
             layer_metadata[spec["name"]] = {
@@ -593,6 +604,8 @@ class SecretLayersStage(Stage):
                     if spec["name"] in S2_SECRET_LAYER_NAMES
                     and (self.secret_s2_cube_fetcher is not None or self.secret_s2_layer_fetcher is not None)
                     else spec["source_type"]
+                    if spec["name"] != "AI_READY_640_Secret_Thermal_Inertia" or self.thermal_inertia_fetcher is None
+                    else "notebook_l9_st_b10"
                 ),
             }
 

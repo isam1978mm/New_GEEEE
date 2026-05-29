@@ -21,6 +21,11 @@ DEFAULT_START = "2022-01-01"
 DEFAULT_END = "2026-02-28"
 LST_TIF_NAME = "lst.tif"
 RAW_ST_B10_NPY_NAME = ".internal/st_b10_raw.npy"
+NOTEBOOK_THERMAL_START = "2022-01-01"
+NOTEBOOK_THERMAL_END = "2026-03-01"
+NOTEBOOK_L9_ST_B10_COLLECTION = "LANDSAT/LC09/C02/T1_L2"
+NOTEBOOK_THERMAL_EPS = 1e-6
+NOTEBOOK_THERMAL_INERTIA_NAME = "AI_READY_640_Secret_Thermal_Inertia"
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +36,10 @@ class ThermalOutputs:
 
 class LstFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> ThermalOutputs: ...
+
+
+class NotebookThermalArrayFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
 
 def build_grid_region(grid_spec: GridSpec):
@@ -72,6 +81,35 @@ def build_landsat_st_b10_collection(grid_spec: GridSpec, *, start_date: str = DE
     l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2").filterBounds(region).filterDate(start_date, end_date)
     l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2").filterBounds(region).filterDate(start_date, end_date)
     return l8.merge(l9).map(prep_landsat_st_b10)
+
+
+def build_notebook_l9_st_b10_image(
+    grid_spec: GridSpec,
+    *,
+    start_date: str = NOTEBOOK_THERMAL_START,
+    end_date: str = NOTEBOOK_THERMAL_END,
+):
+    return (
+        ee.ImageCollection(NOTEBOOK_L9_ST_B10_COLLECTION)
+        .filterBounds(build_grid_region(grid_spec))
+        .filterDate(start_date, end_date)
+        .select("ST_B10")
+        .median()
+    )
+
+
+def build_notebook_thermal_inertia_image(grid_spec: GridSpec):
+    l9_col = build_notebook_l9_st_b10_image(grid_spec)
+    eps = ee.Image.constant(NOTEBOOK_THERMAL_EPS)
+    thermal_inertia = (
+        l9_col.divide(l9_col.focal_mean(radius=500, units="meters").add(eps))
+        .rename(NOTEBOOK_THERMAL_INERTIA_NAME)
+    )
+    return (
+        thermal_inertia.toFloat()
+        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
+        .clip(build_grid_region(grid_spec))
+    )
 
 
 def to_grid_lst(image, grid_spec: GridSpec):
@@ -137,6 +175,43 @@ def create_ee_lst_fetcher(
         return ThermalOutputs(lst=lst, st_b10_raw=st_b10_raw)
 
     return fetch_lst
+
+
+def _sample_single_band_image(
+    image,
+    *,
+    band_name: str,
+    grid_spec: GridSpec,
+) -> np.ndarray:
+    requests = build_thermal_tile_requests(grid_spec)
+    array = np.full((grid_spec.size, grid_spec.size), grid_spec.nodata, dtype=np.float32)
+    for request in requests:
+        tile_geo = ee.Geometry.Rectangle([request["xmin"], request["ymin"], request["xmax"], request["ymax"]], grid_spec.crs, False)
+        rect = image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+        tile = np.array(rect["properties"][band_name], dtype=np.float32)[: DEM_TILE_SIZE, : DEM_TILE_SIZE]
+        if tile.shape != (DEM_TILE_SIZE, DEM_TILE_SIZE):
+            raise StageError(
+                f"EE notebook thermal tile ({request['tile_row']},{request['tile_col']}) band {band_name} "
+                f"returned shape {tile.shape}, expected {(DEM_TILE_SIZE, DEM_TILE_SIZE)}."
+            )
+        row_start = request["tile_row"] * DEM_TILE_SIZE
+        col_start = request["tile_col"] * DEM_TILE_SIZE
+        array[row_start : row_start + DEM_TILE_SIZE, col_start : col_start + DEM_TILE_SIZE] = tile
+    return array
+
+
+def create_ee_notebook_thermal_inertia_fetcher(settings, grid_spec: GridSpec) -> NotebookThermalArrayFetcher:
+    initialize_ee_session(settings)
+    thermal_inertia_image = build_notebook_thermal_inertia_image(grid_spec)
+
+    def fetch_thermal_inertia(*, grid_spec: GridSpec) -> np.ndarray:
+        return _sample_single_band_image(
+            thermal_inertia_image,
+            band_name=NOTEBOOK_THERMAL_INERTIA_NAME,
+            grid_spec=grid_spec,
+        )
+
+    return fetch_thermal_inertia
 
 
 def deterministic_lst_fetcher(*, grid_spec: GridSpec) -> ThermalOutputs:

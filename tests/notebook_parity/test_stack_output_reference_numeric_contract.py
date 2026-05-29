@@ -27,8 +27,8 @@ STACK_REFERENCE_CASES = [
             raises=AssertionError,
             reason=(
                 "notebook FINAL_TESLA TIFF is now assembled from the real 9-layer app source family, "
-                "but notebook source-layer parity remains unresolved; observed bandwise value mismatches include "
-                "band 8 max_error about 20866.9453125 and no stack math or tolerance change is approved"
+                "but GeoTIFF mask/tag parity remains unresolved after source-layer numeric parity; observed "
+                "remaining mismatch is band 6 nodata mask differs and no stack/tolerance change is approved"
             ),
         ),
     ),
@@ -37,16 +37,6 @@ STACK_REFERENCE_CASES = [
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
         "hypercube.npy",
         "npy",
-        marks=pytest.mark.xfail(
-            strict=True,
-            raises=AssertionError,
-            reason=(
-                "notebook FINAL_TESLA NPY is now assembled in real notebook CHW layout, "
-                "and Secret_Hidden_Doors now matches the frozen reference, but other source-layer parity remains "
-                "unresolved; observed residuals include band 8 max_error about 20866.9453125 and no stack math "
-                "or tolerance change is approved"
-            ),
-        ),
     ),
     pytest.param(
         "NPY_STACKS/RADAR_STACK_HWC_640_",

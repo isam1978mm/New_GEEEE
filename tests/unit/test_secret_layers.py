@@ -470,6 +470,44 @@ def test_secret_layers_stage_uses_notebook_s2_fetcher_only_for_s2_layers() -> No
         assert calls == [f"s2:{grid_spec.crs}", f"hidden:{grid_spec.crs}"]
 
 
+def test_secret_layers_stage_uses_thermal_inertia_fetcher_only_for_thermal_layer() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        settings = _settings(run_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=settings, run_dir=run_dir)
+        calls: list[str] = []
+        thermal_inertia = np.full((grid_spec.size, grid_spec.size), 1.25, dtype=np.float32)
+
+        def thermal_inertia_fetcher(*, grid_spec):
+            calls.append(grid_spec.crs)
+            return thermal_inertia
+
+        asyncio.run(GridStage(latitude=35.59499, longitude=36.12694).run(context))
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(
+            SecretLayersStage(
+                grid_spec=grid_spec,
+                thermal_inertia_fetcher=thermal_inertia_fetcher,
+            ).run(context)
+        )
+
+        with rasterio.open(run_dir / "AI_READY_640" / "AI_READY_640_Secret_Thermal_Inertia.tif") as dataset:
+            assert dataset.read(1)[0, 0] == np.float32(1.25)
+
+        with rasterio.open(run_dir / "AI_READY_640" / "AI_READY_640_Secret_Hidden_Doors.tif") as dataset:
+            assert dataset.read(1)[0, 0] != np.float32(1.25)
+
+        manifest = json.loads((run_dir / "QA" / "stacks" / "secret_layers_manifest.json").read_text(encoding="utf-8"))
+        provenance = {item["name"]: item["source_provenance"] for item in manifest["implemented"]}
+        assert provenance["AI_READY_640_Secret_Thermal_Inertia"] == "notebook_l9_st_b10"
+        assert provenance["AI_READY_640_Secret_Hidden_Doors"] == "dem"
+        assert calls == [grid_spec.crs]
+
+
 def test_gold_halo_formula_matches_notebook() -> None:
     size = 64
     b12 = np.ones((size, size), dtype=np.float32) * 0.5
