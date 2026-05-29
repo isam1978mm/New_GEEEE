@@ -252,8 +252,8 @@
       "artifact_role": "unknown",
       "extension": "tif",
       "redacted_path": "redacted/file_000025_tif",
-      "sha256": "05f27b50571030bae9bb4f5db2b25fb3a75204b9c11d602e3a71f70e0a84d10a",
-      "size_bytes": 1197854
+      "sha256": "a688d02e72995c3d1772519b5fb79437277176a84675abecadf0d38475d0e1e0",
+      "size_bytes": 1196617
     },
     {
       "artifact_family": "dem_derivatives",

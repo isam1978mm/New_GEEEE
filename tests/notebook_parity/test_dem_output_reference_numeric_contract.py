@@ -22,19 +22,7 @@ DEM_REFERENCE_PAIRS = [
     ("DEM_GEO8_TIFS/aspect_deg_640.tif", "aspect.tif"),
     ("DEM_GEO8_TIFS/roughness_100m_640.tif", "roughness.tif"),
     ("DEM_GEO8_TIFS/tpi_100m_640.tif", "TPI.tif"),
-    pytest.param(
-        "DEM_GEO8_TIFS/hillshade_0to1_640.tif",
-        "hillshade_0to1_640.tif",
-        marks=pytest.mark.xfail(
-            strict=True,
-            raises=AssertionError,
-            reason=(
-                "notebook reference and app hillshade now match the corrected azimuth convention, "
-                "but a residual float-precision difference of about 1.8e-07 remains under zero tolerance; "
-                "no tolerance change is approved"
-            ),
-        ),
-    ),
+    ("DEM_GEO8_TIFS/hillshade_0to1_640.tif", "hillshade_0to1_640.tif"),
 ]
 
 
