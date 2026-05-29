@@ -179,8 +179,11 @@ def write_notebook_final_tesla_outputs(
     band_names = [name for name, _array in source_layers]
     hwc = np.stack([array for _name, array in source_layers], axis=-1).astype(np.float32, copy=False)
     chw = np.stack([array for _name, array in source_layers], axis=0).astype(np.float32, copy=False)
+    # Preserve notebook CHW arrays as-is, but encode non-finite TIFF pixels with the
+    # dataset nodata sentinel so GeoTIFF masks match the frozen notebook export.
+    tif_hwc = np.where(np.isfinite(hwc), hwc, grid_spec.nodata).astype(np.float32, copy=False)
 
-    write_georeferenced_raster(tif_path, hwc, grid_spec)
+    write_georeferenced_raster(tif_path, tif_hwc, grid_spec)
     write_raster_sidecar(
         tif_path,
         grid_manifest=grid_spec.manifest,

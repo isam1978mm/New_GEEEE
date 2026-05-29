@@ -22,15 +22,6 @@ STACK_REFERENCE_CASES = [
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
         "hypercube.tif",
         "raster",
-        marks=pytest.mark.xfail(
-            strict=True,
-            raises=AssertionError,
-            reason=(
-                "notebook FINAL_TESLA TIFF is now assembled from the real 9-layer app source family, "
-                "but GeoTIFF mask/tag parity remains unresolved after source-layer numeric parity; observed "
-                "remaining mismatch is band 6 nodata mask differs and no stack/tolerance change is approved"
-            ),
-        ),
     ),
     pytest.param(
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",

@@ -22,6 +22,7 @@ from app.pipeline.stages.hypercube import (
     NOTEBOOK_STACK_OUTPUT_DIR,
     HypercubeStage,
     build_hypercube_products,
+    write_notebook_final_tesla_outputs,
 )
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.report_640 import Report640Stage
@@ -173,6 +174,34 @@ def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist(
                 "reason": NOTEBOOK_PATCHED_14B_REASON,
             },
         ]
+
+
+def test_write_notebook_final_tesla_outputs_uses_tiff_nodata_but_preserves_npy_nan() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        layer_a = np.array([[np.nan, 2.0], [3.0, 4.0]], dtype=np.float32)
+        layer_b = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+
+        outputs = write_notebook_final_tesla_outputs(
+            run_dir,
+            grid_spec,
+            [("band_a", layer_a), ("band_b", layer_b)],
+        )
+
+        with rasterio.open(outputs["final_tesla_tif"]) as dataset:
+            band_1 = dataset.read(1, masked=False)
+            mask_1 = dataset.read_masks(1) == 0
+            assert float(dataset.nodata) == float(grid_spec.nodata)
+            assert band_1[0, 0] == np.float32(grid_spec.nodata)
+            assert bool(mask_1[0, 0]) is True
+            assert int(np.isnan(band_1).sum()) == 0
+            assert dataset.descriptions == ("band_a", "band_b")
+
+        tensor = np.load(outputs["final_tesla_npy"])
+        assert tensor.shape == (2, 2, 2)
+        assert np.isnan(tensor[0, 0, 0])
+        assert tensor[0, 0, 1] == np.float32(2.0)
 
 
 def _write_source_raster(path: Path, array: np.ndarray, grid_spec) -> None:
