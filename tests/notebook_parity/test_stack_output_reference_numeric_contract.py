@@ -38,9 +38,10 @@ STACK_REFERENCE_CASES = [
             strict=True,
             raises=AssertionError,
             reason=(
-                "notebook reference and app radar stack NPY no longer have the wrong-source alias bug, "
-                "but a small reference residual remains; observed max_error is about 6.67572021484375e-06 "
-                "and no tolerance or SAR math change is approved"
+                "RADAR_STACK_HWC_640_app.npy is an exact alias of app radar_db_support_stack.npy and the "
+                "frozen radar stack is an exact assembly of frozen NPY_RADAR_BANDS, but the frozen and app "
+                "SAR dB band families still differ by a small residual; observed max_error is about "
+                "6.67572021484375e-06 and no tolerance or SAR math change is approved"
             ),
         ),
     ),
