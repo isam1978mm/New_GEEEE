@@ -28,7 +28,11 @@ from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage
 from app.pipeline.stages.sar_rtc import SarRtcStage
-from app.pipeline.stages.secret_layers import SecretLayersStage, create_ee_hidden_doors_fetcher
+from app.pipeline.stages.secret_layers import (
+    SecretLayersStage,
+    create_ee_hidden_doors_fetcher,
+    create_ee_notebook_secret_s2_layer_fetcher,
+)
 from app.pipeline.stages.thermal import ThermalStage
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
@@ -177,6 +181,7 @@ async def run_core_pipeline_for_run(
                     SecretLayersStage(
                         grid_spec=grid_spec,
                         hidden_doors_fetcher=create_ee_hidden_doors_fetcher(settings, grid_spec),
+                        secret_s2_layer_fetcher=create_ee_notebook_secret_s2_layer_fetcher(settings, grid_spec),
                     ),
                     Report640Stage(grid_spec=grid_spec),
                     FeatureStacksStage(grid_spec=grid_spec),

@@ -14,8 +14,16 @@ from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.grid import GridStage, build_run_grid
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.secret_layers import (
+    NOTEBOOK_SECRET_S2_CLOUD_MAX,
+    NOTEBOOK_SECRET_S2_END,
+    NOTEBOOK_SECRET_S2_SOURCE_BANDS,
+    NOTEBOOK_SECRET_S2_START,
     SECRET_LAYER_SPECS,
     SecretLayersStage,
+    build_notebook_secret_s2_composite,
+    build_notebook_secret_s2_layers_image,
+    create_ee_notebook_secret_s2_cube_fetcher,
+    create_ee_notebook_secret_s2_layer_fetcher,
     compute_hillshade_parameterized,
     compute_secret_chemical_protector,
     compute_secret_gold_halo,
@@ -202,6 +210,264 @@ def test_hidden_doors_can_use_external_ee_derived_fetcher() -> None:
             assert dataset.height == grid_spec.size
 
         assert calls == [grid_spec.crs]
+
+
+def test_notebook_secret_s2_composite_uses_notebook_provenance(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    calls: list[tuple[str, object]] = []
+
+    class FakeFilter:
+        @staticmethod
+        def lt(name, value):
+            return ("lt", name, value)
+
+    class FakeCollection:
+        def filterBounds(self, region):
+            calls.append(("filterBounds", region))
+            return self
+
+        def filterDate(self, start, end):
+            calls.append(("filterDate", (start, end)))
+            return self
+
+        def filter(self, predicate):
+            calls.append(("filter", predicate))
+            return self
+
+        def select(self, bands):
+            calls.append(("select", bands))
+            return self
+
+        def median(self):
+            calls.append(("median", None))
+            return self
+
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.ee.Filter", FakeFilter)
+    monkeypatch.setattr(
+        "app.pipeline.stages.secret_layers.ee.ImageCollection",
+        lambda dataset: calls.append(("ImageCollection", dataset)) or FakeCollection(),
+    )
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.build_grid_region", lambda _grid_spec: "grid-region")
+
+    build_notebook_secret_s2_composite(grid_spec)
+
+    assert ("ImageCollection", "COPERNICUS/S2_SR_HARMONIZED") in calls
+    assert ("filterBounds", "grid-region") in calls
+    assert ("filterDate", (NOTEBOOK_SECRET_S2_START, NOTEBOOK_SECRET_S2_END)) in calls
+    assert ("filter", ("lt", "CLOUDY_PIXEL_PERCENTAGE", NOTEBOOK_SECRET_S2_CLOUD_MAX)) in calls
+    assert ("select", list(NOTEBOOK_SECRET_S2_SOURCE_BANDS)) in calls
+    assert ("median", None) in calls
+
+
+def test_create_ee_notebook_secret_s2_cube_fetcher_uses_sample_rectangle(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    settings = _settings(Path("C:/tmp/gee-secret-s2-test"))
+    init_calls: list[str] = []
+    rectangle_calls: list[tuple[list[float], str, bool]] = []
+
+    class FakeSampleResult:
+        def getInfo(self):
+            return {"properties": {band: [[float(index)] * 320 for _ in range(320)] for index, band in enumerate(NOTEBOOK_SECRET_S2_SOURCE_BANDS)}}
+
+    class FakeImage:
+        def sampleRectangle(self, *, region, defaultValue):
+            assert region == "tile-region"
+            assert defaultValue == grid_spec.nodata
+            return FakeSampleResult()
+
+    class FakeGeometry:
+        @staticmethod
+        def Rectangle(coords, crs, geodesic):
+            rectangle_calls.append((coords, crs, geodesic))
+            return "tile-region"
+
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.initialize_ee_session", lambda _settings: init_calls.append("init"))
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.build_notebook_secret_s2_image", lambda _grid_spec: FakeImage())
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.ee.Geometry", FakeGeometry)
+
+    fetcher = create_ee_notebook_secret_s2_cube_fetcher(settings, grid_spec)
+    cube = fetcher(grid_spec=grid_spec)
+
+    assert init_calls == ["init"]
+    assert cube.shape == (640, 640, len(NOTEBOOK_SECRET_S2_SOURCE_BANDS))
+    assert cube.dtype == np.float32
+    assert len(rectangle_calls) == 4
+    assert np.array_equal(cube[0, 0, :], np.arange(len(NOTEBOOK_SECRET_S2_SOURCE_BANDS), dtype=np.float32))
+
+
+def test_create_ee_notebook_secret_s2_layer_fetcher_uses_sample_rectangle(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    settings = _settings(Path("C:/tmp/gee-secret-s2-layer-test"))
+    init_calls: list[str] = []
+    rectangle_calls: list[tuple[list[float], str, bool]] = []
+
+    layer_names = (
+        "AI_READY_640_Secret_Gold_Halo",
+        "AI_READY_640_Secret_Silver_Oxide",
+        "AI_READY_640_Secret_Tunnel_Ceiling",
+        "AI_READY_640_Secret_Chemical_Protector",
+    )
+
+    class FakeSampleResult:
+        def getInfo(self):
+            return {"properties": {name: [[float(index)] * 320 for _ in range(320)] for index, name in enumerate(layer_names)}}
+
+    class FakeImage:
+        def sampleRectangle(self, *, region, defaultValue):
+            assert region == "tile-region"
+            assert defaultValue == grid_spec.nodata
+            return FakeSampleResult()
+
+    class FakeGeometry:
+        @staticmethod
+        def Rectangle(coords, crs, geodesic):
+            rectangle_calls.append((coords, crs, geodesic))
+            return "tile-region"
+
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.initialize_ee_session", lambda _settings: init_calls.append("init"))
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.build_notebook_secret_s2_layers_image", lambda _grid_spec: FakeImage())
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.ee.Geometry", FakeGeometry)
+
+    fetcher = create_ee_notebook_secret_s2_layer_fetcher(settings, grid_spec)
+    arrays = fetcher(grid_spec=grid_spec)
+
+    assert init_calls == ["init"]
+    assert set(arrays) == set(layer_names)
+    assert len(rectangle_calls) == 4
+    for index, name in enumerate(layer_names):
+        assert arrays[name].shape == (640, 640)
+        assert arrays[name].dtype == np.float32
+        assert arrays[name][0, 0] == np.float32(index)
+
+
+def test_notebook_secret_s2_layers_image_builds_ee_formula_stack(monkeypatch) -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+    operations: list[str] = []
+
+    class FakeBand:
+        def __init__(self, name):
+            self.name = name
+
+        def add(self, value):
+            other = value.name if isinstance(value, FakeBand) else value
+            operations.append(f"{self.name}.add({other})")
+            return FakeBand(f"{self.name}+eps")
+
+        def divide(self, other):
+            operations.append(f"{self.name}.divide({other.name})")
+            return FakeBand(f"{self.name}/{other.name}")
+
+        def subtract(self, other):
+            operations.append(f"{self.name}.subtract({other.name})")
+            return FakeBand(f"{self.name}-{other.name}")
+
+        def rename(self, name):
+            operations.append(f"{self.name}.rename({name})")
+            return FakeBand(name)
+
+    class FakeS2:
+        def select(self, name):
+            operations.append(f"select({name})")
+            return FakeBand(name)
+
+    class FakeLayerImage:
+        def toFloat(self):
+            operations.append("toFloat")
+            return self
+
+        def reproject(self, *, crs, crsTransform):
+            operations.append(f"reproject({crs})")
+            assert crs == grid_spec.crs
+            assert crsTransform == list(grid_spec.transform)
+            return self
+
+        def clip(self, region):
+            operations.append(f"clip({region})")
+            return self
+
+    class FakeImage:
+        @staticmethod
+        def cat(layers):
+            operations.append(f"cat({len(layers)})")
+            return FakeLayerImage()
+
+        @staticmethod
+        def constant(value):
+            operations.append(f"constant({value})")
+            return FakeBand("eps")
+
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.build_notebook_secret_s2_composite", lambda _grid_spec: FakeS2())
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.build_grid_region", lambda _grid_spec: "grid-region")
+    monkeypatch.setattr("app.pipeline.stages.secret_layers.ee.Image", FakeImage)
+
+    build_notebook_secret_s2_layers_image(grid_spec)
+
+    assert "constant(1e-06)" in operations
+    assert "B12.divide(B8+eps)" in operations
+    assert "B2.divide(B1+eps)" in operations
+    assert "B8.subtract(B4)" in operations
+    assert "B1.divide(B11+eps)" in operations
+    assert "cat(4)" in operations
+    assert "toFloat" in operations
+
+
+def test_secret_layers_stage_uses_notebook_s2_fetcher_only_for_s2_layers() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        settings = _settings(run_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=settings, run_dir=run_dir)
+        calls: list[str] = []
+
+        notebook_secret_layers = {
+            "AI_READY_640_Secret_Gold_Halo": np.full((grid_spec.size, grid_spec.size), 101.0, dtype=np.float32),
+            "AI_READY_640_Secret_Silver_Oxide": np.full((grid_spec.size, grid_spec.size), 102.0, dtype=np.float32),
+            "AI_READY_640_Secret_Tunnel_Ceiling": np.full((grid_spec.size, grid_spec.size), 103.0, dtype=np.float32),
+            "AI_READY_640_Secret_Chemical_Protector": np.full((grid_spec.size, grid_spec.size), 104.0, dtype=np.float32),
+        }
+        hidden_doors = np.full((grid_spec.size, grid_spec.size), 42.0, dtype=np.float32)
+
+        def secret_s2_layer_fetcher(*, grid_spec):
+            calls.append(f"s2:{grid_spec.crs}")
+            return notebook_secret_layers
+
+        def hidden_doors_fetcher(*, grid_spec):
+            calls.append(f"hidden:{grid_spec.crs}")
+            return hidden_doors
+
+        asyncio.run(GridStage(latitude=35.59499, longitude=36.12694).run(context))
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(
+            SecretLayersStage(
+                grid_spec=grid_spec,
+                hidden_doors_fetcher=hidden_doors_fetcher,
+                secret_s2_layer_fetcher=secret_s2_layer_fetcher,
+            ).run(context)
+        )
+
+        expected_values = {
+            "AI_READY_640_Secret_Gold_Halo": np.float32(101.0),
+            "AI_READY_640_Secret_Silver_Oxide": np.float32(102.0),
+            "AI_READY_640_Secret_Tunnel_Ceiling": np.float32(103.0),
+            "AI_READY_640_Secret_Chemical_Protector": np.float32(104.0),
+            "AI_READY_640_Secret_Hidden_Doors": np.float32(42.0),
+        }
+        for layer_name, expected in expected_values.items():
+            with rasterio.open(run_dir / "AI_READY_640" / f"{layer_name}.tif") as dataset:
+                assert dataset.read(1)[0, 0] == expected
+
+        manifest = json.loads((run_dir / "QA" / "stacks" / "secret_layers_manifest.json").read_text(encoding="utf-8"))
+        provenance = {item["name"]: item["source_provenance"] for item in manifest["implemented"]}
+        assert provenance["AI_READY_640_Secret_Gold_Halo"] == "notebook_secret_s2"
+        assert provenance["AI_READY_640_Secret_Silver_Oxide"] == "notebook_secret_s2"
+        assert provenance["AI_READY_640_Secret_Tunnel_Ceiling"] == "notebook_secret_s2"
+        assert provenance["AI_READY_640_Secret_Chemical_Protector"] == "notebook_secret_s2"
+        assert provenance["AI_READY_640_Secret_Thermal_Inertia"] == "thermal"
+        assert provenance["AI_READY_640_Secret_Hidden_Doors"] == "dem"
+        assert calls == [f"s2:{grid_spec.crs}", f"hidden:{grid_spec.crs}"]
 
 
 def test_gold_halo_formula_matches_notebook() -> None:

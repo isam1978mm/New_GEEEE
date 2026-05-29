@@ -27,14 +27,30 @@ from app.pipeline.stages.thermal import LST_TIF_NAME
 from app.services.ee_session import initialize_ee_session
 
 EPS = 1e-10
+NOTEBOOK_SECRET_EPS = 1e-6
 SECRET_LAYER_OUTPUT_DIR = "AI_READY_640"
-
-# Band index mapping within the raw S2 cube: (B2, B3, B4, B8, B11, B12, B1)
-_S2_BAND_INDEX = {name: index for index, name in enumerate(S2_SOURCE_BANDS)}
+NOTEBOOK_SECRET_S2_START = "2022-01-01"
+NOTEBOOK_SECRET_S2_END = "2026-03-01"
+NOTEBOOK_SECRET_S2_CLOUD_MAX = 5
+NOTEBOOK_SECRET_S2_SOURCE_BANDS = ("B1", "B2", "B4", "B8", "B11", "B12")
+S2_SECRET_LAYER_NAMES = (
+    "AI_READY_640_Secret_Gold_Halo",
+    "AI_READY_640_Secret_Silver_Oxide",
+    "AI_READY_640_Secret_Tunnel_Ceiling",
+    "AI_READY_640_Secret_Chemical_Protector",
+)
 
 
 class HiddenDoorsFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
+
+class SecretS2CubeFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
+
+class SecretS2LayerFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> dict[str, np.ndarray]: ...
 
 # --- Layer definitions -------------------------------------------------------
 
@@ -116,40 +132,55 @@ def _check_source_available(spec: dict, available_s2_bands: set[str]) -> tuple[b
     return True, ""
 
 
-def compute_secret_gold_halo(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
+def _band_index(band_name: str, band_names: tuple[str, ...]) -> int:
+    try:
+        return band_names.index(band_name)
+    except ValueError as exc:
+        raise StageError(f"S2 cube is missing required notebook secret band {band_name}.") from exc
+
+
+def compute_secret_gold_halo(
+    s2_cube: np.ndarray, *, nodata: float, band_names: tuple[str, ...] = S2_SOURCE_BANDS
+) -> np.ndarray:
     """B12 / (B8 + eps)"""
-    b12 = s2_cube[:, :, _S2_BAND_INDEX["B12"]]
-    b8 = s2_cube[:, :, _S2_BAND_INDEX["B8"]]
+    b12 = s2_cube[:, :, _band_index("B12", band_names)]
+    b8 = s2_cube[:, :, _band_index("B8", band_names)]
     valid = (b12 != nodata) & (b8 != nodata) & np.isfinite(b12) & np.isfinite(b8)
     result = np.full(b12.shape, nodata, dtype=np.float32)
     result[valid] = (b12[valid] / (b8[valid] + EPS)).astype(np.float32)
     return result
 
 
-def compute_secret_silver_oxide(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
+def compute_secret_silver_oxide(
+    s2_cube: np.ndarray, *, nodata: float, band_names: tuple[str, ...] = S2_SOURCE_BANDS
+) -> np.ndarray:
     """B2 / (B1 + eps)"""
-    b2 = s2_cube[:, :, _S2_BAND_INDEX["B2"]]
-    b1 = s2_cube[:, :, _S2_BAND_INDEX["B1"]]
+    b2 = s2_cube[:, :, _band_index("B2", band_names)]
+    b1 = s2_cube[:, :, _band_index("B1", band_names)]
     valid = (b2 != nodata) & (b1 != nodata) & np.isfinite(b2) & np.isfinite(b1)
     result = np.full(b2.shape, nodata, dtype=np.float32)
     result[valid] = (b2[valid] / (b1[valid] + EPS)).astype(np.float32)
     return result
 
 
-def compute_secret_chemical_protector(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
+def compute_secret_chemical_protector(
+    s2_cube: np.ndarray, *, nodata: float, band_names: tuple[str, ...] = S2_SOURCE_BANDS
+) -> np.ndarray:
     """B1 / (B11 + eps)"""
-    b1 = s2_cube[:, :, _S2_BAND_INDEX["B1"]]
-    b11 = s2_cube[:, :, _S2_BAND_INDEX["B11"]]
+    b1 = s2_cube[:, :, _band_index("B1", band_names)]
+    b11 = s2_cube[:, :, _band_index("B11", band_names)]
     valid = (b1 != nodata) & (b11 != nodata) & np.isfinite(b1) & np.isfinite(b11)
     result = np.full(b1.shape, nodata, dtype=np.float32)
     result[valid] = (b1[valid] / (b11[valid] + EPS)).astype(np.float32)
     return result
 
 
-def compute_secret_tunnel_ceiling(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
+def compute_secret_tunnel_ceiling(
+    s2_cube: np.ndarray, *, nodata: float, band_names: tuple[str, ...] = S2_SOURCE_BANDS
+) -> np.ndarray:
     """B8 - B4"""
-    b8 = s2_cube[:, :, _S2_BAND_INDEX["B8"]]
-    b4 = s2_cube[:, :, _S2_BAND_INDEX["B4"]]
+    b8 = s2_cube[:, :, _band_index("B8", band_names)]
+    b4 = s2_cube[:, :, _band_index("B4", band_names)]
     valid = (b8 != nodata) & (b4 != nodata) & np.isfinite(b8) & np.isfinite(b4)
     result = np.full(b8.shape, nodata, dtype=np.float32)
     result[valid] = (b8[valid] - b4[valid]).astype(np.float32)
@@ -201,6 +232,101 @@ def build_ee_hidden_doors_image(grid_spec: GridSpec):
         .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
     )
     return hidden_doors
+
+
+def build_notebook_secret_s2_composite(grid_spec: GridSpec):
+    return (
+        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+        .filterBounds(build_grid_region(grid_spec))
+        .filterDate(NOTEBOOK_SECRET_S2_START, NOTEBOOK_SECRET_S2_END)
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", NOTEBOOK_SECRET_S2_CLOUD_MAX))
+        .select(list(NOTEBOOK_SECRET_S2_SOURCE_BANDS))
+        .median()
+    )
+
+
+def build_notebook_secret_s2_image(grid_spec: GridSpec):
+    return (
+        ee.Image(build_notebook_secret_s2_composite(grid_spec))
+        .toFloat()
+        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
+        .clip(build_grid_region(grid_spec))
+    )
+
+
+def build_notebook_secret_s2_layers_image(grid_spec: GridSpec):
+    s2_col = build_notebook_secret_s2_composite(grid_spec)
+    eps = ee.Image.constant(NOTEBOOK_SECRET_EPS)
+    layers = ee.Image.cat(
+        [
+            s2_col.select("B12").divide(s2_col.select("B8").add(eps)).rename("AI_READY_640_Secret_Gold_Halo"),
+            s2_col.select("B2").divide(s2_col.select("B1").add(eps)).rename("AI_READY_640_Secret_Silver_Oxide"),
+            s2_col.select("B8").subtract(s2_col.select("B4")).rename("AI_READY_640_Secret_Tunnel_Ceiling"),
+            s2_col.select("B1").divide(s2_col.select("B11").add(eps)).rename("AI_READY_640_Secret_Chemical_Protector"),
+        ]
+    )
+    return (
+        layers.toFloat()
+        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
+        .clip(build_grid_region(grid_spec))
+    )
+
+
+def create_ee_notebook_secret_s2_cube_fetcher(settings, grid_spec: GridSpec) -> SecretS2CubeFetcher:
+    initialize_ee_session(settings)
+    s2_image = build_notebook_secret_s2_image(grid_spec)
+    requests = build_dem_tile_requests(grid_spec)
+
+    def fetch_secret_s2_cube(*, grid_spec: GridSpec) -> np.ndarray:
+        cube = np.full(
+            (grid_spec.size, grid_spec.size, len(NOTEBOOK_SECRET_S2_SOURCE_BANDS)),
+            grid_spec.nodata,
+            dtype=np.float32,
+        )
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle([request.xmin, request.ymin, request.xmax, request.ymax], grid_spec.crs, False)
+            rect = s2_image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            for band_index, band_name in enumerate(NOTEBOOK_SECRET_S2_SOURCE_BANDS):
+                tile = np.array(rect["properties"][band_name], dtype=np.float32)[: request.size, : request.size]
+                if tile.shape != (request.size, request.size):
+                    raise StageError(
+                        f"EE notebook secret S2 tile ({request.tile_row},{request.tile_col}) band {band_name} "
+                        f"returned shape {tile.shape}, expected {(request.size, request.size)}."
+                    )
+                row_start = request.tile_row * request.size
+                col_start = request.tile_col * request.size
+                cube[row_start : row_start + request.size, col_start : col_start + request.size, band_index] = tile
+        return cube
+
+    return fetch_secret_s2_cube
+
+
+def create_ee_notebook_secret_s2_layer_fetcher(settings, grid_spec: GridSpec) -> SecretS2LayerFetcher:
+    initialize_ee_session(settings)
+    s2_layers_image = build_notebook_secret_s2_layers_image(grid_spec)
+    requests = build_dem_tile_requests(grid_spec)
+
+    def fetch_secret_s2_layers(*, grid_spec: GridSpec) -> dict[str, np.ndarray]:
+        arrays = {
+            layer_name: np.full((grid_spec.size, grid_spec.size), grid_spec.nodata, dtype=np.float32)
+            for layer_name in S2_SECRET_LAYER_NAMES
+        }
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle([request.xmin, request.ymin, request.xmax, request.ymax], grid_spec.crs, False)
+            rect = s2_layers_image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            for layer_name in S2_SECRET_LAYER_NAMES:
+                tile = np.array(rect["properties"][layer_name], dtype=np.float32)[: request.size, : request.size]
+                if tile.shape != (request.size, request.size):
+                    raise StageError(
+                        f"EE notebook secret S2 tile ({request.tile_row},{request.tile_col}) layer {layer_name} "
+                        f"returned shape {tile.shape}, expected {(request.size, request.size)}."
+                    )
+                row_start = request.tile_row * request.size
+                col_start = request.tile_col * request.size
+                arrays[layer_name][row_start : row_start + request.size, col_start : col_start + request.size] = tile
+        return arrays
+
+    return fetch_secret_s2_layers
 
 
 def create_ee_hidden_doors_fetcher(settings, grid_spec: GridSpec) -> HiddenDoorsFetcher:
@@ -314,17 +440,28 @@ class SecretLayersStage(Stage):
     name = "secret_layers"
     parity_category = ParityCategory.PARITY_REPRODUCES
 
-    def __init__(self, *, grid_spec: GridSpec, hidden_doors_fetcher: HiddenDoorsFetcher | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        grid_spec: GridSpec,
+        hidden_doors_fetcher: HiddenDoorsFetcher | None = None,
+        secret_s2_cube_fetcher: SecretS2CubeFetcher | None = None,
+        secret_s2_layer_fetcher: SecretS2LayerFetcher | None = None,
+    ) -> None:
         self.grid_spec = grid_spec
         self.hidden_doors_fetcher = hidden_doors_fetcher
+        self.secret_s2_cube_fetcher = secret_s2_cube_fetcher
+        self.secret_s2_layer_fetcher = secret_s2_layer_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
-        available_s2_bands = set(S2_SOURCE_BANDS)
+        s2_band_names = NOTEBOOK_SECRET_S2_SOURCE_BANDS if self.secret_s2_cube_fetcher is not None else S2_SOURCE_BANDS
+        available_s2_bands = set(s2_band_names)
         scale_m = float(self.grid_spec.manifest.scale_m)
         nodata = self.grid_spec.nodata
 
         # Load source data (lazy — only load if needed)
         s2_cube = None
+        s2_layers = None
         dem = None
         lst = None
 
@@ -350,25 +487,61 @@ class SecretLayersStage(Stage):
 
             # Compute the layer
             if spec["name"] == "AI_READY_640_Secret_Gold_Halo":
-                if s2_cube is None:
-                    s2_cube = load_s2_raw_cube(context.run_dir)
-                array = compute_secret_gold_halo(s2_cube, nodata=nodata)
+                if self.secret_s2_layer_fetcher is not None:
+                    if s2_layers is None:
+                        s2_layers = self.secret_s2_layer_fetcher(grid_spec=self.grid_spec)
+                    array = s2_layers[spec["name"]]
+                else:
+                    if s2_cube is None:
+                        s2_cube = (
+                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
+                            if self.secret_s2_cube_fetcher is not None
+                            else load_s2_raw_cube(context.run_dir)
+                        )
+                    array = compute_secret_gold_halo(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Silver_Oxide":
-                if s2_cube is None:
-                    s2_cube = load_s2_raw_cube(context.run_dir)
-                array = compute_secret_silver_oxide(s2_cube, nodata=nodata)
+                if self.secret_s2_layer_fetcher is not None:
+                    if s2_layers is None:
+                        s2_layers = self.secret_s2_layer_fetcher(grid_spec=self.grid_spec)
+                    array = s2_layers[spec["name"]]
+                else:
+                    if s2_cube is None:
+                        s2_cube = (
+                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
+                            if self.secret_s2_cube_fetcher is not None
+                            else load_s2_raw_cube(context.run_dir)
+                        )
+                    array = compute_secret_silver_oxide(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Tunnel_Ceiling":
-                if s2_cube is None:
-                    s2_cube = load_s2_raw_cube(context.run_dir)
-                array = compute_secret_tunnel_ceiling(s2_cube, nodata=nodata)
+                if self.secret_s2_layer_fetcher is not None:
+                    if s2_layers is None:
+                        s2_layers = self.secret_s2_layer_fetcher(grid_spec=self.grid_spec)
+                    array = s2_layers[spec["name"]]
+                else:
+                    if s2_cube is None:
+                        s2_cube = (
+                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
+                            if self.secret_s2_cube_fetcher is not None
+                            else load_s2_raw_cube(context.run_dir)
+                        )
+                    array = compute_secret_tunnel_ceiling(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Thermal_Inertia":
                 if lst is None:
                     lst = load_lst_array(context.run_dir, nodata=nodata)
                 array = compute_secret_thermal_inertia(lst, nodata=nodata, scale_m=scale_m)
             elif spec["name"] == "AI_READY_640_Secret_Chemical_Protector":
-                if s2_cube is None:
-                    s2_cube = load_s2_raw_cube(context.run_dir)
-                array = compute_secret_chemical_protector(s2_cube, nodata=nodata)
+                if self.secret_s2_layer_fetcher is not None:
+                    if s2_layers is None:
+                        s2_layers = self.secret_s2_layer_fetcher(grid_spec=self.grid_spec)
+                    array = s2_layers[spec["name"]]
+                else:
+                    if s2_cube is None:
+                        s2_cube = (
+                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
+                            if self.secret_s2_cube_fetcher is not None
+                            else load_s2_raw_cube(context.run_dir)
+                        )
+                    array = compute_secret_chemical_protector(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Hidden_Doors":
                 if self.hidden_doors_fetcher is not None:
                     array = self.hidden_doors_fetcher(grid_spec=self.grid_spec)
@@ -405,10 +578,22 @@ class SecretLayersStage(Stage):
                 "source_type": spec["source_type"],
                 "inputs": spec["inputs"],
                 "output_path": f"{SECRET_LAYER_OUTPUT_DIR}/{spec['name']}.tif",
+                "source_provenance": (
+                    "notebook_secret_s2"
+                    if spec["name"] in S2_SECRET_LAYER_NAMES
+                    and (self.secret_s2_cube_fetcher is not None or self.secret_s2_layer_fetcher is not None)
+                    else spec["source_type"]
+                ),
             })
             layer_metadata[spec["name"]] = {
                 "status": "implemented",
                 "formula": spec["formula"],
+                "source_provenance": (
+                    "notebook_secret_s2"
+                    if spec["name"] in S2_SECRET_LAYER_NAMES
+                    and (self.secret_s2_cube_fetcher is not None or self.secret_s2_layer_fetcher is not None)
+                    else spec["source_type"]
+                ),
             }
 
         # Write manifest
