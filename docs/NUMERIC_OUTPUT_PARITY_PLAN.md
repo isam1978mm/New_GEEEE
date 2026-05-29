@@ -93,11 +93,14 @@ The current Phase 5E reference-parity classification is:
 - DEM: 5 outputs pass
 - DEM: `hillshade_0to1_640.tif` is a known strict `xfail`
 - SAR: 8 band outputs pass
-- STACKS: 3 outputs are known strict `xfail`
+- STACKS: 2 outputs pass
+- STACKS: `RADAR_STACK_HWC_640_app.npy` is a known strict `xfail` due inherited SAR dB residual
 - QA grid: 3 outputs pass
 - QA post-RTC SAR intermediates: `not_implemented_no_source_equivalent`
 - QA post-RTC SAR intermediates: contract-ambiguous notebook intermediate family
-- `REPORT_640`: the three root report GeoTIFFs remain `not_implemented_no_source_equivalent`
+- `FINAL_TESLA_V7_2_HYPERCUBE`: 2 outputs pass
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`: `not_implemented_no_source_equivalent`
+- `REPORT_640`: the three root report GeoTIFFs are implemented and parity passing
 
 Verification notes:
 
@@ -106,23 +109,24 @@ Verification notes:
 - app final SAR outputs already pass reference parity through `GEOTIFF_RADAR_BANDS/*`, `NPY_RADAR_BANDS/*`, and `npy_radar_bands/*`
 - frozen QA post-RTC reference arrays are inconsistent with those final SAR output families
 - the app no longer presents QA post-RTC arrays as implemented notebook-compatible outputs
-- `REPORT_640` remains manifest/API verified as not implemented; no fake report rasters are created
+- `REPORT_640` outputs are manifest/API verified as implemented source-equivalent notebook-compatible rasters
+- `FINAL_TESLA_V7_2_HYPERCUBE` is implemented and parity passing
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` remains not implemented
 - Phase 5E has not approved any math changes
 - Phase 5E has not approved any tolerance changes
 
 Future fix candidates:
 
 - hillshade parity
-- stack 21-band/layout parity
 - QA post-RTC intermediate contract/provenance
 - `REPORT_640` generation
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
 
 Current known blockers:
 
 - hillshade reference provenance
-- `FINAL_TESLA` / Secret-layer / `REPORT_640` generation
 - QA post-RTC intermediate contract/provenance
-- `REPORT_640` generation
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
 
 ## Hillshade Reference Provenance Blocker
 
@@ -140,6 +144,19 @@ Accepted resolution paths:
 - or regenerate the frozen hillshade reference through an approved reference-refresh process
 
 Until reference provenance is resolved, hillshade remains a strict `xfail`.
+
+## Current Phase 6F Status
+
+Current Phase 6F status is:
+
+- `FINAL_TESLA_V7_2_HYPERCUBE.tif`: implemented and parity passing
+- `FINAL_TESLA_V7_2_HYPERCUBE.npy`: implemented and parity passing
+- `RADAR_STACK_HWC_640_app.npy`: strict `xfail` due inherited SAR dB band residual
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`: not implemented
+- QA post-RTC SAR intermediates: not implemented / contract ambiguous
+- DEM hillshade reference provenance: unresolved
+
+Phase 6F does not change math, tolerances, or pipeline behavior. It only updates final parity status classification.
 
 ## Phase 5F: Parity Report Integration
 

@@ -75,23 +75,26 @@ Expected notebook stack outputs:
 
 Current app status is intentionally:
 
-- `not_implemented_no_source_equivalent` for all three `REPORT_640_*` rasters
-- `not_implemented_no_source_equivalent` for the notebook `FINAL_TESLA_V7_2_HYPERCUBE` family
+- `implemented` for all three `REPORT_640_*` rasters
+- `implemented` for the notebook `FINAL_TESLA_V7_2_HYPERCUBE.tif`
+- `implemented` for the notebook `FINAL_TESLA_V7_2_HYPERCUBE.npy`
+- `not_implemented_no_source_equivalent` for `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
 
 Reason:
 
-- the app does not currently emit the exact raw notebook behavior/source layers required for this family
-- the app `hypercube.tif` and `hypercube.npy` are a different 21-channel science product
-- the app `ai_ready_support_stack` is an implemented subset/support tensor, not the notebook `AI_READY_640_Secret_*` raster family
+- the app now emits the exact source layers required for the notebook `FINAL_TESLA_V7_2_HYPERCUBE` family
+- the app `hypercube.tif` and `hypercube.npy` remain a different 21-channel science product
+- the app `ai_ready_support_stack` remains an implemented subset/support tensor, not the notebook `AI_READY_640_Secret_*` raster family
 
 ## Source-Equivalence Rule
 
-Until these exact notebook layers are implemented:
+The implemented source-equivalence rule is:
 
-- `REPORT_640_*` must remain not implemented
-- notebook `FINAL_TESLA_V7_2_HYPERCUBE*` outputs must remain not implemented
+- `REPORT_640_*` are implemented notebook-compatible rasters
+- notebook `FINAL_TESLA_V7_2_HYPERCUBE.tif` and `.npy` are implemented notebook-compatible outputs
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` remains not implemented
 - the app must not alias the 21-channel science hypercube as notebook `FINAL_TESLA`
-- the operator output tree must show these notebook outputs under `not_implemented[]`, not under implemented outputs
+- the operator output tree must show implemented notebook outputs under `outputs[]`, not under `not_implemented[]`
 
 ## Non-Goals
 
