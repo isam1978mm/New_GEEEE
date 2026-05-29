@@ -174,13 +174,18 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "hypercube_audit": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif": ArtifactClass.LOCAL_SENSITIVE,
             "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B_tif": ArtifactClass.LOCAL_SENSITIVE,
         }
         notebook_outputs = {item["filename"]: item for item in hypercube_result.metadata["notebook_output_statuses"]}
         assert notebook_outputs["FINAL_TESLA_V7_2_HYPERCUBE.tif"]["status"] == "implemented"
         assert notebook_outputs["FINAL_TESLA_V7_2_HYPERCUBE.npy"]["status"] == "implemented"
         assert notebook_outputs["FINAL_TESLA_V7_2_HYPERCUBE.npy"]["layout"] == "CHW"
-        assert notebook_outputs["FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif"]["status"] == "not_implemented_no_source_equivalent"
-        assert isinstance(notebook_outputs["FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif"]["reason"], str)
+        patched = notebook_outputs["FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif"]
+        assert patched["status"] == "implemented"
+        assert patched["actual_band_count"] == 13
+        assert patched["em_anomaly_source_equivalent"] == "DEM_GEO8_TIFS/DEM_640.tif"
+        assert "13 bands" in patched["note"]
+        assert isinstance(patched["reason"], str)
         assert _artifact_classes(pca_result) == {
             "pca_anomaly_tif": ArtifactClass.LOCAL_SENSITIVE,
             "pca_eigenvalues": ArtifactClass.LOCAL_SENSITIVE,
@@ -259,6 +264,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
             "QA/QA_GRID_dx_m_640.tif",
             "QA/QA_GRID_dy_m_640.tif",
             "QA/QA_GRID_validmask_640.tif",

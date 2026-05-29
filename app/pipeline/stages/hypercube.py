@@ -26,11 +26,13 @@ NOTEBOOK_STACK_OUTPUT_DIR = "NPY_STACKS"
 NOTEBOOK_HYPERCUBE_TIF_NAME = "FINAL_TESLA_V7_2_HYPERCUBE.tif"
 NOTEBOOK_HYPERCUBE_NPY_NAME = "FINAL_TESLA_V7_2_HYPERCUBE.npy"
 NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME = "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif"
-NOTEBOOK_PATCHED_14B_STATUS = "not_implemented_no_source_equivalent"
+NOTEBOOK_PATCHED_14B_STATUS = "implemented"
 NOTEBOOK_FINAL_TESLA_STATUS = "implemented"
 NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY = "notebook_secret_report_fusion_v1"
 NOTEBOOK_PATCHED_14B_REASON = (
-    "Notebook FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B requires exact patched 14-band notebook logic that the app does not implement yet."
+    "Frozen notebook FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B is a 13-band patched stack. "
+    "Its AI_READY_640_EM_Anomaly band is sourced from DEM_640.tif per the notebook patch report, and "
+    "AI_READY_640_Magnetic_Anomaly remains unavailable."
 )
 NOTEBOOK_FINAL_TESLA_LAYER_ORDER: tuple[tuple[str, str], ...] = (
     ("AI_READY_640_Secret_Gold_Halo", "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif"),
@@ -43,6 +45,29 @@ NOTEBOOK_FINAL_TESLA_LAYER_ORDER: tuple[tuple[str, str], ...] = (
     ("REPORT_640_Mass_Report", "REPORT_640_Mass_Report.tif"),
     ("REPORT_640_Pottery_Report", "REPORT_640_Pottery_Report.tif"),
 )
+NOTEBOOK_PATCHED_14B_LAYER_ORDER: tuple[tuple[str, str], ...] = (
+    *NOTEBOOK_FINAL_TESLA_LAYER_ORDER,
+    ("AI_READY_640_EM_Anomaly", "DEM_GEO8_TIFS/DEM_640.tif"),
+    ("DEM_Slope", "DEM_GEO8_TIFS/slope_deg_640.tif"),
+    ("DEM_TPI", "DEM_GEO8_TIFS/tpi_100m_640.tif"),
+    ("DEM_Roughness", "DEM_GEO8_TIFS/roughness_100m_640.tif"),
+)
+NOTEBOOK_PATCHED_14B_BAND_DESCRIPTIONS: tuple[str, ...] = (
+    "Secret_Gold_Halo",
+    "Secret_Silver_Oxide",
+    "Secret_Tunnel_Ceiling",
+    "Secret_Thermal_Inertia",
+    "Secret_Chemical_Protector",
+    "Secret_Hidden_Doors",
+    "REPORT_640_FINAL_Zero_Point_Targets",
+    "REPORT_640_Mass_Report",
+    "REPORT_640_Pottery_Report",
+    "AI_READY_640_EM_Anomaly",
+    "DEM_Slope",
+    "DEM_TPI",
+    "DEM_Roughness",
+)
+NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT = len(NOTEBOOK_PATCHED_14B_LAYER_ORDER)
 EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}
 EPS = 1e-6
 
@@ -150,10 +175,14 @@ def remove_stale_notebook_final_tesla_outputs(run_dir: Path) -> None:
             sidecar.unlink()
 
 
-def load_notebook_final_tesla_source_layers(run_dir: Path, grid_spec: GridSpec) -> tuple[list[tuple[str, np.ndarray]], list[str]]:
+def _load_named_source_layers(
+    run_dir: Path,
+    grid_spec: GridSpec,
+    source_order: tuple[tuple[str, str], ...],
+) -> tuple[list[tuple[str, np.ndarray]], list[str]]:
     source_layers: list[tuple[str, np.ndarray]] = []
     missing_paths: list[str] = []
-    for band_name, relative_path in NOTEBOOK_FINAL_TESLA_LAYER_ORDER:
+    for band_name, relative_path in source_order:
         path = run_dir / relative_path
         if not path.is_file():
             missing_paths.append(relative_path)
@@ -164,6 +193,14 @@ def load_notebook_final_tesla_source_layers(run_dir: Path, grid_spec: GridSpec) 
         array = np.where(array == nodata, grid_spec.nodata, array).astype(np.float32, copy=False)
         source_layers.append((band_name, array))
     return source_layers, missing_paths
+
+
+def load_notebook_final_tesla_source_layers(run_dir: Path, grid_spec: GridSpec) -> tuple[list[tuple[str, np.ndarray]], list[str]]:
+    return _load_named_source_layers(run_dir, grid_spec, NOTEBOOK_FINAL_TESLA_LAYER_ORDER)
+
+
+def load_notebook_patched_14b_source_layers(run_dir: Path, grid_spec: GridSpec) -> tuple[list[tuple[str, np.ndarray]], list[str]]:
+    return _load_named_source_layers(run_dir, grid_spec, NOTEBOOK_PATCHED_14B_LAYER_ORDER)
 
 
 def write_notebook_final_tesla_outputs(
@@ -200,6 +237,33 @@ def write_notebook_final_tesla_outputs(
         "final_tesla_tif": tif_path,
         "final_tesla_npy": npy_path,
     }
+
+
+def write_notebook_patched_14b_output(
+    run_dir: Path,
+    grid_spec: GridSpec,
+    source_layers: list[tuple[str, np.ndarray]],
+) -> Path:
+    notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    notebook_stack_dir.mkdir(parents=True, exist_ok=True)
+    tif_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME
+
+    hwc = np.stack([array for _name, array in source_layers], axis=-1).astype(np.float32, copy=False)
+    tif_hwc = np.where(np.isfinite(hwc), hwc, grid_spec.nodata).astype(np.float32, copy=False)
+
+    write_georeferenced_raster(tif_path, tif_hwc, grid_spec)
+    write_raster_sidecar(
+        tif_path,
+        grid_manifest=grid_spec.manifest,
+        nodata=grid_spec.nodata,
+        dtype="float32",
+        shape=hwc.shape[:2],
+    )
+    with rasterio.open(tif_path, "r+") as dataset:
+        for band_index, band_name in enumerate(NOTEBOOK_PATCHED_14B_BAND_DESCRIPTIONS, start=1):
+            dataset.set_band_description(band_index, band_name)
+
+    return tif_path
 
 
 def write_hypercube_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
@@ -336,8 +400,12 @@ class HypercubeStage(Stage):
             self.grid_spec,
         )
         notebook_outputs: dict[str, Path] | None = None
+        notebook_patched_14b_tif: Path | None = None
         if not missing_notebook_sources and len(notebook_source_layers) == len(NOTEBOOK_FINAL_TESLA_LAYER_ORDER):
             notebook_outputs = write_notebook_final_tesla_outputs(context.run_dir, self.grid_spec, notebook_source_layers)
+        patched_source_layers, missing_patched_sources = load_notebook_patched_14b_source_layers(context.run_dir, self.grid_spec)
+        if not missing_patched_sources and len(patched_source_layers) == NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT:
+            notebook_patched_14b_tif = write_notebook_patched_14b_output(context.run_dir, self.grid_spec, patched_source_layers)
 
         artifacts = [
             build_stage_artifact(
@@ -395,6 +463,15 @@ class HypercubeStage(Stage):
                     ),
                 ]
             )
+        if notebook_patched_14b_tif is not None:
+            artifacts.append(
+                build_stage_artifact(
+                    name="notebook_FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B_tif",
+                    relative_path=notebook_patched_14b_tif.relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                    size_bytes=notebook_patched_14b_tif.stat().st_size,
+                )
+            )
         band_names = products["band_names"]
         assert isinstance(band_names, list)
         notebook_output_statuses: list[dict[str, object]]
@@ -414,12 +491,29 @@ class HypercubeStage(Stage):
                     "source_layer_order": source_layer_order,
                     "layout": "CHW",
                 },
-                {
-                    "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
-                    "status": NOTEBOOK_PATCHED_14B_STATUS,
-                    "reason": NOTEBOOK_PATCHED_14B_REASON,
-                },
             ]
+            if notebook_patched_14b_tif is not None:
+                patched_layer_order = [name for name, _relative_path in NOTEBOOK_PATCHED_14B_LAYER_ORDER]
+                notebook_output_statuses.append(
+                    {
+                        "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+                        "status": NOTEBOOK_PATCHED_14B_STATUS,
+                        "source_family": f"{NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY}_patched_v2",
+                        "source_layer_order": patched_layer_order,
+                        "actual_band_count": NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT,
+                        "note": "Filename says 14B, but the frozen notebook artifact contains 13 bands.",
+                        "em_anomaly_source_equivalent": "DEM_GEO8_TIFS/DEM_640.tif",
+                        "reason": NOTEBOOK_PATCHED_14B_REASON,
+                    }
+                )
+            else:
+                notebook_output_statuses.append(
+                    {
+                        "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+                        "status": "not_implemented_no_source_equivalent",
+                        "reason": NOTEBOOK_PATCHED_14B_REASON,
+                    }
+                )
         else:
             missing_summary = ", ".join(missing_notebook_sources) if missing_notebook_sources else "unknown notebook source gap"
             missing_reason = (
@@ -439,7 +533,7 @@ class HypercubeStage(Stage):
                 },
                 {
                     "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
-                    "status": NOTEBOOK_PATCHED_14B_STATUS,
+                    "status": "not_implemented_no_source_equivalent",
                     "reason": NOTEBOOK_PATCHED_14B_REASON,
                 },
             ]

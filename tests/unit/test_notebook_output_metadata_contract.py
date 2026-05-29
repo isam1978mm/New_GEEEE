@@ -49,6 +49,7 @@ def test_notebook_compatible_raster_metadata_contract() -> None:
             "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_app.tif": 1,
             "GEOTIFF_RADAR_BANDS/RADAR_angle_640_app.tif": 1,
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif": 9,
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif": 13,
             "QA/QA_GRID_dx_m_640.tif": 1,
             "QA/QA_GRID_dy_m_640.tif": 1,
             "QA/QA_GRID_validmask_640.tif": 1,

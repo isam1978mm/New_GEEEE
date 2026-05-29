@@ -30,6 +30,12 @@ STACK_REFERENCE_CASES = [
         "npy",
     ),
     pytest.param(
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+        "hypercube.tif",
+        "raster",
+    ),
+    pytest.param(
         "NPY_STACKS/RADAR_STACK_HWC_640_",
         "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
         "RADAR_STACK_HWC_640_app.npy",

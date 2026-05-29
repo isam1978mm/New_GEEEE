@@ -587,6 +587,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "NPY_STACKS/RADAR_STACK_HWC_640_app.npy",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
             "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
             "QA/QA_GRID_dx_m_640.tif",
             "QA/QA_GRID_dy_m_640.tif",
             "QA/QA_GRID_validmask_640.tif",
@@ -608,7 +609,6 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "alignment_qa.json",
         } <= output_paths
         assert {
-            "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
             "QA/sar/intermediates/per_image_products_db",
             "QA/sar/intermediates/pair_median",
             "QA/sar/intermediates/final_median_pre_rtc",
@@ -661,6 +661,7 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "NPY_STACKS/RADAR_STACK_HWC_640_app.npy": b"radar-stack",
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif": b"final-tesla-tif",
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy": b"final-tesla-npy",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif": b"patched-14b-tif",
         "QA/QA_GRID_dx_m_640.tif": b"dx",
         "QA/QA_GRID_dy_m_640.tif": b"dy",
         "QA/QA_GRID_validmask_640.tif": b"mask",
@@ -774,8 +775,12 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
                         },
                         {
                             "filename": "FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
-                            "status": "not_implemented_no_source_equivalent",
-                            "reason": "No source-equivalent exists yet.",
+                            "status": "implemented",
+                            "source_family": "notebook_secret_report_fusion_v1_patched_v2",
+                            "actual_band_count": 13,
+                            "note": "Filename says 14B, but the frozen notebook artifact contains 13 bands.",
+                            "em_anomaly_source_equivalent": "DEM_GEO8_TIFS/DEM_640.tif",
+                            "reason": "Frozen notebook FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B is a 13-band patched stack. Its AI_READY_640_EM_Anomaly band is sourced from DEM_640.tif per the notebook patch report, and AI_READY_640_Magnetic_Anomaly remains unavailable.",
                         },
                     ],
                 }

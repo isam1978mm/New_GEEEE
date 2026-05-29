@@ -13,9 +13,10 @@ from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.hypercube import (
-    NOTEBOOK_HYPERCUBE_NPY_NAME,
     NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
+    NOTEBOOK_HYPERCUBE_NPY_NAME,
     NOTEBOOK_HYPERCUBE_TIF_NAME,
+    NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT,
     NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY,
     NOTEBOOK_FINAL_TESLA_LAYER_ORDER,
     NOTEBOOK_PATCHED_14B_REASON,
@@ -25,6 +26,7 @@ from app.pipeline.stages.hypercube import (
     write_notebook_final_tesla_outputs,
 )
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
+from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -123,6 +125,7 @@ def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist(
 
         asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
         asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
+        asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
         asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
         asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
@@ -131,9 +134,10 @@ def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist(
         notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
         tif_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_TIF_NAME
         npy_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_NPY_NAME
+        patched_path = notebook_stack_dir / NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME
         assert tif_path.is_file()
         assert npy_path.is_file()
-        assert not (notebook_stack_dir / NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME).exists()
+        assert patched_path.is_file()
 
         tensor = np.load(npy_path)
         assert tensor.shape == (9, grid_spec.size, grid_spec.size)
@@ -152,6 +156,28 @@ def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist(
         artifact_names = [artifact.name for artifact in result.artifacts]
         assert "notebook_FINAL_TESLA_V7_2_HYPERCUBE_tif" in artifact_names
         assert "notebook_FINAL_TESLA_V7_2_HYPERCUBE_npy" in artifact_names
+        assert "notebook_FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B_tif" in artifact_names
+
+        with rasterio.open(patched_path) as dataset:
+            assert dataset.count == NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT
+            assert dataset.dtypes == ("float32",) * NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT
+            assert float(dataset.nodata) == float(grid_spec.nodata)
+            assert str(dataset.crs) == grid_spec.crs
+            assert dataset.descriptions == (
+                "Secret_Gold_Halo",
+                "Secret_Silver_Oxide",
+                "Secret_Tunnel_Ceiling",
+                "Secret_Thermal_Inertia",
+                "Secret_Chemical_Protector",
+                "Secret_Hidden_Doors",
+                "REPORT_640_FINAL_Zero_Point_Targets",
+                "REPORT_640_Mass_Report",
+                "REPORT_640_Pottery_Report",
+                "AI_READY_640_EM_Anomaly",
+                "DEM_Slope",
+                "DEM_TPI",
+                "DEM_Roughness",
+            )
 
         statuses = result.metadata["notebook_output_statuses"]
         assert statuses == [
@@ -170,7 +196,26 @@ def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist(
             },
             {
                 "filename": NOTEBOOK_HYPERCUBE_PATCHED_14B_NAME,
-                "status": "not_implemented_no_source_equivalent",
+                "status": "implemented",
+                "source_family": f"{NOTEBOOK_FINAL_TESLA_SOURCE_FAMILY}_patched_v2",
+                "source_layer_order": [
+                    "AI_READY_640_Secret_Gold_Halo",
+                    "AI_READY_640_Secret_Silver_Oxide",
+                    "AI_READY_640_Secret_Tunnel_Ceiling",
+                    "AI_READY_640_Secret_Thermal_Inertia",
+                    "AI_READY_640_Secret_Chemical_Protector",
+                    "AI_READY_640_Secret_Hidden_Doors",
+                    "REPORT_640_FINAL_Zero_Point_Targets",
+                    "REPORT_640_Mass_Report",
+                    "REPORT_640_Pottery_Report",
+                    "AI_READY_640_EM_Anomaly",
+                    "DEM_Slope",
+                    "DEM_TPI",
+                    "DEM_Roughness",
+                ],
+                "actual_band_count": 13,
+                "note": "Filename says 14B, but the frozen notebook artifact contains 13 bands.",
+                "em_anomaly_source_equivalent": "DEM_GEO8_TIFS/DEM_640.tif",
                 "reason": NOTEBOOK_PATCHED_14B_REASON,
             },
         ]
