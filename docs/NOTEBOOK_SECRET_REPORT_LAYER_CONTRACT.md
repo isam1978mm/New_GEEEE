@@ -78,7 +78,7 @@ Current app status is intentionally:
 - `implemented` for all three `REPORT_640_*` rasters
 - `implemented` for the notebook `FINAL_TESLA_V7_2_HYPERCUBE.tif`
 - `implemented` for the notebook `FINAL_TESLA_V7_2_HYPERCUBE.npy`
-- `not_implemented_no_source_equivalent` for `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
+- `implemented` for `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` (as frozen-compatible 13-band artifact, passes parity; filename says 14B, but the frozen artifact has 13 bands; no fake 14th band or fake AI_READY_640_Magnetic_Anomaly was created)
 
 Reason:
 
@@ -92,7 +92,7 @@ The implemented source-equivalence rule is:
 
 - `REPORT_640_*` are implemented notebook-compatible rasters
 - notebook `FINAL_TESLA_V7_2_HYPERCUBE.tif` and `.npy` are implemented notebook-compatible outputs
-- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` remains not implemented
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` is implemented and passes parity
 - the app must not alias the 21-channel science hypercube as notebook `FINAL_TESLA`
 - the operator output tree must show implemented notebook outputs under `outputs[]`, not under `not_implemented[]`
 

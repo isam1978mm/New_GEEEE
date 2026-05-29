@@ -117,7 +117,7 @@ For repeated notebook families, one row may represent a concrete filename patter
 | `FINAL_TESLA_V7_2_HYPERCUBE.npy` | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy` | `hypercube.npy` | `renamed-equivalent` | no | App writes the hypercube at run root. |
 | `FINAL_TESLA_V7_2_HYPERCUBE.tif` | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif` | `hypercube.tif` | `renamed-equivalent` | no | App writes the hypercube GeoTIFF at run root. |
 | `RADAR_STACK_HWC_640_<radar_stamp>_<radar_config>.npy` | `NPY_STACKS/RADAR_STACK_HWC_640_<radar_stamp>_<radar_config>.npy` | `stacks/tensor_support/radar_linear_support_stack.npy` | `renamed-equivalent` | no | App writes a radar support stack under `stacks/tensor_support/`. |
-| `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` |  | `notebook-only` | no | Notebook patched hypercube TIFF has no direct app file yet. |
+| `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` |  | `implemented / passes parity` | no | Implemented as frozen-compatible 13-band artifact and passes parity. Filename says 14B, but the frozen artifact has 13 bands; no fake 14th band or fake AI_READY_640_Magnetic_Anomaly was created. |
 | `FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy` | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy` |  | `notebook-only` | no | Notebook resampled hypercube NPY has no direct app file yet. |
 | `FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif` | `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif` |  | `notebook-only` | no | Notebook resampled hypercube TIFF has no direct app file yet. |
 | `PAN_LAYERS_STACK_640.npy` | `NPY_STACKS/PAN_LAYERS_STACK_640.npy` |  | `notebook-only` | no | Notebook panchromatic stack has no direct app file yet. |
@@ -311,10 +311,6 @@ These contract or notebook-reference outputs remain absent as real notebook-comp
 
 | Notebook output | Status | Notes |
 |---|---|---|
-| `REPORT_640_Pottery_Report.tif` | `missing-in-app` | No real app raster equivalent has been identified. |
-| `REPORT_640_Mass_Report.tif` | `missing-in-app` | No real app raster equivalent has been identified. |
-| `REPORT_640_FINAL_Zero_Point_Targets.tif` | `missing-in-app` | No real app raster equivalent has been identified. |
-| `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` | `notebook-only` | No real app equivalent was found during Phase 3C. |
 | `QA/FOCUS_MASK_17m_inside_640.tif` | `renamed-equivalent-only` | App equivalent remains `full_job/focus/focus_zone_17m.tif`; no notebook-compatible QA alias was emitted in Phase 3. |
 | `QA/SUMMARY_RADAR_*.csv` | `renamed-equivalent-only` | App equivalent remains `qa/sar/sar_summary.csv`; no notebook-compatible QA alias was emitted in Phase 3. |
 | `QA/sar/intermediates/per_image_products_db/*.npy` | `not_implemented_no_source_equivalent` | Manifest records that production SAR does not persist this notebook intermediate. |
@@ -324,9 +320,7 @@ These contract or notebook-reference outputs remain absent as real notebook-comp
 
 ### Intentionally Not Implemented Or No-Source Outputs
 
-- The three root `REPORT_640_*.tif` outputs are not emitted as fake rasters. The app writes `QA/REPORT_640_manifest.json` with `not_implemented_no_source_equivalent` entries for each report.
 - Pre-RTC SAR intermediate stages are not reconstructed from final products. `QA/sar/intermediates/sar_intermediate_manifest.json` records the missing notebook stages as `not_implemented_no_source_equivalent`.
-- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` remains notebook-only because no source-equivalent app raster has been identified.
 
 ### App-Only Outputs Still Preserved
 

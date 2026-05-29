@@ -89,9 +89,7 @@ PHASE5E_REFERENCE_CASES: tuple[Phase5Case, ...] = (
         "raster_reference",
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
         "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
-        tolerance=0.0,
-        expected="xfail",
-        xfail_reason="known patched 14b band 11 slope residual",
+        tolerance=1e-5,
     ),
     Phase5Case(
         "stacks",

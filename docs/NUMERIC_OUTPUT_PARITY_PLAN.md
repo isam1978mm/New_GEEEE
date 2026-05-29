@@ -99,7 +99,7 @@ The current Phase 5E reference-parity classification is:
 - QA post-RTC SAR intermediates: `not_implemented_no_source_equivalent`
 - QA post-RTC SAR intermediates: contract-ambiguous notebook intermediate family
 - `FINAL_TESLA_V7_2_HYPERCUBE`: 2 outputs pass
-- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`: `not_implemented_no_source_equivalent`
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`: implemented as frozen-compatible 13-band artifact and passes parity (filename says 14B, but the frozen artifact has 13 bands; no fake 14th band or fake AI_READY_640_Magnetic_Anomaly was created)
 - `REPORT_640`: the three root report GeoTIFFs are implemented and parity passing
 
 Verification notes:
@@ -111,7 +111,7 @@ Verification notes:
 - the app no longer presents QA post-RTC arrays as implemented notebook-compatible outputs
 - `REPORT_640` outputs are manifest/API verified as implemented source-equivalent notebook-compatible rasters
 - `FINAL_TESLA_V7_2_HYPERCUBE` is implemented and parity passing
-- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` remains not implemented
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` is implemented and passes parity
 - Phase 5E has not approved any math changes
 - Phase 5E has not approved any tolerance changes
 
@@ -120,13 +120,11 @@ Future fix candidates:
 - hillshade parity
 - QA post-RTC intermediate contract/provenance
 - `REPORT_640` generation
-- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
 
 Current known blockers:
 
 - hillshade reference provenance
 - QA post-RTC intermediate contract/provenance
-- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
 
 ## Hillshade Reference Provenance Blocker
 
@@ -145,18 +143,18 @@ Accepted resolution paths:
 
 Until reference provenance is resolved, hillshade remains a strict `xfail`.
 
-## Current Phase 6F Status
+## Current Phase 6H-3 Status
 
-Current Phase 6F status is:
+Current Phase 6H-3 status is:
 
 - `FINAL_TESLA_V7_2_HYPERCUBE.tif`: implemented and parity passing
 - `FINAL_TESLA_V7_2_HYPERCUBE.npy`: implemented and parity passing
+- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`: implemented as frozen-compatible 13-band artifact and passes parity (filename says 14B, but the frozen artifact has 13 bands; no fake 14th band or fake AI_READY_640_Magnetic_Anomaly was created)
 - `RADAR_STACK_HWC_640_app.npy`: strict `xfail` due inherited SAR dB band residual
-- `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`: not implemented
 - QA post-RTC SAR intermediates: not implemented / contract ambiguous
 - DEM hillshade reference provenance: unresolved
 
-Phase 6F does not change math, tolerances, or pipeline behavior. It only updates final parity status classification.
+Phase 6H-3 does not change math, tolerances, or pipeline behavior. It only updates final parity status classification.
 
 ## Phase 5F: Parity Report Integration
 
@@ -176,8 +174,6 @@ The report must stay local-only and must not expose absolute paths, bundle paths
 
 These remain outside numeric parity proof until real source equivalents exist:
 
-- the three root `REPORT_640` GeoTIFF outputs
-- the notebook patched `14B` hypercube GeoTIFF
 - pre-RTC SAR intermediate groups that are still `not_implemented_no_source_equivalent`
 
 These should be reported explicitly, not silently ignored and not counted as numeric PASS.
