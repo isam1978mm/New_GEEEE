@@ -82,17 +82,31 @@
           </div>
           <div class="output-tree-panel" aria-labelledby="output-tree-title">
             <div class="output-tree-head">
-              <h3 id="output-tree-title">Full operator output tree</h3>
+              <h3 id="output-tree-title">Output Browser</h3>
               <span class="status-chip" id="output-tree-count">0 files</span>
             </div>
             <p class="history-status">
-              The full local run tree appears here after a completed run.
+              The Full operator output tree appears here after a completed run.
             </p>
-            <ul class="output-tree-list" id="output-tree-list"></ul>
-            <div class="not-implemented-panel" aria-labelledby="not-implemented-title">
-              <h4 id="not-implemented-title">Not implemented in current app output set</h4>
-              <ul class="not-implemented-list" id="not-implemented-list"></ul>
+            <div class="key-downloads-panel" aria-labelledby="key-downloads-title">
+              <h4 id="key-downloads-title">Key Downloads</h4>
+              <ul class="key-downloads-list" id="key-downloads-list"></ul>
             </div>
+            <div class="output-browser-controls" aria-label="Output browser controls">
+              <label class="output-filter-field" for="output-filter">
+                <span class="run-field output-filter-label">Filter outputs</span>
+                <input class="run-input output-filter-input" id="output-filter" name="output-filter" type="search" autocomplete="off" placeholder="Filter by filename or path">
+              </label>
+              <button class="refresh-button" id="expand-output-groups" type="button">Expand all</button>
+              <button class="refresh-button" id="collapse-output-groups" type="button">Collapse all</button>
+            </div>
+            <div class="output-browser-scroll" aria-label="Grouped output browser">
+              <ul class="output-tree-list" id="output-tree-list"></ul>
+            </div>
+            <details class="not-implemented-panel" id="not-implemented-panel">
+              <summary id="not-implemented-title">Not implemented in current app output set</summary>
+              <ul class="not-implemented-list" id="not-implemented-list"></ul>
+            </details>
           </div>
           <div class="run-outputs" aria-labelledby="run-outputs-title">
             <div class="run-outputs-head">

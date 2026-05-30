@@ -22,6 +22,29 @@
     alignment_mask_selection: "alignment_mask_selection.json",
   };
 
+  const KEY_DOWNLOAD_PATHS = [
+    "QA/RUN_MANIFEST.json",
+    "DEM_GEO8_TIFS/DEM_640.tif",
+    "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+    "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+    "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+    "REPORT_640_FINAL_Zero_Point_Targets.tif",
+    "REPORT_640_Mass_Report.tif",
+    "REPORT_640_Pottery_Report.tif",
+    "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+  ];
+
+  const OUTPUT_GROUP_ORDER = [
+    "AI_READY_640",
+    "DEM_GEO8_TIFS",
+    "GEOTIFF_RADAR_BANDS",
+    "NPY_RADAR_BANDS",
+    "NPY_STACKS",
+    "QA",
+    "REPORT_640",
+    "Root files / app science outputs",
+  ];
+
   const state = {
     currentRunId: null,
     currentRunStatus: null,
@@ -29,6 +52,9 @@
     pollFailed: false,
     recentRuns: [],
     currentOutputTreeRunId: null,
+    currentOutputTreePayload: null,
+    outputFilter: "",
+    outputGroupsExpanded: false,
   };
 
   function isVisibleArtifact(artifact) {
@@ -68,8 +94,11 @@
     }
 
     const relativePath = item.relative_path;
+    if (relativePath.startsWith("AI_READY_640/")) {
+      return "AI_READY_640";
+    }
     if (relativePath.startsWith("REPORT_640_")) {
-      return "Reports";
+      return "REPORT_640";
     }
     if (relativePath.startsWith("DEM_GEO8_TIFS/")) {
       return "DEM_GEO8_TIFS";
@@ -83,9 +112,6 @@
     if (relativePath.startsWith("NPY_STACKS/")) {
       return "NPY_STACKS";
     }
-    if (relativePath.startsWith("QA/sar/intermediates/")) {
-      return "QA/sar/intermediates";
-    }
     if (relativePath.startsWith("QA/")) {
       return "QA";
     }
@@ -95,7 +121,10 @@
     if (relativePath.includes("manifest")) {
       return "Manifests";
     }
-    return "App-only extras";
+    if (!relativePath.includes("/")) {
+      return "Root files / app science outputs";
+    }
+    return relativePath.split("/")[0] || "Other";
   }
 
   function formatFileSize(sizeBytes) {
@@ -121,6 +150,8 @@
     outputTreeList.innerHTML = "";
     notImplementedList.innerHTML = "";
     outputTreeCount.textContent = "0 files";
+    state.currentOutputTreePayload = null;
+    renderKeyDownloads([]);
   }
 
   function renderOutputTreeMessage(message) {
@@ -131,10 +162,89 @@
     }
     outputTreeList.innerHTML = "";
     outputTreeCount.textContent = "0 files";
+    state.currentOutputTreePayload = null;
+    renderKeyDownloads([]);
     const item = document.createElement("li");
     item.className = "output-tree-empty";
     item.textContent = message;
     outputTreeList.appendChild(item);
+  }
+
+  function outputMatchesFilter(output, query) {
+    if (!query) {
+      return true;
+    }
+    const haystack = `${output.filename || ""} ${output.relative_path || ""} ${output.directory || ""}`.toLowerCase();
+    return haystack.includes(query);
+  }
+
+  function sortOutputGroups(left, right) {
+    const leftIndex = OUTPUT_GROUP_ORDER.indexOf(left);
+    const rightIndex = OUTPUT_GROUP_ORDER.indexOf(right);
+    if (leftIndex !== -1 || rightIndex !== -1) {
+      if (leftIndex === -1) {
+        return 1;
+      }
+      if (rightIndex === -1) {
+        return -1;
+      }
+      return leftIndex - rightIndex;
+    }
+    return left.localeCompare(right);
+  }
+
+  function renderKeyDownloads(outputs) {
+    const list = document.getElementById("key-downloads-list");
+    if (!list) {
+      return;
+    }
+    list.innerHTML = "";
+
+    const byPath = new Map();
+    for (const output of Array.isArray(outputs) ? outputs : []) {
+      if (output && typeof output.relative_path === "string") {
+        byPath.set(output.relative_path, output);
+      }
+    }
+
+    const keyOutputs = KEY_DOWNLOAD_PATHS.map(function (relativePath) {
+      return byPath.get(relativePath);
+    }).filter(Boolean);
+
+    if (keyOutputs.length === 0) {
+      const item = document.createElement("li");
+      item.className = "key-download-empty";
+      item.textContent = "Key artifacts appear here when available for this run.";
+      list.appendChild(item);
+      return;
+    }
+
+    for (const output of keyOutputs) {
+      const item = document.createElement("li");
+      item.className = "key-download-item";
+
+      const label = document.createElement("span");
+      label.className = "key-download-label";
+      label.textContent = output.filename;
+
+      const path = document.createElement("span");
+      path.className = "key-download-path";
+      path.textContent = output.relative_path;
+
+      item.appendChild(label);
+      item.appendChild(path);
+
+      if (typeof output.download_url === "string" && output.download_url) {
+        const link = document.createElement("a");
+        link.className = "key-download-link";
+        link.href = output.download_url;
+        link.download = output.filename;
+        link.textContent = "Download";
+        item.appendChild(link);
+      }
+
+      list.appendChild(item);
+    }
   }
 
   function renderNotImplementedList(notImplemented) {
@@ -206,9 +316,14 @@
       return;
     }
 
+    state.currentOutputTreePayload = payload || null;
     const outputs = Array.isArray(payload && payload.outputs) ? payload.outputs : [];
+    const query = state.outputFilter.trim().toLowerCase();
+    const filteredOutputs = outputs.filter(function (output) {
+      return outputMatchesFilter(output, query);
+    });
     const grouped = new Map();
-    for (const output of outputs) {
+    for (const output of filteredOutputs) {
       if (!output || typeof output.relative_path !== "string" || typeof output.filename !== "string") {
         continue;
       }
@@ -221,18 +336,35 @@
 
     outputTreeList.innerHTML = "";
     outputTreeCount.textContent = `${outputs.length} file${outputs.length === 1 ? "" : "s"}`;
+    renderKeyDownloads(outputs);
 
     if (outputs.length === 0) {
       renderOutputTreeMessage("No output files found for this run.");
       renderNotImplementedList(payload && payload.not_implemented);
       return;
     }
+    if (filteredOutputs.length === 0) {
+      const item = document.createElement("li");
+      item.className = "output-tree-empty";
+      item.textContent = "No output files match the current filter.";
+      outputTreeList.appendChild(item);
+      renderNotImplementedList(payload && payload.not_implemented);
+      return;
+    }
 
-    for (const [groupLabel, groupOutputs] of grouped.entries()) {
+    const groupLabels = Array.from(grouped.keys()).sort(sortOutputGroups);
+    for (const groupLabel of groupLabels) {
+      const groupOutputs = grouped.get(groupLabel).slice().sort(function (left, right) {
+        return left.relative_path.localeCompare(right.relative_path);
+      });
       const groupItem = document.createElement("li");
       groupItem.className = "output-group";
 
-      const head = document.createElement("div");
+      const details = document.createElement("details");
+      details.className = "output-group-details";
+      details.open = state.outputGroupsExpanded;
+
+      const head = document.createElement("summary");
       head.className = "output-group-head";
 
       const title = document.createElement("span");
@@ -241,53 +373,37 @@
 
       const count = document.createElement("span");
       count.className = "output-group-count";
-      count.textContent = `${groupOutputs.length} file${groupOutputs.length === 1 ? "" : "s"}`;
+      const totalSize = groupOutputs.reduce(function (sum, output) {
+        const size = Number(output.size_bytes);
+        return Number.isFinite(size) && size > 0 ? sum + size : sum;
+      }, 0);
+      count.textContent = `${groupOutputs.length} file${groupOutputs.length === 1 ? "" : "s"} · ${formatFileSize(totalSize)}`;
 
       head.appendChild(title);
       head.appendChild(count);
 
-      const fileList = document.createElement("ul");
-      fileList.className = "output-file-list";
+      const table = document.createElement("table");
+      table.className = "output-file-table";
+      const thead = document.createElement("thead");
+      thead.innerHTML = "<tr><th>Filename</th><th>Path</th><th>Size</th><th>Action</th></tr>";
+      const tbody = document.createElement("tbody");
 
       for (const output of groupOutputs) {
-        const fileItem = document.createElement("li");
-        fileItem.className = "output-file-card";
+        const row = document.createElement("tr");
 
-        const fileHead = document.createElement("div");
-        fileHead.className = "output-file-head";
+        const nameCell = document.createElement("td");
+        nameCell.className = "output-file-name";
+        nameCell.textContent = output.filename;
 
-        const name = document.createElement("span");
-        name.className = "output-file-name";
-        name.textContent = output.filename;
+        const pathCell = document.createElement("td");
+        pathCell.className = "output-file-path";
+        pathCell.textContent = output.relative_path;
 
-        const type = document.createElement("span");
-        type.className = "output-file-type";
-        type.textContent = output.extension || output.file_type || "file";
+        const sizeCell = document.createElement("td");
+        sizeCell.className = "output-file-size";
+        sizeCell.textContent = formatFileSize(Number(output.size_bytes));
 
-        fileHead.appendChild(name);
-        fileHead.appendChild(type);
-
-        const path = document.createElement("span");
-        path.className = "output-file-path";
-        path.textContent = output.relative_path;
-
-        const meta = document.createElement("div");
-        meta.className = "output-file-meta";
-
-        const size = document.createElement("span");
-        size.className = "output-file-size";
-        size.textContent = formatFileSize(Number(output.size_bytes));
-
-        const directory = document.createElement("span");
-        directory.className = "output-file-size";
-        directory.textContent = typeof output.directory === "string" && output.directory ? output.directory : "run root";
-
-        meta.appendChild(size);
-        meta.appendChild(directory);
-
-        fileItem.appendChild(fileHead);
-        fileItem.appendChild(path);
-        fileItem.appendChild(meta);
+        const actionCell = document.createElement("td");
 
         if (typeof output.download_url === "string" && output.download_url) {
           const link = document.createElement("a");
@@ -295,14 +411,26 @@
           link.href = output.download_url;
           link.download = output.filename;
           link.textContent = "Download";
-          fileItem.appendChild(link);
+          actionCell.appendChild(link);
+        } else {
+          actionCell.textContent = "Unavailable";
         }
 
-        fileList.appendChild(fileItem);
+        row.appendChild(nameCell);
+        row.appendChild(pathCell);
+        row.appendChild(sizeCell);
+        row.appendChild(actionCell);
+        tbody.appendChild(row);
       }
 
-      groupItem.appendChild(head);
-      groupItem.appendChild(fileList);
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      const tableWrap = document.createElement("div");
+      tableWrap.className = "output-file-table-wrap";
+      tableWrap.appendChild(table);
+      details.appendChild(head);
+      details.appendChild(tableWrap);
+      groupItem.appendChild(details);
       outputTreeList.appendChild(groupItem);
     }
 
@@ -311,6 +439,12 @@
 
   async function loadOutputTree(runId) {
     state.currentOutputTreeRunId = runId;
+    state.outputFilter = "";
+    state.outputGroupsExpanded = false;
+    const outputFilter = document.getElementById("output-filter");
+    if (outputFilter) {
+      outputFilter.value = "";
+    }
     renderOutputTreeMessage("Outputs are loading...");
     renderNotImplementedList([]);
 
@@ -482,7 +616,9 @@
         continue;
       }
       const item = document.createElement("li");
-      item.className = "stage-progress-item";
+      item.className = `stage-progress-item stage-status-${stage.status}`;
+      item.title = `${stage.label}: ${stage.status}`;
+      item.setAttribute("aria-label", `${stage.label}: ${stage.status}`);
 
       const label = document.createElement("span");
       label.className = "stage-progress-label";
@@ -927,7 +1063,21 @@
     const lookupForm = document.getElementById("run-lookup-form");
     const lookupInput = document.getElementById("run-lookup-id");
     const recentRunsRefresh = document.getElementById("recent-runs-refresh");
-    if (!form || !latInput || !lonInput || !refreshButton || !lookupForm || !lookupInput || !recentRunsRefresh) {
+    const outputFilter = document.getElementById("output-filter");
+    const expandOutputGroups = document.getElementById("expand-output-groups");
+    const collapseOutputGroups = document.getElementById("collapse-output-groups");
+    if (
+      !form ||
+      !latInput ||
+      !lonInput ||
+      !refreshButton ||
+      !lookupForm ||
+      !lookupInput ||
+      !recentRunsRefresh ||
+      !outputFilter ||
+      !expandOutputGroups ||
+      !collapseOutputGroups
+    ) {
       return;
     }
 
@@ -945,6 +1095,24 @@
     });
     recentRunsRefresh.addEventListener("click", function () {
       void loadRecentRuns();
+    });
+    outputFilter.addEventListener("input", function () {
+      state.outputFilter = outputFilter.value.trim();
+      if (state.currentOutputTreePayload) {
+        renderOutputTree(state.currentOutputTreePayload);
+      }
+    });
+    expandOutputGroups.addEventListener("click", function () {
+      state.outputGroupsExpanded = true;
+      if (state.currentOutputTreePayload) {
+        renderOutputTree(state.currentOutputTreePayload);
+      }
+    });
+    collapseOutputGroups.addEventListener("click", function () {
+      state.outputGroupsExpanded = false;
+      if (state.currentOutputTreePayload) {
+        renderOutputTree(state.currentOutputTreePayload);
+      }
     });
     refreshButton.addEventListener("click", function () {
       if (!state.currentRunId) {

@@ -26,9 +26,17 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "Status history" in response.text
     assert "status-history-list" in response.text
     assert "What outputs will I get?" in response.text
+    assert "Output Browser" in response.text
     assert "Full operator output tree" in response.text
     assert response.text.index("Full operator output tree") < response.text.index("Run outputs")
-    assert "The full local run tree appears here after a completed run." in response.text
+    assert "Full operator output tree appears here after a completed run." in response.text
+    assert "Key Downloads" in response.text
+    assert "key-downloads-list" in response.text
+    assert "output-filter" in response.text
+    assert "Filter outputs" in response.text
+    assert "Expand all" in response.text
+    assert "Collapse all" in response.text
+    assert "Grouped output browser" in response.text
     assert "output-tree-list" in response.text
     assert "not-implemented-list" in response.text
     assert "Run outputs" in response.text
@@ -80,6 +88,15 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "selectRun" in js_response.text
     assert "loadOutputTree" in js_response.text
     assert "renderOutputTree" in js_response.text
+    assert "KEY_DOWNLOAD_PATHS" in js_response.text
+    assert "OUTPUT_GROUP_ORDER" in js_response.text
+    assert "renderKeyDownloads" in js_response.text
+    assert "outputMatchesFilter" in js_response.text
+    assert "sortOutputGroups" in js_response.text
+    assert "outputGroupsExpanded" in js_response.text
+    assert "outputFilter" in js_response.text
+    assert "output-file-table" in js_response.text
+    assert "stage-status-" in js_response.text
     assert "run-lookup-form" in js_response.text
     assert "run-history-list" in js_response.text
     assert "target-lat" in js_response.text
@@ -129,7 +146,12 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "No output files found for this run." in js_response.text
     assert "Could not load full output tree." in js_response.text
     assert "Not implemented in current app output set." in js_response.text
-    assert "REPORT_640_Pottery_Report.tif" not in js_response.text
+    assert "QA/RUN_MANIFEST.json" in js_response.text
+    assert "DEM_GEO8_TIFS/DEM_640.tif" in js_response.text
+    assert "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif" in js_response.text
+    assert "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy" in js_response.text
+    assert "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif" in js_response.text
+    assert "REPORT_640_Pottery_Report.tif" in js_response.text
     assert "sampleArtifacts" not in js_response.text
     assert "demo-run" not in js_response.text
     assert "Artifacts will appear after a run completes." in js_response.text
@@ -146,5 +168,9 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
 
     assert css_response.status_code == 200
     assert "text/css" in css_response.headers["content-type"]
+    assert "key-downloads-panel" in css_response.text
+    assert "output-browser-scroll" in css_response.text
+    assert "output-file-table" in css_response.text
+    assert "stage-status-done" in css_response.text
     assert "@import" not in css_response.text
     assert "fonts.googleapis" not in css_response.text

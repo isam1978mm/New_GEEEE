@@ -176,7 +176,6 @@ body {
   display: none;
 }
 
-.stage-progress-list,
 .status-history-list {
   display: grid;
   gap: 8px;
@@ -185,7 +184,15 @@ body {
   list-style: none;
 }
 
-.stage-progress-item,
+.stage-progress-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .status-history-item {
   display: flex;
   align-items: center;
@@ -195,6 +202,42 @@ body {
   border-radius: 8px;
   background: rgba(255, 252, 245, 0.78);
   border: 1px solid rgba(31, 43, 34, 0.08);
+}
+
+.stage-progress-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 252, 245, 0.84);
+  border: 1px solid rgba(31, 43, 34, 0.1);
+}
+
+.stage-status-done {
+  border-color: rgba(43, 120, 77, 0.24);
+  background: rgba(226, 245, 232, 0.82);
+}
+
+.stage-status-running {
+  border-color: rgba(135, 88, 31, 0.28);
+  background: rgba(255, 239, 205, 0.82);
+}
+
+.stage-status-failed {
+  border-color: rgba(152, 47, 47, 0.26);
+  background: rgba(255, 224, 219, 0.82);
+}
+
+.stage-status-skipped {
+  border-color: rgba(93, 100, 112, 0.22);
+  background: rgba(235, 237, 239, 0.82);
+}
+
+.stage-status-pending {
+  border-color: rgba(31, 43, 34, 0.1);
+  background: rgba(255, 252, 245, 0.84);
 }
 
 .stage-progress-empty,
@@ -214,6 +257,11 @@ body {
   color: var(--accent-strong);
   font-size: 0.84rem;
   font-weight: 700;
+}
+
+.stage-progress-item .stage-progress-label,
+.stage-progress-item .stage-progress-status {
+  white-space: nowrap;
 }
 
 .status-history-message {
@@ -448,33 +496,152 @@ kbd {
   text-decoration: underline;
 }
 
+.key-downloads-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(31, 43, 34, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.74);
+}
+
+.key-downloads-panel h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.key-downloads-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.key-download-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(31, 43, 34, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.key-download-label {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.key-download-path {
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.key-download-link {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.key-download-link:hover,
+.key-download-link:focus-visible {
+  text-decoration: underline;
+}
+
+.key-download-empty {
+  color: var(--muted);
+}
+
+.output-browser-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.output-filter-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.output-filter-label {
+  margin: 0;
+}
+
+.output-filter-input {
+  min-height: 40px;
+  padding: 9px 12px;
+  border-radius: 8px;
+}
+
+.output-browser-scroll {
+  max-height: 460px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(31, 43, 34, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.44);
+}
+
 .output-tree-list,
 .not-implemented-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .output-group {
-  display: grid;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.68);
   border: 1px solid rgba(31, 43, 34, 0.08);
+  overflow: hidden;
+}
+
+.output-group-details {
+  display: grid;
 }
 
 .output-group-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.output-group-head::-webkit-details-marker {
+  display: none;
+}
+
+.output-group-head::before {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(31, 43, 34, 0.08);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.output-group-details[open] > .output-group-head::before {
+  content: "-";
 }
 
 .output-group-title {
   font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .output-group-count {
@@ -482,26 +649,49 @@ kbd {
   font-size: 0.86rem;
 }
 
-.output-file-list {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.output-file-table-wrap {
+  overflow-x: auto;
+  border-top: 1px solid rgba(31, 43, 34, 0.08);
 }
 
-.output-file-card,
+.output-file-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.output-file-table th,
+.output-file-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(31, 43, 34, 0.06);
+  text-align: left;
+  vertical-align: top;
+}
+
+.output-file-table th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.output-file-table td {
+  overflow-wrap: anywhere;
+}
+
+.output-file-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .not-implemented-card {
   display: grid;
   gap: 6px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
   background: rgba(255, 252, 245, 0.84);
   border: 1px solid rgba(31, 43, 34, 0.08);
 }
 
-.output-file-head,
-.output-file-meta,
 .not-implemented-head,
 .not-implemented-meta {
   display: flex;
@@ -532,7 +722,6 @@ kbd {
 }
 
 .output-file-link {
-  justify-self: start;
   color: var(--accent-strong);
   text-decoration: none;
   font-weight: 700;
@@ -545,6 +734,16 @@ kbd {
 
 .output-tree-empty {
   color: var(--muted);
+}
+
+.not-implemented-panel {
+  color: var(--muted);
+}
+
+.not-implemented-panel summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {
@@ -573,7 +772,6 @@ kbd {
     flex-direction: column;
   }
 
-  .output-group-head,
   .output-file-head,
   .output-file-meta,
   .not-implemented-head,
@@ -583,6 +781,14 @@ kbd {
   }
 
   .lookup-button {
+    width: 100%;
+  }
+
+  .output-browser-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .output-browser-controls .refresh-button {
     width: 100%;
   }
 }
