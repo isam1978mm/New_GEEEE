@@ -73,3 +73,30 @@ Future work should formalize the frozen reference set as a repo fixture:
 - explicit status for app-only artifacts that are not notebook-matched in that fixture
 
 The current laptop-path reference bundle is useful validation evidence, but it is not yet a repo fixture contract.
+
+## Reference Refresh Policy
+
+Reference refresh is allowed only when an audit proves the existing frozen reference is internally inconsistent with its notebook-derived source.
+
+Rules:
+
+- require a pre-condition proof before any refresh
+- require a post-condition proof after any refresh
+- derive the refreshed reference from the notebook expression plus frozen reference inputs only
+- never derive a refreshed reference from app outputs
+- do not relax tolerance during a reference refresh
+- keep refresh scope to one file unless broader scope is explicitly approved
+
+Worked examples:
+
+- DEM hillshade refresh:
+  - pre-condition was true because the old frozen hillshade reference did not exactly match the notebook Cell 13 hillshade expression applied to frozen `DEM_640.tif`
+  - the refresh was executed for `DEM_GEO8_TIFS/hillshade_0to1_640.tif` only
+  - post-condition verification showed the refreshed reference exactly matched the notebook expression result
+  - strict zero-tolerance DEM parity now passes
+
+- `RADAR_STACK_HWC` refresh attempt:
+  - pre-condition was false because the existing frozen `RADAR_STACK_HWC` reference already matched `np.stack` of frozen SAR band references exactly
+  - refresh was correctly not executed
+  - the remaining app-vs-reference mismatch stays classified as accepted upstream SAR-band-residual inheritance
+  - no SAR reference refresh, SAR math change, or tolerance change applies

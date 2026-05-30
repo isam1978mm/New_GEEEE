@@ -44,10 +44,10 @@ STACK_REFERENCE_CASES = [
             strict=True,
             raises=AssertionError,
             reason=(
-                "RADAR_STACK_HWC_640_app.npy is an exact alias of app radar_db_support_stack.npy and the "
-                "frozen radar stack is an exact assembly of frozen NPY_RADAR_BANDS, but the frozen and app "
-                "SAR dB band families still differ by a small residual; observed max_error is about "
-                "6.67572021484375e-06 and no tolerance or SAR math change is approved"
+                "Accepted SAR-band-residual inheritance. Frozen reference equals np.stack of frozen SAR band "
+                "references exactly; app stack equals np.stack of app SAR bands exactly. The residual is purely "
+                "the upstream SAR dB band residual (~3e-06 to 7e-06). Stack assembly is correct on both sides. "
+                "No reference refresh or tolerance change applies."
             ),
         ),
     ),

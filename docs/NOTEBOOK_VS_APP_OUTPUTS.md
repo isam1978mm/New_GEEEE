@@ -1,5 +1,24 @@
 # Notebook Vs App Outputs
 
+## 2026-05-30 Parity Closeout Update
+
+This document's Phase 1 inventory tables are historical and do not represent the final parity classification.
+
+Current closeout status for the notebook-compatible stack family:
+
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif` is implemented and parity passing.
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy` is implemented and parity passing.
+- `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif` is implemented as a frozen-compatible 13-band artifact and parity passing.
+- `NPY_STACKS/RADAR_STACK_HWC_640_app.npy` remains an accepted classified strict `xfail`.
+
+RADAR stack classification:
+
+- frozen `RADAR_STACK_HWC` equals `np.stack` of frozen SAR band references exactly
+- app `RADAR_STACK_HWC_640_app.npy` equals `np.stack` of app SAR band outputs exactly
+- the remaining app-vs-reference mismatch is inherited from the upstream SAR dB band residual
+- no `RADAR_STACK` reference refresh is needed
+- no SAR math, SAR band reference refresh, or tolerance change is approved
+
 Comparison date: `2026-05-26`
 
 Fresh app run ID: `da0dca61-bc35-43c2-af91-351f3fbda942`
