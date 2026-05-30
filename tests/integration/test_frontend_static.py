@@ -20,12 +20,14 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "Queue run" in response.text
     assert 'id="target-lat"' in response.text
     assert 'id="target-lon"' in response.text
+    assert "Run lifecycle" in response.text
     assert "Current stage" in response.text
     assert "stage-progress-list" in response.text
     assert "Status history" in response.text
     assert "status-history-list" in response.text
     assert "What outputs will I get?" in response.text
     assert "Full operator output tree" in response.text
+    assert response.text.index("Full operator output tree") < response.text.index("Run outputs")
     assert "The full local run tree appears here after a completed run." in response.text
     assert "output-tree-list" in response.text
     assert "not-implemented-list" in response.text
@@ -48,6 +50,7 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "Run lookup" in response.text
     assert "Refresh runs" in response.text
     assert "Load run" in response.text
+    assert "Recent runs will load automatically." in response.text
     assert "Manual Pin Workspace" not in response.text
     assert "Stage a local point" not in response.text
     assert "pin-map" not in response.text
@@ -106,6 +109,8 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "Detailed stage progress is unavailable for this failed run." in js_response.text
     assert "Waiting for first stage update." in js_response.text
     assert "No detailed status history is available for this run." in js_response.text
+    assert "Run completed." in js_response.text
+    assert "Run ended in a failed state." in js_response.text
     assert "Stage progress is not available yet." not in js_response.text
     assert "Status history is not available yet." not in js_response.text
     assert "stage-progress-list" in js_response.text

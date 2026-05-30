@@ -2,92 +2,89 @@
 
 ## Purpose
 
-This checklist is the final local operator smoke test for the UI workflow after implementation work lands.
+This checklist is the final local operator smoke test for the local-first operator UI after parity closeout.
 
 It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 ## Preconditions
 
-- the app is running locally on the intended port, currently `8007`
+- the app is running locally on the intended port
 - the operator can open the local UI
 - required local configuration is already in place
 - the operator is using the accepted production API surface, not internal validation-only hooks
+- a completed run exists for download verification
 
-## Restart And Readiness Checks
+## Startup And Readiness Checks
 
-- after changing `.env` or application code, restart the FastAPI server before testing
-- after restarting the server, hard reload the browser with `Ctrl+F5`
-- open the UI on the actual running port, currently `http://127.0.0.1:8007`
-- check `http://127.0.0.1:8007/readyz` before creating a run
-- if `/readyz` returns `ee_not_ready`, stop and fix Earth Engine configuration before creating a run
-- verify `EE_SERVICE_ACCOUNT_KEY_PATH` points to an existing service-account JSON file
-- ensure each `.env` setting is on its own line; do not join multiple settings on one line
-- be aware that the DEM stage can fail almost immediately if Earth Engine is not ready
-- failed runs can still appear in history, but they will not produce downloadable outputs
+1. Start the app locally.
+2. Verify `/healthz`.
+3. Verify `/readyz`.
+4. If `/readyz` returns `ee_not_ready`, stop and fix service-account configuration before continuing.
+5. Open the homepage on the actual local port.
+6. Hard reload the browser with `Ctrl+F5`.
 
-## Smoke Test Steps
+## Manual Operator Checklist
 
-1. Enter the target point and create a run from the UI.
+1. Verify the homepage loads the local operator workspace shell.
    Expected result:
-   the UI requires valid latitude and longitude values before enabling the queue button, accepts the submission, and returns a visible run ID.
+   the page shows `Target Input`, `Run lifecycle`, `Status history`, `Full operator output tree`, `Run outputs`, and `Run lookup`.
 
-   Operator note:
-   if `/readyz` is not healthy first, do not queue the run. Fix readiness, restart the server, and hard reload the browser before trying again.
-
-2. Confirm the UI starts polling run status and progress.
+2. Select a completed run.
    Expected result:
-   the UI checks run status every 2 seconds while the run is still `queued` or `running`, shows the current public-safe stage, renders the stage checklist, and shows a `Status history` timeline with the latest safe run event.
+   the run lookup or recent-runs list loads the selected run without exposing local paths, coordinates, or internal-only fields.
 
-3. Observe terminal state handling.
+3. Verify lifecycle and current status display.
    Expected result:
-   the UI stops polling when the run reaches `done`, `failed`, or `cancelled`, while keeping the final stage checklist visible.
+   the lifecycle panel shows run ID, state, detail, and current stage with readable operator-facing labels.
 
-4. Verify failed-run handling if a run fails.
+4. Verify Goal D status history timeline.
    Expected result:
-   the UI shows a public-safe failed state without stack traces or internal exception content.
+   ordered public-safe status events are visible for the selected run and render as a readable timeline, not raw JSON.
 
-   Operator note:
-   if the run fails during `DEM`, check `/readyz` and Earth Engine service-account configuration before assuming there is a pipeline bug.
-
-5. Verify polling-failure behavior.
+5. Verify stage progress count and stage list.
    Expected result:
-   if polling fails, the UI offers a manual refresh option.
+   stage progress is visible, ordered, and readable, including empty or historical fallback states where applicable.
 
-6. Refresh or inspect recent-run history.
+6. Verify full operator output tree appears before public `Run outputs`.
    Expected result:
-   the UI lists recent public-safe runs from the API without exposing internal run data.
+   the full local output tree panel is visible first, followed by the public-safe artifact list.
 
-7. Use explicit run lookup.
+7. Expand or inspect output rows.
    Expected result:
-   entering a run ID loads that run, updates the lifecycle panel, and resumes polling if the run is still active.
+   operator output rows show grouped files, filenames, relative paths, sizes, and guarded download links where implemented.
 
-8. Select a run from history.
+8. Download representative artifacts from the operator output tree:
+   - `DEM_GEO8_TIFS/DEM_640.tif`
+   - `QA/RUN_MANIFEST.json`
+   - `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif`
+   - `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy`
+   - `NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif`
+   - `QA/sar/intermediates/post_rtc/final_VV_dB.npy`
    Expected result:
-   the selected run shows its run ID, status, public-safe stage progress, status history, terminal state, and artifacts when available.
+   each download resolves through the guarded route and returns the real artifact filename.
 
-9. Load the public-safe artifact list.
+9. Verify unavailable or not-implemented outputs show safe unavailable behavior.
    Expected result:
-   the UI renders the real artifact list from the API for the selected run.
+   not-implemented outputs appear under the not-implemented section, and unavailable downloads do not expose internal details.
 
-   Operator note:
-   failed runs are expected to show no downloadable outputs.
-
-10. Test artifact download links.
+10. Verify recent runs and explicit run lookup.
    Expected result:
-   public-safe downloads use the guarded route and resolve correctly.
+   recent runs load, a pasted run ID loads the requested run, and active runs resume polling.
 
-11. Check artifact filtering.
+11. Verify failed, empty, and loading states if available.
    Expected result:
-   `FILESYSTEM_ONLY` artifacts do not render in the UI at all.
+   loading, failed, historical, and no-history states remain operator-readable and do not show raw exceptions.
 
-12. Check network-bind protection for `LOCAL_SENSITIVE` downloads when applicable.
+12. Verify sensitive files are not exposed or downloadable:
+   - `.env`
+   - credentials
+   - local path maps
+   - DB files
+   - logs
+   - service-account-like files
    Expected result:
-   when `ALLOW_NETWORK_BIND=true`, guarded access to `LOCAL_SENSITIVE` artifacts returns `403`.
-
-13. Verify leak safety.
-    Expected result:
-    the UI does not expose coordinates, bounds, transforms, local paths, bundle environment variables, internal GRID overrides, or traceback text.
+   the UI and guarded routes do not expose these files or leak internal path/config values.
 
 ## Completion Rule
 
-The smoke test passes only when the operator can submit a run, follow it to a terminal state, review the real public-safe artifact results, use guarded downloads, and confirm no public-surface leak terms appear in the visible UI or API responses.
+The smoke test passes only when the operator can load a completed run, verify lifecycle and Goal D status history timeline behavior, inspect the full operator output tree before public outputs, download representative guarded artifacts, and confirm no sensitive files or internal-only values are exposed.
