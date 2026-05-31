@@ -348,7 +348,11 @@ async def _run_operator_output_tree_test(tmp_path: Path) -> None:
         run_dir = data_dir / "runs" / run_id
         (run_dir / "DEM_GEO8_TIFS").mkdir(parents=True, exist_ok=True)
         (run_dir / "QA" / "sar" / "intermediates").mkdir(parents=True, exist_ok=True)
+        (run_dir / "QA" / "grid_dem").mkdir(parents=True, exist_ok=True)
+        (run_dir / "full_job" / "field_ops").mkdir(parents=True, exist_ok=True)
+        (run_dir / "stacks" / "tensor_support").mkdir(parents=True, exist_ok=True)
         (run_dir / "DEM_GEO8_TIFS" / "DEM_640.tif").write_bytes(b"dem")
+        (run_dir / "QA" / "grid_dem" / "grid_guard_summary.json").write_text('{"grid":"ok"}', encoding="utf-8")
         (run_dir / "QA" / "REPORT_640_manifest.json").write_text(
             '{"reports":{"REPORT_640_Pottery_Report.tif":{"status":"not_implemented_no_source_equivalent"}}}',
             encoding="utf-8",
@@ -357,6 +361,11 @@ async def _run_operator_output_tree_test(tmp_path: Path) -> None:
             '{"stages":{"per_image_products_db":{"status":"not_implemented_no_source_equivalent"}}}',
             encoding="utf-8",
         )
+        (run_dir / "grid_manifest.json").write_text('{"grid":"internal"}', encoding="utf-8")
+        (run_dir / "stage_grid.manifest.json").write_text('{"stage":"grid"}', encoding="utf-8")
+        (run_dir / "run_status_history.json").write_text('{"events":[]}', encoding="utf-8")
+        (run_dir / "full_job" / "field_ops" / "field_ops_report.json").write_text('{"field_ops":true}', encoding="utf-8")
+        (run_dir / "stacks" / "tensor_support" / "radar_db_support_stack.npy").write_bytes(b"stack")
         (run_dir / ".env").write_text("SECRET=blocked", encoding="utf-8")
 
         async with session_factory() as session:
@@ -396,13 +405,15 @@ async def _run_operator_output_tree_test(tmp_path: Path) -> None:
             "status": "implemented",
             "download_url": f"/runs/{run_id}/outputs/download/DEM_GEO8_TIFS/DEM_640.tif",
         }
+        output_paths = {item["relative_path"] for item in body["outputs"]}
+        assert "QA/grid_dem/grid_guard_summary.json" in output_paths
+        assert "grid_manifest.json" not in output_paths
+        assert "stage_grid.manifest.json" not in output_paths
+        assert "run_status_history.json" not in output_paths
+        assert "full_job/field_ops/field_ops_report.json" not in output_paths
+        assert "stacks/tensor_support/radar_db_support_stack.npy" not in output_paths
         assert all(item["filename"] != ".env" for item in body["outputs"])
-        assert {
-            item["relative_path"] for item in body["not_implemented"]
-        } >= {
-            "REPORT_640_Pottery_Report.tif",
-            "QA/sar/intermediates/per_image_products_db",
-        }
+        assert {item["relative_path"] for item in body["not_implemented"]} == {"REPORT_640_Pottery_Report.tif"}
     finally:
         await engine.dispose()
 
@@ -567,7 +578,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "NPY_RADAR_BANDS",
             "NPY_STACKS",
             "QA",
-            "objects",
+            "root",
         } <= output_groups
         assert {
             "DEM_GEO8_TIFS/DEM_640.tif",
@@ -592,12 +603,21 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "QA/QA_GRID_dy_m_640.tif",
             "QA/QA_GRID_validmask_640.tif",
             "QA/RUN_MANIFEST.json",
+            "QA/grid_dem/grid_guard_summary.json",
+            "QA/grid_dem/dem_audit_summary.json",
+            "QA/grid_dem/drift_audit.csv",
+            "QA/sar/sar_pair_diagnostics.json",
+            "QA/sar/sar_summary.csv",
+            "QA/sar/sar_nodata_audit.csv",
+            "QA/sar/sar_alignment_summary.json",
             "QA/sar/intermediates/sar_intermediate_manifest.json",
             "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
             "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
             "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
             "QA/sar/intermediates/post_rtc/final_angle.npy",
             "QA/stacks/secret_layers_manifest.json",
+            "QA/stacks/s2_indices_summary.json",
+            "QA/stacks/thermal_summary.json",
             "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
             "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif",
             "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif",
@@ -607,23 +627,43 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "REPORT_640_Pottery_Report.tif",
             "REPORT_640_Mass_Report.tif",
             "REPORT_640_FINAL_Zero_Point_Targets.tif",
+            "NDVI.tif",
+            "NDWI.tif",
+            "NDMI.tif",
+            "NBR.tif",
+            "IRONOX.tif",
+            "IRON_SWIR.tif",
+            "BSI.tif",
+            "lst.tif",
+            "pca_anomaly.tif",
+            "pca_eigenvalues.json",
+            "hypercube.tif",
+            "hypercube.npy",
+            "hypercube_band_order.csv",
+            "hypercube_band_stats.csv",
+            "hypercube_norm_params.csv",
             "objects_index.csv",
             "clusters_summary.csv",
-            "objects/object_mask.npy",
             "alignment_qa.json",
+            "alignment_audit.csv",
+            "alignment_mask_selection.json",
         } <= output_paths
-        assert {
-            "QA/sar/intermediates/per_image_products_db",
-            "QA/sar/intermediates/pair_median",
-            "QA/sar/intermediates/final_median_pre_rtc",
-            "QA/sar/intermediates/post_sample_pre_rtc",
-        } <= not_implemented_paths
+        assert not not_implemented_paths
         assert not (not_implemented_paths & {
             "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
             "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
             "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
             "QA/sar/intermediates/post_rtc/final_angle.npy",
         })
+        assert not ({
+            "grid_manifest.json",
+            "run_status_history.json",
+            "full_job/field_ops/field_ops_report.json",
+            "kmz/site_location.kmz",
+            "objects/object_mask.npy",
+            "npy_radar_bands/VV_dB.npy",
+            "stage_hypercube.manifest.json",
+        } & output_paths)
         assert not any(path.startswith("qa/") for path in output_paths | not_implemented_paths)
         assert all(item["status"] == "implemented" for item in outputs)
         assert all(item["download_url"].startswith(f"/runs/{run_id}/outputs/download/") for item in outputs)
@@ -670,19 +710,46 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "QA/QA_GRID_dy_m_640.tif": b"dy",
         "QA/QA_GRID_validmask_640.tif": b"mask",
         "QA/RUN_MANIFEST.json": b'{"manifest":"ok"}',
+        "QA/grid_dem/grid_guard_summary.json": b'{"grid":"ok"}',
+        "QA/grid_dem/dem_audit_summary.json": b'{"dem":"ok"}',
+        "QA/grid_dem/drift_audit.csv": b"artifact_name,passes_alignment\nDEM_640.tif,true\n",
+        "QA/sar/sar_pair_diagnostics.json": b'{"pairs":[]}',
+        "QA/sar/sar_summary.csv": b"band_name,mean\nVV_dB,1\n",
+        "QA/sar/sar_nodata_audit.csv": b"band_name,nodata_fraction\nVV_dB,0.0\n",
+        "QA/sar/sar_alignment_summary.json": b'{"all_shapes_match": true}',
         "QA/sar/intermediates/post_rtc/final_VV_dB.npy": b"final-vv",
         "QA/sar/intermediates/post_rtc/final_VH_dB.npy": b"final-vh",
         "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy": b"final-log",
         "QA/sar/intermediates/post_rtc/final_angle.npy": b"final-angle",
+        "QA/stacks/s2_indices_summary.json": b'{"indices":"ok"}',
+        "QA/stacks/thermal_summary.json": b'{"thermal":"ok"}',
         "objects_index.csv": b"object_id\n1\n",
         "clusters_summary.csv": b"cluster_id\n1\n",
         "objects/object_mask.npy": b"mask",
         "alignment_qa.json": b'{"pass": true}',
+        "alignment_audit.csv": b"artifact_name,passes_alignment\nDEM_640.tif,true\n",
+        "alignment_mask_selection.json": b'{"anchor_artifact":"DEM_640.tif"}',
+        "NDVI.tif": b"ndvi",
+        "NDWI.tif": b"ndwi",
+        "NDMI.tif": b"ndmi",
+        "NBR.tif": b"nbr",
+        "IRONOX.tif": b"ironox",
+        "IRON_SWIR.tif": b"ironswir",
+        "BSI.tif": b"bsi",
+        "lst.tif": b"lst",
+        "pca_anomaly.tif": b"pca",
+        "pca_eigenvalues.json": b'{"eigenvalues":[1.0]}',
+        "hypercube.tif": b"hypercube-tif",
+        "hypercube.npy": b"hypercube-npy",
+        "hypercube_band_order.csv": b"band_index,band_name\n1,NDVI\n",
+        "hypercube_band_stats.csv": b"band_name,min,max\nNDVI,0,1\n",
+        "hypercube_norm_params.csv": b"band_name,mean,std\nNDVI,0.5,0.1\n",
         "grid_manifest.json": b'{"grid":"ok"}',
         "run_status_history.json": b'{"events":[]}',
-        "QA/sar/sar_summary.csv": b"band_name,mean\nVV_dB,1\n",
         "full_job/field_ops/field_ops_report.json": b'{"field_ops": true}',
         "kmz/site_location.kmz": b"kmz",
+        "npy_radar_bands/VV_dB.npy": b"internal-vv",
+        "stage_hypercube.manifest.json": b'{"stage":"hypercube"}',
         "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif": b"gold",
         "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif": b"silver",
         "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif": b"tunnel",

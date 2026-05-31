@@ -75,7 +75,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 13. Verify Advanced / unavailable outputs.
     Expected result:
-    unavailable or not-implemented outputs are secondary and collapsed under `Advanced / unavailable outputs`; detailed reason text is visible only when expanded.
+    unavailable or not-implemented outputs are secondary and collapsed under `Advanced / unavailable outputs`; legacy notebook-only SAR pre-RTC intermediates do not appear as operator deliverables, and detailed reason text is visible only when expanded.
 
 14. Download representative artifacts from `Run outputs`, `Key Downloads`, or the `Exports` tab:
    - `DEM_GEO8_TIFS/DEM_640.tif`
@@ -109,7 +109,20 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    the UI and guarded routes do not expose these files or leak internal path/config values.
 
-19. If browser automation is unavailable, record that literal browser `Ctrl+F5` and click-through remains operator-required.
+19. Verify internal debug/runtime files are not shown as operator deliverables:
+   - `grid_manifest.json`
+   - `run_status_history.json`
+   - `stage_*.manifest.json`
+   - `npy_radar_bands/*.npy`
+   - `stacks/tensor_support/*`
+   - `full_job/field_ops/*`
+   - `kmz/*`
+   - `objects/object_mask.npy`
+   - `objects/object_patches/*.npy`
+   Expected result:
+   these internal or exact-context artifacts do not appear in the operator output browser even if they exist on disk.
+
+20. If browser automation is unavailable, record that literal browser `Ctrl+F5` and click-through remains operator-required.
     Expected result:
     the smoke record explicitly distinguishes automated HTTP/static checks from manual browser visual checks.
 

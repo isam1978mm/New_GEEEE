@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -31,6 +32,49 @@ SENSITIVE_NAME_PARTS = (
     "private_key",
 )
 STATUS_NOT_IMPLEMENTED = "not_implemented_no_source_equivalent"
+OPERATOR_VISIBLE_PATTERNS = (
+    "DEM_GEO8_TIFS/*",
+    "GEOTIFF_RADAR_BANDS/*",
+    "NPY_RADAR_BANDS/*",
+    "NPY_STACKS/*",
+    "AI_READY_640/*.tif",
+    "REPORT_640_*.tif",
+    "QA/RUN_MANIFEST.json",
+    "QA/REPORT_640_manifest.json",
+    "QA/QA_GRID_*.tif",
+    "QA/grid_dem/grid_guard_summary.json",
+    "QA/grid_dem/dem_audit_summary.json",
+    "QA/grid_dem/drift_audit.csv",
+    "QA/sar/sar_pair_diagnostics.json",
+    "QA/sar/sar_summary.csv",
+    "QA/sar/sar_nodata_audit.csv",
+    "QA/sar/sar_alignment_summary.json",
+    "QA/sar/intermediates/sar_intermediate_manifest.json",
+    "QA/sar/intermediates/post_rtc/*.npy",
+    "QA/stacks/secret_layers_manifest.json",
+    "QA/stacks/s2_indices_summary.json",
+    "QA/stacks/thermal_summary.json",
+    "NDVI.tif",
+    "NDWI.tif",
+    "NDMI.tif",
+    "NBR.tif",
+    "IRONOX.tif",
+    "IRON_SWIR.tif",
+    "BSI.tif",
+    "lst.tif",
+    "pca_anomaly.tif",
+    "pca_eigenvalues.json",
+    "hypercube.tif",
+    "hypercube.npy",
+    "hypercube_band_order.csv",
+    "hypercube_band_stats.csv",
+    "hypercube_norm_params.csv",
+    "objects_index.csv",
+    "clusters_summary.csv",
+    "alignment_qa.json",
+    "alignment_audit.csv",
+    "alignment_mask_selection.json",
+)
 
 
 def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOutputTreePublic:
@@ -41,7 +85,7 @@ def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOu
     if run_dir.is_dir():
         for path in sorted((item for item in run_dir.rglob("*") if item.is_file()), key=_relative_sort_key(run_dir)):
             relative_path = path.relative_to(run_dir).as_posix()
-            if not is_safe_operator_output_relative_path(relative_path):
+            if not is_operator_visible_relative_path(relative_path):
                 continue
             if relative_path in not_implemented_paths:
                 continue
@@ -55,7 +99,7 @@ def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOu
 
 
 def resolve_operator_output_path(settings: Settings, run_id: str, relative_path: str) -> Path:
-    if not is_safe_operator_output_relative_path(relative_path):
+    if not is_operator_visible_relative_path(relative_path):
         raise ArtifactServeViolation()
     if relative_path in {item.relative_path for item in _collect_not_implemented(settings=settings, run_id=run_id)}:
         raise ArtifactServeViolation()
@@ -96,6 +140,13 @@ def is_safe_operator_output_relative_path(relative_path: str) -> bool:
     return True
 
 
+def is_operator_visible_relative_path(relative_path: str) -> bool:
+    normalized = relative_path.replace("\\", "/")
+    if not is_safe_operator_output_relative_path(normalized):
+        return False
+    return any(fnmatchcase(normalized, pattern) for pattern in OPERATOR_VISIBLE_PATTERNS)
+
+
 def _to_output_file(*, run_id: str, run_dir: Path, path: Path) -> OperatorOutputFilePublic:
     relative_path = path.relative_to(run_dir).as_posix()
     directory = path.parent.relative_to(run_dir).as_posix()
@@ -122,7 +173,10 @@ def _collect_not_implemented(*, settings: Settings, run_id: str) -> list[Operato
     items.extend(_read_sar_intermediate_manifest(run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"))
     items.extend(_read_hypercube_manifest(run_dir / "stage_hypercube.manifest.json"))
     items.extend(_read_secret_layers_manifest(run_dir / "QA" / "stacks" / "secret_layers_manifest.json"))
-    return sorted(items, key=lambda item: item.relative_path)
+    return sorted(
+        (item for item in items if is_operator_visible_relative_path(item.relative_path)),
+        key=lambda item: item.relative_path,
+    )
 
 
 def _read_report_640_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
