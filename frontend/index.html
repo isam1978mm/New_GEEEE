@@ -38,19 +38,6 @@
               <button class="submit-button" id="submit-run" type="submit" disabled>Queue run</button>
             </form>
           </div>
-          <div class="run-status-card" id="run-status-card" aria-live="polite">
-            <div class="run-status-head">
-              <p class="selection-label">Run lifecycle</p>
-              <button class="refresh-button is-hidden" id="run-refresh" type="button">Manual refresh</button>
-            </div>
-            <p class="run-status-line"><span class="run-status-key">Run ID</span><span id="run-id-value">Not started</span></p>
-            <p class="run-status-line"><span class="run-status-key">State</span><span id="run-state-value">Idle</span></p>
-            <p class="run-status-line"><span class="run-status-key">Detail</span><span id="run-detail-value">Submit a run to begin polling.</span></p>
-            <p class="run-status-line"><span class="run-status-key">Current stage</span><span id="current-stage-value">Not started</span></p>
-            <ul class="stage-progress-list" id="stage-progress-list"></ul>
-            <p class="selection-label">Status history</p>
-            <ul class="status-history-list" id="status-history-list"></ul>
-          </div>
           <p class="map-legend">
             The target point is entered directly. External map tiles are not used.
           </p>
@@ -59,64 +46,7 @@
 
         <section class="panel results-panel" aria-labelledby="results-title">
           <div class="panel-head">
-            <h2 id="results-title">Results</h2>
-          </div>
-          <p class="panel-copy">
-            The frontend excludes experimental outputs and Class IV filesystem-only artifacts.
-          </p>
-          <p class="panel-copy">
-            Parity scope: production runs use the app-authoritative GRID. Notebook-exact GRID is validation/replay-only;
-            fresh-ROI notebook parity is not claimed, and app-only outputs are not parity failures.
-          </p>
-          <div class="output-guidance" aria-labelledby="output-guidance-title">
-            <h3 id="output-guidance-title">What outputs will I get?</h3>
-            <p>
-              The UI shows only public-safe artifacts. Full local outputs live under
-              <code>data/runs/&lt;run_id&gt;/</code>, and downloads use guarded links.
-            </p>
-            <p>
-              <code>FILESYSTEM_ONLY</code> and internal outputs are not shown here. Outputs may include
-              GRID/DEM, SAR, Sentinel-2 indices, DEM derivatives, thermal, hypercube/PCA,
-              object extraction, and alignment QA. See <code>docs/RUN_OUTPUTS.md</code>.
-            </p>
-          </div>
-          <div class="output-tree-panel" aria-labelledby="output-tree-title">
-            <div class="output-tree-head">
-              <h3 id="output-tree-title">Output Browser</h3>
-              <span class="status-chip" id="output-tree-count">0 files</span>
-            </div>
-            <p class="history-status">
-              The Full operator output tree appears here after a completed run.
-            </p>
-            <div class="key-downloads-panel" aria-labelledby="key-downloads-title">
-              <h4 id="key-downloads-title">Key Downloads</h4>
-              <ul class="key-downloads-list" id="key-downloads-list"></ul>
-            </div>
-            <div class="output-browser-controls" aria-label="Output browser controls">
-              <label class="output-filter-field" for="output-filter">
-                <span class="run-field output-filter-label">Filter outputs</span>
-                <input class="run-input output-filter-input" id="output-filter" name="output-filter" type="search" autocomplete="off" placeholder="Filter by filename or path">
-              </label>
-              <button class="refresh-button" id="expand-output-groups" type="button">Expand all</button>
-              <button class="refresh-button" id="collapse-output-groups" type="button">Collapse all</button>
-            </div>
-            <div class="output-browser-scroll" aria-label="Grouped output browser">
-              <ul class="output-tree-list" id="output-tree-list"></ul>
-            </div>
-            <details class="not-implemented-panel" id="not-implemented-panel">
-              <summary id="not-implemented-title">Not implemented in current app output set</summary>
-              <ul class="not-implemented-list" id="not-implemented-list"></ul>
-            </details>
-          </div>
-          <div class="run-outputs" aria-labelledby="run-outputs-title">
-            <div class="run-outputs-head">
-              <h3 id="run-outputs-title">Run outputs</h3>
-              <span class="status-chip" id="artifact-count">0 artifacts</span>
-            </div>
-            <p class="history-status">
-              Public-safe artifacts appear here when a run completes.
-            </p>
-            <ul class="artifact-list" id="artifact-list"></ul>
+            <h2 id="results-title">Run Dashboard</h2>
           </div>
           <div class="run-browser" aria-labelledby="run-browser-title">
             <div class="run-browser-head">
@@ -127,11 +57,119 @@
               <label class="run-field" for="run-lookup-id">Run ID</label>
               <div class="lookup-row">
                 <input class="run-input" id="run-lookup-id" name="run_id" type="text" autocomplete="off" placeholder="Paste run ID">
-                <button class="submit-button lookup-button" type="submit">Load run</button>
+                <button class="submit-button lookup-button" type="submit">Open run</button>
               </div>
             </form>
             <p class="history-status" id="history-status" aria-live="polite">Recent runs will load automatically.</p>
+            <h4 class="run-browser-subtitle">Recent Runs</h4>
             <ul class="run-history-list" id="run-history-list"></ul>
+            <details class="run-archive" id="run-archive">
+              <summary>Run Archive</summary>
+              <label class="output-filter-field" for="archive-filter">
+                <span class="run-field output-filter-label">Search archive</span>
+                <input class="run-input output-filter-input" id="archive-filter" name="archive-filter" type="search" autocomplete="off" placeholder="Filter loaded runs">
+              </label>
+              <ul class="run-history-list run-archive-list" id="run-archive-list"></ul>
+            </details>
+          </div>
+          <nav class="dashboard-tabs" aria-label="Selected run dashboard tabs">
+            <button class="tab-button is-active" id="tab-overview" type="button" data-tab="overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+            <button class="tab-button" id="tab-exports" type="button" data-tab="exports" aria-controls="panel-exports" aria-selected="false">Exports</button>
+            <button class="tab-button" id="tab-status-history" type="button" data-tab="status-history" aria-controls="panel-status-history" aria-selected="false">Status History</button>
+            <button class="tab-button" id="tab-diagnostics" type="button" data-tab="diagnostics" aria-controls="panel-diagnostics" aria-selected="false">Diagnostics</button>
+          </nav>
+          <div class="tab-panels">
+            <section class="tab-panel is-active" id="panel-overview" data-panel="overview" aria-labelledby="tab-overview">
+              <div class="run-status-card" id="run-status-card" aria-live="polite">
+                <div class="run-status-head">
+                  <p class="selection-label">Run lifecycle</p>
+                  <button class="refresh-button is-hidden" id="run-refresh" type="button">Manual refresh</button>
+                </div>
+                <div class="run-status-grid">
+                  <p class="run-status-line"><span class="run-status-key">Run ID</span><span id="run-id-value">Not started</span></p>
+                  <p class="run-status-line"><span class="run-status-key">State</span><span id="run-state-value">Idle</span></p>
+                  <p class="run-status-line"><span class="run-status-key">Detail</span><span id="run-detail-value">Submit a run to begin polling.</span></p>
+                  <p class="run-status-line"><span class="run-status-key">Current stage</span><span id="current-stage-value">Not started</span></p>
+                </div>
+                <ul class="stage-progress-list" id="stage-progress-list"></ul>
+              </div>
+              <div class="status-summary-panel" aria-labelledby="status-summary-title">
+                <div class="run-outputs-head">
+                  <h3 id="status-summary-title">Status history summary</h3>
+                  <span class="status-chip" id="status-history-count">0 events</span>
+                </div>
+                <ul class="status-history-summary-list" id="status-history-summary-list"></ul>
+              </div>
+              <div class="run-outputs" aria-labelledby="run-outputs-title">
+                <div class="run-outputs-head">
+                  <h3 id="run-outputs-title">Run outputs</h3>
+                  <span class="status-chip" id="artifact-count">0 artifacts</span>
+                </div>
+                <p class="history-status">
+                  Public-safe artifacts appear here when a run completes.
+                </p>
+                <ul class="artifact-list" id="artifact-list"></ul>
+              </div>
+              <div class="key-downloads-panel" aria-labelledby="key-downloads-title">
+                <h3 id="key-downloads-title">Key Downloads</h3>
+                <ul class="key-downloads-list" id="key-downloads-list"></ul>
+              </div>
+              <details class="scope-note">
+                <summary>More info / Scope note</summary>
+                <p>
+                  The UI shows public-safe artifacts and guarded links. Full local outputs live under
+                  <code>data/runs/&lt;run_id&gt;/</code>. The Full operator output tree is available on the Exports tab.
+                </p>
+                <p>
+                  The frontend excludes experimental outputs and Class IV filesystem-only artifacts. <code>FILESYSTEM_ONLY</code>
+                  and internal outputs stay local. Output families may include GRID/DEM, SAR, Sentinel-2 indices,
+                  DEM derivatives, thermal, hypercube/PCA, object extraction, and alignment QA. See <code>docs/RUN_OUTPUTS.md</code>.
+                </p>
+              </details>
+            </section>
+            <section class="tab-panel" id="panel-exports" data-panel="exports" aria-labelledby="tab-exports" hidden>
+              <div class="output-tree-panel" aria-labelledby="output-tree-title">
+                <div class="output-tree-head">
+                  <h3 id="output-tree-title">Exports</h3>
+                  <span class="status-chip" id="output-tree-count">0 files</span>
+                </div>
+                <p class="history-status">
+                  The Full operator output tree appears here after a completed run.
+                </p>
+                <div class="output-browser-controls" aria-label="Export browser controls">
+                  <label class="output-filter-field" for="output-filter">
+                    <span class="run-field output-filter-label">Search exports</span>
+                    <input class="run-input output-filter-input" id="output-filter" name="output-filter" type="search" autocomplete="off" placeholder="Filter by filename or path">
+                  </label>
+                  <button class="refresh-button" id="expand-output-groups" type="button">Expand all</button>
+                  <button class="refresh-button" id="collapse-output-groups" type="button">Collapse all</button>
+                </div>
+                <div class="output-browser-scroll" aria-label="Grouped output browser">
+                  <ul class="output-tree-list" id="output-tree-list"></ul>
+                </div>
+                <details class="not-implemented-panel" id="not-implemented-panel">
+                  <summary id="not-implemented-title">Advanced / unavailable outputs</summary>
+                  <p class="history-status">Unavailable in this run. Expand for notebook-compatible outputs that are absent, ambiguous, or intentionally local-only.</p>
+                  <ul class="not-implemented-list" id="not-implemented-list"></ul>
+                </details>
+              </div>
+            </section>
+            <section class="tab-panel" id="panel-status-history" data-panel="status-history" aria-labelledby="tab-status-history" hidden>
+              <details class="status-history-details" id="status-history-details">
+                <summary id="status-history-summary-label">Status history (0 events)</summary>
+                <ul class="status-history-list" id="status-history-list"></ul>
+              </details>
+            </section>
+            <section class="tab-panel" id="panel-diagnostics" data-panel="diagnostics" aria-labelledby="tab-diagnostics" hidden>
+              <div class="diagnostics-note">
+                <h3>Diagnostics</h3>
+                <p>
+                  Parity closeout: 0 unexplained failures. Accepted xfail: <code>RADAR_STACK_HWC_640_app.npy</code>
+                  inherits a tiny upstream SAR dB residual. No tolerance relaxation, unapproved reference refresh,
+                  or science change is applied from this dashboard.
+                </p>
+              </div>
+            </section>
           </div>
         </section>
       </main>

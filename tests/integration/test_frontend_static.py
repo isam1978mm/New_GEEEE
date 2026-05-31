@@ -23,21 +23,29 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "Run lifecycle" in response.text
     assert "Current stage" in response.text
     assert "stage-progress-list" in response.text
+    assert "dashboard-tabs" in response.text
+    assert "Overview" in response.text
+    assert "Exports" in response.text
     assert "Status history" in response.text
+    assert "Diagnostics" in response.text
     assert "status-history-list" in response.text
-    assert "What outputs will I get?" in response.text
-    assert "Output Browser" in response.text
+    assert "Status history summary" in response.text
+    assert "status-history-summary-list" in response.text
+    assert "More info" in response.text
+    assert "Scope note" in response.text
     assert "Full operator output tree" in response.text
-    assert response.text.index("Full operator output tree") < response.text.index("Run outputs")
+    assert response.text.index("Run outputs") < response.text.index("Full operator output tree")
     assert "Full operator output tree appears here after a completed run." in response.text
     assert "Key Downloads" in response.text
     assert "key-downloads-list" in response.text
     assert "output-filter" in response.text
-    assert "Filter outputs" in response.text
+    assert "Search exports" in response.text
     assert "Expand all" in response.text
     assert "Collapse all" in response.text
     assert "Grouped output browser" in response.text
     assert "output-tree-list" in response.text
+    assert "Advanced / unavailable outputs" in response.text
+    assert "Unavailable in this run" in response.text
     assert "not-implemented-list" in response.text
     assert "Run outputs" in response.text
     assert "Public-safe artifacts appear here when a run completes." in response.text
@@ -56,8 +64,11 @@ def test_frontend_spa_shell_is_served_locally_without_external_assets() -> None:
     assert "docs/RUN_OUTPUTS.md" in response.text
     assert 'href="docs/RUN_OUTPUTS.md"' not in response.text
     assert "Run lookup" in response.text
+    assert "Recent Runs" in response.text
+    assert "Run Archive" in response.text
+    assert "archive-filter" in response.text
     assert "Refresh runs" in response.text
-    assert "Load run" in response.text
+    assert "Open run" in response.text
     assert "Recent runs will load automatically." in response.text
     assert "Manual Pin Workspace" not in response.text
     assert "Stage a local point" not in response.text
@@ -103,6 +114,13 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "target-lon" in js_response.text
     assert "renderStageProgress" in js_response.text
     assert "renderStatusHistory" in js_response.text
+    assert "renderStatusHistorySummary" in js_response.text
+    assert "shouldExpandStatusHistory" in js_response.text
+    assert "setActiveDashboardTab" in js_response.text
+    assert "DASHBOARD_TABS" in js_response.text
+    assert "STAGE_LABEL_SHORT_NAMES" in js_response.text
+    assert "STATUS_ICON_BY_STATE" in js_response.text
+    assert "renderRunArchive" in js_response.text
     assert "syncRecentRunFromDetail" in js_response.text
     assert "describeOutputGroup" in js_response.text
     assert "describeArtifact" in js_response.text
@@ -126,6 +144,7 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "Detailed stage progress is unavailable for this failed run." in js_response.text
     assert "Waiting for first stage update." in js_response.text
     assert "No detailed status history is available for this run." in js_response.text
+    assert "No status history summary is available yet." in js_response.text
     assert "Run completed." in js_response.text
     assert "Run ended in a failed state." in js_response.text
     assert "Stage progress is not available yet." not in js_response.text
@@ -145,7 +164,7 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "Outputs are loading..." in js_response.text
     assert "No output files found for this run." in js_response.text
     assert "Could not load full output tree." in js_response.text
-    assert "Not implemented in current app output set." in js_response.text
+    assert "Unavailable in this run" in js_response.text
     assert "QA/RUN_MANIFEST.json" in js_response.text
     assert "DEM_GEO8_TIFS/DEM_640.tif" in js_response.text
     assert "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif" in js_response.text
@@ -169,6 +188,10 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert css_response.status_code == 200
     assert "text/css" in css_response.headers["content-type"]
     assert "key-downloads-panel" in css_response.text
+    assert "dashboard-tabs" in css_response.text
+    assert "tab-panel" in css_response.text
+    assert "status-history-details" in css_response.text
+    assert "run-archive" in css_response.text
     assert "output-browser-scroll" in css_response.text
     assert "output-file-table" in css_response.text
     assert "stage-status-done" in css_response.text

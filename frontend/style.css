@@ -63,7 +63,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 1.35fr 0.9fr;
+  grid-template-columns: 0.76fr 1.44fr;
   gap: 20px;
 }
 
@@ -98,7 +98,7 @@ body {
 
 .map-toolbar {
   display: grid;
-  grid-template-columns: 0.95fr 1.2fr;
+  grid-template-columns: 1fr;
   gap: 14px;
   margin-top: 18px;
 }
@@ -134,9 +134,8 @@ body {
 }
 
 .run-status-card {
-  margin-top: 14px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .run-status-head {
@@ -153,6 +152,12 @@ body {
   gap: 16px;
   margin: 0;
   color: var(--ink);
+}
+
+.run-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
 }
 
 .run-status-key {
@@ -187,7 +192,7 @@ body {
 .stage-progress-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 5px;
   margin: 4px 0 0;
   padding: 0;
   list-style: none;
@@ -207,12 +212,14 @@ body {
 .stage-progress-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   max-width: 100%;
-  padding: 6px 10px;
+  padding: 3px 7px;
   border-radius: 999px;
   background: rgba(255, 252, 245, 0.84);
   border: 1px solid rgba(31, 43, 34, 0.1);
+  font-size: 0.74rem;
+  line-height: 1.1;
 }
 
 .stage-status-done {
@@ -250,6 +257,11 @@ body {
 .status-history-label {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.stage-progress-icon {
+  font-weight: 800;
+  line-height: 1;
 }
 
 .stage-progress-status,
@@ -326,14 +338,89 @@ kbd {
 .run-browser,
 .run-outputs,
 .output-tree-panel,
-.not-implemented-panel {
+.not-implemented-panel,
+.status-summary-panel,
+.diagnostics-note,
+.scope-note {
   display: grid;
   gap: 12px;
-  margin: 18px 0;
+  margin: 12px 0;
   padding: 16px;
   border: 1px solid rgba(31, 43, 34, 0.08);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.58);
+}
+
+.dashboard-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(255, 252, 245, 0.74);
+  border: 1px solid rgba(31, 43, 34, 0.08);
+}
+
+.tab-button {
+  flex: 1 1 120px;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tab-button.is-active {
+  border-color: rgba(107, 52, 24, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--accent-strong);
+}
+
+.tab-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.scope-note {
+  padding: 12px 14px;
+  color: var(--muted);
+}
+
+.scope-note summary,
+.run-archive summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.status-history-details {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(31, 43, 34, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.status-history-details summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.status-history-summary-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .run-browser-head,
@@ -355,7 +442,9 @@ kbd {
 .run-browser-head h3,
 .run-outputs-head h3,
 .output-tree-head h3,
-.not-implemented-panel h4 {
+.not-implemented-panel h4,
+.key-downloads-panel h3,
+.status-summary-panel h3 {
   margin: 0;
   font-size: 1rem;
 }
@@ -368,6 +457,20 @@ kbd {
 .lookup-form {
   display: grid;
   gap: 8px;
+}
+
+.run-browser-subtitle {
+  margin: 2px 0 -4px;
+  font-size: 0.9rem;
+}
+
+.run-archive {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(31, 43, 34, 0.08);
+  border-radius: 8px;
+  background: rgba(247, 242, 232, 0.62);
 }
 
 .lookup-row {
@@ -390,7 +493,7 @@ kbd {
 
 .run-history-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -398,7 +501,7 @@ kbd {
 
 .run-history-item {
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: rgba(255, 252, 245, 0.8);
   border: 1px solid rgba(31, 43, 34, 0.08);
@@ -409,18 +512,26 @@ kbd {
 }
 
 .run-history-id,
-.run-history-name {
+.run-history-name,
+.run-history-time {
   display: block;
   overflow-wrap: anywhere;
 }
 
 .run-history-id {
-  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .run-history-name {
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.run-history-time {
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.76rem;
 }
 
 .run-history-status {
@@ -431,7 +542,7 @@ kbd {
 
 .artifact-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -440,10 +551,10 @@ kbd {
 .artifact-card {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 14px 16px;
-  border-radius: 18px;
+  padding: 9px 11px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(31, 43, 34, 0.08);
 }
@@ -466,9 +577,9 @@ kbd {
 
 .artifact-description {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   line-height: 1.35;
 }
 
@@ -512,7 +623,7 @@ kbd {
 
 .key-downloads-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -523,7 +634,7 @@ kbd {
   display: grid;
   gap: 4px;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: 1px solid rgba(31, 43, 34, 0.08);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.62);

@@ -45,6 +45,32 @@
     "Root files / app science outputs",
   ];
 
+  const DASHBOARD_TABS = ["overview", "exports", "status-history", "diagnostics"];
+
+  const STAGE_LABEL_SHORT_NAMES = {
+    "Sentinel-2 indices": "S2",
+    "DEM derivatives": "DEM deriv.",
+    "Object extraction": "Objects",
+    "Alignment QA": "Align QA",
+    "Location exports": "Locations",
+    "Field ops exports": "Field ops",
+    "GPS comparison": "GPS",
+    "PCA anomaly": "PCA",
+    "Report 640": "Rpt640",
+    "Feature stacks": "Stacks",
+  };
+
+  const STATUS_ICON_BY_STATE = {
+    done: "ok",
+    pending: "o",
+    queued: "o",
+    running: ">",
+    failed: "!",
+    stale_failed: "!",
+    skipped: "-",
+    cancelled: "-",
+  };
+
   const state = {
     currentRunId: null,
     currentRunStatus: null,
@@ -55,6 +81,8 @@
     currentOutputTreePayload: null,
     outputFilter: "",
     outputGroupsExpanded: false,
+    activeDashboardTab: "overview",
+    archiveFilter: "",
   };
 
   function isVisibleArtifact(artifact) {
@@ -279,7 +307,7 @@
 
       const status = document.createElement("span");
       status.className = "not-implemented-status";
-      status.textContent = "Not implemented in current app output set.";
+      status.textContent = "Unavailable in this run.";
 
       head.appendChild(name);
       head.appendChild(status);
@@ -529,6 +557,42 @@
     return "Idle";
   }
 
+  function shortStageLabel(label) {
+    return STAGE_LABEL_SHORT_NAMES[label] || label;
+  }
+
+  function statusIcon(status) {
+    return STATUS_ICON_BY_STATE[status] || "o";
+  }
+
+  function shouldExpandStatusHistory(status) {
+    return status === "running" || status === "failed" || status === "stale_failed";
+  }
+
+  function setActiveDashboardTab(tabName) {
+    const nextTab = DASHBOARD_TABS.includes(tabName) ? tabName : "overview";
+    state.activeDashboardTab = nextTab;
+
+    for (const button of document.querySelectorAll(".tab-button[data-tab]")) {
+      const isActive = button.getAttribute("data-tab") === nextTab;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    }
+
+    for (const panel of document.querySelectorAll(".tab-panel[data-panel]")) {
+      const isActive = panel.getAttribute("data-panel") === nextTab;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+    }
+  }
+
+  function formatRunTimestamp(run) {
+    if (!run) {
+      return "";
+    }
+    return run.updated_at || run.created_at || "";
+  }
+
   function syncRecentRunFromDetail(runDetail) {
     if (!runDetail || typeof runDetail.id !== "string" || typeof runDetail.status !== "string") {
       return;
@@ -620,34 +684,45 @@
       item.title = `${stage.label}: ${stage.status}`;
       item.setAttribute("aria-label", `${stage.label}: ${stage.status}`);
 
+      const icon = document.createElement("span");
+      icon.className = "stage-progress-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = statusIcon(stage.status);
+
       const label = document.createElement("span");
       label.className = "stage-progress-label";
-      label.textContent = stage.label;
+      label.textContent = shortStageLabel(stage.label);
 
-      const status = document.createElement("span");
-      status.className = "stage-progress-status";
-      status.textContent = stage.status;
-
+      item.appendChild(icon);
       item.appendChild(label);
-      item.appendChild(status);
       list.appendChild(item);
     }
   }
 
   function renderStatusHistory(runDetail) {
     const list = document.getElementById("status-history-list");
+    const details = document.getElementById("status-history-details");
+    const summary = document.getElementById("status-history-summary-label");
     if (!list) {
       return;
     }
 
     const history = Array.isArray(runDetail && runDetail.history) ? runDetail.history : [];
+    const runStatus = typeof (runDetail && runDetail.status) === "string" ? runDetail.status : null;
     list.innerHTML = "";
+    if (summary) {
+      summary.textContent = `Status history (${history.length} event${history.length === 1 ? "" : "s"})`;
+    }
+    if (details) {
+      details.open = shouldExpandStatusHistory(runStatus);
+    }
 
     if (history.length === 0) {
       const item = document.createElement("li");
       item.className = "status-history-item status-history-empty";
       item.textContent = "No detailed status history is available for this run.";
       list.appendChild(item);
+      renderStatusHistorySummary(history);
       return;
     }
 
@@ -657,6 +732,46 @@
       }
       const item = document.createElement("li");
       item.className = "status-history-item";
+
+      const label = document.createElement("span");
+      label.className = "status-history-label";
+      label.textContent = event.label;
+
+      const message = document.createElement("span");
+      message.className = "status-history-message";
+      message.textContent = event.message;
+
+      item.appendChild(label);
+      item.appendChild(message);
+      list.appendChild(item);
+    }
+    renderStatusHistorySummary(history);
+  }
+
+  function renderStatusHistorySummary(history) {
+    const list = document.getElementById("status-history-summary-list");
+    const count = document.getElementById("status-history-count");
+    const events = Array.isArray(history) ? history : [];
+    if (!list) {
+      return;
+    }
+    list.innerHTML = "";
+    if (count) {
+      count.textContent = `${events.length} event${events.length === 1 ? "" : "s"}`;
+    }
+    if (events.length === 0) {
+      const item = document.createElement("li");
+      item.className = "status-history-item status-history-empty";
+      item.textContent = "No status history summary is available yet.";
+      list.appendChild(item);
+      return;
+    }
+    for (const event of events.slice(-3)) {
+      if (!event || typeof event.label !== "string" || typeof event.message !== "string") {
+        continue;
+      }
+      const item = document.createElement("li");
+      item.className = "status-history-item status-history-summary-item";
 
       const label = document.createElement("span");
       label.className = "status-history-label";
@@ -762,6 +877,84 @@
     }
   }
 
+  function createRunHistoryItem(run) {
+    const item = document.createElement("li");
+    item.className = "run-history-item";
+
+    const meta = document.createElement("span");
+    meta.className = "run-history-meta";
+
+    const name = document.createElement("span");
+    name.className = "run-history-name";
+    name.textContent = typeof run.name === "string" && run.name.trim() ? run.name : "Unnamed run";
+
+    const id = document.createElement("span");
+    id.className = "run-history-id";
+    id.textContent = run.id;
+
+    const time = document.createElement("span");
+    time.className = "run-history-time";
+    time.textContent = formatRunTimestamp(run);
+
+    const status = document.createElement("span");
+    status.className = "run-history-status";
+    status.textContent = describeRunStatus(run.status);
+
+    const button = document.createElement("button");
+    button.className = "refresh-button";
+    button.type = "button";
+    button.textContent = "Open";
+    button.addEventListener("click", function () {
+      void selectRun(run.id);
+    });
+
+    meta.appendChild(name);
+    meta.appendChild(id);
+    if (time.textContent) {
+      meta.appendChild(time);
+    }
+    item.appendChild(meta);
+    item.appendChild(status);
+    item.appendChild(button);
+    return item;
+  }
+
+  function renderRunArchive(runs) {
+    const list = document.getElementById("run-archive-list");
+    if (!list) {
+      return;
+    }
+
+    list.innerHTML = "";
+    const entries = Array.isArray(runs) ? runs.slice(3) : [];
+    const query = state.archiveFilter.trim().toLowerCase();
+    const filteredEntries = entries.filter(function (run) {
+      const haystack = `${run.id || ""} ${run.name || ""} ${run.status || ""} ${formatRunTimestamp(run)}`.toLowerCase();
+      return !query || haystack.includes(query);
+    });
+    if (entries.length === 0) {
+      const item = document.createElement("li");
+      item.className = "status-history-item status-history-empty";
+      item.textContent = "No older loaded runs are available from the current API response.";
+      list.appendChild(item);
+      return;
+    }
+    if (filteredEntries.length === 0) {
+      const item = document.createElement("li");
+      item.className = "status-history-item status-history-empty";
+      item.textContent = "No archived runs match the current filter.";
+      list.appendChild(item);
+      return;
+    }
+
+    for (const run of filteredEntries) {
+      if (!run || typeof run.id !== "string") {
+        continue;
+      }
+      list.appendChild(createRunHistoryItem(run));
+    }
+  }
+
   function renderRunHistory(runs) {
     const list = document.getElementById("run-history-list");
     if (!list) {
@@ -771,48 +964,18 @@
     list.innerHTML = "";
     if (!Array.isArray(runs) || runs.length === 0) {
       setHistoryStatus("No recent runs found.");
+      renderRunArchive([]);
       return;
     }
 
-    setHistoryStatus(`${runs.length} recent run${runs.length === 1 ? "" : "s"} available.`);
-    for (const run of runs) {
+    setHistoryStatus(`${runs.length} loaded run${runs.length === 1 ? "" : "s"} available. Showing the latest 3.`);
+    for (const run of runs.slice(0, 3)) {
       if (!run || typeof run.id !== "string") {
         continue;
       }
-
-      const item = document.createElement("li");
-      item.className = "run-history-item";
-
-      const meta = document.createElement("span");
-      meta.className = "run-history-meta";
-
-      const id = document.createElement("span");
-      id.className = "run-history-id";
-      id.textContent = run.id;
-
-      const name = document.createElement("span");
-      name.className = "run-history-name";
-      name.textContent = typeof run.name === "string" && run.name.trim() ? run.name : "Unnamed run";
-
-      const status = document.createElement("span");
-      status.className = "run-history-status";
-      status.textContent = describeRunStatus(run.status);
-
-      const button = document.createElement("button");
-      button.className = "refresh-button";
-      button.type = "button";
-      button.textContent = "Load";
-      button.addEventListener("click", function () {
-        void selectRun(run.id);
-      });
-
-      meta.appendChild(id);
-      meta.appendChild(name);
-      item.appendChild(meta);
-      item.appendChild(status);
-      item.appendChild(button);
-      list.appendChild(item);
+      list.appendChild(createRunHistoryItem(run));
     }
+    renderRunArchive(runs);
   }
 
   async function loadRecentRuns() {
@@ -1064,6 +1227,7 @@
     const lookupInput = document.getElementById("run-lookup-id");
     const recentRunsRefresh = document.getElementById("recent-runs-refresh");
     const outputFilter = document.getElementById("output-filter");
+    const archiveFilter = document.getElementById("archive-filter");
     const expandOutputGroups = document.getElementById("expand-output-groups");
     const collapseOutputGroups = document.getElementById("collapse-output-groups");
     if (
@@ -1075,6 +1239,7 @@
       !lookupInput ||
       !recentRunsRefresh ||
       !outputFilter ||
+      !archiveFilter ||
       !expandOutputGroups ||
       !collapseOutputGroups
     ) {
@@ -1102,6 +1267,15 @@
         renderOutputTree(state.currentOutputTreePayload);
       }
     });
+    archiveFilter.addEventListener("input", function () {
+      state.archiveFilter = archiveFilter.value.trim();
+      renderRunArchive(state.recentRuns);
+    });
+    for (const button of document.querySelectorAll(".tab-button[data-tab]")) {
+      button.addEventListener("click", function () {
+        setActiveDashboardTab(button.getAttribute("data-tab"));
+      });
+    }
     expandOutputGroups.addEventListener("click", function () {
       state.outputGroupsExpanded = true;
       if (state.currentOutputTreePayload) {
@@ -1135,6 +1309,7 @@
     });
     renderStageProgress({ current_stage: null, stages: [] });
     renderStatusHistory({ history: [] });
+    setActiveDashboardTab("overview");
     renderOutputTreeMessage("Full output tree is available after a completed run.");
     renderNotImplementedList([]);
     renderArtifactMessage("Artifacts will appear after a run completes.");
