@@ -97,6 +97,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if vendor_dir.is_dir():
             app.mount("/vendor", StaticFiles(directory=vendor_dir), name="frontend-vendor")
 
+    frontend_v2_dist_dir = Path(__file__).resolve().parent.parent / "frontend-v2" / "dist"
+    if frontend_v2_dist_dir.is_dir():
+        frontend_v2_index_path = frontend_v2_dist_dir / "index.html"
+        frontend_v2_assets_dir = frontend_v2_dist_dir / "assets"
+
+        if frontend_v2_assets_dir.is_dir():
+            app.mount(
+                "/v2/assets",
+                StaticFiles(directory=frontend_v2_assets_dir),
+                name="frontend-v2-assets",
+            )
+
+        @app.get("/v2", include_in_schema=False)
+        async def frontend_v2_index() -> FileResponse:
+            return FileResponse(frontend_v2_index_path)
+
+        @app.get("/v2/{path:path}", include_in_schema=False)
+        async def frontend_v2_fallback(path: str) -> FileResponse:
+            return FileResponse(frontend_v2_index_path)
+
     return app
 
 

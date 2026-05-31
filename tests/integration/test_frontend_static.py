@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -197,3 +199,50 @@ def test_frontend_assets_are_served_and_guarded_artifact_path_is_used() -> None:
     assert "stage-status-done" in css_response.text
     assert "@import" not in css_response.text
     assert "fonts.googleapis" not in css_response.text
+
+
+def test_frontend_v2_react_shell_is_served_side_by_side_with_legacy_ui() -> None:
+    client = TestClient(create_app(), raise_server_exceptions=False)
+
+    legacy_response = client.get("/")
+    v2_response = client.get("/v2")
+    deep_response = client.get("/v2/runs/mock-run")
+
+    assert legacy_response.status_code == 200
+    assert "GEE Screening Workspace" in legacy_response.text
+    assert 'src="/app.js"' in legacy_response.text
+
+    assert v2_response.status_code == 200
+    assert "text/html" in v2_response.headers["content-type"]
+    assert "GEE Screening Operator Mock V2" in v2_response.text
+    assert 'id="root"' in v2_response.text
+    assert "/v2/assets/" in v2_response.text
+    assert 'src="/app.js"' not in v2_response.text
+    assert "https://" not in v2_response.text
+    assert "http://" not in v2_response.text
+
+    assert deep_response.status_code == 200
+    assert "GEE Screening Operator Mock V2" in deep_response.text
+
+
+def test_frontend_v2_assets_are_mock_only_and_do_not_call_real_run_apis() -> None:
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    index_response = client.get("/v2")
+    assert index_response.status_code == 200
+
+    asset_paths = re.findall(r'src="(/v2/assets/[^"]+\.js)"', index_response.text)
+    assert asset_paths
+
+    bundle_text = "\n".join(client.get(path).text for path in asset_paths)
+    assert "Mock Data" in bundle_text
+    assert "Status History" in bundle_text
+    assert "Key Downloads" in bundle_text
+    assert "Advanced / unavailable outputs" in bundle_text
+    assert '"/runs"' not in bundle_text
+    assert '"/runs/' not in bundle_text
+    assert "/outputs/download/" not in bundle_text
+    assert "latitude" not in bundle_text.casefold()
+    assert "longitude" not in bundle_text.casefold()
+    assert "C:\\" not in bundle_text
+    assert ".env" not in bundle_text
+    assert "service-account" not in bundle_text
