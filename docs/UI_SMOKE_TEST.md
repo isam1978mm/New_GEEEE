@@ -99,11 +99,19 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    completed or failed runs show a delete option in the Run Archive; active runs show `Cannot delete active run`; confirmation requires typing the run name or run ID; deleting a disposable test run removes it from the archive without showing local paths.
 
-18. Verify failed, empty, and loading states if available.
+18. Verify Settings.
+   Expected result:
+   `Settings` opens as a real local-operator panel, `External map tiles` is OFF by default, `Privacy warning` is clear, `Tile URL template` is editable only when tiles are enabled, `Status polling interval` is shown as read-only, and `Show advanced / unavailable outputs` changes the default expansion behavior of the Exports view after refresh.
+
+19. Verify external-tile privacy behavior.
+   Expected result:
+   while external tiles are disabled, no external map request is made; if the operator enables them, the UI makes clear that external tile providers may receive browser map viewport requests, and the setting persists after refresh.
+
+20. Verify failed, empty, and loading states if available.
    Expected result:
    loading, failed, historical, and no-history states remain operator-readable and do not show raw exceptions.
 
-19. Verify sensitive files are not exposed or downloadable:
+21. Verify sensitive files are not exposed or downloadable:
    - `.env`
    - credentials
    - local path maps
@@ -113,7 +121,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    the UI and guarded routes do not expose these files or leak internal path/config values.
 
-20. Verify internal debug/runtime files are not shown as operator deliverables:
+22. Verify internal debug/runtime files are not shown as operator deliverables:
    - `grid_manifest.json`
    - `run_status_history.json`
    - `stage_*.manifest.json`
@@ -126,7 +134,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    these internal or exact-context artifacts do not appear in the operator output browser even if they exist on disk.
 
-21. If browser automation is unavailable, record that literal browser `Ctrl+F5` and click-through remains operator-required.
+23. If browser automation is unavailable, record that literal browser `Ctrl+F5` and click-through remains operator-required.
     Expected result:
     the smoke record explicitly distinguishes automated HTTP/static checks from manual browser visual checks.
 

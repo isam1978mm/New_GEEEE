@@ -12,9 +12,15 @@ interface RunWorkflowCardProps {
   onQueueRun?: (input: CreateRunInput) => Promise<void>;
   isQueueing?: boolean;
   feedback?: string | null;
+  externalTilesEnabled?: boolean;
 }
 
-export function RunWorkflowCard({ onQueueRun, isQueueing = false, feedback = null }: RunWorkflowCardProps) {
+export function RunWorkflowCard({
+  onQueueRun,
+  isQueueing = false,
+  feedback = null,
+  externalTilesEnabled = false,
+}: RunWorkflowCardProps) {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [runName, setRunName] = useState("");
@@ -266,7 +272,9 @@ export function RunWorkflowCard({ onQueueRun, isQueueing = false, feedback = nul
             <div className="flex items-center gap-1">
               <WifiOff size={9} style={{ color: "var(--gs-slate)", opacity: 0.5 }} />
               <span style={{ fontSize: "10px", color: "var(--gs-slate)", opacity: 0.55 }}>
-                External tiles disabled
+                {externalTilesEnabled
+                  ? "External tiles enabled for future map previews. No tile requests are made in this screen yet."
+                  : "External tiles disabled"}
               </span>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -16,12 +16,23 @@ interface ExportsTabProps {
   unavailable: UnavailableOutput[];
   loading?: boolean;
   error?: string | null;
+  showAdvancedByDefault?: boolean;
 }
 
-export function ExportsTab({ groups, unavailable, loading = false, error = null }: ExportsTabProps) {
+export function ExportsTab({
+  groups,
+  unavailable,
+  loading = false,
+  error = null,
+  showAdvancedByDefault = false,
+}: ExportsTabProps) {
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(showAdvancedByDefault);
+
+  useEffect(() => {
+    setShowAdvanced(showAdvancedByDefault);
+  }, [showAdvancedByDefault]);
 
   const totalFiles = groups.reduce((sum, g) => sum + g.fileCount, 0);
   const totalSize = groups.length === 0 ? "0 files" : groups.reduce((sum, g) => sum + g.files.reduce((groupSum, file) => groupSum + file.sizeBytes, 0), 0);

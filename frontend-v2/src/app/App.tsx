@@ -23,6 +23,7 @@ import { ExportsTab } from "./components/ExportsTab";
 import { StatusHistoryTab } from "./components/StatusHistoryTab";
 import { DiagnosticsTab } from "./components/DiagnosticsTab";
 import { RunArchivePage } from "./components/RunArchivePage";
+import { SettingsPage } from "./components/SettingsPage";
 
 type NavTab = "dashboard" | "archive" | "exports" | "settings";
 type RunTab = "overview" | "exports" | "status-history" | "diagnostics";
@@ -41,6 +42,47 @@ const EMPTY_OUTPUT_TREE: OperatorOutputTree = {
   keyDownloads: [],
   unavailable: [],
 };
+
+const UI_SETTINGS_STORAGE_KEY = "gs_operator_ui_settings_v1";
+const DEFAULT_TILE_URL_TEMPLATE = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const RUN_POLLING_INTERVAL_SECONDS = 2;
+
+interface UiSettings {
+  externalTilesEnabled: boolean;
+  tileUrlTemplate: string;
+  showAdvancedUnavailableOutputs: boolean;
+}
+
+function loadUiSettings(): UiSettings {
+  if (typeof window === "undefined") {
+    return defaultUiSettings();
+  }
+  try {
+    const raw = window.localStorage.getItem(UI_SETTINGS_STORAGE_KEY);
+    if (!raw) {
+      return defaultUiSettings();
+    }
+    const parsed = JSON.parse(raw) as Partial<UiSettings>;
+    return {
+      externalTilesEnabled: parsed.externalTilesEnabled === true,
+      tileUrlTemplate:
+        typeof parsed.tileUrlTemplate === "string" && parsed.tileUrlTemplate.trim().length > 0
+          ? parsed.tileUrlTemplate
+          : DEFAULT_TILE_URL_TEMPLATE,
+      showAdvancedUnavailableOutputs: parsed.showAdvancedUnavailableOutputs === true,
+    };
+  } catch (_error) {
+    return defaultUiSettings();
+  }
+}
+
+function defaultUiSettings(): UiSettings {
+  return {
+    externalTilesEnabled: false,
+    tileUrlTemplate: DEFAULT_TILE_URL_TEMPLATE,
+    showAdvancedUnavailableOutputs: false,
+  };
+}
 
 function RunStateBadge({ state }: { state: RunState }) {
   const map: Record<RunState, { dot: string; label: string }> = {
@@ -80,10 +122,15 @@ export default function App() {
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
   const [queueing, setQueueing] = useState(false);
   const [pollingPaused, setPollingPaused] = useState(false);
+  const [uiSettings, setUiSettings] = useState<UiSettings>(() => loadUiSettings());
 
   useEffect(() => {
     void refreshRuns();
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(UI_SETTINGS_STORAGE_KEY, JSON.stringify(uiSettings));
+  }, [uiSettings]);
 
   useEffect(() => {
     return () => {
@@ -319,7 +366,12 @@ export default function App() {
                   margin: "0 auto",
                 }}
               >
-                <RunWorkflowCard onQueueRun={handleQueueRun} isQueueing={queueing} feedback={queueFeedback} />
+                <RunWorkflowCard
+                  onQueueRun={handleQueueRun}
+                  isQueueing={queueing}
+                  feedback={queueFeedback}
+                  externalTilesEnabled={uiSettings.externalTilesEnabled}
+                />
                 <ActivityCard hasRun={false} />
               </div>
             )}
@@ -429,6 +481,7 @@ export default function App() {
                     unavailable={outputTree.unavailable}
                     loading={outputsLoading}
                     error={outputsError}
+                    showAdvancedByDefault={uiSettings.showAdvancedUnavailableOutputs}
                   />
                 )}
                 {activeRunTab === "status-history" && <StatusHistoryTab run={selectedRun} />}
@@ -464,46 +517,32 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <ExportsTab groups={outputTree.groups} unavailable={outputTree.unavailable} loading={outputsLoading} error={outputsError} />
+            <ExportsTab
+              groups={outputTree.groups}
+              unavailable={outputTree.unavailable}
+              loading={outputsLoading}
+              error={outputsError}
+              showAdvancedByDefault={uiSettings.showAdvancedUnavailableOutputs}
+            />
           </div>
         )}
 
         {activeNav === "settings" && (
-          <div style={{ maxWidth: "640px", margin: "0 auto" }}>
-            <div className="mb-4">
-              <h2 className="font-mono" style={{ fontSize: "14px", fontWeight: 700, color: "var(--gs-navy)" }}>
-                Settings
-              </h2>
-              <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "2px" }}>
-                Local operator configuration
-              </p>
-            </div>
-            <div
-              className="rounded-lg bg-card overflow-hidden"
-              style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
-            >
-              {[
-                { label: "External tile sources", value: "Disabled", note: "Map tiles are fetched from local cache only. No external requests are made." },
-                { label: "Access mode", value: "Local", note: "Local-only operator app. No sign-in surface is exposed." },
-                { label: "Grid resolution default", value: "640 m", note: "Default grid resolution for new screening runs." },
-                { label: "App version", value: "GEE Screening v2", note: "" },
-              ].map((item, i, arr) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none" }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12.5px", fontWeight: 500, color: "var(--gs-navy)" }}>{item.label}</div>
-                    {item.note && <div style={{ fontSize: "11px", color: "var(--gs-slate)", marginTop: "2px" }}>{item.note}</div>}
-                  </div>
-                  <span className="font-mono" style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--gs-slate)" }}>
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <SettingsPage
+            externalTilesEnabled={uiSettings.externalTilesEnabled}
+            tileUrlTemplate={uiSettings.tileUrlTemplate}
+            showAdvancedUnavailableOutputs={uiSettings.showAdvancedUnavailableOutputs}
+            pollingIntervalSeconds={RUN_POLLING_INTERVAL_SECONDS}
+            onToggleExternalTiles={(externalTilesEnabled) =>
+              setUiSettings((current) => ({ ...current, externalTilesEnabled }))
+            }
+            onTileUrlTemplateChange={(tileUrlTemplate) =>
+              setUiSettings((current) => ({ ...current, tileUrlTemplate }))
+            }
+            onToggleAdvancedUnavailableOutputs={(showAdvancedUnavailableOutputs) =>
+              setUiSettings((current) => ({ ...current, showAdvancedUnavailableOutputs }))
+            }
+          />
         )}
       </main>
     </div>

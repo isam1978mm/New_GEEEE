@@ -100,6 +100,14 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Cannot delete active run" in bundle_text
     assert "This permanently deletes the run record and all files for this run." in bundle_text
     assert "DELETE" in bundle_text
+    assert "External map tiles" in bundle_text
+    assert "Disabled by default" in bundle_text
+    assert "Tile URL template" in bundle_text
+    assert "Privacy warning" in bundle_text
+    assert "Status polling interval" in bundle_text
+    assert "read-only" in bundle_text
+    assert "Show advanced / unavailable outputs" in bundle_text
+    assert "This setting does not enable a live map preview yet" in bundle_text
     assert "Run QA summaries" in bundle_text
     assert "DEM / Grid QA" in bundle_text
     assert "SAR QA" in bundle_text
