@@ -100,6 +100,15 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Cannot delete active run" in bundle_text
     assert "This permanently deletes the run record and all files for this run." in bundle_text
     assert "DELETE" in bundle_text
+    assert "Run QA summaries" in bundle_text
+    assert "DEM / Grid QA" in bundle_text
+    assert "SAR QA" in bundle_text
+    assert "Stack / S2 / Thermal QA" in bundle_text
+    assert "Alignment QA" in bundle_text
+    assert "Accepted exceptions" in bundle_text
+    assert "PCA variance capture: 94.2%" not in bundle_text
+    assert "S2 cloud coverage: 18%" not in bundle_text
+    assert "nearest-clear S2 composite" not in bundle_text
     assert "GEE Screening Operator Mock V2" not in bundle_text
     assert "Mock Data only" not in bundle_text
     assert "Target reference" not in bundle_text

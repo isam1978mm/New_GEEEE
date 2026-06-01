@@ -432,7 +432,9 @@ export default function App() {
                   />
                 )}
                 {activeRunTab === "status-history" && <StatusHistoryTab run={selectedRun} />}
-                {activeRunTab === "diagnostics" && <DiagnosticsTab />}
+                {activeRunTab === "diagnostics" && (
+                  <DiagnosticsTab outputTree={outputTree} artifacts={selectedRun.artifacts} />
+                )}
               </div>
             )}
           </>
