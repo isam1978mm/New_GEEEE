@@ -107,7 +107,15 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Status polling interval" in bundle_text
     assert "read-only" in bundle_text
     assert "Show advanced / unavailable outputs" in bundle_text
-    assert "This setting does not enable a live map preview yet" in bundle_text
+    assert "Map preview disabled" in bundle_text
+    assert "External tile preview enabled" in bundle_text
+    assert "Tile URL template must include " in bundle_text
+    assert "{z}" in bundle_text
+    assert "{x}" in bundle_text
+    assert "{y}" in bundle_text
+    assert "Use a local tile server to avoid third-party requests." in bundle_text
+    assert "Target map tile preview" in bundle_text
+    assert "replaceAll" in bundle_text
     assert "Run QA summaries" in bundle_text
     assert "DEM / Grid QA" in bundle_text
     assert "SAR QA" in bundle_text

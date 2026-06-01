@@ -371,6 +371,7 @@ export default function App() {
                   isQueueing={queueing}
                   feedback={queueFeedback}
                   externalTilesEnabled={uiSettings.externalTilesEnabled}
+                  tileUrlTemplate={uiSettings.tileUrlTemplate}
                 />
                 <ActivityCard hasRun={false} />
               </div>

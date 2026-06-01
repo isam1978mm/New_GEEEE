@@ -75,7 +75,7 @@ export function SettingsPage({
             >
               <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--gs-navy)" }}>Privacy warning</div>
               <div style={{ fontSize: "11px", color: "var(--gs-slate)", marginTop: "2px", lineHeight: "1.5" }}>
-                External tile providers may receive browser map viewport requests. This setting does not enable a live map preview yet; it only stores the operator preference for a future phase.
+                If this URL points to an external provider, that provider may receive browser tile requests. Use a local tile server to avoid third-party requests.
               </div>
             </div>
 
@@ -101,7 +101,7 @@ export function SettingsPage({
               />
               <div style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
                 {externalTilesEnabled
-                  ? "Stored locally for future map-preview support. No external tile request is made by the current UI."
+                  ? "Stored locally and used by the target map preview only when external tiles are enabled."
                   : "External tiles disabled. No external tile URL is requested."}
               </div>
             </div>

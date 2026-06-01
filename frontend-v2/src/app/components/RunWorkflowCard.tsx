@@ -13,13 +13,17 @@ interface RunWorkflowCardProps {
   isQueueing?: boolean;
   feedback?: string | null;
   externalTilesEnabled?: boolean;
+  tileUrlTemplate?: string;
 }
+
+const PREVIEW_TILE_ZOOM = 15;
 
 export function RunWorkflowCard({
   onQueueRun,
   isQueueing = false,
   feedback = null,
   externalTilesEnabled = false,
+  tileUrlTemplate = "",
 }: RunWorkflowCardProps) {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -36,6 +40,11 @@ export function RunWorkflowCard({
   const longitudeValid = Number.isFinite(longitudeValue) && longitudeValue >= -180 && longitudeValue <= 180;
   const canQueue = latitudeValid && longitudeValid;
   const hasPreview = hasLatitude || hasLongitude || runName.trim().length > 0;
+  const tileTemplateValid = hasTileTemplatePlaceholders(tileUrlTemplate);
+  const tilePreviewUrl =
+    externalTilesEnabled && latitudeValid && longitudeValid && tileTemplateValid
+      ? buildTilePreviewUrl(tileUrlTemplate, latitudeValue, longitudeValue, PREVIEW_TILE_ZOOM)
+      : null;
 
   function handleReset() {
     setLatitude(""); setLongitude(""); setRunName("");
@@ -272,10 +281,75 @@ export function RunWorkflowCard({
             <div className="flex items-center gap-1">
               <WifiOff size={9} style={{ color: "var(--gs-slate)", opacity: 0.5 }} />
               <span style={{ fontSize: "10px", color: "var(--gs-slate)", opacity: 0.55 }}>
-                {externalTilesEnabled
-                  ? "External tiles enabled for future map previews. No tile requests are made in this screen yet."
-                  : "External tiles disabled"}
+                {externalTilesEnabled ? "External tile preview enabled" : "External tiles disabled"}
               </span>
+            </div>
+
+            <div
+              className="rounded overflow-hidden"
+              style={{
+                backgroundColor: "rgba(28,43,94,0.03)",
+                border: "1px solid rgba(28,43,94,0.12)",
+                minHeight: "172px",
+              }}
+            >
+              {!externalTilesEnabled && (
+                <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ minHeight: "170px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>Map preview disabled</div>
+                  <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "260px" }}>
+                    Enable External map tiles in Settings to preview map tiles.
+                  </div>
+                </div>
+              )}
+
+              {externalTilesEnabled && !tileTemplateValid && (
+                <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ minHeight: "170px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>
+                    Map preview unavailable
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "280px" }}>
+                    Tile URL template must include {"{z}"}, {"{x}"}, and {"{y}"}.
+                  </div>
+                </div>
+              )}
+
+              {externalTilesEnabled && tileTemplateValid && (!latitudeValid || !longitudeValid) && (
+                <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ minHeight: "170px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>
+                    Map preview ready
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "280px" }}>
+                    Enter latitude and longitude to preview map tile.
+                  </div>
+                </div>
+              )}
+
+              {tilePreviewUrl && (
+                <div className="flex flex-col">
+                  <img
+                    src={tilePreviewUrl}
+                    alt="Target map tile preview"
+                    style={{
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      objectFit: "cover",
+                      display: "block",
+                      backgroundColor: "rgba(28,43,94,0.04)",
+                    }}
+                  />
+                  <div
+                    className="px-2.5 py-1.5"
+                    style={{
+                      fontSize: "10px",
+                      color: "var(--gs-slate)",
+                      borderTop: "1px solid rgba(28,43,94,0.12)",
+                      backgroundColor: "rgba(255,255,255,0.72)",
+                    }}
+                  >
+                    External tile preview enabled
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -322,4 +396,29 @@ export function RunWorkflowCard({
       </div>
     </div>
   );
+}
+
+function hasTileTemplatePlaceholders(template: string): boolean {
+  return template.includes("{z}") && template.includes("{x}") && template.includes("{y}");
+}
+
+function buildTilePreviewUrl(template: string, latitude: number, longitude: number, zoom: number): string {
+  const { x, y } = latLonToTile(latitude, longitude, zoom);
+  return template
+    .replaceAll("{z}", String(zoom))
+    .replaceAll("{x}", String(x))
+    .replaceAll("{y}", String(y));
+}
+
+function latLonToTile(latitude: number, longitude: number, zoom: number): { x: number; y: number } {
+  const latRadians = (Math.max(Math.min(latitude, 85.05112878), -85.05112878) * Math.PI) / 180;
+  const tilesPerAxis = 2 ** zoom;
+  const x = Math.floor(((longitude + 180) / 360) * tilesPerAxis);
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRadians) + 1 / Math.cos(latRadians)) / Math.PI) / 2) * tilesPerAxis,
+  );
+  return {
+    x: Math.max(0, Math.min(tilesPerAxis - 1, x)),
+    y: Math.max(0, Math.min(tilesPerAxis - 1, y)),
+  };
 }
