@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   buildActivityEvents,
@@ -61,6 +61,9 @@ function RunStateBadge({ state }: { state: RunState }) {
 }
 
 export default function App() {
+  const pollTimerRef = useRef<number | null>(null);
+  const activePollRunIdRef = useRef<string | null>(null);
+  const pollFailureCountRef = useRef(0);
   const [activeNav, setActiveNav] = useState<NavTab>("dashboard");
   const [activeRunTab, setActiveRunTab] = useState<RunTab>("overview");
   const [runs, setRuns] = useState<Run[]>([]);
@@ -74,10 +77,42 @@ export default function App() {
   const [outputsError, setOutputsError] = useState<string | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
   const [queueing, setQueueing] = useState(false);
+  const [pollingPaused, setPollingPaused] = useState(false);
 
   useEffect(() => {
     void refreshRuns();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      clearRunPollTimer();
+    };
+  }, []);
+
+  useEffect(() => {
+    clearRunPollTimer();
+    pollFailureCountRef.current = 0;
+    setPollingPaused(false);
+
+    if (!selectedRun || !shouldPollRun(selectedRun.state)) {
+      activePollRunIdRef.current = null;
+      return;
+    }
+
+    activePollRunIdRef.current = selectedRun.id;
+
+    const scheduleNextPoll = () => {
+      clearRunPollTimer();
+      pollTimerRef.current = window.setTimeout(() => {
+        void pollSelectedRun(selectedRun.id);
+      }, 2000);
+    };
+
+    scheduleNextPoll();
+    return () => {
+      clearRunPollTimer();
+    };
+  }, [selectedRun?.id, selectedRun?.state]);
 
   async function refreshRuns(selectFirst = true) {
     setRunsLoading(true);
@@ -100,8 +135,11 @@ export default function App() {
     setRunLoading(true);
     setRunError(null);
     setOutputsError(null);
+    setPollingPaused(false);
+    pollFailureCountRef.current = 0;
     try {
       const detail = await getRunDetail(runId);
+      syncRunSummary(detail);
       setSelectedRun(detail);
       setActiveNav("dashboard");
       setActiveRunTab("overview");
@@ -154,6 +192,93 @@ export default function App() {
   const runId = selectedRun?.id ?? "Not started";
   const runState: RunState = selectedRun?.state ?? "queued";
   const runStage = selectedRun?.stage ?? "Queued";
+
+  function clearRunPollTimer() {
+    if (pollTimerRef.current !== null) {
+      window.clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }
+
+  function shouldPollRun(state: RunState) {
+    return state === "queued" || state === "running";
+  }
+
+  function syncRunSummary(detail: RunDetail) {
+    setRuns((currentRuns) => {
+      let matched = false;
+      const nextRuns = currentRuns.map((run) => {
+        if (run.id !== detail.id) {
+          return run;
+        }
+        matched = true;
+        return {
+          ...run,
+          name: detail.name,
+          state: detail.state,
+          stage: detail.stage,
+          updated: detail.updated,
+          created: detail.created,
+        };
+      });
+      return matched ? nextRuns : currentRuns;
+    });
+  }
+
+  async function pollSelectedRun(runId: string) {
+    if (activePollRunIdRef.current !== runId) {
+      return;
+    }
+
+    try {
+      const detail = await getRunDetail(runId);
+      if (activePollRunIdRef.current !== runId) {
+        return;
+      }
+
+      pollFailureCountRef.current = 0;
+      setPollingPaused(false);
+      syncRunSummary(detail);
+      setSelectedRun((currentRun) => (currentRun && currentRun.id === runId ? detail : currentRun));
+
+      if (detail.state === "done") {
+        await loadOutputs(detail.id);
+        return;
+      }
+
+      if (shouldPollRun(detail.state)) {
+        clearRunPollTimer();
+        pollTimerRef.current = window.setTimeout(() => {
+          void pollSelectedRun(runId);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Selected run polling failed.", error);
+      if (activePollRunIdRef.current !== runId) {
+        return;
+      }
+
+      pollFailureCountRef.current += 1;
+      if (pollFailureCountRef.current >= 5) {
+        clearRunPollTimer();
+        setPollingPaused(true);
+        return;
+      }
+
+      pollTimerRef.current = window.setTimeout(() => {
+        void pollSelectedRun(runId);
+      }, 2000);
+    }
+  }
+
+  async function handleManualRefresh() {
+    if (!selectedRun) {
+      return;
+    }
+    setPollingPaused(false);
+    pollFailureCountRef.current = 0;
+    await loadRun(selectedRun.id);
+  }
 
   return (
     <div
@@ -211,6 +336,24 @@ export default function App() {
 
                   <div className="flex items-center gap-2">
                     {runLoading && <span style={{ fontSize: "11px", color: "var(--gs-slate)" }}>Loading run...</span>}
+                    {pollingPaused && (
+                      <span style={{ fontSize: "11px", color: "var(--gs-slate)" }}>Status updates paused</span>
+                    )}
+                    {selectedRun && (
+                      <button
+                        onClick={() => { void handleManualRefresh(); }}
+                        className="px-2.5 py-1 rounded"
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--gs-navy)",
+                          backgroundColor: "transparent",
+                          border: "1px solid rgba(28,43,94,0.15)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Refresh
+                      </button>
+                    )}
                     <button
                       onClick={() => { setSelectedRun(null); setOutputTree(EMPTY_OUTPUT_TREE); setActiveRunTab("overview"); }}
                       className="flex items-center gap-1 px-2.5 py-1 rounded ml-1"
