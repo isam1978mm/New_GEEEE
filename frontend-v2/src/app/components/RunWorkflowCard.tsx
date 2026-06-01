@@ -18,6 +18,7 @@ interface RunWorkflowCardProps {
 
 const PREVIEW_TILE_ZOOM = 15;
 type TilePreviewStatus = "idle" | "loading" | "success" | "error";
+type TileLoadState = "loading" | "success" | "error";
 
 export function RunWorkflowCard({
   onQueueRun,
@@ -33,6 +34,7 @@ export function RunWorkflowCard({
   const [bufferKm, setBufferKm] = useState("2.0");
   const [resolution, setResolution] = useState("640");
   const [tilePreviewStatus, setTilePreviewStatus] = useState<TilePreviewStatus>("idle");
+  const [tileStates, setTileStates] = useState<Record<string, TileLoadState>>({});
 
   const latitudeValue = Number.parseFloat(latitude);
   const longitudeValue = Number.parseFloat(longitude);
@@ -46,7 +48,7 @@ export function RunWorkflowCard({
   const tilePreview = useMemo(
     () =>
       externalTilesEnabled && latitudeValid && longitudeValid && tileTemplateValid
-        ? buildTilePreview(tileUrlTemplate, latitudeValue, longitudeValue, PREVIEW_TILE_ZOOM)
+        ? buildTilePreviewGrid(tileUrlTemplate, latitudeValue, longitudeValue, PREVIEW_TILE_ZOOM)
         : null,
     [externalTilesEnabled, latitudeValid, latitudeValue, longitudeValid, longitudeValue, tileTemplateValid, tileUrlTemplate],
   );
@@ -54,9 +56,13 @@ export function RunWorkflowCard({
   useEffect(() => {
     if (!externalTilesEnabled || !tileTemplateValid || !latitudeValid || !longitudeValid || !tilePreview) {
       setTilePreviewStatus("idle");
+      setTileStates({});
       return;
     }
     setTilePreviewStatus("loading");
+    setTileStates(
+      Object.fromEntries(tilePreview.tiles.map((tile) => [tile.key, "loading" satisfies TileLoadState])),
+    );
   }, [externalTilesEnabled, latitudeValid, longitudeValid, tilePreview, tileTemplateValid]);
 
   function handleReset() {
@@ -74,6 +80,25 @@ export function RunWorkflowCard({
       lon: longitudeValue,
       name: runName.trim() || null,
     });
+  }
+
+  const centerTileFailed = tilePreview ? tileStates[tilePreview.centerTile.key] === "error" : false;
+  const centerTileLoaded = tilePreview ? tileStates[tilePreview.centerTile.key] === "success" : false;
+  const surroundingTileFailure =
+    tilePreview?.tiles.some((tile) => !tile.isCenter && tileStates[tile.key] === "error") ?? false;
+
+  function handleTileLoad(tileKey: string, isCenter: boolean) {
+    setTileStates((current) => ({ ...current, [tileKey]: "success" }));
+    if (isCenter) {
+      setTilePreviewStatus("success");
+    }
+  }
+
+  function handleTileError(tileKey: string, isCenter: boolean) {
+    setTileStates((current) => ({ ...current, [tileKey]: "error" }));
+    if (isCenter) {
+      setTilePreviewStatus("error");
+    }
   }
 
   return (
@@ -298,8 +323,8 @@ export function RunWorkflowCard({
                   ? "External tiles disabled"
                   : tilePreviewStatus === "success"
                     ? "External tile preview enabled"
-                    : tilePreviewStatus === "loading"
-                      ? "Loading tile preview..."
+                  : tilePreviewStatus === "loading"
+                    ? "Loading tile preview..."
                       : tilePreviewStatus === "error"
                         ? "Tile preview failed to load"
                         : "Tile preview ready"}
@@ -347,31 +372,75 @@ export function RunWorkflowCard({
 
               {tilePreview && (
                 <div className="flex flex-col">
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", backgroundColor: "rgba(248,247,242,0.95)" }}>
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      height: "360px",
+                      backgroundColor: "rgba(248,247,242,0.95)",
+                      overflow: "hidden",
+                    }}
+                  >
                     {tilePreviewStatus !== "error" && (
-                      <img
-                        key={tilePreview.url}
-                        src={tilePreview.url}
-                        alt="Target map tile preview"
-                        onLoad={() => setTilePreviewStatus("success")}
-                        onError={() => setTilePreviewStatus("error")}
+                      <div
                         style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, 1fr)",
+                          gridTemplateRows: "repeat(3, 1fr)",
                           width: "100%",
                           height: "100%",
-                          objectFit: "cover",
-                          display: tilePreviewStatus === "success" ? "block" : "none",
                         }}
-                      />
+                      >
+                        {tilePreview.tiles.map((tile) => (
+                          <div
+                            key={tile.key}
+                            style={{
+                              position: "relative",
+                              overflow: "hidden",
+                              backgroundColor: tileStates[tile.key] === "error" ? "rgba(148,163,184,0.12)" : "rgba(248,247,242,0.6)",
+                            }}
+                          >
+                            <img
+                              src={tile.url}
+                              alt={tile.isCenter ? "Target map tile preview center tile" : "Target map tile preview surrounding tile"}
+                              onLoad={() => handleTileLoad(tile.key, tile.isCenter)}
+                              onError={() => handleTileError(tile.key, tile.isCenter)}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: tileStates[tile.key] === "error" ? "none" : "block",
+                                opacity: tileStates[tile.key] === "loading" ? 0.45 : 1,
+                              }}
+                            />
+                            {tileStates[tile.key] === "error" && !tile.isCenter && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "10px",
+                                  color: "var(--gs-slate)",
+                                }}
+                              >
+                                tile unavailable
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
-                    {tilePreviewStatus === "loading" && (
+                    {tilePreviewStatus === "loading" && !centerTileLoaded && (
                       <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ position: "absolute", inset: 0 }}>
                         <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>Loading tile preview...</div>
                         <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "280px" }}>
-                          Waiting for tile image response from the configured template.
+                          Waiting for the center tile image response from the configured template.
                         </div>
                       </div>
                     )}
-                    {tilePreviewStatus === "error" && (
+                    {tilePreviewStatus === "error" && centerTileFailed && (
                       <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ position: "absolute", inset: 0 }}>
                         <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>
                           Tile preview failed to load. Check tile URL template.
@@ -379,6 +448,50 @@ export function RunWorkflowCard({
                         <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "280px" }}>
                           The current tile request did not return a usable image preview.
                         </div>
+                      </div>
+                    )}
+                    {centerTileLoaded && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "50%",
+                          top: "50%",
+                          transform: "translate(-50%, -50%)",
+                          pointerEvents: "none",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "relative",
+                            width: "28px",
+                            height: "28px",
+                            border: "2px solid rgba(255,255,255,0.92)",
+                            borderRadius: "999px",
+                            boxShadow: "0 0 0 1px rgba(28,43,94,0.35)",
+                            backgroundColor: "rgba(28,43,94,0.08)",
+                          }}
+                        >
+                          <span style={{ position: "absolute", left: "50%", top: "2px", bottom: "2px", width: "2px", backgroundColor: "var(--gs-red)", transform: "translateX(-50%)" }} />
+                          <span style={{ position: "absolute", top: "50%", left: "2px", right: "2px", height: "2px", backgroundColor: "var(--gs-red)", transform: "translateY(-50%)" }} />
+                        </div>
+                        <span
+                          className="font-mono"
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            color: "var(--gs-navy)",
+                            backgroundColor: "rgba(255,255,255,0.88)",
+                            border: "1px solid rgba(28,43,94,0.12)",
+                            padding: "1px 5px",
+                            borderRadius: "3px",
+                          }}
+                        >
+                          Target
+                        </span>
                       </div>
                     )}
                   </div>
@@ -397,9 +510,22 @@ export function RunWorkflowCard({
                   >
                     <span>{tilePreview.providerLabel}</span>
                     <span className="font-mono">
-                      z{tilePreview.zoom} x{tilePreview.x} y{tilePreview.y}
+                      z{tilePreview.zoom} x{tilePreview.centerTile.x} y{tilePreview.centerTile.y}
                     </span>
                   </div>
+                  {centerTileLoaded && surroundingTileFailure && (
+                    <div
+                      className="px-2.5 py-1.5"
+                      style={{
+                        fontSize: "10px",
+                        color: "var(--gs-slate)",
+                        borderTop: "1px solid rgba(28,43,94,0.08)",
+                        backgroundColor: "rgba(255,255,255,0.65)",
+                      }}
+                    >
+                      Some surrounding tiles failed to load.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -454,17 +580,29 @@ function hasTileTemplatePlaceholders(template: string): boolean {
   return template.includes("{z}") && template.includes("{x}") && template.includes("{y}");
 }
 
-function buildTilePreview(template: string, latitude: number, longitude: number, zoom: number) {
-  const { x, y } = latLonToTile(latitude, longitude, zoom);
+function buildTilePreviewGrid(template: string, latitude: number, longitude: number, zoom: number) {
+  const centerTile = latLonToTile(latitude, longitude, zoom);
+  const tiles = [-1, 0, 1].flatMap((yOffset) =>
+    [-1, 0, 1].map((xOffset) => {
+      const x = centerTile.x + xOffset;
+      const y = centerTile.y + yOffset;
+      return {
+        key: `${zoom}-${x}-${y}`,
+        x,
+        y,
+        isCenter: xOffset === 0 && yOffset === 0,
+        url: template
+          .replaceAll("{z}", String(zoom))
+          .replaceAll("{x}", String(x))
+          .replaceAll("{y}", String(y)),
+      };
+    }),
+  );
   return {
-    url: template
-      .replaceAll("{z}", String(zoom))
-      .replaceAll("{x}", String(x))
-      .replaceAll("{y}", String(y)),
     providerLabel: tileTemplateLabel(template),
     zoom,
-    x,
-    y,
+    centerTile,
+    tiles,
   };
 }
 

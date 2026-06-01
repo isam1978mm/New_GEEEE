@@ -111,6 +111,10 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "External tile preview enabled" in bundle_text
     assert "Loading tile preview..." in bundle_text
     assert "Tile preview failed to load. Check tile URL template." in bundle_text
+    assert "Some surrounding tiles failed to load." in bundle_text
+    assert "Target" in bundle_text
+    assert "tile unavailable" in bundle_text
+    assert "repeat(3, 1fr)" in bundle_text
     assert "Tile URL template must include " in bundle_text
     assert "{z}" in bundle_text
     assert "{x}" in bundle_text
