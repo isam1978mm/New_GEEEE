@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This checklist is the final local operator smoke test for the local-first operator UI after parity closeout.
+This checklist is the final local operator smoke test for the local-first React operator UI after parity closeout and Phase 9E-D cutover.
 
 It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
@@ -25,7 +25,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
 
 ## Manual Operator Checklist
 
-1. Verify the homepage loads the local operator workspace shell.
+1. Verify the homepage loads the React operator dashboard.
    Expected result:
    the page shows `Target Input`, `Run Dashboard`, `Run lookup`, `Recent Runs`, `Run Archive`, `Overview`, `Exports`, `Status History`, and `Diagnostics`.
 

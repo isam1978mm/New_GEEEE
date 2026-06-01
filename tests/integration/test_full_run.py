@@ -62,7 +62,7 @@ def test_full_core_run_completes_and_app_serves_safe_outputs(monkeypatch) -> Non
         assert run_detail.json()["status"] == "done"
         assert {artifact["name"] for artifact in run_detail.json()["artifacts"]} >= {"objects_index", "alignment_qa"}
         assert root.status_code == 200
-        assert "GEE Screening Workspace" in root.text
+        assert "GEE Screening Dashboard Design" in root.text
         assert health.status_code == 200
         assert health.json() == {"status": "ok"}
         assert ready.status_code == 200

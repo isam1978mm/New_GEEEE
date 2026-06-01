@@ -162,12 +162,12 @@ gee_screening_app/
 │   ├── NOTEBOOK_MIGRATION_MATRIX.md  # PRIVATE unless scrubbed
 │   └── DIRECTORY_SKETCH.md
 │
-└── frontend/
-    ├── index.html
-    ├── app.js
-    ├── style.css
-    ├── config.js                     # external tiles disabled unless ALLOW_EXTERNAL_TILES set
-    └── vendor/                       # vendored JS/CSS only; no CDN-loaded scripts/fonts
+└── frontend-v2/
+    ├── package.json
+    ├── package-lock.json
+    ├── vite.config.ts
+    ├── src/                          # React operator dashboard source
+    └── dist/                         # built local React UI served at / and /v2
 ```
 
 ## Notes

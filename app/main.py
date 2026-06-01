@@ -75,28 +75,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(runs_router)
     app.include_router(artifacts_router)
-    frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
-    if frontend_dir.is_dir():
-        index_path = frontend_dir / "index.html"
-        app_js_path = frontend_dir / "app.js"
-        style_path = frontend_dir / "style.css"
-        vendor_dir = frontend_dir / "vendor"
-
-        @app.get("/", include_in_schema=False)
-        async def frontend_index() -> FileResponse:
-            return FileResponse(index_path)
-
-        @app.get("/app.js", include_in_schema=False)
-        async def frontend_app_js() -> FileResponse:
-            return FileResponse(app_js_path, media_type="application/javascript")
-
-        @app.get("/style.css", include_in_schema=False)
-        async def frontend_style_css() -> FileResponse:
-            return FileResponse(style_path, media_type="text/css")
-
-        if vendor_dir.is_dir():
-            app.mount("/vendor", StaticFiles(directory=vendor_dir), name="frontend-vendor")
-
     frontend_v2_dist_dir = Path(__file__).resolve().parent.parent / "frontend-v2" / "dist"
     if frontend_v2_dist_dir.is_dir():
         frontend_v2_index_path = frontend_v2_dist_dir / "index.html"
@@ -109,6 +87,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 name="frontend-v2-assets",
             )
 
+        @app.get("/", include_in_schema=False)
+        async def frontend_index() -> FileResponse:
+            return FileResponse(frontend_v2_index_path)
+
         @app.get("/v2", include_in_schema=False)
         async def frontend_v2_index() -> FileResponse:
             return FileResponse(frontend_v2_index_path)
@@ -117,7 +99,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async def frontend_v2_fallback(path: str) -> FileResponse:
             return FileResponse(frontend_v2_index_path)
 
+        @app.middleware("http")
+        async def react_spa_fallback(request, call_next):
+            response = await call_next(request)
+            if response.status_code != 404 or not _is_react_ui_path(request.url.path):
+                return response
+            return FileResponse(frontend_v2_index_path)
+
     return app
 
 
 app = create_app()
+
+
+def _is_react_ui_path(path: str) -> bool:
+    if path in {"/openapi.json", "/docs", "/redoc", "/healthz", "/readyz"}:
+        return False
+    if path.startswith("/runs"):
+        return False
+    if path.startswith("/v2/assets"):
+        return False
+    if "." in Path(path).name:
+        return False
+    return True
