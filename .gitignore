@@ -14,4 +14,5 @@ logs/
 *.npz
 .pytest-tmp/
 tests/notebook_parity/fixtures/reference_run_v1/PATH_MAP.local.json
+node_modules/
 frontend-v2/node_modules/
