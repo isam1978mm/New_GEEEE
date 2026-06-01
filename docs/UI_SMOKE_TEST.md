@@ -95,11 +95,15 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    recent runs load, a pasted run ID loads the requested run, and active runs resume polling.
 
-17. Verify failed, empty, and loading states if available.
+17. Verify safe run deletion.
+   Expected result:
+   completed or failed runs show a delete option in the Run Archive; active runs show `Cannot delete active run`; confirmation requires typing the run name or run ID; deleting a disposable test run removes it from the archive without showing local paths.
+
+18. Verify failed, empty, and loading states if available.
    Expected result:
    loading, failed, historical, and no-history states remain operator-readable and do not show raw exceptions.
 
-18. Verify sensitive files are not exposed or downloadable:
+19. Verify sensitive files are not exposed or downloadable:
    - `.env`
    - credentials
    - local path maps
@@ -109,7 +113,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    the UI and guarded routes do not expose these files or leak internal path/config values.
 
-19. Verify internal debug/runtime files are not shown as operator deliverables:
+20. Verify internal debug/runtime files are not shown as operator deliverables:
    - `grid_manifest.json`
    - `run_status_history.json`
    - `stage_*.manifest.json`
@@ -122,7 +126,7 @@ It is a validation checklist, not a claim of fresh-ROI notebook parity.
    Expected result:
    these internal or exact-context artifacts do not appear in the operator output browser even if they exist on disk.
 
-20. If browser automation is unavailable, record that literal browser `Ctrl+F5` and click-through remains operator-required.
+21. If browser automation is unavailable, record that literal browser `Ctrl+F5` and click-through remains operator-required.
     Expected result:
     the smoke record explicitly distinguishes automated HTTP/static checks from manual browser visual checks.
 

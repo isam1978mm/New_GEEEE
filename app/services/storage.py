@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +11,13 @@ from app.config import Settings
 from app.db.models.enums import ArtifactClass
 from app.errors import ArtifactServeViolation
 from app.services.grid import GridManifest
+
+
+@dataclass(frozen=True)
+class RunDirectoryDeleteSummary:
+    deleted_files_count: int
+    deleted_dirs_count: int
+    freed_bytes: int
 
 
 def ensure_data_dirs(settings: Settings) -> None:
@@ -22,6 +31,19 @@ def get_runs_dir(settings: Settings) -> Path:
 
 def get_run_dir(settings: Settings, run_id: str) -> Path:
     return get_runs_dir(settings) / run_id
+
+
+def delete_run_directory(settings: Settings, run_id: str) -> RunDirectoryDeleteSummary:
+    runs_dir = get_runs_dir(settings).resolve()
+    run_dir = get_run_dir(settings, run_id).resolve()
+    if runs_dir not in (run_dir, *run_dir.parents):
+        raise ArtifactServeViolation()
+    if not run_dir.is_dir():
+        return RunDirectoryDeleteSummary(deleted_files_count=0, deleted_dirs_count=0, freed_bytes=0)
+
+    summary = _summarize_run_directory_for_delete(run_dir)
+    shutil.rmtree(run_dir)
+    return summary
 
 
 def get_redacted_cache_dir(settings: Settings, run_id: str) -> Path:
@@ -84,6 +106,27 @@ def resolve_run_artifact_path(settings: Settings, run_id: str, relative_path: st
     if run_dir not in (candidate, *candidate.parents):
         raise ArtifactServeViolation()
     return candidate
+
+
+def _summarize_run_directory_for_delete(run_dir: Path) -> RunDirectoryDeleteSummary:
+    deleted_files_count = 0
+    deleted_dirs_count = 0
+    freed_bytes = 0
+    for path in run_dir.rglob("*"):
+        try:
+            stat_result = path.lstat()
+        except OSError:
+            continue
+        if path.is_dir() and not path.is_symlink():
+            deleted_dirs_count += 1
+            continue
+        deleted_files_count += 1
+        freed_bytes += stat_result.st_size
+    return RunDirectoryDeleteSummary(
+        deleted_files_count=deleted_files_count,
+        deleted_dirs_count=deleted_dirs_count,
+        freed_bytes=freed_bytes,
+    )
 
 
 def _write_manifest_file(

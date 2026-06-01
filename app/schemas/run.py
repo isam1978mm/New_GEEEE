@@ -69,3 +69,13 @@ class RunDetailPublic(RunPublic):
     stages: list[RunStageProgressPublic] = Field(default_factory=list)
     history: list[RunHistoryEventPublic] = Field(default_factory=list)
     artifacts: list[ArtifactPublic] = Field(default_factory=list)
+
+
+class RunDeletePublic(BaseModel):
+    run_id: str
+    deleted: bool
+    deleted_files_count: int
+    deleted_dirs_count: int
+    freed_bytes: int
+    status: str
+    message: str

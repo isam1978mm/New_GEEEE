@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -244,6 +245,105 @@ def test_terminal_runs_without_stage_manifests_get_sparse_fallback_history() -> 
             assert all(not event["event_type"].startswith("stage_") for event in body["history"])
             assert all(event.get("stage_name") is None for event in body["history"])
             _assert_no_sensitive_public_fields(response.text)
+
+
+def test_delete_terminal_run_removes_database_rows_and_run_directory() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        run_id = str(uuid4())
+        asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.DONE, name="delete-me"))
+        run_dir = settings.data_dir / "runs" / run_id
+        nested_dir = run_dir / "nested"
+        nested_dir.mkdir(parents=True)
+        (run_dir / "objects_index.csv").write_bytes(b"id\n1\n")
+        (nested_dir / "note.txt").write_bytes(b"remove")
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            delete_response = client.delete(f"/runs/{run_id}")
+            list_response = client.get("/runs")
+            detail_response = client.get(f"/runs/{run_id}")
+            outputs_response = client.get(f"/runs/{run_id}/outputs")
+
+        assert delete_response.status_code == 200
+        body = delete_response.json()
+        assert body == {
+            "run_id": run_id,
+            "deleted": True,
+            "deleted_files_count": 2,
+            "deleted_dirs_count": 1,
+            "freed_bytes": len(b"id\n1\n") + len(b"remove"),
+            "status": "deleted",
+            "message": "Run deleted.",
+        }
+        assert not run_dir.exists()
+        assert all(run["id"] != run_id for run in list_response.json())
+        assert detail_response.status_code == 404
+        assert outputs_response.status_code == 404
+        _assert_no_sensitive_public_fields(delete_response.text)
+
+
+def test_delete_active_run_returns_conflict_and_preserves_files() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        run_id = str(uuid4())
+        asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.QUEUED, name="active-delete"))
+        run_dir = settings.data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        artifact_path = run_dir / "keep.txt"
+        artifact_path.write_text("keep", encoding="utf-8")
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.delete(f"/runs/{run_id}")
+            detail_response = client.get(f"/runs/{run_id}")
+
+        assert response.status_code == 409
+        assert response.json() == {
+            "error": "active_run_delete_blocked",
+            "message": "Cannot delete active run.",
+        }
+        assert artifact_path.exists()
+        assert detail_response.status_code == 200
+        _assert_no_sensitive_public_fields(response.text)
+
+
+def test_delete_missing_run_returns_not_found() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+        run_id = str(uuid4())
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.delete(f"/runs/{run_id}")
+
+        assert response.status_code == 404
+        assert response.json() == {
+            "error": "run_not_found",
+            "message": "Run is unavailable.",
+        }
+
+
+def test_delete_run_rejects_traversal_and_absolute_identifiers() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        asyncio.run(_create_database(settings))
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            responses = [
+                client.delete("/runs/.."),
+                client.delete("/runs/..%2Fsecret"),
+                client.delete("/runs/C:%5Csecret"),
+                client.delete("/runs/%5C%5Cserver%5Cshare"),
+                client.delete("/runs/%2Ftmp%2Fsecret"),
+                client.delete("/runs/not-a-uuid"),
+            ]
+
+        assert all(response.status_code in {400, 404, 405} for response in responses)
+        for response in responses:
+            assert "secret" not in response.text.casefold()
+            assert "tmp" not in response.text.casefold()
+            assert "path" not in response.text.casefold()
 
 
 async def _create_database(settings: Settings) -> None:

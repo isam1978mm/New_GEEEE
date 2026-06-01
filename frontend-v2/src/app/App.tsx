@@ -3,10 +3,12 @@ import { Plus } from "lucide-react";
 import {
   buildActivityEvents,
   createRun,
+  deleteRun,
   getOperatorOutputs,
   getRunDetail,
   listRuns,
   type CreateRunInput,
+  type DeleteRunResult,
   type OperatorOutputTree,
   type Run,
   type RunDetail,
@@ -187,6 +189,19 @@ export default function App() {
     } finally {
       setQueueing(false);
     }
+  }
+
+  async function handleDeleteRun(run: Run): Promise<DeleteRunResult> {
+    const result = await deleteRun(run.id);
+    setRuns((currentRuns) => currentRuns.filter((item) => item.id !== run.id));
+    if (selectedRun?.id === run.id) {
+      clearRunPollTimer();
+      activePollRunIdRef.current = null;
+      setSelectedRun(null);
+      setOutputTree(EMPTY_OUTPUT_TREE);
+      setActiveRunTab("overview");
+    }
+    return result;
   }
 
   const runId = selectedRun?.id ?? "Not started";
@@ -425,7 +440,13 @@ export default function App() {
 
         {activeNav === "archive" && (
           <div style={{ maxWidth: "1140px", margin: "0 auto" }}>
-            <RunArchivePage runs={runs} loading={runsLoading} error={runsError} onSelectRun={handleSelectRun} />
+            <RunArchivePage
+              runs={runs}
+              loading={runsLoading}
+              error={runsError}
+              onSelectRun={handleSelectRun}
+              onDeleteRun={handleDeleteRun}
+            />
           </div>
         )}
 

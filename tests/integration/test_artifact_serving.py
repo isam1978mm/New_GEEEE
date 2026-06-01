@@ -4,6 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -140,6 +141,11 @@ def test_operator_output_tree_enforces_notebook_compatible_inventory_contract() 
         asyncio.run(_run_operator_output_inventory_contract_test(Path(temp_dir)))
 
 
+def test_deleted_run_artifacts_and_operator_outputs_are_unavailable() -> None:
+    with TemporaryDirectory() as temp_dir:
+        asyncio.run(_run_deleted_run_artifacts_unavailable_test(Path(temp_dir)))
+
+
 def _assert_artifact_response(
     artifact_class: ArtifactClass,
     expected_status: int,
@@ -209,6 +215,48 @@ async def _run_artifact_response_test(
             }
 
     await engine.dispose()
+
+
+async def _run_deleted_run_artifacts_unavailable_test(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    db_path = data_dir / "gee_screening.db"
+    settings = Settings(data_dir=data_dir, database_path=db_path)
+    app = create_app(settings)
+
+    engine = create_async_engine(settings.database_url, future=True)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        run_id = str(uuid4())
+        run_dir = data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        artifact_path = run_dir / "objects_index.csv"
+        artifact_path.write_text("object_id\n1\n", encoding="utf-8")
+
+        async with session_factory() as session:
+            await seed_artifact(
+                session,
+                run_id=run_id,
+                artifact_name="objects_index",
+                artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                relative_path="objects_index.csv",
+            )
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            before_delete = client.get(f"/runs/{run_id}/artifacts/objects_index/download/objects_index.csv")
+            delete_response = client.delete(f"/runs/{run_id}")
+            artifact_response = client.get(f"/runs/{run_id}/artifacts/objects_index/download/objects_index.csv")
+            outputs_response = client.get(f"/runs/{run_id}/outputs")
+
+        assert before_delete.status_code == 200
+        assert delete_response.status_code == 200
+        assert artifact_response.status_code == 404
+        assert outputs_response.status_code == 404
+        assert not run_dir.exists()
+    finally:
+        await engine.dispose()
 
 
 async def _run_known_artifact_filename_test(

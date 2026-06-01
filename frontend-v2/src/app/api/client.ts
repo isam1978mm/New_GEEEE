@@ -92,6 +92,16 @@ export interface CreateRunInput {
   name: string | null;
 }
 
+export interface DeleteRunResult {
+  runId: string;
+  deleted: boolean;
+  deletedFilesCount: number;
+  deletedDirsCount: number;
+  freedBytes: number;
+  status: string;
+  message: string;
+}
+
 interface RunPublicDto {
   id?: unknown;
   name?: unknown;
@@ -149,6 +159,16 @@ interface OperatorOutputTreeDto {
   not_implemented?: unknown;
 }
 
+interface DeleteRunDto {
+  run_id?: unknown;
+  deleted?: unknown;
+  deleted_files_count?: unknown;
+  deleted_dirs_count?: unknown;
+  freed_bytes?: unknown;
+  status?: unknown;
+  message?: unknown;
+}
+
 const KEY_DOWNLOAD_PATHS = [
   "QA/RUN_MANIFEST.json",
   "DEM_GEO8_TIFS/DEM_640.tif",
@@ -192,6 +212,10 @@ export async function createRun(input: CreateRunInput): Promise<Run> {
     body: JSON.stringify(input),
   });
   return mapRunPublic(payload) ?? emptyRun();
+}
+
+export async function deleteRun(runId: string): Promise<DeleteRunResult> {
+  return mapDeleteRunResult(await fetchJson<DeleteRunDto>(`/runs/${encodeURIComponent(runId)}`, { method: "DELETE" }));
 }
 
 export function buildActivityEvents(detail: RunDetail | null): ActivityEvent[] {
@@ -341,6 +365,18 @@ function mapOperatorOutputTree(payload: OperatorOutputTreeDto): OperatorOutputTr
       downloadUrl: output.downloadUrl,
     }));
   return { runId, outputs, groups, keyDownloads, unavailable };
+}
+
+function mapDeleteRunResult(payload: DeleteRunDto): DeleteRunResult {
+  return {
+    runId: asString(payload.run_id) || "",
+    deleted: payload.deleted === true,
+    deletedFilesCount: asNumber(payload.deleted_files_count),
+    deletedDirsCount: asNumber(payload.deleted_dirs_count),
+    freedBytes: asNumber(payload.freed_bytes),
+    status: asString(payload.status) || "unknown",
+    message: asString(payload.message) || "Run deleted.",
+  };
 }
 
 function mapOperatorOutput(payload: unknown): ExportFile | null {

@@ -5,11 +5,12 @@ import {
   Loader2,
   Clock,
   Search,
+  Trash2,
   ChevronDown,
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
-import type { Run } from "../api/client";
+import { formatFileSize, type DeleteRunResult, type Run } from "../api/client";
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -57,12 +58,22 @@ interface RunArchivePageProps {
   loading?: boolean;
   error?: string | null;
   onSelectRun?: (run: Run) => void;
+  onDeleteRun?: (run: Run) => Promise<DeleteRunResult>;
 }
 
-export function RunArchivePage({ runs, loading = false, error = null, onSelectRun }: RunArchivePageProps) {
+function canDeleteRun(run: Run) {
+  return run.state === "done" || run.state === "failed" || run.state === "cancelled";
+}
+
+export function RunArchivePage({ runs, loading = false, error = null, onSelectRun, onDeleteRun }: RunArchivePageProps) {
   const [search, setSearch] = useState("");
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<Run["state"] | "all">("all");
+  const [confirmRun, setConfirmRun] = useState<Run | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
+  const [deleteFeedback, setDeleteFeedback] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filtered = runs.filter((r) => {
     const matchSearch =
@@ -80,6 +91,29 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
     { key: "queued", label: "Queued" },
     { key: "cancelled", label: "Cancelled" },
   ];
+
+  const confirmMatches =
+    confirmRun !== null &&
+    (confirmText.trim() === confirmRun.id || confirmText.trim() === confirmRun.name);
+
+  async function handleConfirmDelete() {
+    if (!confirmRun || !onDeleteRun || !confirmMatches) {
+      return;
+    }
+    setDeletingRunId(confirmRun.id);
+    setDeleteError(null);
+    setDeleteFeedback(null);
+    try {
+      const result = await onDeleteRun(confirmRun);
+      setDeleteFeedback(`Run deleted. Freed ${formatFileSize(result.freedBytes)} from ${result.deletedFilesCount} files.`);
+      setConfirmRun(null);
+      setConfirmText("");
+    } catch (_error) {
+      setDeleteError("Run could not be deleted. Check that it is not active, then try again.");
+    } finally {
+      setDeletingRunId(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -100,6 +134,17 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
           {runs.length} runs
         </span>
       </div>
+
+      {deleteFeedback && (
+        <div className="rounded px-3 py-2" style={{ fontSize: "12px", color: "var(--gs-green)", backgroundColor: "var(--gs-green-bg)", border: "1px solid var(--gs-green-border)" }}>
+          {deleteFeedback}
+        </div>
+      )}
+      {deleteError && (
+        <div className="rounded px-3 py-2" style={{ fontSize: "12px", color: "var(--gs-red)", backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}>
+          {deleteError}
+        </div>
+      )}
 
       {/* Search + filters */}
       <div className="flex items-center gap-2">
@@ -149,7 +194,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
         <div
           className="grid px-4 py-2"
           style={{
-            gridTemplateColumns: "24px 1fr 110px 90px 160px 76px",
+            gridTemplateColumns: "24px 1fr 110px 90px 160px 160px",
             gap: "12px",
             borderBottom: "1px solid var(--border)",
             backgroundColor: "var(--accent)",
@@ -193,7 +238,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
                 {/* Row */}
                 <div
                   className="grid px-4 py-2 hover:bg-accent/30 transition-colors items-center cursor-pointer"
-                  style={{ gridTemplateColumns: "24px 1fr 110px 90px 160px 76px", gap: "12px" }}
+                  style={{ gridTemplateColumns: "24px 1fr 110px 90px 160px 160px", gap: "12px" }}
                   onClick={() => setExpandedRun(isExpanded ? null : run.id)}
                 >
                   <span style={{ display: "flex", alignItems: "center", color: "var(--gs-slate)" }}>
@@ -227,21 +272,63 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
                     {fmtDate(run.updated)}
                   </span>
 
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onSelectRun?.(run); }}
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      color: "var(--gs-navy)",
-                      backgroundColor: "var(--accent)",
-                      border: "1px solid rgba(28,43,94,0.15)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <ExternalLink size={9} />
-                    Open
-                  </button>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectRun?.(run); }}
+                      className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        color: "var(--gs-navy)",
+                        backgroundColor: "var(--accent)",
+                        border: "1px solid rgba(28,43,94,0.15)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <ExternalLink size={9} />
+                      Open
+                    </button>
+                    {canDeleteRun(run) ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmRun(run);
+                          setConfirmText("");
+                          setDeleteError(null);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          color: "var(--gs-red)",
+                          backgroundColor: "transparent",
+                          border: "1px solid var(--gs-red-border)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Trash2 size={9} />
+                        Delete
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        title="Cannot delete active run"
+                        className="flex items-center gap-1 px-2 py-1 rounded"
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          color: "var(--gs-slate)",
+                          backgroundColor: "transparent",
+                          border: "1px solid rgba(100,116,139,0.15)",
+                          cursor: "not-allowed",
+                          opacity: 0.7,
+                        }}
+                      >
+                        <Trash2 size={9} />
+                        Cannot delete active run
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Expanded detail */}
@@ -279,6 +366,67 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
           })
         )}
       </div>
+
+      {confirmRun && (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(15,23,42,0.28)", zIndex: 40 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-run-title"
+        >
+          <div
+            className="rounded-lg bg-card p-4"
+            style={{ width: "min(440px, calc(100vw - 32px))", border: "1px solid var(--border)", boxShadow: "0 18px 40px rgba(15,23,42,0.18)" }}
+          >
+            <h3 id="delete-run-title" className="font-mono" style={{ fontSize: "14px", fontWeight: 700, color: "var(--gs-navy)" }}>
+              Delete run?
+            </h3>
+            <p style={{ fontSize: "12px", color: "var(--gs-slate)", marginTop: "8px" }}>
+              This permanently deletes the run record and all files for this run.
+            </p>
+            <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "10px" }}>
+              Type the run name or run ID to confirm.
+            </p>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              className="rounded px-2.5 py-1.5 w-full outline-none mt-2"
+              style={{
+                fontSize: "12px",
+                backgroundColor: "var(--input-background)",
+                border: "1px solid var(--border)",
+                color: "var(--gs-navy)",
+              }}
+            />
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button
+                onClick={() => { setConfirmRun(null); setConfirmText(""); }}
+                className="px-3 py-1.5 rounded"
+                style={{ fontSize: "12px", color: "var(--gs-navy)", backgroundColor: "transparent", border: "1px solid rgba(28,43,94,0.15)", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { void handleConfirmDelete(); }}
+                disabled={!confirmMatches || deletingRunId === confirmRun.id}
+                className="px-3 py-1.5 rounded"
+                style={{
+                  fontSize: "12px",
+                  color: "white",
+                  backgroundColor: "var(--gs-red)",
+                  border: "1px solid var(--gs-red-border)",
+                  cursor: confirmMatches && deletingRunId !== confirmRun.id ? "pointer" : "not-allowed",
+                  opacity: confirmMatches && deletingRunId !== confirmRun.id ? 1 : 0.55,
+                }}
+              >
+                {deletingRunId === confirmRun.id ? "Deleting..." : "Delete permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

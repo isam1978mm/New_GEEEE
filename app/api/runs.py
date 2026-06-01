@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import select
@@ -41,10 +42,10 @@ from app.pipeline.stages.thermal import ThermalStage
 from app.pipeline.stages.thermal import create_ee_notebook_thermal_inertia_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
-from app.schemas.run import RunCreate, RunDetailPublic, RunHistoryEventPublic, RunPublic, RunStageProgressPublic
+from app.schemas.run import RunCreate, RunDeletePublic, RunDetailPublic, RunHistoryEventPublic, RunPublic, RunStageProgressPublic
 from app.services.run_history import append_run_event, build_run_event, read_run_history_events
 from app.services.run_state import ensure_single_active_run
-from app.services.storage import initialize_run_storage, read_manifest, get_run_dir
+from app.services.storage import delete_run_directory, initialize_run_storage, read_manifest, get_run_dir
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,6 +77,24 @@ class RunNotFoundError(AppError):
     status_code = 404
     public_code = "run_not_found"
     public_message = "Run is unavailable."
+
+
+class InvalidRunIdError(AppError):
+    status_code = 400
+    public_code = "invalid_run_id"
+    public_message = "Run identifier is invalid."
+
+
+class ActiveRunDeleteError(AppError):
+    status_code = 409
+    public_code = "active_run_delete_blocked"
+    public_message = "Cannot delete active run."
+
+
+class RunDeleteError(AppError):
+    status_code = 500
+    public_code = "run_delete_failed"
+    public_message = "Run could not be deleted."
 
 
 @router.post("/runs", response_model=RunPublic, status_code=201)
@@ -142,6 +161,37 @@ async def get_run(
         stages=progress,
         history=history,
         artifacts=public_artifacts,
+    )
+
+
+@router.delete("/runs/{run_id}", response_model=RunDeletePublic)
+async def delete_run(
+    run_id: str,
+    settings: Settings = Depends(get_settings_from_request),
+    session: AsyncSession = Depends(get_db_session),
+) -> RunDeletePublic:
+    _validate_delete_run_id(run_id)
+    run = await session.scalar(select(Run).where(Run.id == run_id))
+    if run is None:
+        raise RunNotFoundError()
+    if _is_active_run_status(run.status):
+        raise ActiveRunDeleteError()
+
+    try:
+        delete_summary = delete_run_directory(settings, run_id)
+    except Exception as exc:
+        raise RunDeleteError() from exc
+
+    await session.delete(run)
+    await session.commit()
+    return RunDeletePublic(
+        run_id=run_id,
+        deleted=True,
+        deleted_files_count=delete_summary.deleted_files_count,
+        deleted_dirs_count=delete_summary.deleted_dirs_count,
+        freed_bytes=delete_summary.freed_bytes,
+        status="deleted",
+        message="Run deleted.",
     )
 
 
@@ -230,6 +280,19 @@ def _to_run_public(run: Run) -> RunPublic:
         status=run.status,
         created_at=run.created_at,
     )
+
+
+def _validate_delete_run_id(run_id: str) -> None:
+    try:
+        parsed = UUID(run_id)
+    except (TypeError, ValueError):
+        raise InvalidRunIdError()
+    if str(parsed) != run_id:
+        raise InvalidRunIdError()
+
+
+def _is_active_run_status(status: RunStatus) -> bool:
+    return status in {RunStatus.QUEUED, RunStatus.RUNNING}
 
 
 def _to_artifact_public(artifact: Artifact) -> ArtifactPublic:
