@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, WifiOff, Play, RotateCcw } from "lucide-react";
 import type { CreateRunInput } from "../api/client";
 
@@ -17,6 +17,7 @@ interface RunWorkflowCardProps {
 }
 
 const PREVIEW_TILE_ZOOM = 15;
+type TilePreviewStatus = "idle" | "loading" | "success" | "error";
 
 export function RunWorkflowCard({
   onQueueRun,
@@ -31,6 +32,7 @@ export function RunWorkflowCard({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [bufferKm, setBufferKm] = useState("2.0");
   const [resolution, setResolution] = useState("640");
+  const [tilePreviewStatus, setTilePreviewStatus] = useState<TilePreviewStatus>("idle");
 
   const latitudeValue = Number.parseFloat(latitude);
   const longitudeValue = Number.parseFloat(longitude);
@@ -41,10 +43,21 @@ export function RunWorkflowCard({
   const canQueue = latitudeValid && longitudeValid;
   const hasPreview = hasLatitude || hasLongitude || runName.trim().length > 0;
   const tileTemplateValid = hasTileTemplatePlaceholders(tileUrlTemplate);
-  const tilePreviewUrl =
-    externalTilesEnabled && latitudeValid && longitudeValid && tileTemplateValid
-      ? buildTilePreviewUrl(tileUrlTemplate, latitudeValue, longitudeValue, PREVIEW_TILE_ZOOM)
-      : null;
+  const tilePreview = useMemo(
+    () =>
+      externalTilesEnabled && latitudeValid && longitudeValid && tileTemplateValid
+        ? buildTilePreview(tileUrlTemplate, latitudeValue, longitudeValue, PREVIEW_TILE_ZOOM)
+        : null,
+    [externalTilesEnabled, latitudeValid, latitudeValue, longitudeValid, longitudeValue, tileTemplateValid, tileUrlTemplate],
+  );
+
+  useEffect(() => {
+    if (!externalTilesEnabled || !tileTemplateValid || !latitudeValid || !longitudeValid || !tilePreview) {
+      setTilePreviewStatus("idle");
+      return;
+    }
+    setTilePreviewStatus("loading");
+  }, [externalTilesEnabled, latitudeValid, longitudeValid, tilePreview, tileTemplateValid]);
 
   function handleReset() {
     setLatitude(""); setLongitude(""); setRunName("");
@@ -281,14 +294,22 @@ export function RunWorkflowCard({
             <div className="flex items-center gap-1">
               <WifiOff size={9} style={{ color: "var(--gs-slate)", opacity: 0.5 }} />
               <span style={{ fontSize: "10px", color: "var(--gs-slate)", opacity: 0.55 }}>
-                {externalTilesEnabled ? "External tile preview enabled" : "External tiles disabled"}
+                {!externalTilesEnabled
+                  ? "External tiles disabled"
+                  : tilePreviewStatus === "success"
+                    ? "External tile preview enabled"
+                    : tilePreviewStatus === "loading"
+                      ? "Loading tile preview..."
+                      : tilePreviewStatus === "error"
+                        ? "Tile preview failed to load"
+                        : "Tile preview ready"}
               </span>
             </div>
 
             <div
               className="rounded overflow-hidden"
               style={{
-                backgroundColor: "rgba(28,43,94,0.03)",
+                backgroundColor: "rgba(248,247,242,0.9)",
                 border: "1px solid rgba(28,43,94,0.12)",
                 minHeight: "172px",
               }}
@@ -324,19 +345,43 @@ export function RunWorkflowCard({
                 </div>
               )}
 
-              {tilePreviewUrl && (
+              {tilePreview && (
                 <div className="flex flex-col">
-                  <img
-                    src={tilePreviewUrl}
-                    alt="Target map tile preview"
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      objectFit: "cover",
-                      display: "block",
-                      backgroundColor: "rgba(28,43,94,0.04)",
-                    }}
-                  />
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", backgroundColor: "rgba(248,247,242,0.95)" }}>
+                    {tilePreviewStatus !== "error" && (
+                      <img
+                        key={tilePreview.url}
+                        src={tilePreview.url}
+                        alt="Target map tile preview"
+                        onLoad={() => setTilePreviewStatus("success")}
+                        onError={() => setTilePreviewStatus("error")}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: tilePreviewStatus === "success" ? "block" : "none",
+                        }}
+                      />
+                    )}
+                    {tilePreviewStatus === "loading" && (
+                      <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ position: "absolute", inset: 0 }}>
+                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>Loading tile preview...</div>
+                        <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "280px" }}>
+                          Waiting for tile image response from the configured template.
+                        </div>
+                      </div>
+                    )}
+                    {tilePreviewStatus === "error" && (
+                      <div className="flex flex-col items-center justify-center gap-1 px-4 py-6" style={{ position: "absolute", inset: 0 }}>
+                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}>
+                          Tile preview failed to load. Check tile URL template.
+                        </div>
+                        <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", textAlign: "center", maxWidth: "280px" }}>
+                          The current tile request did not return a usable image preview.
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div
                     className="px-2.5 py-1.5"
                     style={{
@@ -344,9 +389,16 @@ export function RunWorkflowCard({
                       color: "var(--gs-slate)",
                       borderTop: "1px solid rgba(28,43,94,0.12)",
                       backgroundColor: "rgba(255,255,255,0.72)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    External tile preview enabled
+                    <span>{tilePreview.providerLabel}</span>
+                    <span className="font-mono">
+                      z{tilePreview.zoom} x{tilePreview.x} y{tilePreview.y}
+                    </span>
                   </div>
                 </div>
               )}
@@ -402,12 +454,18 @@ function hasTileTemplatePlaceholders(template: string): boolean {
   return template.includes("{z}") && template.includes("{x}") && template.includes("{y}");
 }
 
-function buildTilePreviewUrl(template: string, latitude: number, longitude: number, zoom: number): string {
+function buildTilePreview(template: string, latitude: number, longitude: number, zoom: number) {
   const { x, y } = latLonToTile(latitude, longitude, zoom);
-  return template
-    .replaceAll("{z}", String(zoom))
-    .replaceAll("{x}", String(x))
-    .replaceAll("{y}", String(y));
+  return {
+    url: template
+      .replaceAll("{z}", String(zoom))
+      .replaceAll("{x}", String(x))
+      .replaceAll("{y}", String(y)),
+    providerLabel: tileTemplateLabel(template),
+    zoom,
+    x,
+    y,
+  };
 }
 
 function latLonToTile(latitude: number, longitude: number, zoom: number): { x: number; y: number } {
@@ -421,4 +479,13 @@ function latLonToTile(latitude: number, longitude: number, zoom: number): { x: n
     x: Math.max(0, Math.min(tilesPerAxis - 1, x)),
     y: Math.max(0, Math.min(tilesPerAxis - 1, y)),
   };
+}
+
+function tileTemplateLabel(template: string): string {
+  try {
+    const url = new URL(template);
+    return url.hostname || "custom tile template";
+  } catch (_error) {
+    return "custom tile template";
+  }
 }
