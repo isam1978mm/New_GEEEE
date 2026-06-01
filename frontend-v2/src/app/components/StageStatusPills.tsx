@@ -1,5 +1,5 @@
 import { CheckCircle2, Loader2, XCircle, Circle } from "lucide-react";
-import type { Stage } from "../data/mockData";
+import type { Stage } from "../api/client";
 
 const statusCfg = {
   done: {

@@ -8,10 +8,9 @@ import {
   Loader2,
   XCircle,
 } from "lucide-react";
-import { STAGES, STAGES_RUNNING, STAGES_FAILED, RECENT_RUNS, COMPLETED_RUN } from "../data/mockData";
 import { StageStatusPills } from "./StageStatusPills";
 import { KeyDownloads } from "./KeyDownloads";
-import type { Run, RunState } from "../data/mockData";
+import type { KeyDownload, Run, RunDetail } from "../api/client";
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -28,6 +27,7 @@ function StateBadge({ state }: { state: Run["state"] }) {
     running: { label: "Running", color: "var(--gs-blue)", bg: "var(--gs-blue-bg)", border: "var(--gs-blue-border)" },
     failed: { label: "Failed", color: "var(--gs-red)", bg: "var(--gs-red-bg)", border: "var(--gs-red-border)" },
     queued: { label: "Queued", color: "var(--gs-amber)", bg: "var(--gs-amber-bg)", border: "var(--gs-amber-border)" },
+    cancelled: { label: "Cancelled", color: "var(--gs-slate)", bg: "rgba(100,116,139,0.06)", border: "rgba(100,116,139,0.15)" },
   };
   const cfg = map[state];
   return (
@@ -51,28 +51,30 @@ function StateBadge({ state }: { state: Run["state"] }) {
 
 interface OverviewTabProps {
   onSelectRun?: (run: Run) => void;
-  runState?: RunState;
+  selectedRun: RunDetail;
+  recentRuns: Run[];
+  keyDownloads: KeyDownload[];
+  loadingOutputs?: boolean;
 }
 
-export function OverviewTab({ onSelectRun, runState = "done" }: OverviewTabProps) {
+export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads, loadingOutputs = false }: OverviewTabProps) {
   const [showArchive, setShowArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState("");
 
-  const stages =
-    runState === "running" ? STAGES_RUNNING : runState === "failed" ? STAGES_FAILED : STAGES;
-
-  const filteredArchive = RECENT_RUNS.filter(
+  const filteredArchive = recentRuns.filter(
     (r) =>
       r.name.toLowerCase().includes(archiveSearch.toLowerCase()) ||
       r.id.toLowerCase().includes(archiveSearch.toLowerCase())
   );
 
   const lifecycleSummary =
-    runState === "done"
-      ? { icon: <CheckCircle2 size={13} />, color: "var(--gs-green)", label: "Complete", detail: "All 18 stages passed · 1 accepted xfail · 421 files exported" }
-      : runState === "running"
-      ? { icon: <Loader2 size={13} className="animate-spin" />, color: "var(--gs-blue)", label: "Running", detail: "Stage 11 of 18 · FOCUS in progress" }
-      : { icon: <XCircle size={13} />, color: "var(--gs-red)", label: "Failed", detail: "Halted at SAR · backscatter threshold exceeded" };
+    selectedRun.state === "done"
+      ? { icon: <CheckCircle2 size={13} />, color: "var(--gs-green)", label: "Complete", detail: `${selectedRun.stages.filter((s) => s.status === "done").length} stages complete` }
+      : selectedRun.state === "running"
+      ? { icon: <Loader2 size={13} className="animate-spin" />, color: "var(--gs-blue)", label: "Running", detail: `${selectedRun.stage} in progress` }
+      : selectedRun.state === "failed"
+      ? { icon: <XCircle size={13} />, color: "var(--gs-red)", label: "Failed", detail: `Halted at ${selectedRun.stage}` }
+      : { icon: <Clock size={13} />, color: "var(--gs-amber)", label: "Queued", detail: "Waiting for first stage update" };
 
   return (
     <div className="flex flex-col gap-3">
@@ -95,11 +97,11 @@ export function OverviewTab({ onSelectRun, runState = "done" }: OverviewTabProps
           <div className="flex items-center gap-3 shrink-0">
             <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.65 }}>
               <Clock size={10} className="inline mr-1" />
-              {fmtDate(COMPLETED_RUN.updated)}
+              {fmtDate(selectedRun.updated)}
             </span>
           </div>
         </div>
-        <StageStatusPills stages={stages} />
+        <StageStatusPills stages={selectedRun.stages} />
       </div>
 
       {/* Two-column: Key Downloads | Recent Runs */}
@@ -132,7 +134,7 @@ export function OverviewTab({ onSelectRun, runState = "done" }: OverviewTabProps
               safe deliverables only
             </span>
           </div>
-          <KeyDownloads />
+          <KeyDownloads downloads={keyDownloads} loading={loadingOutputs} />
         </div>
 
         {/* Right: Recent Runs + Archive */}
@@ -155,7 +157,7 @@ export function OverviewTab({ onSelectRun, runState = "done" }: OverviewTabProps
           </div>
 
           <div className="flex flex-col">
-            {RECENT_RUNS.map((run, i) => (
+            {recentRuns.slice(0, 3).map((run, i) => (
               <div
                 key={run.id}
                 className="flex items-center gap-2 px-3 py-2 hover:bg-accent/30 transition-colors"
@@ -190,6 +192,11 @@ export function OverviewTab({ onSelectRun, runState = "done" }: OverviewTabProps
                 </button>
               </div>
             ))}
+            {recentRuns.length === 0 && (
+              <div className="px-3 py-3" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
+                No recent runs returned by the API.
+              </div>
+            )}
           </div>
 
           {/* Run Archive collapsible */}

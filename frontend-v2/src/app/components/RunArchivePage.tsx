@@ -9,8 +9,7 @@ import {
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
-import { ARCHIVE_RUNS } from "../data/mockData";
-import type { Run } from "../data/mockData";
+import type { Run } from "../api/client";
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -26,6 +25,7 @@ const stateIcon: Record<Run["state"], React.ReactNode> = {
   running: <Loader2 size={12} className="animate-spin" />,
   failed: <XCircle size={12} />,
   queued: <Clock size={12} />,
+  cancelled: <Clock size={12} />,
 };
 
 const stateColor: Record<Run["state"], string> = {
@@ -33,6 +33,7 @@ const stateColor: Record<Run["state"], string> = {
   running: "var(--gs-blue)",
   failed: "var(--gs-red)",
   queued: "var(--gs-amber)",
+  cancelled: "var(--gs-slate)",
 };
 
 const stateBg: Record<Run["state"], string> = {
@@ -40,6 +41,7 @@ const stateBg: Record<Run["state"], string> = {
   running: "var(--gs-blue-bg)",
   failed: "var(--gs-red-bg)",
   queued: "var(--gs-amber-bg)",
+  cancelled: "rgba(100,116,139,0.06)",
 };
 
 const stateBorder: Record<Run["state"], string> = {
@@ -47,18 +49,22 @@ const stateBorder: Record<Run["state"], string> = {
   running: "var(--gs-blue-border)",
   failed: "var(--gs-red-border)",
   queued: "var(--gs-amber-border)",
+  cancelled: "rgba(100,116,139,0.15)",
 };
 
 interface RunArchivePageProps {
+  runs: Run[];
+  loading?: boolean;
+  error?: string | null;
   onSelectRun?: (run: Run) => void;
 }
 
-export function RunArchivePage({ onSelectRun }: RunArchivePageProps) {
+export function RunArchivePage({ runs, loading = false, error = null, onSelectRun }: RunArchivePageProps) {
   const [search, setSearch] = useState("");
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<Run["state"] | "all">("all");
 
-  const filtered = ARCHIVE_RUNS.filter((r) => {
+  const filtered = runs.filter((r) => {
     const matchSearch =
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.id.toLowerCase().includes(search.toLowerCase());
@@ -72,6 +78,7 @@ export function RunArchivePage({ onSelectRun }: RunArchivePageProps) {
     { key: "running", label: "Running" },
     { key: "failed", label: "Failed" },
     { key: "queued", label: "Queued" },
+    { key: "cancelled", label: "Cancelled" },
   ];
 
   return (
@@ -90,7 +97,7 @@ export function RunArchivePage({ onSelectRun }: RunArchivePageProps) {
           </p>
         </div>
         <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)" }}>
-          {ARCHIVE_RUNS.length} runs
+          {runs.length} runs
         </span>
       </div>
 
@@ -160,7 +167,15 @@ export function RunArchivePage({ onSelectRun }: RunArchivePageProps) {
         </div>
 
         {/* Rows */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="px-4 py-8 text-center">
+            <p style={{ fontSize: "13px", color: "var(--gs-slate)" }}>Loading runs from API...</p>
+          </div>
+        ) : error ? (
+          <div className="px-4 py-8 text-center">
+            <p style={{ fontSize: "13px", color: "var(--gs-red)" }}>{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <p style={{ fontSize: "13px", color: "var(--gs-slate)" }}>No runs match your filter.</p>
           </div>

@@ -1,11 +1,8 @@
 type NavTab = "dashboard" | "archive" | "exports" | "settings";
-type DemoMode = "empty" | "completed" | "running" | "failed";
 
 interface NavBarProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
-  demoMode: DemoMode;
-  onDemoChange: (mode: DemoMode) => void;
 }
 
 const tabs: { key: NavTab; label: string }[] = [
@@ -15,14 +12,7 @@ const tabs: { key: NavTab; label: string }[] = [
   { key: "settings", label: "Settings" },
 ];
 
-const demoStates: { key: DemoMode; label: string; color: string }[] = [
-  { key: "empty", label: "New run", color: "rgba(255,255,255,0.45)" },
-  { key: "completed", label: "Done", color: "#86efac" },
-  { key: "running", label: "Running", color: "#93c5fd" },
-  { key: "failed", label: "Failed", color: "#fca5a5" },
-];
-
-export function NavBar({ activeTab, onTabChange, demoMode, onDemoChange }: NavBarProps) {
+export function NavBar({ activeTab, onTabChange }: NavBarProps) {
   return (
     <header
       style={{ backgroundColor: "var(--gs-navy)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
@@ -77,32 +67,14 @@ export function NavBar({ activeTab, onTabChange, demoMode, onDemoChange }: NavBa
         ))}
       </nav>
 
-      {/* Right: screen state switcher (prototype nav) */}
+      {/* Right: local access marker */}
       <div className="ml-auto flex items-center gap-1.5">
         <span
-          style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginRight: "4px" }}
+          style={{ fontSize: "10px", color: "rgba(255,255,255,0.45)", marginRight: "4px" }}
           className="font-mono"
         >
-          screen:
+          local access
         </span>
-        {demoStates.map((ds) => (
-          <button
-            key={ds.key}
-            onClick={() => onDemoChange(ds.key)}
-            className="px-2 py-0.5 rounded transition-all"
-            style={{
-              fontSize: "10.5px",
-              fontWeight: demoMode === ds.key ? 600 : 400,
-              color: demoMode === ds.key ? ds.color : "rgba(255,255,255,0.35)",
-              backgroundColor: demoMode === ds.key ? "rgba(255,255,255,0.1)" : "transparent",
-              border: demoMode === ds.key ? `1px solid ${ds.color}40` : "1px solid transparent",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {ds.label}
-          </button>
-        ))}
       </div>
     </header>
   );

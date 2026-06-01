@@ -9,15 +9,28 @@ import {
   AlertTriangle,
   Lock,
 } from "lucide-react";
-import { EXPORT_GROUPS } from "../data/mockData";
+import type { ExportGroup, UnavailableOutput } from "../api/client";
 
-export function ExportsTab() {
+interface ExportsTabProps {
+  groups: ExportGroup[];
+  unavailable: UnavailableOutput[];
+  loading?: boolean;
+  error?: string | null;
+}
+
+export function ExportsTab({ groups, unavailable, loading = false, error = null }: ExportsTabProps) {
   const [search, setSearch] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["AI_READY_640"]));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const totalFiles = EXPORT_GROUPS.reduce((sum, g) => sum + g.fileCount, 0);
-  const totalSize = "24.1 GB";
+  const totalFiles = groups.reduce((sum, g) => sum + g.fileCount, 0);
+  const totalSize = groups.length === 0 ? "0 files" : groups.reduce((sum, g) => sum + g.files.reduce((groupSum, file) => groupSum + file.sizeBytes, 0), 0);
+  const totalSizeLabel =
+    typeof totalSize === "number" && totalSize > 1024 * 1024 * 1024
+      ? `${(totalSize / (1024 * 1024 * 1024)).toFixed(1)} GB`
+      : typeof totalSize === "number" && totalSize > 1024 * 1024
+        ? `${(totalSize / (1024 * 1024)).toFixed(1)} MB`
+        : "0 files";
 
   function toggleGroup(key: string) {
     setExpandedGroups((prev) => {
@@ -28,7 +41,7 @@ export function ExportsTab() {
     });
   }
 
-  const filteredGroups = EXPORT_GROUPS.map((group) => ({
+  const filteredGroups = groups.map((group) => ({
     ...group,
     files: group.files.filter(
       (f) =>
@@ -73,7 +86,7 @@ export function ExportsTab() {
           </span>
           <span style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
             <span className="font-mono" style={{ fontWeight: 700, color: "var(--gs-navy)" }}>
-              {totalSize}
+          {totalSizeLabel}
             </span>{" "}
             total
           </span>
@@ -101,12 +114,27 @@ export function ExportsTab() {
             Export Tree
           </span>
           <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-            · {EXPORT_GROUPS.length} groups · collapsed by default
+            · {groups.length} groups · collapsed by default
           </span>
         </div>
 
         <div className="overflow-y-auto" style={{ maxHeight: "440px" }}>
-          {filteredGroups.map((group, gi) => {
+          {loading && (
+            <div className="px-4 py-8 text-center" style={{ fontSize: "12px", color: "var(--gs-slate)" }}>
+              Loading exports from the run output API...
+            </div>
+          )}
+          {!loading && error && (
+            <div className="px-4 py-8 text-center" style={{ fontSize: "12px", color: "var(--gs-red)" }}>
+              {error}
+            </div>
+          )}
+          {!loading && !error && filteredGroups.length === 0 && (
+            <div className="px-4 py-8 text-center" style={{ fontSize: "12px", color: "var(--gs-slate)" }}>
+              {search ? "No exports match the current filter." : "No guarded exports are available for this run."}
+            </div>
+          )}
+          {!loading && !error && filteredGroups.map((group, gi) => {
             const isExpanded = expandedGroups.has(group.key) || (search !== "" && group.files.length > 0);
             return (
               <div
@@ -214,20 +242,27 @@ export function ExportsTab() {
                         >
                           {file.size}
                         </span>
-                        <button
-                          className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-card transition-colors"
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: 500,
-                            color: "var(--gs-navy)",
-                            backgroundColor: "var(--card)",
-                            border: "1px solid rgba(28,43,94,0.15)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <Download size={9} />
-                          Download
-                        </button>
+                        {file.downloadUrl ? (
+                          <a
+                            href={file.downloadUrl}
+                            download={file.name}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-card transition-colors"
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 500,
+                              color: "var(--gs-navy)",
+                              backgroundColor: "var(--card)",
+                              border: "1px solid rgba(28,43,94,0.15)",
+                              cursor: "pointer",
+                              textDecoration: "none",
+                            }}
+                          >
+                            <Download size={9} />
+                            Download
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "var(--gs-slate)" }}>Unavailable</span>
+                        )}
                       </div>
                     ))}
 
@@ -269,10 +304,19 @@ export function ExportsTab() {
             style={{ borderTop: "1px solid var(--border)", backgroundColor: "var(--gs-amber-bg)" }}
           >
             <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.6", paddingTop: "10px" }}>
-              Legacy notebook and debug outputs, or files not produced by this app run, are not exposed
-              here. These may include intermediate SAR processing artifacts, raw GEE notebook outputs,
-              and developer-only diagnostics. Contact your administrator for access.
+              {unavailable.length === 0
+                ? "No unavailable outputs are reported for this run."
+                : `${unavailable.length} outputs are unavailable for this run. Detailed source status is retained by the guarded operator output API.`}
             </p>
+            {unavailable.length > 0 && (
+              <div className="mt-2 flex flex-col gap-1">
+                {unavailable.slice(0, 20).map((item) => (
+                  <div key={item.path} className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
+                    {item.path} · {item.status}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

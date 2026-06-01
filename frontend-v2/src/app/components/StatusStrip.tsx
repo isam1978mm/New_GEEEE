@@ -1,5 +1,5 @@
 import { WifiOff, CheckCircle2, Loader2, XCircle, Clock } from "lucide-react";
-import type { RunState } from "../data/mockData";
+import type { RunState } from "../api/client";
 
 interface StatusStripProps {
   runId: string;
@@ -34,6 +34,13 @@ const stateCfg: Record<RunState, { label: string; color: string; bg: string; bor
     color: "var(--gs-amber)",
     bg: "var(--gs-amber-bg)",
     border: "var(--gs-amber-border)",
+    icon: <Clock size={10} />,
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "var(--gs-slate)",
+    bg: "rgba(100,116,139,0.06)",
+    border: "rgba(100,116,139,0.15)",
     icon: <Clock size={10} />,
   },
 };

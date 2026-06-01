@@ -1,0 +1,524 @@
+export type RunState = "done" | "running" | "failed" | "queued" | "cancelled";
+export type StageStatus = "done" | "running" | "failed" | "pending" | "skipped";
+
+export interface Run {
+  id: string;
+  name: string;
+  state: RunState;
+  stage: string;
+  updated: string;
+  created: string;
+}
+
+export interface Stage {
+  key: string;
+  label: string;
+  status: StageStatus;
+}
+
+export interface StatusEvent {
+  id: string;
+  time: string;
+  state: RunState;
+  stage: string;
+  message: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: "done" | "running" | "info" | "failed";
+  message: string;
+  detail?: string;
+  time: string;
+}
+
+export interface ExportFile {
+  name: string;
+  path: string;
+  size: string;
+  sizeBytes: number;
+  tag?: string;
+  downloadUrl?: string;
+}
+
+export interface ExportGroup {
+  key: string;
+  label: string;
+  fileCount: number;
+  totalSize: string;
+  files: ExportFile[];
+  isPublicSafe?: boolean;
+}
+
+export interface KeyDownload {
+  label: string;
+  path: string;
+  size: string;
+  tag?: string;
+  downloadUrl?: string;
+}
+
+export interface UnavailableOutput {
+  filename: string;
+  path: string;
+  group: string;
+  status: string;
+  source: string;
+}
+
+export interface RunDetail extends Run {
+  stages: Stage[];
+  history: StatusEvent[];
+  artifacts: PublicArtifact[];
+}
+
+export interface PublicArtifact {
+  name: string;
+  artifactClass: string;
+  downloadUrl: string;
+}
+
+export interface OperatorOutputTree {
+  runId: string;
+  outputs: ExportFile[];
+  groups: ExportGroup[];
+  keyDownloads: KeyDownload[];
+  unavailable: UnavailableOutput[];
+}
+
+export interface CreateRunInput {
+  lat: number;
+  lon: number;
+  name: string | null;
+}
+
+interface RunPublicDto {
+  id?: unknown;
+  name?: unknown;
+  status?: unknown;
+  created_at?: unknown;
+}
+
+interface RunStageDto {
+  name?: unknown;
+  label?: unknown;
+  status?: unknown;
+}
+
+interface RunHistoryDto {
+  timestamp?: unknown;
+  event_type?: unknown;
+  label?: unknown;
+  message?: unknown;
+  stage_name?: unknown;
+}
+
+interface RunDetailDto extends RunPublicDto {
+  current_stage?: unknown;
+  stages?: unknown;
+  history?: unknown;
+  artifacts?: unknown;
+}
+
+interface ArtifactDto {
+  name?: unknown;
+  artifact_class?: unknown;
+}
+
+interface OperatorOutputDto {
+  relative_path?: unknown;
+  filename?: unknown;
+  directory?: unknown;
+  group?: unknown;
+  size_bytes?: unknown;
+  status?: unknown;
+  download_url?: unknown;
+}
+
+interface OperatorUnavailableDto {
+  relative_path?: unknown;
+  filename?: unknown;
+  group?: unknown;
+  status?: unknown;
+  source?: unknown;
+}
+
+interface OperatorOutputTreeDto {
+  run_id?: unknown;
+  outputs?: unknown;
+  not_implemented?: unknown;
+}
+
+const KEY_DOWNLOAD_PATHS = [
+  "QA/RUN_MANIFEST.json",
+  "DEM_GEO8_TIFS/DEM_640.tif",
+  "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+  "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+  "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+  "REPORT_640_FINAL_Zero_Point_Targets.tif",
+  "REPORT_640_Mass_Report.tif",
+  "REPORT_640_Pottery_Report.tif",
+  "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+];
+
+const OUTPUT_GROUP_ORDER = [
+  "AI_READY_640",
+  "DEM_GEO8_TIFS",
+  "GEOTIFF_RADAR_BANDS",
+  "NPY_RADAR_BANDS",
+  "NPY_STACKS",
+  "QA",
+  "REPORT_640",
+  "Root files",
+];
+
+export async function listRuns(): Promise<Run[]> {
+  const payload = await fetchJson<unknown>("/runs");
+  return Array.isArray(payload) ? payload.map(mapRunPublic).filter(Boolean) : [];
+}
+
+export async function getRunDetail(runId: string): Promise<RunDetail> {
+  return mapRunDetail(await fetchJson<RunDetailDto>(`/runs/${encodeURIComponent(runId)}`));
+}
+
+export async function getOperatorOutputs(runId: string): Promise<OperatorOutputTree> {
+  return mapOperatorOutputTree(await fetchJson<OperatorOutputTreeDto>(`/runs/${encodeURIComponent(runId)}/outputs`));
+}
+
+export async function createRun(input: CreateRunInput): Promise<Run> {
+  const payload = await fetchJson<RunPublicDto>("/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return mapRunPublic(payload) ?? emptyRun();
+}
+
+export function buildActivityEvents(detail: RunDetail | null): ActivityEvent[] {
+  if (!detail || detail.history.length === 0) {
+    return [];
+  }
+  return detail.history.slice(-10).reverse().map((event) => ({
+    id: event.id,
+    type: event.state === "done" ? "done" : event.state === "failed" ? "failed" : event.state === "running" ? "running" : "info",
+    message: event.stage,
+    detail: event.message,
+    time: formatShortTime(event.time),
+  }));
+}
+
+export function formatFileSize(sizeBytes: number): string {
+  if (!Number.isFinite(sizeBytes) || sizeBytes < 0) {
+    return "size unavailable";
+  }
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+  if (sizeBytes < 1024 * 1024 * 1024) {
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(sizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch (_error) {
+    payload = null;
+  }
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
+        ? payload.message
+        : "Request failed.";
+    throw new Error(message);
+  }
+  return payload as T;
+}
+
+function mapRunPublic(payload: unknown): Run | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as RunPublicDto;
+  const id = asString(dto.id);
+  if (!id) {
+    return null;
+  }
+  const created = asString(dto.created_at) || new Date(0).toISOString();
+  return {
+    id,
+    name: asString(dto.name) || "Unnamed run",
+    state: mapRunState(dto.status),
+    stage: mapRunState(dto.status) === "done" ? "Completed" : "Queued",
+    updated: created,
+    created,
+  };
+}
+
+function mapRunDetail(payload: RunDetailDto): RunDetail {
+  const base = mapRunPublic(payload) ?? emptyRun();
+  const stages = Array.isArray(payload.stages) ? payload.stages.map(mapStage).filter(Boolean) : [];
+  const currentStage = asString(payload.current_stage);
+  const history = Array.isArray(payload.history) ? payload.history.map(mapHistoryEvent).filter(Boolean) : [];
+  const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts.map((item) => mapArtifact(base.id, item)).filter(Boolean) : [];
+  return {
+    ...base,
+    stage: currentStage ? stageLabelFromKey(currentStage, stages) : base.stage,
+    stages,
+    history,
+    artifacts,
+  };
+}
+
+function mapStage(payload: unknown): Stage | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as RunStageDto;
+  const key = asString(dto.name);
+  const label = asString(dto.label);
+  if (!key || !label) {
+    return null;
+  }
+  return { key, label: shortStageLabel(label), status: mapStageStatus(dto.status) };
+}
+
+function mapHistoryEvent(payload: unknown, index: number): StatusEvent | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as RunHistoryDto;
+  const timestamp = asString(dto.timestamp) || new Date(0).toISOString();
+  const label = asString(dto.label) || asString(dto.event_type) || "Status update";
+  const message = asString(dto.message) || label;
+  return {
+    id: `${timestamp}-${index}`,
+    time: timestamp,
+    state: stateFromEventType(asString(dto.event_type)),
+    stage: asString(dto.stage_name) || label,
+    message,
+  };
+}
+
+function mapArtifact(runId: string, payload: unknown): PublicArtifact | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as ArtifactDto;
+  const name = asString(dto.name);
+  if (!name) {
+    return null;
+  }
+  const downloadName = artifactDownloadName(name);
+  return {
+    name: downloadName,
+    artifactClass: asString(dto.artifact_class) || "REDACTED_PUBLIC",
+    downloadUrl: `/runs/${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(name)}/download/${encodeURIComponent(downloadName)}`,
+  };
+}
+
+function mapOperatorOutputTree(payload: OperatorOutputTreeDto): OperatorOutputTree {
+  const runId = asString(payload.run_id) || "";
+  const outputs = Array.isArray(payload.outputs) ? payload.outputs.map(mapOperatorOutput).filter(Boolean) : [];
+  const unavailable = Array.isArray(payload.not_implemented)
+    ? payload.not_implemented.map(mapUnavailableOutput).filter(Boolean)
+    : [];
+  const groups = groupOutputs(outputs);
+  const byPath = new Map(outputs.map((output) => [output.path, output]));
+  const keyDownloads = KEY_DOWNLOAD_PATHS.map((path) => byPath.get(path))
+    .filter(Boolean)
+    .map((output) => ({
+      label: output.name,
+      path: output.path,
+      size: output.size,
+      tag: output.tag,
+      downloadUrl: output.downloadUrl,
+    }));
+  return { runId, outputs, groups, keyDownloads, unavailable };
+}
+
+function mapOperatorOutput(payload: unknown): ExportFile | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as OperatorOutputDto;
+  const relativePath = asString(dto.relative_path);
+  const filename = asString(dto.filename);
+  const downloadUrl = asString(dto.download_url);
+  if (!relativePath || !filename || !downloadUrl) {
+    return null;
+  }
+  const sizeBytes = asNumber(dto.size_bytes);
+  return {
+    name: filename,
+    path: relativePath,
+    size: formatFileSize(sizeBytes),
+    sizeBytes,
+    tag: asString(dto.status) || "implemented",
+    downloadUrl,
+  };
+}
+
+function mapUnavailableOutput(payload: unknown): UnavailableOutput | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as OperatorUnavailableDto;
+  const path = asString(dto.relative_path);
+  const filename = asString(dto.filename);
+  if (!path || !filename) {
+    return null;
+  }
+  return {
+    filename,
+    path,
+    group: asString(dto.group) || groupForPath(path),
+    status: asString(dto.status) || "unavailable",
+    source: asString(dto.source) || "not reported",
+  };
+}
+
+function groupOutputs(outputs: ExportFile[]): ExportGroup[] {
+  const groups = new Map<string, ExportFile[]>();
+  for (const output of outputs) {
+    const label = groupForPath(output.path);
+    groups.set(label, [...(groups.get(label) ?? []), output]);
+  }
+  return Array.from(groups.entries())
+    .sort(([left], [right]) => sortGroups(left, right))
+    .map(([label, files]) => {
+      const sortedFiles = files.slice().sort((left, right) => left.path.localeCompare(right.path));
+      const totalBytes = sortedFiles.reduce((sum, file) => sum + file.sizeBytes, 0);
+      return {
+        key: label,
+        label,
+        fileCount: sortedFiles.length,
+        totalSize: formatFileSize(totalBytes),
+        files: sortedFiles,
+        isPublicSafe: sortedFiles.some((file) => Boolean(file.downloadUrl)),
+      };
+    });
+}
+
+function groupForPath(path: string): string {
+  if (path.startsWith("REPORT_640_")) {
+    return "REPORT_640";
+  }
+  if (!path.includes("/")) {
+    return "Root files";
+  }
+  return path.split("/")[0] || "Other";
+}
+
+function sortGroups(left: string, right: string): number {
+  const leftIndex = OUTPUT_GROUP_ORDER.indexOf(left);
+  const rightIndex = OUTPUT_GROUP_ORDER.indexOf(right);
+  if (leftIndex !== -1 || rightIndex !== -1) {
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
+  }
+  return left.localeCompare(right);
+}
+
+function mapRunState(value: unknown): RunState {
+  if (value === "done" || value === "running" || value === "queued" || value === "cancelled") {
+    return value;
+  }
+  if (value === "failed" || value === "stale_failed") {
+    return "failed";
+  }
+  return "queued";
+}
+
+function mapStageStatus(value: unknown): StageStatus {
+  if (value === "done" || value === "running" || value === "failed" || value === "skipped") {
+    return value;
+  }
+  return "pending";
+}
+
+function stateFromEventType(eventType: string | null): RunState {
+  if (!eventType) {
+    return "queued";
+  }
+  if (eventType.includes("failed")) {
+    return "failed";
+  }
+  if (eventType.includes("done")) {
+    return "done";
+  }
+  if (eventType.includes("started")) {
+    return "running";
+  }
+  return "queued";
+}
+
+function shortStageLabel(label: string): string {
+  const map: Record<string, string> = {
+    "GRID setup": "GRID",
+    "Sentinel-2 indices": "S2",
+    "DEM derivatives": "DEM deriv.",
+    "Object extraction": "Objects",
+    "Alignment QA": "Align QA",
+    "Location exports": "Locations",
+    "Field ops exports": "Field ops",
+    "GPS comparison": "GPS",
+    "PCA anomaly": "PCA",
+    "Report 640": "Rpt640",
+    "Feature stacks": "Stacks",
+    "Focus mask": "Focus",
+    "Zero shift": "Zero",
+    "SAR RTC": "SAR",
+    "Secret layers": "Secret",
+  };
+  return map[label] || label;
+}
+
+function stageLabelFromKey(key: string, stages: Stage[]): string {
+  return stages.find((stage) => stage.key === key)?.label || key;
+}
+
+function artifactDownloadName(name: string): string {
+  const map: Record<string, string> = {
+    objects_index: "objects_index.csv",
+    clusters_summary: "clusters_summary.csv",
+    alignment_qa: "alignment_qa.json",
+    alignment_audit: "alignment_audit.json",
+    alignment_mask_selection: "alignment_mask_selection.json",
+  };
+  return map[name] || name;
+}
+
+function formatShortTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function asNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function emptyRun(): Run {
+  return {
+    id: "Not started",
+    name: "No run selected",
+    state: "queued",
+    stage: "Queued",
+    updated: new Date(0).toISOString(),
+    created: new Date(0).toISOString(),
+  };
+}

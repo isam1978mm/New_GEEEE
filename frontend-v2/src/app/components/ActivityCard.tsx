@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Inbox } from "lucide-react";
-import { ACTIVITY_EVENTS } from "../data/mockData";
-import type { ActivityEvent } from "../data/mockData";
+import type { ActivityEvent, RunDetail } from "../api/client";
 
 const dotColor: Record<ActivityEvent["type"], string> = {
   done: "var(--gs-green)",
@@ -18,33 +17,42 @@ const dotBg: Record<ActivityEvent["type"], string> = {
 };
 
 interface ActivityCardProps {
-  runState?: "done" | "running" | "failed";
+  run?: RunDetail | null;
+  events?: ActivityEvent[];
   hasRun?: boolean;
 }
 
-export function ActivityCard({ runState = "done", hasRun = true }: ActivityCardProps) {
+export function ActivityCard({ run = null, events = [], hasRun = true }: ActivityCardProps) {
   const [showSysMessages, setShowSysMessages] = useState(false);
+  const runState = run?.state ?? "queued";
 
   const lifecycleItems =
     runState === "done"
       ? [
           { label: "State", value: "Done", color: "var(--gs-green)" },
-          { label: "Stage", value: "Completed", color: "var(--gs-navy)" },
-          { label: "Exports", value: "421 files", color: "var(--gs-navy)" },
-          { label: "xfails", value: "1 accepted", color: "var(--gs-amber)" },
+          { label: "Stage", value: run?.stage ?? "Completed", color: "var(--gs-navy)" },
+          { label: "Events", value: `${events.length}`, color: "var(--gs-navy)" },
+          { label: "At", value: run ? new Date(run.updated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : "-", color: "var(--gs-slate)" },
         ]
       : runState === "running"
       ? [
           { label: "State", value: "Running", color: "var(--gs-blue)" },
-          { label: "Stage", value: "FOCUS", color: "var(--gs-navy)" },
-          { label: "Progress", value: "11 / 18", color: "var(--gs-navy)" },
-          { label: "Elapsed", value: "1h 05m", color: "var(--gs-slate)" },
+          { label: "Stage", value: run?.stage ?? "Running", color: "var(--gs-navy)" },
+          { label: "Events", value: `${events.length}`, color: "var(--gs-navy)" },
+          { label: "At", value: run ? new Date(run.updated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : "-", color: "var(--gs-slate)" },
+        ]
+      : runState === "failed"
+      ? [
+          { label: "State", value: "Failed", color: "var(--gs-red)" },
+          { label: "Stage", value: run?.stage ?? "Failed", color: "var(--gs-navy)" },
+          { label: "Events", value: `${events.length}`, color: "var(--gs-red)" },
+          { label: "At", value: run ? new Date(run.updated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : "-", color: "var(--gs-slate)" },
         ]
       : [
-          { label: "State", value: "Failed", color: "var(--gs-red)" },
-          { label: "Stage", value: "SAR", color: "var(--gs-navy)" },
-          { label: "Error", value: "Threshold", color: "var(--gs-red)" },
-          { label: "At", value: "16:45", color: "var(--gs-slate)" },
+          { label: "State", value: "Queued", color: "var(--gs-amber)" },
+          { label: "Stage", value: run?.stage ?? "Queued", color: "var(--gs-navy)" },
+          { label: "Events", value: `${events.length}`, color: "var(--gs-navy)" },
+          { label: "At", value: run ? new Date(run.updated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : "-", color: "var(--gs-slate)" },
         ];
 
   return (
@@ -111,12 +119,17 @@ export function ActivityCard({ runState = "done", hasRun = true }: ActivityCardP
               Activity Feed
             </div>
             <div className="flex flex-col overflow-y-auto" style={{ maxHeight: "240px" }}>
-              {ACTIVITY_EVENTS.map((ev, i) => (
+              {events.length === 0 && (
+                <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", padding: "6px 0" }}>
+                  No activity events are available yet.
+                </div>
+              )}
+              {events.map((ev, i) => (
                 <div
                   key={ev.id}
                   className="flex items-start gap-2.5 py-1.5"
                   style={{
-                    borderBottom: i < ACTIVITY_EVENTS.length - 1 ? "1px solid rgba(28,43,94,0.05)" : "none",
+                    borderBottom: i < events.length - 1 ? "1px solid rgba(28,43,94,0.05)" : "none",
                   }}
                 >
                   <div className="shrink-0 mt-1">
@@ -178,11 +191,13 @@ export function ActivityCard({ runState = "done", hasRun = true }: ActivityCardP
                   lineHeight: "1.7",
                 }}
               >
-                <div>[11:05:00] GEE Screening daemon started</div>
-                <div>[11:05:02] Geospatial engine initialized</div>
-                <div>[11:12:44] GRID: resolution=640m, tiles=64</div>
-                <div>[13:22:49] SAR: 1 xfail accepted (RADAR_STACK)</div>
-                <div>[14:22:10] Run finalized, 421 files written</div>
+                {events.length === 0 ? (
+                  <div>No status messages returned by the API.</div>
+                ) : (
+                  events.slice(0, 5).map((event) => (
+                    <div key={event.id}>[{event.time}] {event.message}</div>
+                  ))
+                )}
               </div>
             )}
           </div>

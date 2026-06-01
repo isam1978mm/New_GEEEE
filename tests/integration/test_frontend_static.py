@@ -226,7 +226,7 @@ def test_frontend_v2_react_shell_is_served_side_by_side_with_legacy_ui() -> None
     assert "GEE Screening Dashboard Design" in deep_response.text
 
 
-def test_frontend_v2_assets_are_mock_only_and_do_not_call_real_run_apis() -> None:
+def test_frontend_v2_assets_use_real_run_apis_without_sensitive_content() -> None:
     client = TestClient(create_app(), raise_server_exceptions=False)
     index_response = client.get("/v2")
     assert index_response.status_code == 200
@@ -246,17 +246,22 @@ def test_frontend_v2_assets_are_mock_only_and_do_not_call_real_run_apis() -> Non
     assert "Latitude" in bundle_text
     assert "Longitude" in bundle_text
     assert "Run name" in bundle_text
+    assert '"/runs"' in bundle_text
+    assert "encodeURIComponent" in bundle_text
+    assert "/outputs" in bundle_text
     assert "GEE Screening Operator Mock V2" not in bundle_text
+    assert "Mock Data only" not in bundle_text
+    assert "screen:" not in bundle_text
     assert "Target reference" not in bundle_text
     assert "Accept SAR residual xfail" not in bundle_text
-    assert '"/runs"' not in bundle_text
-    assert '"/runs/' not in bundle_text
-    assert '"/artifacts"' not in bundle_text
-    assert '"/artifacts/' not in bundle_text
-    assert "/outputs/download/" not in bundle_text
+    assert "demoMode" not in bundle_text
+    assert "mockData" not in bundle_text
     assert "coordinates" not in bundle_text.casefold()
     assert "37.7749" not in bundle_text
     assert "-122.4194" not in bundle_text
     assert "C:\\" not in bundle_text
+    assert "/Users/" not in bundle_text
+    assert "/home/" not in bundle_text
+    assert "data/runs/" not in bundle_text
     assert ".env" not in bundle_text
     assert "service-account" not in bundle_text

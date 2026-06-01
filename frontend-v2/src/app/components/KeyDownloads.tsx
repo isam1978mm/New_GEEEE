@@ -1,8 +1,13 @@
 import { Download, Info } from "lucide-react";
 import { useState } from "react";
-import { KEY_DOWNLOADS } from "../data/mockData";
+import type { KeyDownload } from "../api/client";
 
-export function KeyDownloads() {
+interface KeyDownloadsProps {
+  downloads: KeyDownload[];
+  loading?: boolean;
+}
+
+export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) {
   const [infoOpen, setInfoOpen] = useState<string | null>(null);
 
   return (
@@ -22,17 +27,27 @@ export function KeyDownloads() {
           Key Downloads
         </span>
         <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-          {KEY_DOWNLOADS.length} artifacts
+          {downloads.length} artifacts
         </span>
       </div>
 
       {/* Rows */}
       <div className="flex flex-col">
-        {KEY_DOWNLOADS.map((dl, i) => (
+        {loading && (
+          <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
+            Loading guarded downloads...
+          </div>
+        )}
+        {!loading && downloads.length === 0 && (
+          <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
+            Key downloads appear here when a completed run exposes them.
+          </div>
+        )}
+        {!loading && downloads.map((dl, i) => (
           <div
             key={dl.path}
             className="relative group"
-            style={{ borderBottom: i < KEY_DOWNLOADS.length - 1 ? "1px solid rgba(28,43,94,0.06)" : "none" }}
+            style={{ borderBottom: i < downloads.length - 1 ? "1px solid rgba(28,43,94,0.06)" : "none" }}
           >
             <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/30 transition-colors">
               {/* Tag */}
@@ -86,20 +101,25 @@ export function KeyDownloads() {
               </button>
 
               {/* Download */}
-              <button
-                className="flex items-center gap-1 px-2 py-0.5 rounded shrink-0 transition-colors hover:bg-accent"
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  color: "var(--gs-navy)",
-                  backgroundColor: "var(--accent)",
-                  border: "1px solid rgba(28,43,94,0.15)",
-                  cursor: "pointer",
-                }}
-              >
-                <Download size={9} />
-                Download
-              </button>
+              {dl.downloadUrl && (
+                <a
+                  href={dl.downloadUrl}
+                  download={dl.label}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded shrink-0 transition-colors hover:bg-accent"
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    color: "var(--gs-navy)",
+                    backgroundColor: "var(--accent)",
+                    border: "1px solid rgba(28,43,94,0.15)",
+                    cursor: "pointer",
+                    textDecoration: "none",
+                  }}
+                >
+                  <Download size={9} />
+                  Download
+                </a>
+              )}
             </div>
 
             {/* More info panel */}

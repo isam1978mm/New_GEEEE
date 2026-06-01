@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { CheckCircle2, XCircle, Loader2, Clock, ChevronDown, ChevronRight } from "lucide-react";
-import { STATUS_HISTORY_DONE, STATUS_HISTORY_FAILED } from "../data/mockData";
-import type { StatusEvent, RunState } from "../data/mockData";
+import type { RunDetail, RunState, StatusEvent } from "../api/client";
 
 const stateIcon: Record<RunState, React.ReactNode> = {
   done: <CheckCircle2 size={12} />,
   running: <Loader2 size={12} className="animate-spin" />,
   failed: <XCircle size={12} />,
   queued: <Clock size={12} />,
+  cancelled: <Clock size={12} />,
 };
 
 const stateColor: Record<RunState, string> = {
@@ -15,6 +15,7 @@ const stateColor: Record<RunState, string> = {
   running: "var(--gs-blue)",
   failed: "var(--gs-red)",
   queued: "var(--gs-slate)",
+  cancelled: "var(--gs-slate)",
 };
 
 function fmtTime(iso: string) {
@@ -80,11 +81,12 @@ function EventRow({ event, isLast }: { event: StatusEvent; isLast: boolean }) {
 }
 
 interface StatusHistoryTabProps {
-  runState?: RunState;
+  run: RunDetail;
 }
 
-export function StatusHistoryTab({ runState = "done" }: StatusHistoryTabProps) {
-  const events = runState === "failed" ? STATUS_HISTORY_FAILED : STATUS_HISTORY_DONE;
+export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
+  const runState = run.state;
+  const events = run.history;
   const autoExpand = runState === "running" || runState === "failed";
   const [expanded, setExpanded] = useState(autoExpand);
 
@@ -189,6 +191,11 @@ export function StatusHistoryTab({ runState = "done" }: StatusHistoryTabProps) {
         {/* Events */}
         {expanded && (
           <div>
+            {events.length === 0 && (
+              <div className="px-4 py-3" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
+                No detailed status history is available for this run.
+              </div>
+            )}
             {events.map((ev, i) => (
               <EventRow key={ev.id} event={ev} isLast={i === events.length - 1} />
             ))}
@@ -214,8 +221,8 @@ export function StatusHistoryTab({ runState = "done" }: StatusHistoryTabProps) {
         }}
       >
         {[
-          { label: "Run ID", value: runState === "failed" ? "c7d84f22…" : "b1277c76…" },
-          { label: "Run name", value: runState === "failed" ? "new1" : "validation-run" },
+          { label: "Run ID", value: run.id },
+          { label: "Run name", value: run.name },
           {
             label: "Final state",
             value: runState === "failed" ? "Failed" : runState === "running" ? "Running" : "Done",

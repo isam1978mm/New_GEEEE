@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, WifiOff, Play, RotateCcw } from "lucide-react";
+import type { CreateRunInput } from "../api/client";
 
 const steps = [
   { n: 1, label: "Define Target" },
@@ -7,7 +8,13 @@ const steps = [
   { n: 3, label: "Review Results" },
 ];
 
-export function RunWorkflowCard() {
+interface RunWorkflowCardProps {
+  onQueueRun?: (input: CreateRunInput) => Promise<void>;
+  isQueueing?: boolean;
+  feedback?: string | null;
+}
+
+export function RunWorkflowCard({ onQueueRun, isQueueing = false, feedback = null }: RunWorkflowCardProps) {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [runName, setRunName] = useState("");
@@ -28,6 +35,17 @@ export function RunWorkflowCard() {
     setLatitude(""); setLongitude(""); setRunName("");
     setBufferKm("2.0"); setResolution("640");
     setShowAdvanced(false);
+  }
+
+  async function handleQueueRun() {
+    if (!canQueue || isQueueing) {
+      return;
+    }
+    await onQueueRun?.({
+      lat: latitudeValue,
+      lon: longitudeValue,
+      name: runName.trim() || null,
+    });
   }
 
   return (
@@ -257,19 +275,20 @@ export function RunWorkflowCard() {
         {/* Actions */}
         <div className="flex gap-2">
           <button
-            disabled={!canQueue}
+            disabled={!canQueue || isQueueing}
+            onClick={() => void handleQueueRun()}
             className="flex items-center justify-center gap-1.5 py-2 rounded flex-1 transition-opacity"
             style={{
-              backgroundColor: canQueue ? "var(--gs-navy)" : "var(--muted)",
-              color: canQueue ? "white" : "var(--gs-slate)",
+              backgroundColor: canQueue && !isQueueing ? "var(--gs-navy)" : "var(--muted)",
+              color: canQueue && !isQueueing ? "white" : "var(--gs-slate)",
               border: "none",
-              cursor: canQueue ? "pointer" : "not-allowed",
+              cursor: canQueue && !isQueueing ? "pointer" : "not-allowed",
               fontSize: "12.5px",
               fontWeight: 600,
             }}
           >
             <Play size={11} />
-            Queue Run
+            {isQueueing ? "Queueing..." : "Queue Run"}
           </button>
           <button
             onClick={handleReset}
@@ -287,6 +306,11 @@ export function RunWorkflowCard() {
             Reset
           </button>
         </div>
+        {feedback && (
+          <p style={{ fontSize: "11px", color: "var(--gs-slate)" }}>
+            {feedback}
+          </p>
+        )}
       </div>
     </div>
   );
