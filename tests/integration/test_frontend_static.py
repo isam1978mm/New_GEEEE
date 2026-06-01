@@ -243,14 +243,17 @@ def test_frontend_v2_assets_are_mock_only_and_do_not_call_real_run_apis() -> Non
     assert "Key Downloads" in bundle_text
     assert "Status History" in bundle_text
     assert "Advanced / unavailable outputs" in bundle_text
+    assert "Latitude" in bundle_text
+    assert "Longitude" in bundle_text
+    assert "Run name" in bundle_text
     assert "GEE Screening Operator Mock V2" not in bundle_text
+    assert "Target reference" not in bundle_text
+    assert "Accept SAR residual xfail" not in bundle_text
     assert '"/runs"' not in bundle_text
     assert '"/runs/' not in bundle_text
     assert '"/artifacts"' not in bundle_text
     assert '"/artifacts/' not in bundle_text
     assert "/outputs/download/" not in bundle_text
-    assert "latitude" not in bundle_text.casefold()
-    assert "longitude" not in bundle_text.casefold()
     assert "coordinates" not in bundle_text.casefold()
     assert "37.7749" not in bundle_text
     assert "-122.4194" not in bundle_text

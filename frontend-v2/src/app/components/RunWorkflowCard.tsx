@@ -8,17 +8,24 @@ const steps = [
 ];
 
 export function RunWorkflowCard() {
-  const [targetLabel, setTargetLabel] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [runName, setRunName] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [bufferKm, setBufferKm] = useState("2.0");
   const [resolution, setResolution] = useState("640");
 
-  const canQueue = targetLabel.trim().length > 2;
-  const hasPreview = targetLabel.trim() || runName;
+  const latitudeValue = Number.parseFloat(latitude);
+  const longitudeValue = Number.parseFloat(longitude);
+  const hasLatitude = latitude.trim().length > 0;
+  const hasLongitude = longitude.trim().length > 0;
+  const latitudeValid = Number.isFinite(latitudeValue) && latitudeValue >= -90 && latitudeValue <= 90;
+  const longitudeValid = Number.isFinite(longitudeValue) && longitudeValue >= -180 && longitudeValue <= 180;
+  const canQueue = latitudeValid && longitudeValid;
+  const hasPreview = hasLatitude || hasLongitude || runName.trim().length > 0;
 
   function handleReset() {
-    setTargetLabel(""); setRunName("");
+    setLatitude(""); setLongitude(""); setRunName("");
     setBufferKm("2.0"); setResolution("640");
     setShowAdvanced(false);
   }
@@ -82,26 +89,57 @@ export function RunWorkflowCard() {
           })}
         </div>
 
-        {/* Target reference field */}
-        <div className="flex flex-col gap-1">
-          <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--gs-navy)" }}>
-            Target reference
-            <span style={{ fontWeight: 400, color: "var(--gs-slate)", marginLeft: "4px" }}>mock only</span>
-          </label>
-          <input
-            type="text"
-            value={targetLabel}
-            onChange={(e) => setTargetLabel(e.target.value)}
-            placeholder="e.g. validation-target"
-            className="font-mono rounded outline-none"
-            style={{
-              fontSize: "12px",
-              padding: "6px 10px",
-              backgroundColor: "var(--input-background)",
-              border: "1px solid var(--border)",
-              color: "var(--gs-navy)",
-            }}
-          />
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="flex flex-col gap-1">
+            <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--gs-navy)" }}>
+              Latitude
+              <span style={{ fontWeight: 400, color: "var(--gs-slate)", marginLeft: "4px" }}>required</span>
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={-90}
+              max={90}
+              step="any"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              placeholder="e.g. 43.6532"
+              aria-invalid={hasLatitude && !latitudeValid}
+              className="font-mono rounded outline-none"
+              style={{
+                fontSize: "12px",
+                padding: "6px 10px",
+                backgroundColor: "var(--input-background)",
+                border: "1px solid var(--border)",
+                color: "var(--gs-navy)",
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--gs-navy)" }}>
+              Longitude
+              <span style={{ fontWeight: 400, color: "var(--gs-slate)", marginLeft: "4px" }}>required</span>
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={-180}
+              max={180}
+              step="any"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              placeholder="e.g. -79.3832"
+              aria-invalid={hasLongitude && !longitudeValid}
+              className="font-mono rounded outline-none"
+              style={{
+                fontSize: "12px",
+                padding: "6px 10px",
+                backgroundColor: "var(--input-background)",
+                border: "1px solid var(--border)",
+                color: "var(--gs-navy)",
+              }}
+            />
+          </div>
         </div>
 
         {/* Run name */}
@@ -176,12 +214,6 @@ export function RunWorkflowCard() {
                   </select>
                 </div>
               </div>
-              <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
-                <input type="checkbox" defaultChecked className="rounded" />
-                <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-                  Accept SAR residual xfail (RADAR_STACK)
-                </span>
-              </label>
             </div>
           )}
         </div>
@@ -199,12 +231,17 @@ export function RunWorkflowCard() {
               Target Preview
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
-              {targetLabel.trim() && (
+              {hasLatitude && (
                 <span className="font-mono" style={{ fontSize: "11.5px", color: "var(--gs-navy)" }}>
-                  Target: {targetLabel.trim()}
+                  Latitude: {latitude}
                 </span>
               )}
-              {runName && (
+              {hasLongitude && (
+                <span className="font-mono" style={{ fontSize: "11.5px", color: "var(--gs-navy)" }}>
+                  Longitude: {longitude}
+                </span>
+              )}
+              {runName.trim() && (
                 <span style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>"{runName}"</span>
               )}
             </div>
