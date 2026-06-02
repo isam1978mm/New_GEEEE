@@ -26,6 +26,7 @@ function StateBadge({ state }: { state: Run["state"] }) {
     done: { label: "Done", color: "var(--gs-green)", bg: "var(--gs-green-bg)", border: "var(--gs-green-border)" },
     running: { label: "Running", color: "var(--gs-blue)", bg: "var(--gs-blue-bg)", border: "var(--gs-blue-border)" },
     failed: { label: "Failed", color: "var(--gs-red)", bg: "var(--gs-red-bg)", border: "var(--gs-red-border)" },
+    stale_failed: { label: "Stale failed", color: "var(--gs-red)", bg: "var(--gs-red-bg)", border: "var(--gs-red-border)" },
     queued: { label: "Queued", color: "var(--gs-amber)", bg: "var(--gs-amber-bg)", border: "var(--gs-amber-border)" },
     cancelled: { label: "Cancelled", color: "var(--gs-slate)", bg: "rgba(100,116,139,0.06)", border: "rgba(100,116,139,0.15)" },
   };
@@ -47,6 +48,60 @@ function StateBadge({ state }: { state: Run["state"] }) {
       {cfg.label}
     </span>
   );
+}
+
+function lastRecordedEvent(run: RunDetail): string {
+  const lastEvent = run.history.length > 0 ? run.history[run.history.length - 1] : null;
+  return lastEvent ? `${lastEvent.stage}: ${lastEvent.message}` : "No status history event was recorded.";
+}
+
+function backendFailureDetail(run: RunDetail): string | null {
+  if (run.detail) {
+    return run.detail;
+  }
+  const terminalEvent = run.history
+    .slice()
+    .reverse()
+    .find((event) => event.state === "failed" || event.state === "stale_failed");
+  return terminalEvent?.message ?? null;
+}
+
+function FailureNotice({ run }: { run: RunDetail }) {
+  if (run.state === "stale_failed") {
+    const terminalDetail = backendFailureDetail(run);
+    return (
+      <div
+        className="rounded px-3 py-2 mt-2"
+        style={{ backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}
+      >
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--gs-red)" }}>Run is stale_failed.</p>
+        <p style={{ fontSize: "11.5px", color: "var(--gs-red)", marginTop: "2px" }}>
+          Last known stage: {run.stage}
+        </p>
+        <p style={{ fontSize: "11.5px", color: "var(--gs-red)", marginTop: "2px" }}>
+          Last recorded event: {lastRecordedEvent(run)}
+        </p>
+        <p style={{ fontSize: "11.5px", color: "var(--gs-red)", marginTop: "2px" }}>
+          {terminalDetail ?? "No terminal failure message was recorded."}
+        </p>
+      </div>
+    );
+  }
+
+  if (run.state === "failed") {
+    return (
+      <div
+        className="rounded px-3 py-2 mt-2"
+        style={{ backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}
+      >
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--gs-red)" }}>
+          {backendFailureDetail(run) ?? "Run failed. No failure detail was recorded."}
+        </p>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 interface OverviewTabProps {
@@ -73,7 +128,9 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
       : selectedRun.state === "running"
       ? { icon: <Loader2 size={13} className="animate-spin" />, color: "var(--gs-blue)", label: "Running", detail: `${selectedRun.stage} in progress` }
       : selectedRun.state === "failed"
-      ? { icon: <XCircle size={13} />, color: "var(--gs-red)", label: "Failed", detail: `Halted at ${selectedRun.stage}` }
+      ? { icon: <XCircle size={13} />, color: "var(--gs-red)", label: "Failed", detail: selectedRun.stage }
+      : selectedRun.state === "stale_failed"
+      ? { icon: <XCircle size={13} />, color: "var(--gs-red)", label: "Stale failed", detail: `Last known stage: ${selectedRun.stage}` }
       : { icon: <Clock size={13} />, color: "var(--gs-amber)", label: "Queued", detail: "Waiting for first stage update" };
 
   return (
@@ -102,6 +159,7 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
           </div>
         </div>
         <StageStatusPills stages={selectedRun.stages} />
+        <FailureNotice run={selectedRun} />
       </div>
 
       {/* Two-column: Key Downloads | Recent Runs */}

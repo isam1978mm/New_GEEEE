@@ -1,4 +1,4 @@
-export type RunState = "done" | "running" | "failed" | "queued" | "cancelled";
+export type RunState = "done" | "running" | "failed" | "stale_failed" | "queued" | "cancelled";
 export type StageStatus = "done" | "running" | "failed" | "pending" | "skipped";
 
 export interface Run {
@@ -67,6 +67,7 @@ export interface UnavailableOutput {
 }
 
 export interface RunDetail extends Run {
+  detail?: string | null;
   stages: Stage[];
   history: StatusEvent[];
   artifacts: PublicArtifact[];
@@ -107,6 +108,7 @@ interface RunPublicDto {
   name?: unknown;
   status?: unknown;
   created_at?: unknown;
+  detail?: unknown;
 }
 
 interface RunStageDto {
@@ -224,7 +226,14 @@ export function buildActivityEvents(detail: RunDetail | null): ActivityEvent[] {
   }
   return detail.history.slice(-10).reverse().map((event) => ({
     id: event.id,
-    type: event.state === "done" ? "done" : event.state === "failed" ? "failed" : event.state === "running" ? "running" : "info",
+    type:
+      event.state === "done"
+        ? "done"
+        : event.state === "failed" || event.state === "stale_failed"
+          ? "failed"
+          : event.state === "running"
+            ? "running"
+            : "info",
     message: event.stage,
     detail: event.message,
     time: formatShortTime(event.time),
@@ -294,6 +303,7 @@ function mapRunDetail(payload: RunDetailDto): RunDetail {
   return {
     ...base,
     stage: currentStage ? stageLabelFromKey(currentStage, stages) : base.stage,
+    detail: asString(payload.detail),
     stages,
     history,
     artifacts,
@@ -464,10 +474,10 @@ function sortGroups(left: string, right: string): number {
 }
 
 function mapRunState(value: unknown): RunState {
-  if (value === "done" || value === "running" || value === "queued" || value === "cancelled") {
+  if (value === "done" || value === "running" || value === "queued" || value === "cancelled" || value === "stale_failed") {
     return value;
   }
-  if (value === "failed" || value === "stale_failed") {
+  if (value === "failed") {
     return "failed";
   }
   return "queued";
@@ -483,6 +493,9 @@ function mapStageStatus(value: unknown): StageStatus {
 function stateFromEventType(eventType: string | null): RunState {
   if (!eventType) {
     return "queued";
+  }
+  if (eventType.includes("stale_failed")) {
+    return "stale_failed";
   }
   if (eventType.includes("failed")) {
     return "failed";

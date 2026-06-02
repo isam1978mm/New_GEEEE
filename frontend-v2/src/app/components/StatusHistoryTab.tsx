@@ -6,6 +6,7 @@ const stateIcon: Record<RunState, React.ReactNode> = {
   done: <CheckCircle2 size={12} />,
   running: <Loader2 size={12} className="animate-spin" />,
   failed: <XCircle size={12} />,
+  stale_failed: <XCircle size={12} />,
   queued: <Clock size={12} />,
   cancelled: <Clock size={12} />,
 };
@@ -14,6 +15,7 @@ const stateColor: Record<RunState, string> = {
   done: "var(--gs-green)",
   running: "var(--gs-blue)",
   failed: "var(--gs-red)",
+  stale_failed: "var(--gs-red)",
   queued: "var(--gs-slate)",
   cancelled: "var(--gs-slate)",
 };
@@ -69,7 +71,7 @@ function EventRow({ event, isLast }: { event: StatusEvent; isLast: boolean }) {
         <p
           style={{
             fontSize: "11.5px",
-            color: event.state === "failed" ? "var(--gs-red)" : "var(--foreground)",
+            color: event.state === "failed" || event.state === "stale_failed" ? "var(--gs-red)" : "var(--foreground)",
             lineHeight: "1.45",
           }}
         >
@@ -84,19 +86,81 @@ interface StatusHistoryTabProps {
   run: RunDetail;
 }
 
+function stateLabel(state: RunState): string {
+  const labels: Record<RunState, string> = {
+    done: "Done",
+    running: "Running",
+    failed: "Failed",
+    stale_failed: "Stale failed",
+    queued: "Queued",
+    cancelled: "Cancelled",
+  };
+  return labels[state];
+}
+
+function lastRecordedEvent(events: StatusEvent[]): string {
+  const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+  return lastEvent ? `${lastEvent.stage}: ${lastEvent.message}` : "No status history event was recorded.";
+}
+
+function backendFailureDetail(run: RunDetail): string | null {
+  if (run.detail) {
+    return run.detail;
+  }
+  const terminalEvent = run.history
+    .slice()
+    .reverse()
+    .find((event) => event.state === "failed" || event.state === "stale_failed");
+  return terminalEvent?.message ?? null;
+}
+
+function FailureSummary({ run }: { run: RunDetail }) {
+  if (run.state === "stale_failed") {
+    const terminalDetail = backendFailureDetail(run);
+    return (
+      <div>
+        <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--gs-red)" }}>
+          Run is stale_failed.
+        </span>
+        <p style={{ fontSize: "11px", color: "var(--gs-red)", marginTop: "1px", opacity: 0.85 }}>
+          Last known stage: {run.stage}
+        </p>
+        <p style={{ fontSize: "11px", color: "var(--gs-red)", marginTop: "1px", opacity: 0.85 }}>
+          Last recorded event: {lastRecordedEvent(run.history)}
+        </p>
+        <p style={{ fontSize: "11px", color: "var(--gs-red)", marginTop: "1px", opacity: 0.85 }}>
+          {terminalDetail ?? "No terminal failure message was recorded."}
+        </p>
+      </div>
+    );
+  }
+
+  if (run.state === "failed") {
+    return (
+      <div>
+        <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--gs-red)" }}>
+          {backendFailureDetail(run) ?? "Run failed. No failure detail was recorded."}
+        </span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
   const runState = run.state;
   const events = run.history;
-  const autoExpand = runState === "running" || runState === "failed";
+  const autoExpand = runState === "running" || runState === "failed" || runState === "stale_failed";
   const [expanded, setExpanded] = useState(autoExpand);
 
   const headerColor =
-    runState === "failed" ? "var(--gs-red)" :
+    runState === "failed" || runState === "stale_failed" ? "var(--gs-red)" :
     runState === "running" ? "var(--gs-blue)" :
     "var(--gs-navy)";
 
   const headerBg =
-    runState === "failed" ? "var(--gs-red-bg)" :
+    runState === "failed" || runState === "stale_failed" ? "var(--gs-red-bg)" :
     runState === "running" ? "var(--gs-blue-bg)" :
     "var(--accent)";
 
@@ -143,11 +207,11 @@ export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
           </span>
 
           <div className="ml-auto flex items-center gap-1.5">
-            {runState === "failed" && (
+            {(runState === "failed" || runState === "stale_failed") && (
               <>
                 <XCircle size={12} style={{ color: "var(--gs-red)" }} />
                 <span style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--gs-red)" }}>
-                  Failed at SAR
+                  {stateLabel(runState)}
                 </span>
               </>
             )}
@@ -170,21 +234,13 @@ export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
           </div>
         </button>
 
-        {/* Error banner for failed */}
-        {expanded && runState === "failed" && (
+        {expanded && (runState === "failed" || runState === "stale_failed") && (
           <div
             className="px-4 py-2 flex items-start gap-2"
             style={{ backgroundColor: "var(--gs-red-bg)", borderBottom: "1px solid var(--gs-red-border)" }}
           >
             <XCircle size={12} style={{ color: "var(--gs-red)", marginTop: "1px", flexShrink: 0 }} />
-            <div>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--gs-red)" }}>
-                SAR backscatter exceeds threshold
-              </span>
-              <p style={{ fontSize: "11px", color: "var(--gs-red)", marginTop: "1px", opacity: 0.8 }}>
-                Check SAR source data for corrupted scenes before retrying.
-              </p>
-            </div>
+            <FailureSummary run={run} />
           </div>
         )}
 
@@ -225,9 +281,9 @@ export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
           { label: "Run name", value: run.name },
           {
             label: "Final state",
-            value: runState === "failed" ? "Failed" : runState === "running" ? "Running" : "Done",
+            value: stateLabel(runState),
             highlight:
-              runState === "failed" ? "var(--gs-red)" :
+              runState === "failed" || runState === "stale_failed" ? "var(--gs-red)" :
               runState === "running" ? "var(--gs-blue)" :
               "var(--gs-green)",
           },

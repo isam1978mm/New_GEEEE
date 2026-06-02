@@ -29,6 +29,13 @@ const stateCfg: Record<RunState, { label: string; color: string; bg: string; bor
     border: "var(--gs-red-border)",
     icon: <XCircle size={10} />,
   },
+  stale_failed: {
+    label: "Stale failed",
+    color: "var(--gs-red)",
+    bg: "var(--gs-red-bg)",
+    border: "var(--gs-red-border)",
+    icon: <XCircle size={10} />,
+  },
   queued: {
     label: "Queued",
     color: "var(--gs-amber)",

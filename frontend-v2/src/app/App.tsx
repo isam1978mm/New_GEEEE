@@ -89,6 +89,7 @@ function RunStateBadge({ state }: { state: RunState }) {
     done: { dot: "var(--gs-green)", label: "Done" },
     running: { dot: "var(--gs-blue)", label: "Running" },
     failed: { dot: "var(--gs-red)", label: "Failed" },
+    stale_failed: { dot: "var(--gs-red)", label: "Stale failed" },
     queued: { dot: "var(--gs-amber)", label: "Queued" },
     cancelled: { dot: "var(--gs-slate)", label: "Cancelled" },
   };

@@ -25,6 +25,7 @@ const stateIcon: Record<Run["state"], React.ReactNode> = {
   done: <CheckCircle2 size={12} />,
   running: <Loader2 size={12} className="animate-spin" />,
   failed: <XCircle size={12} />,
+  stale_failed: <XCircle size={12} />,
   queued: <Clock size={12} />,
   cancelled: <Clock size={12} />,
 };
@@ -33,6 +34,7 @@ const stateColor: Record<Run["state"], string> = {
   done: "var(--gs-green)",
   running: "var(--gs-blue)",
   failed: "var(--gs-red)",
+  stale_failed: "var(--gs-red)",
   queued: "var(--gs-amber)",
   cancelled: "var(--gs-slate)",
 };
@@ -41,6 +43,7 @@ const stateBg: Record<Run["state"], string> = {
   done: "var(--gs-green-bg)",
   running: "var(--gs-blue-bg)",
   failed: "var(--gs-red-bg)",
+  stale_failed: "var(--gs-red-bg)",
   queued: "var(--gs-amber-bg)",
   cancelled: "rgba(100,116,139,0.06)",
 };
@@ -49,6 +52,7 @@ const stateBorder: Record<Run["state"], string> = {
   done: "var(--gs-green-border)",
   running: "var(--gs-blue-border)",
   failed: "var(--gs-red-border)",
+  stale_failed: "var(--gs-red-border)",
   queued: "var(--gs-amber-border)",
   cancelled: "rgba(100,116,139,0.15)",
 };
@@ -62,7 +66,7 @@ interface RunArchivePageProps {
 }
 
 function canDeleteRun(run: Run) {
-  return run.state === "done" || run.state === "failed" || run.state === "cancelled";
+  return run.state === "done" || run.state === "failed" || run.state === "stale_failed" || run.state === "cancelled";
 }
 
 export function RunArchivePage({ runs, loading = false, error = null, onSelectRun, onDeleteRun }: RunArchivePageProps) {
@@ -88,6 +92,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
     { key: "done", label: "Done" },
     { key: "running", label: "Running" },
     { key: "failed", label: "Failed" },
+    { key: "stale_failed", label: "Stale failed" },
     { key: "queued", label: "Queued" },
     { key: "cancelled", label: "Cancelled" },
   ];

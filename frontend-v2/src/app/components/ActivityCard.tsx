@@ -48,6 +48,13 @@ export function ActivityCard({ run = null, events = [], hasRun = true }: Activit
           { label: "Events", value: `${events.length}`, color: "var(--gs-red)" },
           { label: "At", value: run ? new Date(run.updated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : "-", color: "var(--gs-slate)" },
         ]
+      : runState === "stale_failed"
+      ? [
+          { label: "State", value: "Stale failed", color: "var(--gs-red)" },
+          { label: "Stage", value: run?.stage ?? "Unknown", color: "var(--gs-navy)" },
+          { label: "Events", value: `${events.length}`, color: "var(--gs-red)" },
+          { label: "At", value: run ? new Date(run.updated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : "-", color: "var(--gs-slate)" },
+        ]
       : [
           { label: "State", value: "Queued", color: "var(--gs-amber)" },
           { label: "Stage", value: run?.stage ?? "Queued", color: "var(--gs-navy)" },
