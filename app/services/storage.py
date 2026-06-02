@@ -41,9 +41,19 @@ def delete_run_directory(settings: Settings, run_id: str) -> RunDirectoryDeleteS
     if not run_dir.is_dir():
         return RunDirectoryDeleteSummary(deleted_files_count=0, deleted_dirs_count=0, freed_bytes=0)
 
-    summary = _summarize_run_directory_for_delete(run_dir)
+    summary = summarize_run_directory(settings, run_id)
     shutil.rmtree(run_dir)
     return summary
+
+
+def summarize_run_directory(settings: Settings, run_id: str) -> RunDirectoryDeleteSummary:
+    runs_dir = get_runs_dir(settings).resolve()
+    run_dir = get_run_dir(settings, run_id).resolve()
+    if runs_dir not in (run_dir, *run_dir.parents):
+        raise ArtifactServeViolation()
+    if not run_dir.is_dir():
+        return RunDirectoryDeleteSummary(deleted_files_count=0, deleted_dirs_count=0, freed_bytes=0)
+    return _summarize_run_directory_for_delete(run_dir)
 
 
 def get_redacted_cache_dir(settings: Settings, run_id: str) -> Path:

@@ -4,12 +4,13 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import Settings
-from app.db.base import Base
 from app.db.models import Artifact, Run
 from app.main import create_app
 from app.pipeline.orchestrator import Orchestrator
@@ -146,10 +147,14 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
 
 async def _create_database(settings: Settings) -> None:
     ensure_data_dirs(settings)
-    engine = create_async_engine(settings.database_url, future=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    await engine.dispose()
+    _upgrade_database(settings)
+
+
+def _upgrade_database(settings: Settings) -> None:
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    command.upgrade(cfg, "head")
 
 
 def _deterministic_background_runner(settings: Settings):

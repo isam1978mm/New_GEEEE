@@ -4,12 +4,13 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import Settings
-from app.db.base import Base
 from app.db.models.enums import RunStatus
 from app.db.models.run import Run
 from app.main import create_app
@@ -51,10 +52,8 @@ def test_startup_allows_existing_unmigrated_sqlite_db() -> None:
 
 async def _create_running_run(settings: Settings) -> None:
     ensure_data_dirs(settings)
+    _upgrade_database(settings)
     engine = create_async_engine(settings.database_url, future=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
         session.add(
@@ -69,6 +68,13 @@ async def _create_running_run(settings: Settings) -> None:
         await session.commit()
 
     await engine.dispose()
+
+
+def _upgrade_database(settings: Settings) -> None:
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    command.upgrade(cfg, "head")
 
 
 async def _fetch_run_status(settings: Settings, run_id: str) -> RunStatus:

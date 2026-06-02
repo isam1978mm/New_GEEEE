@@ -4,10 +4,12 @@ import {
   buildActivityEvents,
   createRun,
   deleteRun,
+  getDeletionAudit,
   getOperatorOutputs,
   getRunDetail,
   listRuns,
   type CreateRunInput,
+  type DeletionAuditSummary,
   type DeleteRunResult,
   type OperatorOutputTree,
   type Run,
@@ -41,6 +43,11 @@ const EMPTY_OUTPUT_TREE: OperatorOutputTree = {
   groups: [],
   keyDownloads: [],
   unavailable: [],
+};
+
+const EMPTY_DELETION_AUDIT: DeletionAuditSummary = {
+  totalFreedBytes: 0,
+  records: [],
 };
 
 const UI_SETTINGS_STORAGE_KEY = "gs_operator_ui_settings_v1";
@@ -114,6 +121,7 @@ export default function App() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
   const [outputTree, setOutputTree] = useState<OperatorOutputTree>(EMPTY_OUTPUT_TREE);
+  const [deletionAudit, setDeletionAudit] = useState<DeletionAuditSummary>(EMPTY_DELETION_AUDIT);
   const [runsLoading, setRunsLoading] = useState(true);
   const [runLoading, setRunLoading] = useState(false);
   const [outputsLoading, setOutputsLoading] = useState(false);
@@ -127,6 +135,7 @@ export default function App() {
 
   useEffect(() => {
     void refreshRuns();
+    void refreshDeletionAudit();
   }, []);
 
   useEffect(() => {
@@ -220,6 +229,14 @@ export default function App() {
     }
   }
 
+  async function refreshDeletionAudit() {
+    try {
+      setDeletionAudit(await getDeletionAudit());
+    } catch (_error) {
+      setDeletionAudit(EMPTY_DELETION_AUDIT);
+    }
+  }
+
   async function handleSelectRun(run: Run) {
     await loadRun(run.id);
   }
@@ -249,6 +266,7 @@ export default function App() {
       setOutputTree(EMPTY_OUTPUT_TREE);
       setActiveRunTab("overview");
     }
+    await refreshDeletionAudit();
     return result;
   }
 
@@ -282,6 +300,9 @@ export default function App() {
           stage: detail.stage,
           updated: detail.updated,
           created: detail.created,
+          diskUsageBytes: detail.diskUsageBytes,
+          outputFileCount: detail.outputFileCount,
+          lastDiskScanAt: detail.lastDiskScanAt,
         };
       });
       return matched ? nextRuns : currentRuns;
@@ -503,6 +524,7 @@ export default function App() {
               error={runsError}
               onSelectRun={handleSelectRun}
               onDeleteRun={handleDeleteRun}
+              deletionAudit={deletionAudit}
             />
           </div>
         )}

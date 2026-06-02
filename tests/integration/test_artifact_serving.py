@@ -6,11 +6,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import Settings
-from app.db.base import Base
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
 from app.services.artifact_response import is_expected_download_filename, public_download_filename
@@ -46,6 +47,13 @@ async def seed_artifact(
         )
     )
     await session.commit()
+
+
+def _upgrade_database(settings: Settings) -> None:
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    command.upgrade(cfg, "head")
 
 
 def test_redacted_public_and_preview_only_artifacts_are_served() -> None:
@@ -180,12 +188,10 @@ async def _run_artifact_response_test(
         database_path=db_path,
         allow_network_bind=allow_network_bind,
     )
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     run_id = "run-1"
     run_dir = data_dir / "runs" / run_id
@@ -221,13 +227,11 @@ async def _run_deleted_run_artifacts_unavailable_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = str(uuid4())
         run_dir = data_dir / "runs" / run_id
@@ -270,13 +274,11 @@ async def _run_known_artifact_filename_test(
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
@@ -306,13 +308,11 @@ async def _run_dual_route_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
@@ -346,13 +346,11 @@ async def _run_wrong_filename_route_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
@@ -384,13 +382,11 @@ async def _run_operator_output_tree_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
@@ -470,13 +466,11 @@ async def _run_operator_output_download_guard_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
@@ -515,13 +509,11 @@ async def _run_operator_output_missing_run_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         with TestClient(app, raise_server_exceptions=False) as client:
             response = client.get("/runs/missing-run/outputs")
 
@@ -538,13 +530,11 @@ async def _run_operator_output_json_download_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
@@ -578,13 +568,11 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
     app = create_app(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
     try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id

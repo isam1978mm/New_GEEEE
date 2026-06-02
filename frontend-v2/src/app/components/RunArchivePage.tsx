@@ -10,7 +10,7 @@ import {
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
-import { formatFileSize, type DeleteRunResult, type Run } from "../api/client";
+import { formatFileSize, type DeletionAuditSummary, type DeleteRunResult, type Run } from "../api/client";
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -19,6 +19,22 @@ function fmtDate(iso: string) {
     " · " +
     d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
   );
+}
+
+function fmtMaybeDate(iso: string | null) {
+  return iso ? fmtDate(iso) : "Not scanned";
+}
+
+function fmtRunSize(run: Run) {
+  return run.diskUsageBytes === null ? "Unknown size" : formatFileSize(run.diskUsageBytes);
+}
+
+function fmtFileCount(run: Run) {
+  return run.outputFileCount === null ? "Unknown" : `${run.outputFileCount}`;
+}
+
+function stateLabel(state: Run["state"]) {
+  return state === "stale_failed" ? "Stale failed" : state.charAt(0).toUpperCase() + state.slice(1);
 }
 
 const stateIcon: Record<Run["state"], React.ReactNode> = {
@@ -63,13 +79,14 @@ interface RunArchivePageProps {
   error?: string | null;
   onSelectRun?: (run: Run) => void;
   onDeleteRun?: (run: Run) => Promise<DeleteRunResult>;
+  deletionAudit?: DeletionAuditSummary;
 }
 
 function canDeleteRun(run: Run) {
   return run.state === "done" || run.state === "failed" || run.state === "stale_failed" || run.state === "cancelled";
 }
 
-export function RunArchivePage({ runs, loading = false, error = null, onSelectRun, onDeleteRun }: RunArchivePageProps) {
+export function RunArchivePage({ runs, loading = false, error = null, onSelectRun, onDeleteRun, deletionAudit }: RunArchivePageProps) {
   const [search, setSearch] = useState("");
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<Run["state"] | "all">("all");
@@ -150,6 +167,37 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
           {deleteError}
         </div>
       )}
+
+      <div
+        className="rounded-lg bg-card px-3 py-2 flex flex-col gap-2"
+        style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            Deleted Runs / Cleanup Summary
+          </span>
+          <span className="font-mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--gs-green)" }}>
+            Total freed: {formatFileSize(deletionAudit?.totalFreedBytes ?? 0)}
+          </span>
+        </div>
+        {(deletionAudit?.records.length ?? 0) === 0 ? (
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>No deleted run audit records yet.</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {deletionAudit?.records.slice(0, 3).map((record) => (
+              <div key={`${record.runId}-${record.deletedAt}`} className="flex items-center justify-between gap-3">
+                <span className="font-mono truncate" style={{ fontSize: "11px", color: "var(--gs-navy)" }}>
+                  {record.runName || record.runId.slice(0, 8)}
+                </span>
+                <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>{fmtDate(record.deletedAt)}</span>
+                <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-green)", fontWeight: 700 }}>
+                  {formatFileSize(record.freedBytes)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Search + filters */}
       <div className="flex items-center gap-2">
@@ -265,7 +313,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
                   <div className="flex items-center gap-1.5">
                     <span style={{ color, display: "flex", alignItems: "center" }}>{stateIcon[run.state]}</span>
                     <span style={{ fontSize: "11.5px", fontWeight: 600, color }}>
-                      {run.state.charAt(0).toUpperCase() + run.state.slice(1)}
+                      {stateLabel(run.state)}
                     </span>
                   </div>
 
@@ -361,7 +409,25 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
                     <div className="flex flex-col gap-0.5">
                       <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Final state</span>
                       <span className="font-mono" style={{ fontSize: "11px", color, fontWeight: 700 }}>
-                        {run.state.toUpperCase()}
+                        {stateLabel(run.state)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Run size</span>
+                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)", fontWeight: 600 }}>
+                        {fmtRunSize(run)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>File count</span>
+                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)", fontWeight: 600 }}>
+                        {fmtFileCount(run)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Last scanned</span>
+                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)" }}>
+                        {fmtMaybeDate(run.lastDiskScanAt)}
                       </span>
                     </div>
                   </div>
@@ -390,6 +456,17 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
             <p style={{ fontSize: "12px", color: "var(--gs-slate)", marginTop: "8px" }}>
               This permanently deletes the run record and all files for this run.
             </p>
+            <div
+              className="rounded px-3 py-2 mt-3"
+              style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
+            >
+              <div style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
+                Estimated size: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtRunSize(confirmRun)}</span>
+              </div>
+              <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "2px" }}>
+                File count: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtFileCount(confirmRun)}</span>
+              </div>
+            </div>
             <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "10px" }}>
               Type the run name or run ID to confirm.
             </p>

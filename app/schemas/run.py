@@ -48,6 +48,9 @@ class RunPublic(BaseModel):
     name: str | None
     status: RunStatus
     created_at: datetime
+    disk_usage_bytes: int | None = None
+    output_file_count: int | None = None
+    last_disk_scan_at: datetime | None = None
 
 
 class RunStageProgressPublic(BaseModel):
@@ -79,3 +82,19 @@ class RunDeletePublic(BaseModel):
     freed_bytes: int
     status: str
     message: str
+
+
+class RunDeletionAuditRecordPublic(BaseModel):
+    run_id: str
+    run_name: str | None
+    deleted_at: datetime
+    deleted_files_count: int
+    deleted_dirs_count: int
+    freed_bytes: int
+    status: str
+    message: str
+
+
+class RunDeletionAuditPublic(BaseModel):
+    total_freed_bytes: int
+    records: list[RunDeletionAuditRecordPublic] = Field(default_factory=list)

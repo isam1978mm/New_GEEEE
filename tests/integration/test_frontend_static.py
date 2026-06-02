@@ -99,6 +99,13 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Delete permanently" in bundle_text
     assert "Cannot delete active run" in bundle_text
     assert "This permanently deletes the run record and all files for this run." in bundle_text
+    assert "Run size" in bundle_text
+    assert "File count" in bundle_text
+    assert "Last scanned" in bundle_text
+    assert "Estimated size" in bundle_text
+    assert "Unknown size" in bundle_text
+    assert "Deleted Runs / Cleanup Summary" in bundle_text
+    assert "Total freed" in bundle_text
     assert "DELETE" in bundle_text
     assert "External map tiles" in bundle_text
     assert "Disabled by default" in bundle_text

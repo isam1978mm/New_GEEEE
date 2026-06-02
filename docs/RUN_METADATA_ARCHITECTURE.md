@@ -29,6 +29,9 @@ Current persistent SQL tables are minimal and focused:
   - `longitude`
   - `created_at`
   - `updated_at`
+  - `disk_usage_bytes`
+  - `output_file_count`
+  - `last_disk_scan_at`
 - `artifacts`
   - `id`
   - `run_id`
@@ -40,6 +43,16 @@ Current persistent SQL tables are minimal and focused:
   - `http_servable`
   - `created_at`
   - `updated_at`
+- `run_deletion_audit`
+  - `id`
+  - `run_id`
+  - `run_name`
+  - `deleted_at`
+  - `deleted_files_count`
+  - `deleted_dirs_count`
+  - `freed_bytes`
+  - `status`
+  - `message`
 
 The API deliberately redacts sensitive fields from public DTOs. The frontend never receives raw coordinates, filesystem paths, hashes, or geometry through public run/list/detail responses.
 
@@ -66,18 +79,24 @@ Current run APIs are hybrid:
   - writes initial run directory and grid manifest on disk
   - appends initial status history on disk
 - `GET /runs`
-  - reads only SQLite run rows
+  - reads SQLite run rows
+  - fills missing disk summary metadata from safe filesystem scan
 - `GET /runs/{id}`
   - reads the run row from SQLite
   - reads artifact rows from SQLite
+  - fills missing disk summary metadata from safe filesystem scan
   - builds stage progress from filesystem stage manifests
   - builds run history from filesystem `run_status_history.json`, with fallback synthesis if missing
+- `GET /runs/deletion-audit`
+  - reads retained safe deletion audit rows from SQLite
 - `GET /runs/{id}/outputs`
   - does not use the artifact table as the primary source
   - walks the filesystem under the run directory
   - filters through allowlisted operator-visible path patterns
   - reads selected manifests to classify unavailable / not-implemented items
 - `DELETE /runs/{id}`
+  - refreshes safe disk summary from filesystem immediately before deletion
+  - writes retained deletion audit metadata to SQLite
   - deletes `data/runs/<run_id>/`
   - deletes the SQLite run row
   - removes artifact rows by cascade
@@ -107,8 +126,8 @@ SQLite is not yet the full metadata source of truth because several important me
 - stage progress is reconstructed from stage manifest files
 - operator output tree is built by filesystem scanning
 - unavailable / notebook-only output classification is derived from manifest parsing, not indexed rows
-- deletion audit is not retained after deleting the run row
-- disk usage is calculated at delete time only, not stored over time
+- status history is still file-backed rather than query-backed
+- operator output tree is still scan-based rather than indexed
 - archive search is client-side over the full `/runs` result
 
 ## Current Filesystem Responsibilities

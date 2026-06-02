@@ -4,6 +4,8 @@ import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -27,6 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        _apply_database_migrations(settings)
         app.state.settings = settings
         app.state.engine = create_engine(settings)
         app.state.session_factory = create_session_factory(settings, engine=app.state.engine)
@@ -122,3 +125,10 @@ def _is_react_ui_path(path: str) -> bool:
     if "." in Path(path).name:
         return False
     return True
+
+
+def _apply_database_migrations(settings: Settings) -> None:
+    alembic_ini = Path(__file__).resolve().parent.parent / "alembic.ini"
+    cfg = Config(str(alembic_ini))
+    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    command.upgrade(cfg, "head")

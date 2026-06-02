@@ -7,7 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
 from app.db.base import Base
-from app.db.models import Artifact, Run  # noqa: F401
+from app.db.models import Artifact, Run, RunDeletionAudit  # noqa: F401
 
 config = context.config
 

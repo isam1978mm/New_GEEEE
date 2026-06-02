@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { StageStatusPills } from "./StageStatusPills";
 import { KeyDownloads } from "./KeyDownloads";
-import type { KeyDownload, Run, RunDetail } from "../api/client";
+import { formatFileSize, type KeyDownload, type Run, type RunDetail } from "../api/client";
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -19,6 +19,10 @@ function fmtDate(iso: string) {
     " · " +
     d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
   );
+}
+
+function fmtRunSize(run: Run) {
+  return run.diskUsageBytes === null ? "Unknown size" : formatFileSize(run.diskUsageBytes);
 }
 
 function StateBadge({ state }: { state: Run["state"] }) {
@@ -230,7 +234,7 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
                     {run.name}
                   </div>
                   <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.7 }}>
-                    {fmtDate(run.updated)}
+                    {fmtDate(run.updated)} · Run size {fmtRunSize(run)}
                   </div>
                 </div>
                 <button

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
-from app.db.models import Artifact, ArtifactClass, Run, RunStatus
+from app.db.models import Artifact, ArtifactClass, Run, RunDeletionAudit, RunStatus
 from app.deps import get_db_session, get_settings_from_request
 from app.errors import ActiveRunConflictError, AppError
 from app.pipeline.manifest import save_grid_manifest
@@ -42,10 +43,19 @@ from app.pipeline.stages.thermal import ThermalStage
 from app.pipeline.stages.thermal import create_ee_notebook_thermal_inertia_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
-from app.schemas.run import RunCreate, RunDeletePublic, RunDetailPublic, RunHistoryEventPublic, RunPublic, RunStageProgressPublic
+from app.schemas.run import (
+    RunCreate,
+    RunDeletePublic,
+    RunDeletionAuditPublic,
+    RunDeletionAuditRecordPublic,
+    RunDetailPublic,
+    RunHistoryEventPublic,
+    RunPublic,
+    RunStageProgressPublic,
+)
 from app.services.run_history import append_run_event, build_run_event, read_run_history_events
 from app.services.run_state import ensure_single_active_run
-from app.services.storage import delete_run_directory, initialize_run_storage, read_manifest, get_run_dir
+from app.services.storage import delete_run_directory, initialize_run_storage, read_manifest, get_run_dir, summarize_run_directory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -130,10 +140,41 @@ async def create_run(
 
 @router.get("/runs", response_model=list[RunPublic])
 async def list_runs(
+    settings: Settings = Depends(get_settings_from_request),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[RunPublic]:
     result = await session.scalars(select(Run).order_by(Run.created_at.desc(), Run.id.desc()))
-    return [_to_run_public(run) for run in result]
+    runs = list(result)
+    await _refresh_disk_summaries(session=session, settings=settings, runs=runs)
+    return [_to_run_public(run) for run in runs]
+
+
+@router.get("/runs/deletion-audit", response_model=RunDeletionAuditPublic)
+async def get_deletion_audit(
+    session: AsyncSession = Depends(get_db_session),
+) -> RunDeletionAuditPublic:
+    records = list(
+        await session.scalars(
+            select(RunDeletionAudit).order_by(RunDeletionAudit.deleted_at.desc(), RunDeletionAudit.id.desc()).limit(25)
+        )
+    )
+    total_freed_bytes = await session.scalar(select(func.coalesce(func.sum(RunDeletionAudit.freed_bytes), 0)))
+    return RunDeletionAuditPublic(
+        total_freed_bytes=int(total_freed_bytes or 0),
+        records=[
+            RunDeletionAuditRecordPublic(
+                run_id=record.run_id,
+                run_name=record.run_name,
+                deleted_at=record.deleted_at,
+                deleted_files_count=record.deleted_files_count,
+                deleted_dirs_count=record.deleted_dirs_count,
+                freed_bytes=record.freed_bytes,
+                status=record.status,
+                message=record.message,
+            )
+            for record in records
+        ],
+    )
 
 
 @router.get("/runs/{run_id}", response_model=RunDetailPublic)
@@ -145,6 +186,7 @@ async def get_run(
     run = await session.scalar(select(Run).where(Run.id == run_id))
     if run is None:
         raise RunNotFoundError()
+    await _refresh_disk_summaries(session=session, settings=settings, runs=[run])
 
     artifact_rows = await session.scalars(
         select(Artifact).where(Artifact.run_id == run_id).order_by(Artifact.created_at.asc(), Artifact.id.asc())
@@ -157,6 +199,9 @@ async def get_run(
         name=run.name,
         status=run.status,
         created_at=run.created_at,
+        disk_usage_bytes=run.disk_usage_bytes,
+        output_file_count=run.output_file_count,
+        last_disk_scan_at=run.last_disk_scan_at,
         current_stage=_current_stage(progress),
         stages=progress,
         history=history,
@@ -178,10 +223,24 @@ async def delete_run(
         raise ActiveRunDeleteError()
 
     try:
+        delete_summary = summarize_run_directory(settings, run_id)
+        _set_run_disk_summary(run, delete_summary)
         delete_summary = delete_run_directory(settings, run_id)
     except Exception as exc:
         raise RunDeleteError() from exc
 
+    session.add(
+        RunDeletionAudit(
+            run_id=run_id,
+            run_name=run.name,
+            deleted_at=datetime.now(timezone.utc),
+            deleted_files_count=delete_summary.deleted_files_count,
+            deleted_dirs_count=delete_summary.deleted_dirs_count,
+            freed_bytes=delete_summary.freed_bytes,
+            status="deleted",
+            message="Run deleted.",
+        )
+    )
     await session.delete(run)
     await session.commit()
     return RunDeletePublic(
@@ -279,7 +338,33 @@ def _to_run_public(run: Run) -> RunPublic:
         name=run.name,
         status=run.status,
         created_at=run.created_at,
+        disk_usage_bytes=run.disk_usage_bytes,
+        output_file_count=run.output_file_count,
+        last_disk_scan_at=run.last_disk_scan_at,
     )
+
+
+async def _refresh_disk_summaries(*, session: AsyncSession, settings: Settings, runs: list[Run]) -> None:
+    if not runs:
+        return
+    changed = False
+    for run in runs:
+        if (
+            run.disk_usage_bytes is not None
+            and run.output_file_count is not None
+            and run.last_disk_scan_at is not None
+        ):
+            continue
+        _set_run_disk_summary(run, summarize_run_directory(settings, run.id))
+        changed = True
+    if changed:
+        await session.commit()
+
+
+def _set_run_disk_summary(run: Run, summary) -> None:
+    run.disk_usage_bytes = summary.freed_bytes
+    run.output_file_count = summary.deleted_files_count
+    run.last_disk_scan_at = datetime.now(timezone.utc)
 
 
 def _validate_delete_run_id(run_id: str) -> None:

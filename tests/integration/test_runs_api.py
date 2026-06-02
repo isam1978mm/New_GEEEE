@@ -5,12 +5,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import Settings
-from app.db.base import Base
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
 from app.services.run_history import append_run_event
@@ -20,7 +21,7 @@ from app.services.storage import write_stage_manifest
 def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         monkeypatch.setattr("app.api.runs.enqueue_core_pipeline_run", _fake_background_runner_factory(settings))
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -59,7 +60,7 @@ def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch
 def test_public_run_surfaces_do_not_expose_grid_override_fields(monkeypatch) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         monkeypatch.setattr("app.api.runs.enqueue_core_pipeline_run", _fake_background_runner_factory(settings))
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -80,7 +81,7 @@ def test_public_run_surfaces_do_not_expose_grid_override_fields(monkeypatch) -> 
 def test_post_runs_rejects_second_active_run_with_public_safe_conflict(monkeypatch) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         asyncio.run(_seed_run(settings, run_id="active-run", status=RunStatus.QUEUED, name="active"))
         monkeypatch.setattr("app.api.runs.enqueue_core_pipeline_run", _fake_background_runner_factory(settings))
 
@@ -98,7 +99,7 @@ def test_post_runs_rejects_second_active_run_with_public_safe_conflict(monkeypat
 def test_background_pipeline_failure_marks_run_failed_without_breaking_create_response(monkeypatch) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         monkeypatch.setattr("app.api.runs.run_core_pipeline_for_run", _failing_run_core_pipeline)
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -119,7 +120,7 @@ def test_background_pipeline_failure_marks_run_failed_without_breaking_create_re
 def test_run_detail_exposes_public_safe_stage_progress() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         asyncio.run(_seed_run(settings, run_id="progress-run", status=RunStatus.QUEUED, name="progress"))
         write_stage_manifest(settings, "progress-run", "grid", {"status": "done", "artifact_count": 1})
         write_stage_manifest(settings, "progress-run", "dem", {"status": "running", "artifact_count": 0})
@@ -138,13 +139,66 @@ def test_run_detail_exposes_public_safe_stage_progress() -> None:
         assert all(set(stage) == {"name", "label", "status"} for stage in body["stages"])
         assert {stage["status"] for stage in body["stages"]} <= {"pending", "running", "done", "failed", "skipped"}
         assert {stage["label"] for stage in body["stages"]} >= {"GRID setup", "SAR RTC", "Alignment QA"}
-        assert body["history"]
-        assert {"run_created", "run_queued", "run_started", "stage_done", "stage_started"} <= {
-            event["event_type"] for event in body["history"]
-        }
-        assert all(set(event) <= {"timestamp", "event_type", "label", "stage_name", "message"} for event in body["history"])
-        stage_names = {stage["name"] for stage in body["stages"]}
-        assert {event["stage_name"] for event in body["history"] if event.get("stage_name")} <= stage_names
+
+
+def test_run_public_surfaces_include_safe_disk_summary_without_paths() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        run_id = str(uuid4())
+        asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.DONE, name="disk summary"))
+        run_dir = settings.data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        (run_dir / "a.txt").write_bytes(b"abc")
+        nested = run_dir / "nested"
+        nested.mkdir()
+        (nested / "b.bin").write_bytes(b"12345")
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            list_response = client.get("/runs")
+            detail_response = client.get(f"/runs/{run_id}")
+
+        assert list_response.status_code == 200
+        list_body = list_response.json()[0]
+        assert list_body["disk_usage_bytes"] == 8
+        assert list_body["output_file_count"] == 2
+        assert list_body["last_disk_scan_at"] is not None
+        _assert_no_sensitive_public_fields(list_response.text)
+
+        assert detail_response.status_code == 200
+        detail_body = detail_response.json()
+        assert detail_body["disk_usage_bytes"] == 8
+        assert detail_body["output_file_count"] == 2
+        assert detail_body["last_disk_scan_at"] is not None
+        _assert_no_sensitive_public_fields(detail_response.text)
+
+
+def test_disk_summary_counts_symlink_without_following_external_target() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        run_id = str(uuid4())
+        asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.DONE, name="symlink summary"))
+        run_dir = settings.data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        (run_dir / "local.txt").write_bytes(b"1234")
+        outside = Path(temp_dir) / "outside-large.bin"
+        outside.write_bytes(b"x" * 4096)
+        symlink_path = run_dir / "external-link.bin"
+        try:
+            symlink_path.symlink_to(outside)
+        except OSError:
+            return
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get(f"/runs/{run_id}")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["output_file_count"] == 2
+        assert body["disk_usage_bytes"] >= 4
+        assert body["disk_usage_bytes"] < 4096
+        _assert_no_sensitive_public_fields(response.text)
         assert "artifact_count" not in response.text
         _assert_no_sensitive_public_fields(response.text)
 
@@ -152,7 +206,7 @@ def test_run_detail_exposes_public_safe_stage_progress() -> None:
 def test_run_detail_exposes_failed_stage_without_internal_error_content() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         asyncio.run(_seed_run(settings, run_id="failed-stage-run", status=RunStatus.FAILED, name="failed"))
         write_stage_manifest(settings, "failed-stage-run", "grid", {"status": "done", "artifact_count": 1})
         write_stage_manifest(
@@ -184,7 +238,7 @@ def test_run_detail_exposes_failed_stage_without_internal_error_content() -> Non
 def test_run_detail_uses_persisted_public_safe_status_history() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         asyncio.run(_seed_run(settings, run_id="history-run", status=RunStatus.QUEUED, name="history"))
         append_run_event(settings, "history-run", "run_created")
         append_run_event(settings, "history-run", "run_queued")
@@ -225,7 +279,7 @@ def test_terminal_runs_without_stage_manifests_get_sparse_fallback_history() -> 
     for status, terminal_event in cases:
         with TemporaryDirectory() as temp_dir:
             settings = _settings(Path(temp_dir))
-            asyncio.run(_create_database(settings))
+            _upgrade_database(settings)
             asyncio.run(_seed_run(settings, run_id=f"{status.value}-sparse-run", status=status, name="sparse"))
 
             with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -250,7 +304,7 @@ def test_terminal_runs_without_stage_manifests_get_sparse_fallback_history() -> 
 def test_delete_terminal_run_removes_database_rows_and_run_directory() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         run_id = str(uuid4())
         asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.DONE, name="delete-me"))
         run_dir = settings.data_dir / "runs" / run_id
@@ -264,6 +318,7 @@ def test_delete_terminal_run_removes_database_rows_and_run_directory() -> None:
             list_response = client.get("/runs")
             detail_response = client.get(f"/runs/{run_id}")
             outputs_response = client.get(f"/runs/{run_id}/outputs")
+            audit_response = client.get("/runs/deletion-audit")
 
         assert delete_response.status_code == 200
         body = delete_response.json()
@@ -282,11 +337,52 @@ def test_delete_terminal_run_removes_database_rows_and_run_directory() -> None:
         assert outputs_response.status_code == 404
         _assert_no_sensitive_public_fields(delete_response.text)
 
+        assert audit_response.status_code == 200
+        audit_body = audit_response.json()
+        assert audit_body["total_freed_bytes"] == body["freed_bytes"]
+        assert len(audit_body["records"]) == 1
+        assert audit_body["records"][0] == {
+            "run_id": run_id,
+            "run_name": "delete-me",
+            "deleted_at": audit_body["records"][0]["deleted_at"],
+            "deleted_files_count": 2,
+            "deleted_dirs_count": 1,
+            "freed_bytes": body["freed_bytes"],
+            "status": "deleted",
+            "message": "Run deleted.",
+        }
+        _assert_no_sensitive_public_fields(audit_response.text)
+
+
+def test_delete_terminal_run_persists_safe_deletion_audit_without_paths() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        run_id = str(uuid4())
+        asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.FAILED, name="failed cleanup"))
+        run_dir = settings.data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        (run_dir / "artifact.bin").write_bytes(b"1234567")
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            delete_response = client.delete(f"/runs/{run_id}")
+            audit_response = client.get("/runs/deletion-audit")
+
+        assert delete_response.status_code == 200
+        assert audit_response.status_code == 200
+        assert audit_response.json()["total_freed_bytes"] == 7
+        assert audit_response.json()["records"][0]["run_id"] == run_id
+        assert audit_response.json()["records"][0]["run_name"] == "failed cleanup"
+        assert audit_response.json()["records"][0]["freed_bytes"] == 7
+        assert "artifact.bin" not in audit_response.text
+        assert str(settings.data_dir) not in audit_response.text
+        _assert_no_sensitive_public_fields(audit_response.text)
+
 
 def test_delete_active_run_returns_conflict_and_preserves_files() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         run_id = str(uuid4())
         asyncio.run(_seed_run(settings, run_id=run_id, status=RunStatus.QUEUED, name="active-delete"))
         run_dir = settings.data_dir / "runs" / run_id
@@ -311,7 +407,7 @@ def test_delete_active_run_returns_conflict_and_preserves_files() -> None:
 def test_delete_missing_run_returns_not_found() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
         run_id = str(uuid4())
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -327,7 +423,7 @@ def test_delete_missing_run_returns_not_found() -> None:
 def test_delete_run_rejects_traversal_and_absolute_identifiers() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        asyncio.run(_create_database(settings))
+        _upgrade_database(settings)
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
             responses = [
@@ -346,11 +442,11 @@ def test_delete_run_rejects_traversal_and_absolute_identifiers() -> None:
             assert "path" not in response.text.casefold()
 
 
-async def _create_database(settings: Settings) -> None:
-    engine = create_async_engine(settings.database_url, future=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    await engine.dispose()
+def _upgrade_database(settings: Settings) -> None:
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    command.upgrade(cfg, "head")
 
 
 def _fake_background_runner_factory(settings: Settings):

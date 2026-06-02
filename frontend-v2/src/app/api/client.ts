@@ -8,6 +8,9 @@ export interface Run {
   stage: string;
   updated: string;
   created: string;
+  diskUsageBytes: number | null;
+  outputFileCount: number | null;
+  lastDiskScanAt: string | null;
 }
 
 export interface Stage {
@@ -103,12 +106,31 @@ export interface DeleteRunResult {
   message: string;
 }
 
+export interface DeletionAuditRecord {
+  runId: string;
+  runName: string | null;
+  deletedAt: string;
+  deletedFilesCount: number;
+  deletedDirsCount: number;
+  freedBytes: number;
+  status: string;
+  message: string;
+}
+
+export interface DeletionAuditSummary {
+  totalFreedBytes: number;
+  records: DeletionAuditRecord[];
+}
+
 interface RunPublicDto {
   id?: unknown;
   name?: unknown;
   status?: unknown;
   created_at?: unknown;
   detail?: unknown;
+  disk_usage_bytes?: unknown;
+  output_file_count?: unknown;
+  last_disk_scan_at?: unknown;
 }
 
 interface RunStageDto {
@@ -171,6 +193,22 @@ interface DeleteRunDto {
   message?: unknown;
 }
 
+interface DeletionAuditRecordDto {
+  run_id?: unknown;
+  run_name?: unknown;
+  deleted_at?: unknown;
+  deleted_files_count?: unknown;
+  deleted_dirs_count?: unknown;
+  freed_bytes?: unknown;
+  status?: unknown;
+  message?: unknown;
+}
+
+interface DeletionAuditDto {
+  total_freed_bytes?: unknown;
+  records?: unknown;
+}
+
 const KEY_DOWNLOAD_PATHS = [
   "QA/RUN_MANIFEST.json",
   "DEM_GEO8_TIFS/DEM_640.tif",
@@ -218,6 +256,10 @@ export async function createRun(input: CreateRunInput): Promise<Run> {
 
 export async function deleteRun(runId: string): Promise<DeleteRunResult> {
   return mapDeleteRunResult(await fetchJson<DeleteRunDto>(`/runs/${encodeURIComponent(runId)}`, { method: "DELETE" }));
+}
+
+export async function getDeletionAudit(): Promise<DeletionAuditSummary> {
+  return mapDeletionAudit(await fetchJson<DeletionAuditDto>("/runs/deletion-audit"));
 }
 
 export function buildActivityEvents(detail: RunDetail | null): ActivityEvent[] {
@@ -284,13 +326,28 @@ function mapRunPublic(payload: unknown): Run | null {
     return null;
   }
   const created = asString(dto.created_at) || new Date(0).toISOString();
+  const state = mapRunState(dto.status);
   return {
     id,
     name: asString(dto.name) || "Unnamed run",
-    state: mapRunState(dto.status),
-    stage: mapRunState(dto.status) === "done" ? "Completed" : "Queued",
+    state,
+    stage:
+      state === "done"
+        ? "Completed"
+        : state === "running"
+          ? "Running"
+          : state === "failed"
+            ? "Failed"
+            : state === "stale_failed"
+              ? "Stale failed"
+              : state === "cancelled"
+                ? "Cancelled"
+                : "Queued",
     updated: created,
     created,
+    diskUsageBytes: asNullableNumber(dto.disk_usage_bytes),
+    outputFileCount: asNullableNumber(dto.output_file_count),
+    lastDiskScanAt: asString(dto.last_disk_scan_at),
   };
 }
 
@@ -386,6 +443,36 @@ function mapDeleteRunResult(payload: DeleteRunDto): DeleteRunResult {
     freedBytes: asNumber(payload.freed_bytes),
     status: asString(payload.status) || "unknown",
     message: asString(payload.message) || "Run deleted.",
+  };
+}
+
+function mapDeletionAudit(payload: DeletionAuditDto): DeletionAuditSummary {
+  const records = Array.isArray(payload.records) ? payload.records.map(mapDeletionAuditRecord).filter(Boolean) : [];
+  return {
+    totalFreedBytes: asNumber(payload.total_freed_bytes),
+    records,
+  };
+}
+
+function mapDeletionAuditRecord(payload: unknown): DeletionAuditRecord | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const dto = payload as DeletionAuditRecordDto;
+  const runId = asString(dto.run_id);
+  const deletedAt = asString(dto.deleted_at);
+  if (!runId || !deletedAt) {
+    return null;
+  }
+  return {
+    runId,
+    runName: asString(dto.run_name),
+    deletedAt,
+    deletedFilesCount: asNumber(dto.deleted_files_count),
+    deletedDirsCount: asNumber(dto.deleted_dirs_count),
+    freedBytes: asNumber(dto.freed_bytes),
+    status: asString(dto.status) || "deleted",
+    message: asString(dto.message) || "Run deleted.",
   };
 }
 
@@ -561,6 +648,10 @@ function asNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function asNullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 function emptyRun(): Run {
   return {
     id: "Not started",
@@ -569,5 +660,8 @@ function emptyRun(): Run {
     stage: "Queued",
     updated: new Date(0).toISOString(),
     created: new Date(0).toISOString(),
+    diskUsageBytes: null,
+    outputFileCount: null,
+    lastDiskScanAt: null,
   };
 }
