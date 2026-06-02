@@ -98,3 +98,28 @@ class RunDeletionAuditRecordPublic(BaseModel):
 class RunDeletionAuditPublic(BaseModel):
     total_freed_bytes: int
     records: list[RunDeletionAuditRecordPublic] = Field(default_factory=list)
+
+
+class CleanupRunSuggestionPublic(BaseModel):
+    id: str
+    name: str | None
+    status: RunStatus
+    created_at: datetime
+    disk_usage_bytes: int | None = None
+    output_file_count: int | None = None
+    last_disk_scan_at: datetime | None = None
+
+
+class RunCleanupSummaryPublic(BaseModel):
+    total_runs: int
+    total_disk_usage_bytes: int
+    terminal_runs_count: int
+    active_runs_count: int
+    deleted_runs_count: int
+    total_freed_bytes: int
+    largest_runs: list[CleanupRunSuggestionPublic] = Field(default_factory=list)
+    oldest_terminal_runs: list[CleanupRunSuggestionPublic] = Field(default_factory=list)
+    stale_failed_runs: list[CleanupRunSuggestionPublic] = Field(default_factory=list)
+    cleanup_recommended: bool
+    warning_reason: str
+    threshold_bytes: int

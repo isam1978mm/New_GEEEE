@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   buildActivityEvents,
+  getCleanupSummary,
   createRun,
   deleteRun,
   getDeletionAudit,
   getOperatorOutputs,
   getRunDetail,
   listRuns,
+  type CleanupSummary,
   type CreateRunInput,
   type DeletionAuditSummary,
   type DeleteRunResult,
@@ -49,6 +51,21 @@ const EMPTY_OUTPUT_TREE: OperatorOutputTree = {
 const EMPTY_DELETION_AUDIT: DeletionAuditSummary = {
   totalFreedBytes: 0,
   records: [],
+};
+
+const EMPTY_CLEANUP_SUMMARY: CleanupSummary = {
+  totalRuns: 0,
+  totalDiskUsageBytes: 0,
+  terminalRunsCount: 0,
+  activeRunsCount: 0,
+  deletedRunsCount: 0,
+  totalFreedBytes: 0,
+  largestRuns: [],
+  oldestTerminalRuns: [],
+  staleFailedRuns: [],
+  cleanupRecommended: false,
+  warningReason: "No runs yet.",
+  thresholdBytes: 10 * 1024 * 1024 * 1024,
 };
 
 const DEFAULT_ARCHIVE_QUERY: RunListParams = {
@@ -131,6 +148,7 @@ export default function App() {
   const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
   const [outputTree, setOutputTree] = useState<OperatorOutputTree>(EMPTY_OUTPUT_TREE);
   const [deletionAudit, setDeletionAudit] = useState<DeletionAuditSummary>(EMPTY_DELETION_AUDIT);
+  const [cleanupSummary, setCleanupSummary] = useState<CleanupSummary>(EMPTY_CLEANUP_SUMMARY);
   const [runsLoading, setRunsLoading] = useState(true);
   const [archiveLoading, setArchiveLoading] = useState(true);
   const [runLoading, setRunLoading] = useState(false);
@@ -149,6 +167,7 @@ export default function App() {
     void refreshRuns();
     void refreshArchiveRuns(DEFAULT_ARCHIVE_QUERY);
     void refreshDeletionAudit();
+    void refreshCleanupSummary();
   }, []);
 
   useEffect(() => {
@@ -264,6 +283,14 @@ export default function App() {
     }
   }
 
+  async function refreshCleanupSummary() {
+    try {
+      setCleanupSummary(await getCleanupSummary());
+    } catch (_error) {
+      setCleanupSummary(EMPTY_CLEANUP_SUMMARY);
+    }
+  }
+
   async function handleSelectRun(run: Run) {
     await loadRun(run.id);
   }
@@ -276,6 +303,7 @@ export default function App() {
       setQueueFeedback(`Run queued: ${queuedRun.id}`);
       await refreshRuns(false);
       await refreshArchiveRuns(archiveQuery);
+      await refreshCleanupSummary();
       await loadRun(queuedRun.id);
     } catch (error) {
       setQueueFeedback(error instanceof Error ? error.message : "Run request failed.");
@@ -297,6 +325,7 @@ export default function App() {
     }
     await refreshArchiveRuns(archiveQuery);
     await refreshDeletionAudit();
+    await refreshCleanupSummary();
     return result;
   }
 
@@ -563,6 +592,7 @@ export default function App() {
               onSelectRun={handleSelectRun}
               onDeleteRun={handleDeleteRun}
               deletionAudit={deletionAudit}
+              cleanupSummary={cleanupSummary}
             />
           </div>
         )}

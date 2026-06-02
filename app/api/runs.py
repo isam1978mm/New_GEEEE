@@ -44,7 +44,9 @@ from app.pipeline.stages.thermal import create_ee_notebook_thermal_inertia_fetch
 from app.pipeline.stages.zero_shift import ZeroShiftStage
 from app.schemas.artifact import ArtifactPublic
 from app.schemas.run import (
+    CleanupRunSuggestionPublic,
     RunCreate,
+    RunCleanupSummaryPublic,
     RunDeletePublic,
     RunDeletionAuditPublic,
     RunDeletionAuditRecordPublic,
@@ -59,6 +61,9 @@ from app.services.storage import delete_run_directory, initialize_run_storage, r
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+CLEANUP_WARNING_THRESHOLD_BYTES = 10 * 1024 * 1024 * 1024
+STALE_FAILED_REVIEW_THRESHOLD_BYTES = 1 * 1024 * 1024 * 1024
 
 SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("grid", "GRID setup"),
@@ -206,6 +211,63 @@ async def get_deletion_audit(
             )
             for record in records
         ],
+    )
+
+
+@router.get("/runs/cleanup-summary", response_model=RunCleanupSummaryPublic)
+async def get_cleanup_summary(
+    settings: Settings = Depends(get_settings_from_request),
+    session: AsyncSession = Depends(get_db_session),
+) -> RunCleanupSummaryPublic:
+    runs = list(await session.scalars(select(Run).order_by(Run.created_at.desc(), Run.id.desc())))
+    await _refresh_disk_summaries(session=session, settings=settings, runs=runs)
+
+    active_statuses = {RunStatus.QUEUED, RunStatus.RUNNING}
+    terminal_runs = [run for run in runs if run.status not in active_statuses]
+    stale_failed_runs = [run for run in terminal_runs if run.status == RunStatus.STALE_FAILED]
+    total_disk_usage_bytes = sum(int(run.disk_usage_bytes or 0) for run in runs)
+
+    deleted_runs_count = int(await session.scalar(select(func.count(RunDeletionAudit.id))) or 0)
+    total_freed_bytes = int(await session.scalar(select(func.coalesce(func.sum(RunDeletionAudit.freed_bytes), 0))) or 0)
+
+    if total_disk_usage_bytes >= CLEANUP_WARNING_THRESHOLD_BYTES:
+        cleanup_recommended = True
+        warning_reason = "Stored runs exceed cleanup threshold."
+    elif any(int(run.disk_usage_bytes or 0) >= STALE_FAILED_REVIEW_THRESHOLD_BYTES for run in stale_failed_runs):
+        cleanup_recommended = True
+        warning_reason = "Large stale failed runs should be reviewed."
+    elif runs and any(run.disk_usage_bytes is None for run in runs):
+        cleanup_recommended = False
+        warning_reason = "Run sizes are still being scanned."
+    else:
+        cleanup_recommended = False
+        warning_reason = "Storage healthy."
+
+    largest_runs = sorted(
+        terminal_runs,
+        key=lambda run: (int(run.disk_usage_bytes or 0), run.created_at, run.id),
+        reverse=True,
+    )[:5]
+    oldest_terminal_runs = sorted(terminal_runs, key=lambda run: (run.created_at, run.id))[:5]
+    stale_failed_ranked = sorted(
+        stale_failed_runs,
+        key=lambda run: (int(run.disk_usage_bytes or 0), run.created_at, run.id),
+        reverse=True,
+    )[:5]
+
+    return RunCleanupSummaryPublic(
+        total_runs=len(runs),
+        total_disk_usage_bytes=total_disk_usage_bytes,
+        terminal_runs_count=len(terminal_runs),
+        active_runs_count=len(runs) - len(terminal_runs),
+        deleted_runs_count=deleted_runs_count,
+        total_freed_bytes=total_freed_bytes,
+        largest_runs=[_to_cleanup_run_suggestion(run) for run in largest_runs],
+        oldest_terminal_runs=[_to_cleanup_run_suggestion(run) for run in oldest_terminal_runs],
+        stale_failed_runs=[_to_cleanup_run_suggestion(run) for run in stale_failed_ranked],
+        cleanup_recommended=cleanup_recommended,
+        warning_reason=warning_reason,
+        threshold_bytes=CLEANUP_WARNING_THRESHOLD_BYTES,
     )
 
 
@@ -366,6 +428,18 @@ async def _mark_run_failed_if_present(session_factory, run_id: str, *, settings:
 
 def _to_run_public(run: Run) -> RunPublic:
     return RunPublic(
+        id=run.id,
+        name=run.name,
+        status=run.status,
+        created_at=run.created_at,
+        disk_usage_bytes=run.disk_usage_bytes,
+        output_file_count=run.output_file_count,
+        last_disk_scan_at=run.last_disk_scan_at,
+    )
+
+
+def _to_cleanup_run_suggestion(run: Run) -> CleanupRunSuggestionPublic:
+    return CleanupRunSuggestionPublic(
         id=run.id,
         name=run.name,
         status=run.status,

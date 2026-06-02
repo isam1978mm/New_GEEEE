@@ -577,6 +577,115 @@ def test_list_runs_rejects_invalid_sort_and_order() -> None:
         _assert_no_sensitive_public_fields(bad_order.text)
 
 
+def test_cleanup_summary_returns_safe_storage_health_and_recommendations() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        large_done_id = str(uuid4())
+        old_done_id = str(uuid4())
+        stale_id = str(uuid4())
+        active_id = str(uuid4())
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=large_done_id,
+                status=RunStatus.DONE,
+                name="largest done",
+                created_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+                disk_usage_bytes=8_000_000_000,
+                output_file_count=50,
+                last_disk_scan_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=old_done_id,
+                status=RunStatus.FAILED,
+                name="oldest terminal",
+                created_at=datetime(2024, 1, 2, tzinfo=timezone.utc),
+                disk_usage_bytes=1_500_000_000,
+                output_file_count=20,
+                last_disk_scan_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=stale_id,
+                status=RunStatus.STALE_FAILED,
+                name="stale failed run",
+                created_at=datetime(2025, 6, 1, tzinfo=timezone.utc),
+                disk_usage_bytes=1_200_000_000,
+                output_file_count=12,
+                last_disk_scan_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=active_id,
+                status=RunStatus.QUEUED,
+                name="active run",
+                created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+                disk_usage_bytes=500_000_000,
+                output_file_count=4,
+                last_disk_scan_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(_seed_deletion_audit_record(settings, run_name="deleted one", freed_bytes=321))
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get("/runs/cleanup-summary")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total_runs"] == 4
+        assert body["terminal_runs_count"] == 3
+        assert body["active_runs_count"] == 1
+        assert body["deleted_runs_count"] == 1
+        assert body["total_freed_bytes"] == 321
+        assert body["threshold_bytes"] == 10 * 1024 * 1024 * 1024
+        assert body["total_disk_usage_bytes"] == 11_200_000_000
+        assert body["cleanup_recommended"] is True
+        assert body["warning_reason"] == "Stored runs exceed cleanup threshold."
+        assert [row["id"] for row in body["largest_runs"]] == [large_done_id, old_done_id, stale_id]
+        assert [row["id"] for row in body["oldest_terminal_runs"]] == [old_done_id, large_done_id, stale_id]
+        assert [row["id"] for row in body["stale_failed_runs"]] == [stale_id]
+        assert all(row["status"] != "running" for row in body["largest_runs"])
+        _assert_no_sensitive_public_fields(response.text)
+
+
+def test_cleanup_summary_recommends_review_for_large_stale_failed_runs_below_total_threshold() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        stale_id = str(uuid4())
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=stale_id,
+                status=RunStatus.STALE_FAILED,
+                name="large stale",
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                disk_usage_bytes=1_500_000_000,
+                output_file_count=10,
+                last_disk_scan_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            )
+        )
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get("/runs/cleanup-summary")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["cleanup_recommended"] is True
+        assert body["warning_reason"] == "Large stale failed runs should be reviewed."
+        assert body["total_disk_usage_bytes"] == 1_500_000_000
+        assert [row["id"] for row in body["stale_failed_runs"]] == [stale_id]
+        _assert_no_sensitive_public_fields(response.text)
+
+
 def _upgrade_database(settings: Settings) -> None:
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
     cfg = Config("alembic.ini")
@@ -680,6 +789,28 @@ async def _seed_run(
                 disk_usage_bytes=disk_usage_bytes,
                 output_file_count=output_file_count,
                 last_disk_scan_at=last_disk_scan_at,
+            )
+        )
+        await session.commit()
+    await engine.dispose()
+
+
+async def _seed_deletion_audit_record(settings: Settings, *, run_name: str, freed_bytes: int) -> None:
+    from app.db.models import RunDeletionAudit
+
+    engine = create_async_engine(settings.database_url, future=True)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        session.add(
+            RunDeletionAudit(
+                run_id=str(uuid4()),
+                run_name=run_name,
+                deleted_at=datetime.now(timezone.utc),
+                deleted_files_count=2,
+                deleted_dirs_count=1,
+                freed_bytes=freed_bytes,
+                status="deleted",
+                message="Run deleted.",
             )
         )
         await session.commit()

@@ -122,6 +122,31 @@ export interface DeletionAuditSummary {
   records: DeletionAuditRecord[];
 }
 
+export interface CleanupRunSuggestion {
+  id: string;
+  name: string;
+  state: RunState;
+  created: string;
+  diskUsageBytes: number | null;
+  outputFileCount: number | null;
+  lastDiskScanAt: string | null;
+}
+
+export interface CleanupSummary {
+  totalRuns: number;
+  totalDiskUsageBytes: number;
+  terminalRunsCount: number;
+  activeRunsCount: number;
+  deletedRunsCount: number;
+  totalFreedBytes: number;
+  largestRuns: CleanupRunSuggestion[];
+  oldestTerminalRuns: CleanupRunSuggestion[];
+  staleFailedRuns: CleanupRunSuggestion[];
+  cleanupRecommended: boolean;
+  warningReason: string;
+  thresholdBytes: number;
+}
+
 export type RunListSortField = "created_at" | "updated_at" | "disk_usage_bytes" | "output_file_count" | "name" | "status";
 export type RunListOrder = "asc" | "desc";
 export type RunListStatusFilter = "done" | "running" | "failed" | "stale_failed" | "queued";
@@ -222,6 +247,23 @@ interface DeletionAuditDto {
   records?: unknown;
 }
 
+interface CleanupRunSuggestionDto extends RunPublicDto {}
+
+interface CleanupSummaryDto {
+  total_runs?: unknown;
+  total_disk_usage_bytes?: unknown;
+  terminal_runs_count?: unknown;
+  active_runs_count?: unknown;
+  deleted_runs_count?: unknown;
+  total_freed_bytes?: unknown;
+  largest_runs?: unknown;
+  oldest_terminal_runs?: unknown;
+  stale_failed_runs?: unknown;
+  cleanup_recommended?: unknown;
+  warning_reason?: unknown;
+  threshold_bytes?: unknown;
+}
+
 const KEY_DOWNLOAD_PATHS = [
   "QA/RUN_MANIFEST.json",
   "DEM_GEO8_TIFS/DEM_640.tif",
@@ -293,6 +335,10 @@ export async function deleteRun(runId: string): Promise<DeleteRunResult> {
 
 export async function getDeletionAudit(): Promise<DeletionAuditSummary> {
   return mapDeletionAudit(await fetchJson<DeletionAuditDto>("/runs/deletion-audit"));
+}
+
+export async function getCleanupSummary(): Promise<CleanupSummary> {
+  return mapCleanupSummary(await fetchJson<CleanupSummaryDto>("/runs/cleanup-summary"));
 }
 
 export function buildActivityEvents(detail: RunDetail | null): ActivityEvent[] {
@@ -400,6 +446,22 @@ function mapRunDetail(payload: RunDetailDto): RunDetail {
   };
 }
 
+function mapCleanupRunSuggestion(payload: unknown): CleanupRunSuggestion | null {
+  const run = mapRunPublic(payload);
+  if (!run) {
+    return null;
+  }
+  return {
+    id: run.id,
+    name: run.name,
+    state: run.state,
+    created: run.created,
+    diskUsageBytes: run.diskUsageBytes,
+    outputFileCount: run.outputFileCount,
+    lastDiskScanAt: run.lastDiskScanAt,
+  };
+}
+
 function mapStage(payload: unknown): Stage | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -484,6 +546,23 @@ function mapDeletionAudit(payload: DeletionAuditDto): DeletionAuditSummary {
   return {
     totalFreedBytes: asNumber(payload.total_freed_bytes),
     records,
+  };
+}
+
+function mapCleanupSummary(payload: CleanupSummaryDto): CleanupSummary {
+  return {
+    totalRuns: asNullableNumber(payload.total_runs) ?? 0,
+    totalDiskUsageBytes: asNullableNumber(payload.total_disk_usage_bytes) ?? 0,
+    terminalRunsCount: asNullableNumber(payload.terminal_runs_count) ?? 0,
+    activeRunsCount: asNullableNumber(payload.active_runs_count) ?? 0,
+    deletedRunsCount: asNullableNumber(payload.deleted_runs_count) ?? 0,
+    totalFreedBytes: asNullableNumber(payload.total_freed_bytes) ?? 0,
+    largestRuns: Array.isArray(payload.largest_runs) ? payload.largest_runs.map(mapCleanupRunSuggestion).filter(Boolean) : [],
+    oldestTerminalRuns: Array.isArray(payload.oldest_terminal_runs) ? payload.oldest_terminal_runs.map(mapCleanupRunSuggestion).filter(Boolean) : [],
+    staleFailedRuns: Array.isArray(payload.stale_failed_runs) ? payload.stale_failed_runs.map(mapCleanupRunSuggestion).filter(Boolean) : [],
+    cleanupRecommended: payload.cleanup_recommended === true,
+    warningReason: asString(payload.warning_reason) || "Storage healthy.",
+    thresholdBytes: asNullableNumber(payload.threshold_bytes) ?? 0,
   };
 }
 

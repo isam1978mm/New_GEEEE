@@ -106,6 +106,14 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Unknown size" in bundle_text
     assert "Deleted Runs / Cleanup Summary" in bundle_text
     assert "Total freed" in bundle_text
+    assert "Storage Health" in bundle_text
+    assert "Cleanup recommended" in bundle_text
+    assert "Storage healthy" in bundle_text
+    assert "Largest runs" in bundle_text
+    assert "Oldest runs" in bundle_text
+    assert "Stale failed runs" in bundle_text
+    assert "No runs yet." in bundle_text
+    assert "Run sizes are still being scanned." in bundle_text
     assert "Search runs" in bundle_text
     assert "Status filter" in bundle_text
     assert "Sort runs" in bundle_text

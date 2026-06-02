@@ -11,6 +11,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import {
+  type CleanupRunSuggestion,
+  type CleanupSummary,
   formatFileSize,
   type DeletionAuditSummary,
   type DeleteRunResult,
@@ -90,6 +92,7 @@ interface RunArchivePageProps {
   onSelectRun?: (run: Run) => void;
   onDeleteRun?: (run: Run) => Promise<DeleteRunResult>;
   deletionAudit?: DeletionAuditSummary;
+  cleanupSummary?: CleanupSummary;
 }
 
 type SortOption = "newest" | "oldest" | "largest" | "smallest" | "most_files" | "name_asc";
@@ -116,7 +119,95 @@ function mapSortOption(sortOption: SortOption): { sort: RunListSortField; order:
   }
 }
 
-export function RunArchivePage({ runs, loading = false, error = null, onQueryChange, onSelectRun, onDeleteRun, deletionAudit }: RunArchivePageProps) {
+function toRunFromSuggestion(suggestion: CleanupRunSuggestion): Run {
+  return {
+    id: suggestion.id,
+    name: suggestion.name,
+    state: suggestion.state,
+    stage:
+      suggestion.state === "done"
+        ? "Completed"
+        : suggestion.state === "failed"
+          ? "Failed"
+          : suggestion.state === "stale_failed"
+            ? "Stale failed"
+            : suggestion.state === "running"
+              ? "Running"
+              : "Queued",
+    updated: suggestion.created,
+    created: suggestion.created,
+    diskUsageBytes: suggestion.diskUsageBytes,
+    outputFileCount: suggestion.outputFileCount,
+    lastDiskScanAt: suggestion.lastDiskScanAt,
+  };
+}
+
+function CleanupSuggestionList({
+  title,
+  emptyText,
+  items,
+  onSelectRun,
+  onRequestDelete,
+}: {
+  title: string;
+  emptyText: string;
+  items: CleanupRunSuggestion[];
+  onSelectRun?: (run: Run) => void;
+  onRequestDelete?: (run: Run) => void;
+}) {
+  return (
+    <div className="rounded-lg bg-card px-3 py-2 flex flex-col gap-2" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
+      <div className="flex items-center justify-between">
+        <span className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+          {title}
+        </span>
+      </div>
+      {items.length === 0 ? (
+        <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>{emptyText}</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {items.map((item) => {
+            const run = toRunFromSuggestion(item);
+            return (
+              <div key={`${title}-${item.id}`} className="flex items-center justify-between gap-3 rounded px-2 py-2" style={{ backgroundColor: "var(--accent)" }}>
+                <div className="min-w-0 flex-1">
+                  <div className="font-mono truncate" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>
+                    {item.name || item.id.slice(0, 8)}
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
+                    {stateLabel(item.state)} · {fmtDate(item.created)} · {item.diskUsageBytes === null ? "Size not scanned" : formatFileSize(item.diskUsageBytes)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onSelectRun?.(run)}
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
+                    style={{ fontSize: "11px", fontWeight: 500, color: "var(--gs-navy)", backgroundColor: "var(--card)", border: "1px solid rgba(28,43,94,0.15)", cursor: "pointer" }}
+                  >
+                    <ExternalLink size={9} />
+                    Open
+                  </button>
+                  {canDeleteRun(run) && (
+                    <button
+                      onClick={() => onRequestDelete?.(run)}
+                      className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
+                      style={{ fontSize: "11px", fontWeight: 500, color: "var(--gs-red)", backgroundColor: "transparent", border: "1px solid var(--gs-red-border)", cursor: "pointer" }}
+                    >
+                      <Trash2 size={9} />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function RunArchivePage({ runs, loading = false, error = null, onQueryChange, onSelectRun, onDeleteRun, deletionAudit, cleanupSummary }: RunArchivePageProps) {
   const [search, setSearch] = useState("");
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<RunListStatusFilter | "all">("all");
@@ -194,6 +285,90 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
           {deleteError}
         </div>
       )}
+
+      <div className="rounded-lg bg-card px-3 py-3 flex flex-col gap-3" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              Storage Health
+            </div>
+            <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "4px" }}>
+              {cleanupSummary?.warningReason || "No runs yet."}
+            </div>
+          </div>
+          <div className="font-mono" style={{ fontSize: "11px", fontWeight: 700, color: cleanupSummary?.cleanupRecommended ? "var(--gs-red)" : "var(--gs-green)" }}>
+            {cleanupSummary?.cleanupRecommended ? "Cleanup recommended" : "Storage healthy"}
+          </div>
+        </div>
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+          <div>
+            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Total run storage</div>
+            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{formatFileSize(cleanupSummary?.totalDiskUsageBytes ?? 0)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Number of runs</div>
+            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.totalRuns ?? 0}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Active runs</div>
+            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.activeRunsCount ?? 0}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Terminal runs</div>
+            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.terminalRunsCount ?? 0}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Deleted runs</div>
+            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.deletedRunsCount ?? 0}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Total freed</div>
+            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-green)", fontWeight: 700 }}>{formatFileSize(cleanupSummary?.totalFreedBytes ?? 0)}</div>
+          </div>
+        </div>
+        {cleanupSummary && cleanupSummary.totalRuns === 0 && (
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>No runs yet.</p>
+        )}
+        {cleanupSummary && cleanupSummary.totalRuns > 0 && cleanupSummary.totalDiskUsageBytes === 0 && (
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>Run sizes are still being scanned.</p>
+        )}
+      </div>
+
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+        <CleanupSuggestionList
+          title="Largest runs"
+          emptyText="No terminal runs available."
+          items={cleanupSummary?.largestRuns ?? []}
+          onSelectRun={onSelectRun}
+          onRequestDelete={(run) => {
+            setConfirmRun(run);
+            setConfirmText("");
+            setDeleteError(null);
+          }}
+        />
+        <CleanupSuggestionList
+          title="Oldest runs"
+          emptyText="No terminal runs available."
+          items={cleanupSummary?.oldestTerminalRuns ?? []}
+          onSelectRun={onSelectRun}
+          onRequestDelete={(run) => {
+            setConfirmRun(run);
+            setConfirmText("");
+            setDeleteError(null);
+          }}
+        />
+        <CleanupSuggestionList
+          title="Stale failed runs"
+          emptyText="No stale failed runs."
+          items={cleanupSummary?.staleFailedRuns ?? []}
+          onSelectRun={onSelectRun}
+          onRequestDelete={(run) => {
+            setConfirmRun(run);
+            setConfirmText("");
+            setDeleteError(null);
+          }}
+        />
+      </div>
 
       <div
         className="rounded-lg bg-card px-3 py-2 flex flex-col gap-2"
