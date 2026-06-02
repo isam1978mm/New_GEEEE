@@ -1,54 +1,41 @@
-# Gaps Between Notebook Capabilities and Current App
+# Notebook-to-App Gaps and Intentional Omissions
 
 **Project:** GEE Screening  
-**Source review:** `Notebook cells.md` + current `max2026-lab/GEE_screening` repository review  
-**Purpose:** Document what the notebook can do that the current app cannot yet do, while separating lawful/defensible gaps from unsafe or non-PRD-aligned notebook behavior.
+**Source review:** `Notebook cells.md`, repository docs, and current app code  
+**Purpose:** Separate true product gaps from notebook behavior that the app intentionally removed or quarantined.
 
 ---
 
 ## 1. Scope decision
 
-This document records the notebook-vs-app capability gaps identified during review.
+This document records what the notebook can do that the current app cannot do, with one important distinction:
 
-Excluded from this document by project-owner decision:
+- Some missing notebook behavior is a real product gap.
+- Some missing notebook behavior is intentionally excluded because it is speculative, unsafe, duplicate, Colab-only, or not PRD-aligned.
+
+Excluded from this gap register by project-owner decision:
 
 - Interactive Colab point picker / map workflow.
 
-That notebook feature is not needed for the app gap list.
+That feature is not tracked as a required app gap.
 
 ---
 
-## 2. Executive verdict
+## 2. One-line summary
 
-The notebook can do more exploratory Colab work than the app, but much of the notebook's extra behavior is not safe, not production-ready, or not aligned with the lawful paid-archive triage PRD.
-
-The current app is stronger for:
-
-- controlled backend execution;
-- fixed GRID discipline;
-- service-account Earth Engine initialization;
-- run history and artifact tracking;
-- stage-by-stage pipeline status;
-- safer artifact serving policy;
-- local-only handling of sensitive artifacts.
-
-The current app is weaker or incomplete for:
-
-- full v6 paid-archive triage package import;
-- structured candidate persistence;
-- v6 review-priority ranking;
-- request-zone lifecycle;
-- paid imagery quote comparison lifecycle;
-- structured false-positive warning review;
-- neutralized product terminology.
+The notebook does the defensible science the app does, plus a large amount of duplicate feature-stack work, Colab/Drive plumbing, exact-coordinate export behavior, and speculative treasure/archaeology classifier language. The app keeps the controlled science path, fixes known formula/code issues, drops duplicate and Colab-only behavior, blocks coordinate-bearing public responses, and quarantines any classifier-style logic behind a CLI-only experimental boundary with neutral labels and filesystem-only outputs.
 
 ---
 
-## 3. Gap 1 — Full v6 paid-archive triage package
+## 3. True remaining product gaps
 
-### Notebook capability
+These are the gaps that still matter for the lawful paid-archive triage product.
 
-The v6 notebook can produce a full paid-archive candidate package, including files such as:
+### 3.1 v6 paid-archive package import
+
+#### Notebook capability
+
+The validated v6 notebook can produce a paid-archive triage package containing files such as:
 
 - `lawful_gee_candidate_scout_top_25_<timestamp>.csv`
 - `lawful_gee_candidate_scout_top_25_<timestamp>.geojson`
@@ -64,22 +51,27 @@ The v6 notebook can produce a full paid-archive candidate package, including fil
 - `visual_inspection_map.html`
 - `paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip`
 
-### Current app limitation
+#### Current app gap
 
-The app currently has a staged backend pipeline and artifact tracking, but it does not yet implement a v6 package importer that validates and persists these notebook outputs as structured app data.
+The app does not yet provide a v6 package importer that validates this package and persists its contents as governed app data.
 
-The current app stores runs and artifacts, but the reviewed model does not yet include dedicated v6 import entities such as:
+The current app run/artifact model is not enough by itself. The product still needs structured import records and parsed entities for candidates, request zones, and quote comparisons.
 
-- `gee_import_artifacts`
-- structured GEE candidate rows;
-- structured request-zone rows;
-- structured quote-comparison rows.
+#### Required capability
 
-### Required app capability
+Add a v6 import path that:
 
-Add a v6 import path that accepts a package directory or zip, validates schemas, stores provenance hashes, and persists candidate cells, request zones, and quote rows under the existing legal/review/export governance.
+1. validates package presence;
+2. validates required files;
+3. validates CSV/GeoJSON schemas;
+4. stores provenance hashes;
+5. links import results to a run;
+6. persists candidate rows;
+7. persists request-zone rows;
+8. persists quote-template/comparison rows;
+9. blocks import/escalation when legal gates fail.
 
-Suggested command from PRD direction:
+Suggested PRD-style command:
 
 ```bash
 lawful-anomaly gee-import-v6 \
@@ -89,19 +81,17 @@ lawful-anomaly gee-import-v6 \
   --geofence clear
 ```
 
-### Priority
+#### Priority
 
 High.
 
-This is the main gap between the validated v6 notebook workflow and the current app.
-
 ---
 
-## 4. Gap 2 — Stable candidate ranking and review-priority logic
+### 3.2 Candidate persistence and v6 review-priority ranking
 
-### Notebook capability
+#### Notebook capability
 
-The notebook can produce ranked candidate files with fields such as:
+The notebook can produce ranked candidate tables with fields such as:
 
 - `candidate_score`
 - `quality_adjusted_score`
@@ -124,23 +114,13 @@ The notebook can produce ranked candidate files with fields such as:
 - `terrain_heavy_rank`
 - `false_positive_warning_count`
 
-### Current app limitation
+#### Current app gap
 
-The app can generate PCA anomaly and object extraction outputs, but its object outputs are mainly pixel/object summaries:
+The app can generate PCA anomaly and object extraction outputs, but those outputs are not the full v6 candidate review model. Current object outputs are closer to anomaly-object summaries than paid-archive candidate review records.
 
-- object id;
-- row/column bounding box;
-- pixel center;
-- area in pixels;
-- mean anomaly;
-- max anomaly;
-- cluster id.
+#### Required capability
 
-It does not yet implement the v6 ranking model using stability, seasonality, confidence, false-positive warnings, and review-priority ordering.
-
-### Required app capability
-
-The app should support v6 candidate ranking with primary review ordering:
+Persist imported v6 candidate rows and review them using the PRD ordering:
 
 1. `review_priority_score`
 2. `false_positive_warning_count` ascending
@@ -148,34 +128,30 @@ The app should support v6 candidate ranking with primary review ordering:
 4. `stability_score`
 5. `candidate_score`
 
-The app must keep this interpretation rule visible:
+The app must keep the interpretation rule visible:
 
 > A high-scoring candidate means worth review with paid imagery. It does not mean treasure found, archaeology proven, or field action authorized.
 
-### Priority
+#### Priority
 
 High.
 
-Without this, the app can detect raster/object anomalies but cannot reproduce the notebook's lawful v6 review shortlist.
-
 ---
 
-## 5. Gap 3 — Request-zone creation for paid imagery
+### 3.3 Request-zone lifecycle
 
-### Notebook capability
+#### Notebook capability
 
-The notebook can generate request zones from high-priority candidate cells:
+The notebook can generate paid-imagery request zones:
 
 - `request_zones_v6.csv`
 - `request_zones_v6.geojson`
 
-These zones are practical geometries for paid high-resolution archive imagery requests.
+#### Current app gap
 
-### Current app limitation
+The app does not yet expose structured request-zone records equivalent to the v6 package lifecycle.
 
-The app has a fixed run grid and object extraction, but it does not yet expose a structured request-zone entity or lifecycle equivalent to the v6 package.
-
-The current app does not yet provide governed request-zone records with:
+Missing structured fields include:
 
 - `zone_id`
 - geometry;
@@ -191,11 +167,11 @@ The current app does not yet provide governed request-zone records with:
 - recommended imagery specs;
 - request-zone review state.
 
-### Required app capability
+#### Required capability
 
-Add request-zone import and/or generation support.
+Add request-zone import and review support.
 
-The system should rank zones using:
+Request zones should be ranked using:
 
 1. clean candidate presence;
 2. highest review-priority score;
@@ -204,19 +180,17 @@ The system should rank zones using:
 5. low false-positive warning count;
 6. practical coverage efficiency.
 
-Public/shared exports must remain coordinate-restricted or redacted. Internal/reviewer exports may include exact geometry only behind the existing gate.
+Public/shared exports must remain coordinate-restricted or redacted. Internal/reviewer exports may include exact geometry only behind explicit gated review/export actions.
 
-### Priority
+#### Priority
 
 High.
 
-Request zones are the bridge between anomaly/candidate review and paid imagery quote workflows.
-
 ---
 
-## 6. Gap 4 — Paid imagery quote template and quote comparison workflow
+### 3.4 Paid imagery quote template and quote-comparison lifecycle
 
-### Notebook capability
+#### Notebook capability
 
 The notebook can prepare paid imagery quote files:
 
@@ -244,13 +218,11 @@ Expected quote fields include:
 - `metadata_complete`
 - `notes`
 
-### Current app limitation
+#### Current app gap
 
 The app does not yet persist provider quote comparison rows as structured app data.
 
-The reviewed model does not yet include an `imagery_quote_comparisons` table or equivalent structured quote lifecycle.
-
-### Required app capability
+#### Required capability
 
 Add quote-comparison persistence and review support.
 
@@ -265,257 +237,339 @@ Quote scoring should consider:
 - price;
 - delivery time.
 
-No paid quote, provider request, or imagery order may be created automatically. Any escalation must require:
+No quote request, provider order, or imagery purchase may be created automatically. Any escalation must require:
 
 - legal gate passed;
 - reviewer approval;
 - export audit manifest exists;
 - explicit human trigger.
 
-### Priority
+#### Priority
 
 Medium-high.
 
-This becomes critical after request-zone persistence exists.
+---
+
+### 3.5 False-positive review upgrades
+
+#### Notebook / PRD capability
+
+The v6 workflow includes false-positive warning concepts such as:
+
+- built-up warning;
+- cropland-heavy warning;
+- water-edge warning;
+- modern-linear-edge warning;
+- false-positive warning count.
+
+Future desired warnings include:
+
+- road proximity;
+- settlement proximity;
+- quarry or construction pattern;
+- building density;
+- field-boundary pattern.
+
+#### Current app gap
+
+The app has the staged raster/object workflow, but the full v6 false-positive warning review model is not yet persisted as structured candidate review data.
+
+#### Required capability
+
+Add or import warning fields and use them to lower review priority or require manual review. Warnings must not automatically delete candidates.
+
+#### Priority
+
+Medium-high.
 
 ---
 
-## 7. Gap 5 — Multiple ROI sizes and manual ROI outputs
+## 4. Intentional omissions — not app gaps
 
-### Notebook capability
-
-The notebook can work with multiple ROI concepts, including:
-
-- a rough larger square ROI;
-- an exact UTM square ROI;
-- printed WKT/GeoJSON representations;
-- manual verification of UTM zone and geometry.
-
-### Current app limitation
-
-The app currently builds one authoritative grid around a supplied latitude/longitude:
-
-- UTM CRS based on the coordinate;
-- 10 m scale;
-- 640 x 640 pixels;
-- 6.4 km x 6.4 km extent.
-
-This fixed grid is good for reproducibility, but it does not support multiple operator-defined ROI sizes or manual ROI output variants.
-
-### Required app capability
-
-Only add this if future product requirements need it.
-
-Do not prioritize this over v6 import, candidate persistence, request zones, or quote comparison.
-
-### Priority
-
-Low.
-
-The fixed grid is acceptable for controlled app execution.
+These are notebook capabilities the app should not reproduce as normal product behavior.
 
 ---
 
-## 8. Gap 6 — Google Drive export/wait/copyback workflow
+### 4.1 Treasure / archaeology classifier labels are removed from the user surface
 
-### Notebook capability
+#### Notebook behavior
 
-The notebook can:
+Notebook cells such as 95, 97, 128, 132, 134, 135, and 236-243 emit named labels such as:
 
-- mount Google Drive;
-- export Earth Engine outputs to Drive;
-- wait for Drive exports to land;
-- copy outputs back into Colab;
-- scan Drive folders;
-- manually refresh Drive metadata.
+- `Gold_Metal_Jar`
+- `Sarcophagus_Naos`
+- `Red_Mercury_Trace`
+- `Black_Mercury_Trace`
+- `Buried_Entrance`
+- `Weapons_Shield_Cache`
+- `Ancient_Well`
 
-### Current app limitation
+These labels are not defensible from 10 m public satellite pixels and must not appear in the user-facing app.
 
-The app uses server-side run storage and artifact records. It does not implement the notebook's Colab/Drive workflow.
+#### App behavior
 
-### Required app capability
+The classifier-style logic is quarantined under:
 
-No immediate requirement.
+```text
+app/pipeline/stages_experimental/
+```
 
-For production, server-side storage is better than Drive copyback. The app should not adopt the Drive workflow unless there is a specific operator need for import/export compatibility.
+Boundary rules:
 
-### Priority
+- import requires `ENABLE_EXPERIMENTAL=1`;
+- invocation is CLI-only;
+- API must not import or expose it;
+- frontend must not invoke or display it;
+- background tasks must not invoke it;
+- core orchestrator must not invoke it;
+- outputs write only under `data/runs/<run_id>/experimental/`;
+- outputs are `FILESYSTEM_ONLY` and `http_servable=False`;
+- neutral IDs are used, such as `Class_A` through `Class_N`;
+- mapping to source-notebook identifiers exists only in `docs/CLASS_MAPPING.md`.
 
-Low.
+#### Decision
 
-This is useful for Colab experimentation but not required for the production app.
+This is an intentional safety boundary, not a missing feature.
+
+Do not expose source notebook classifier labels through API, UI, logs, filenames, normal artifacts, or public exports.
 
 ---
 
-## 9. Gap 7 — Experimental feature stacks and model-training attempts
+### 4.2 No coordinate-bearing outputs over HTTP
 
-### Notebook capability
+#### Notebook behavior
 
-The notebook contains many exploratory stacks and experiments, including:
+Several notebook cells emit exact latitude/longitude to KMZ, GeoJSON, CSV, Google Earth overlays, or live map markers.
 
-- repeated radar/geophysics feature stacks;
-- texture/tensor feature exports;
-- PCA anomaly variants;
-- watershed/object extraction variants;
-- CNN/YOLO/Swin/SegFormer setup attempts;
-- classifier/training scaffolds;
-- repeated or duplicate cells.
+Examples from the notebook review include cells:
 
-Only part of this is defensible and useful for the app.
+```text
+119, 122, 123, 128, 132, 134, 135, 139, 149,
+155, 156, 158, 159, 160, 162, 177, 178, 181,
+190, 191, 200, 237, 241, 243
+```
 
-The defensible science core is approximately:
+#### App behavior
 
-- GRID lock;
-- Sentinel-1 SAR RTC pipeline;
-- Sentinel-2 spectral indices;
+The app redaction contract forbids public JSON keys and values that expose sensitive spatial or system details, including:
+
+- latitude;
+- longitude;
+- coordinates;
+- geometry;
+- bounds;
+- bbox;
+- CRS;
+- EPSG;
+- CRS transform;
+- filesystem paths;
+- hashes;
+- tracebacks;
+- raw inputs.
+
+The app also verifies outgoing JSON responses and returns a public error response if redaction verification fails.
+
+KMZ, local location, heatmap, field-operation, and exact geometry artifacts must remain filesystem-only or otherwise internal/gated.
+
+#### Decision
+
+This is an intentional safety boundary, not a missing feature.
+
+Do not make exact coordinate-bearing artifacts public, previewed, tiled, or directly downloadable over HTTP.
+
+---
+
+### 4.3 No `ee.Authenticate()` or interactive Earth Engine auth
+
+#### Notebook behavior
+
+The notebook uses Colab-style interactive Earth Engine authentication.
+
+#### App behavior
+
+The app uses backend/server service-account initialization only.
+
+Required settings are:
+
+- service-account email;
+- service-account key path.
+
+If either is missing, initialization fails instead of falling back to interactive auth.
+
+#### Decision
+
+This is intentional.
+
+Do not add `ee.Authenticate()` to the backend app.
+
+---
+
+### 4.4 No Colab/Drive/UI-specific plumbing
+
+#### Notebook behavior
+
+The notebook contains Colab-only or Drive-only behavior, including:
+
+- Drive mount;
+- Drive export waits;
+- Drive refresh hacks;
+- shell listing cells;
+- Colab JavaScript auto-scroll / auto-run cells;
+- notebook-local pip install cells.
+
+#### App behavior
+
+The app uses controlled server-side run storage, Python dependencies, artifact records, and API/backend execution.
+
+#### Decision
+
+This is intentional.
+
+Do not port Drive mount/wait/refresh hacks, Colab JavaScript cells, or notebook pip install cells into the app.
+
+The interactive map/point-picker workflow is also excluded from this document by project-owner decision.
+
+---
+
+### 4.5 No notebook-only duplicate feature stacks
+
+#### Notebook behavior
+
+The notebook contains many duplicate or near-duplicate feature-stack families, including examples such as:
+
+- NANO stacks;
+- TREASURE stacks;
+- SIGMA0 MASTER variants;
+- GPHYS MASTER variants;
+- ARCH TARGETS variants;
+- RAD MASTER CUBE variants;
+- ULTIMATE GPHYS SCAN;
+- AUX METAL FEATURES;
+- multiple PCA passes;
+- multiple Tesla/inference protocol variants.
+
+#### App behavior
+
+The app collapses this into a controlled pipeline with one canonical path for:
+
+- GRID;
+- DEM;
+- zero-shift/alignment checks;
+- SAR RTC;
+- Sentinel-2 indices;
 - DEM derivatives;
-- Landsat thermal;
-- hypercube assembly;
+- thermal;
+- hypercube;
 - PCA anomaly;
-- basic object extraction;
+- object extraction;
 - alignment QA.
 
-### Current app limitation
+#### Decision
 
-The app implements a controlled staged subset. It does not run every exploratory notebook experiment.
+This is intentional.
 
-This is mostly correct. The app should not copy the notebook wholesale.
-
-### Required app capability
-
-Keep only PRD-aligned, explainable, defensible stages.
-
-Potentially useful future additions:
-
-- richer false-positive warning layers;
-- stronger road/building/proximity filters;
-- better quality diagnostics;
-- neutral anomaly-class labeling;
-- repeatability/stability scoring.
-
-Do not add unsupported artifact-specific claims or dummy-label ML training.
-
-### Priority
-
-Medium.
-
-The app should improve its defensible analysis, not absorb the notebook's speculative branches.
+Do not port duplicate notebook stacks unless a future PRD identifies a specific defensible layer with tests, neutral naming, and governance.
 
 ---
 
-## 10. Gap 8 — Exact-coordinate KMZ / GeoJSON / field-navigation outputs
+### 4.6 Notebook-only artifacts the app intentionally does not produce
 
-### Notebook capability
+The app does not need to produce every notebook artifact.
 
-The notebook can emit exact-coordinate KMZ, GeoJSON, Google Earth, and field-navigation style outputs.
+Notebook-only or intentionally excluded families include:
 
-### Current app limitation
+- panchromatic outputs such as `PAN_LS` and `PAN_S2`;
+- separate ascending/descending S1 support stacks;
+- `FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M` resampled variant;
+- deep-learning model build/inference cells using Swin, UnetPlusPlus, ResNet50, SegFormer, or an archaeology dictionary;
+- live geemap overlay of probability matrix on a satellite basemap;
+- notebook-only AI/hard-decision QA files;
+- pre-RTC SAR intermediates unless specifically needed for parity diagnostics.
 
-The app intentionally restricts these outputs. Some location and field-ops replacement artifacts exist, but they are local-only filesystem artifacts and should not be HTTP-served or public-facing.
+Some notebook-compatible internal/parity artifacts may exist in app code, such as `REPORT_640_*` or notebook-compatible hypercube outputs. Those must be treated as internal/parity artifacts and must not be promoted as user-facing proof semantics.
 
-### Required app capability
+#### Decision
 
-This is mostly not a missing feature. It is a governance boundary.
+Do not treat every notebook-only artifact as a product gap.
 
-The app should continue to block public/default exposure of:
-
-- exact candidate coordinates;
-- exact request-zone geometries;
-- exact field-navigation KMZ/KML;
-- public Google Maps target links;
-- public sub-pixel target coordinates.
-
-Internal/reviewer-only export may include exact geometry only when:
-
-- legal gate passed;
-- reviewer action is explicit;
-- warning language is visible;
-- export is audit-logged;
-- export precision policy allows it.
-
-### Priority
-
-Do not implement as public functionality.
-
-Only retain narrowly controlled reviewer/internal export behavior.
+Only implement notebook artifacts when they support the lawful paid-archive triage PRD.
 
 ---
 
-## 11. Safety and terminology gap
+### 4.7 Known notebook bugs are not carried forward
 
-### Issue
+#### Notebook bug 1 — Python constructor typo
 
-Some notebook-parity names and concepts are not aligned with the lawful PRD language. These labels should not appear in user-facing product surfaces:
+Notebook cell 233 uses a broken class constructor pattern:
 
-- treasure;
-- gold;
-- silver;
-- jars;
-- tunnel;
-- hidden doors;
-- field operations;
-- zero-point target;
-- Tesla protocol;
-- archaeology certainty;
-- sub-pixel target claims;
-- artifact-specific labels.
+```python
+def init(self)
+```
 
-### Required app capability
+instead of:
 
-Rename or hide unsafe/speculative labels before production exposure.
+```python
+def __init__(self)
+```
 
-Use neutral terminology such as:
+This is not carried into the app.
 
-| Unsafe / speculative term | Safer app term |
-| --- | --- |
-| Gold halo | SWIR/NIR ratio layer |
-| Silver oxide | visible-band ratio layer |
-| Tunnel ceiling | NIR/red contrast layer |
-| Hidden doors | directional hillshade contrast |
-| Zero-point targets | threshold intersection mask |
-| Field operations | reviewer-only local location artifact |
-| Treasure / artifact classifier | anomaly class / review class |
-| Target found | candidate anomaly |
-| Confidence of discovery | confidence for review priority |
+#### Notebook bug 2 — `IRON_SWIR` denominator
 
-### Priority
+The notebook note identified this incorrect formula:
 
-High.
+```text
+IRON_SWIR = (B11 - B12) / (B11 - B12)
+```
 
-This is required for PRD alignment and risk control.
+That expression collapses to 1 wherever the denominator is nonzero.
+
+The app uses the corrected normalized-difference form:
+
+```text
+(B11 - B12) / (B11 + B12)
+```
+
+#### Decision
+
+These are fixes, not gaps.
+
+Do not reintroduce notebook bugs for parity.
 
 ---
 
-## 12. App strengths to preserve
+## 5. App strengths to preserve
 
-The app should preserve the advantages it already has over the notebook:
+Preserve these app advantages while adding true missing PRD capabilities:
 
 - backend service-account Earth Engine flow;
-- no Colab `ee.Authenticate()` dependency;
+- no interactive `ee.Authenticate()`;
 - run status lifecycle;
 - stage manifests;
 - artifact records;
-- artifact classification;
-- filesystem-only handling for sensitive outputs;
+- artifact classes;
+- filesystem-only sensitive outputs;
 - fixed GRID discipline;
 - alignment QA;
 - public/internal export separation;
-- local-only sensitive artifacts;
-- controlled API access rather than free-form notebook execution.
+- redaction verification on public JSON responses;
+- controlled API access instead of free-form notebook execution;
+- quarantined experimental classifier boundary;
+- neutral labels only outside approved private mapping docs.
 
-Do not weaken these controls while adding notebook capabilities.
+Do not weaken these controls while closing true product gaps.
 
 ---
 
-## 13. Recommended implementation order
+## 6. Recommended implementation order
 
 ### Step 1 — v6 import scaffold
 
-Add a `gee-import-v6` importer that validates package presence, required files, schema, hashes, and final safety-rule text.
+Add `gee-import-v6` package validation with required-file checks, schema checks, package hashes, and final-rule text verification.
 
 ### Step 2 — candidate persistence
 
-Persist imported v6 candidate rows with the required score, stability, warning, and provenance fields.
+Persist imported v6 candidate rows with score, stability, warning, and provenance fields.
 
 ### Step 3 — request-zone persistence
 
@@ -525,21 +579,21 @@ Persist imported v6 request zones and add review states.
 
 Persist quote template/comparison rows and require explicit human selection.
 
-### Step 5 — safer UI/review views
+### Step 5 — safe review UI/API views
 
-Expose candidate and request-zone review tables with public/internal coordinate rules.
+Expose candidate and request-zone review data with public/internal coordinate rules.
 
-### Step 6 — terminology cleanup
-
-Rename unsafe notebook-parity labels or keep them strictly internal with neutral aliases.
-
-### Step 7 — false-positive filter upgrades
+### Step 6 — false-positive warning upgrades
 
 Add stronger road/building/settlement/quarry/construction/field-boundary warnings.
 
+### Step 7 — terminology guard audit
+
+Keep user-facing product language neutral. Ensure no notebook treasure/archaeology labels leak into app code, frontend, logs, artifacts, or public API responses.
+
 ---
 
-## 14. Final rule
+## 7. Final rule
 
 This project supports lawful desk-based remote-sensing triage only.
 
