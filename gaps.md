@@ -1,84 +1,281 @@
-# Notebook-to-App Gaps and Intentional Omissions
+# Notebook-to-App Gaps for Faithful Parity
 
 **Project:** GEE Screening  
 **Source review:** `Notebook cells.md`, repository docs, and current app code  
-**Purpose:** Separate true product gaps from notebook behavior that the app intentionally removed or quarantined.
+**Primary goal:** Convert the notebook to a Python app as faithfully as possible, while keeping execution modes clear.
 
 ---
 
-## 1. Scope decision
+## 1. Correct framing
 
-This document records what the notebook can do that the current app cannot do, with one important distinction:
+The challenge is not to remove notebook behavior.
 
-- Some missing notebook behavior is a real product gap.
-- Some missing notebook behavior is intentionally excluded because it is speculative, unsafe, duplicate, Colab-only, or not PRD-aligned.
+The challenge is to convert the notebook into a Python app and preserve what the notebook does, including its output families, file names, folder structure, and experimental/classifier outputs where technically feasible.
+
+Earlier wording that treated some notebook outputs as simply “risky” or “intentional omissions” is not the right framing for this conversion goal.
+
+Correct framing:
+
+```text
+The notebook outputs should be tracked as notebook-parity requirements.
+The app may keep them in a private/parity/experimental mode.
+They should not be lost merely because the core app or public UI does not expose them.
+```
+
+This document therefore separates:
+
+1. outputs that must be reproduced for notebook parity;
+2. outputs already covered by the app, renamed, corrected, or partially covered;
+3. outputs that require private/parity-mode handling rather than public/product exposure;
+4. outputs that may require staged implementation because they depend on Earth Engine, model weights, Colab-only behavior, or unavailable source data.
+
+---
+
+## 2. Scope decision
 
 Excluded from this gap register by project-owner decision:
 
 - Interactive Colab point picker / map workflow.
 
-That feature is not tracked as a required app gap.
+That feature is not required as a parity gap at this time.
+
+Everything else from the notebook should be evaluated as a parity target unless explicitly rejected later.
 
 ---
 
-## 2. One-line summary
+## 3. Required mode separation
 
-The notebook does the defensible science the app does, plus a large amount of duplicate feature-stack work, Colab/Drive plumbing, exact-coordinate export behavior, and speculative treasure/archaeology classifier language. The app keeps the controlled science path, fixes known formula/code issues, drops duplicate and Colab-only behavior, blocks coordinate-bearing public responses, and quarantines any classifier-style logic behind a CLI-only experimental boundary with neutral labels and filesystem-only outputs.
+To preserve the notebook “as is” without confusing it with the app’s clean review workflow, the app should support clear output modes.
+
+### 3.1 Core app mode
+
+Purpose:
+
+- controlled pipeline execution;
+- stable backend workflow;
+- run status;
+- artifact tracking;
+- current clean app behavior.
+
+This mode may use neutral names and controlled outputs.
+
+### 3.2 Notebook parity mode
+
+Purpose:
+
+- reproduce notebook output families;
+- preserve original notebook names where needed;
+- preserve original folder conventions where needed;
+- preserve original report/classifier/KMZ/GeoJSON/CSV outputs where technically feasible;
+- produce an auditable output tree for comparison against notebook reference output.
+
+This mode may include original notebook names such as `AI_BEH_*`, `AI_READY_*`, `REPORT_640_*`, `FINAL_TESLA_V7_2_*`, and original classifier labels if the goal is exact conversion fidelity.
+
+### 3.3 Experimental/private mode
+
+Purpose:
+
+- run classifier or model-derived outputs that are not part of the core pipeline;
+- preserve notebook logic for audit and experimentation;
+- avoid blocking conversion fidelity because the label names are experimental.
+
+This mode can keep original notebook labels if required for parity, while also optionally writing neutral aliases.
+
+### 3.4 Public/shared mode
+
+Purpose:
+
+- future controlled sharing;
+- redacted summaries;
+- no accidental exposure of internal/private artifacts.
+
+Public/shared mode is separate from notebook parity mode. A parity artifact can exist privately without being public UI functionality.
 
 ---
 
-## 3. True remaining product gaps
+## 4. Highest-priority true parity gaps
 
-These are the gaps that still matter for the lawful paid-archive triage product.
+These are the most important gaps to close to make the Python app match the notebook workflow.
 
-### 3.1 v6 paid-archive package import
+---
 
-#### Notebook capability
+### 4.1 Full v6 paid-archive package outputs
 
-The validated v6 notebook can produce a paid-archive triage package containing files such as:
+#### Notebook outputs
 
-- `lawful_gee_candidate_scout_top_25_<timestamp>.csv`
-- `lawful_gee_candidate_scout_top_25_<timestamp>.geojson`
-- `top25_enhanced_v6.csv`
-- `top25_enhanced_v6.geojson`
-- `quality_diagnostics_all_cells_v6.csv`
-- `stable_candidate_priority_list_v6.csv`
-- `request_zones_v6.csv`
-- `request_zones_v6.geojson`
-- `paid_imagery_quote_template_v6.csv`
-- `paid_imagery_quote_comparison_v6.csv`
-- `paid_archive_request_summary.txt`
-- `visual_inspection_map.html`
-- `paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip`
+The notebook can produce the final v6 candidate/request/quote package:
+
+```text
+lawful_gee_candidate_scout_top_25_<timestamp>.csv
+lawful_gee_candidate_scout_top_25_<timestamp>.geojson
+top25_enhanced_v6.csv
+top25_enhanced_v6.geojson
+quality_diagnostics_all_cells_v6.csv
+stable_candidate_priority_list_v6.csv
+request_zones_v6.csv
+request_zones_v6.geojson
+paid_imagery_quote_template_v6.csv
+paid_imagery_quote_comparison_v6.csv
+paid_archive_request_summary.txt
+visual_inspection_map.html
+paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip
+```
 
 #### Current app gap
 
-The app does not yet provide a v6 package importer that validates this package and persists its contents as governed app data.
+The app does not yet provide a complete v6 package import/export parity path that validates these files, stores provenance, and exposes them as structured run outputs.
 
-The current app run/artifact model is not enough by itself. The product still needs structured import records and parsed entities for candidates, request zones, and quote comparisons.
+#### Required parity goal
 
-#### Required capability
+Implement `gee-import-v6` or equivalent so the app can accept or reproduce the v6 package and keep every expected package file available under the run output tree.
 
-Add a v6 import path that:
+Required behavior:
 
-1. validates package presence;
-2. validates required files;
-3. validates CSV/GeoJSON schemas;
-4. stores provenance hashes;
-5. links import results to a run;
-6. persists candidate rows;
-7. persists request-zone rows;
-8. persists quote-template/comparison rows;
-9. blocks import/escalation when legal gates fail.
+1. validate all required files;
+2. validate schemas;
+3. store package/file hashes;
+4. persist imported candidates;
+5. persist imported request zones;
+6. persist imported quote rows;
+7. preserve original v6 filenames;
+8. write a parity manifest proving what was imported or reproduced.
 
-Suggested PRD-style command:
+#### Priority
 
-```bash
-lawful-anomaly gee-import-v6 \
-  --run-id <run_id> \
-  --package-path <paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip> \
-  --attestation present \
-  --geofence clear
+Critical.
+
+---
+
+### 4.2 Candidate tables and ranking outputs
+
+#### Notebook outputs
+
+The notebook can produce candidate tables with ranking and quality fields such as:
+
+```text
+candidate_score
+quality_adjusted_score
+review_priority_score
+confidence_score_all
+stability_score
+top10_count
+top25_count
+avg_rank
+season_top10_count
+season_top25_count
+season_avg_rank
+season_score_mean
+season_score_std
+score_gap_from_median
+score_gap_to_next_rank
+balanced_rank
+visibility_heavy_rank
+contrast_heavy_rank
+terrain_heavy_rank
+false_positive_warning_count
+```
+
+#### Current app gap
+
+The app can produce PCA anomaly and object extraction outputs, but those are not a full replacement for the notebook’s v6 candidate ranking tables.
+
+#### Required parity goal
+
+Add candidate persistence and export so the app can preserve notebook candidate-table semantics and reproduce:
+
+```text
+top25_enhanced_v6.csv
+top25_enhanced_v6.geojson
+stable_candidate_priority_list_v6.csv
+quality_diagnostics_all_cells_v6.csv
+```
+
+#### Priority
+
+Critical.
+
+---
+
+### 4.3 Request-zone outputs
+
+#### Notebook outputs
+
+The notebook can produce:
+
+```text
+request_zones_v6.csv
+request_zones_v6.geojson
+```
+
+These are part of the paid archive workflow.
+
+#### Current app gap
+
+The app does not yet provide full request-zone persistence and parity export equivalent to the notebook.
+
+#### Required parity goal
+
+Add request-zone import/export support preserving notebook fields such as:
+
+```text
+zone_id
+geometry
+centroid
+area estimate
+included candidate IDs
+candidate count
+max candidate score
+mean review priority score
+max confidence score
+minimum false-positive warning count
+reason summary
+recommended imagery specs
+```
+
+#### Priority
+
+Critical.
+
+---
+
+### 4.4 Paid imagery quote template and comparison outputs
+
+#### Notebook outputs
+
+The notebook can produce:
+
+```text
+paid_imagery_quote_template_v6.csv
+paid_imagery_quote_comparison_v6.csv
+```
+
+#### Current app gap
+
+The app does not yet persist or reproduce these quote workflow files as structured app entities.
+
+#### Required parity goal
+
+Add quote-row persistence and parity exports preserving fields such as:
+
+```text
+quote_id
+provider
+zone_id
+candidate_ids_covered
+acquisition_date
+sensor
+resolution_m
+cloud_cover_pct
+off_nadir_deg
+sun_elevation_deg
+processing_level
+license_terms
+price
+currency
+delivery_time_days
+coverage_score
+metadata_complete
+notes
 ```
 
 #### Priority
@@ -87,162 +284,35 @@ High.
 
 ---
 
-### 3.2 Candidate persistence and v6 review-priority ranking
+## 5. Notebook raster and tensor parity gaps
 
-#### Notebook capability
-
-The notebook can produce ranked candidate tables with fields such as:
-
-- `candidate_score`
-- `quality_adjusted_score`
-- `review_priority_score`
-- `confidence_score_all`
-- `stability_score`
-- `top10_count`
-- `top25_count`
-- `avg_rank`
-- `season_top10_count`
-- `season_top25_count`
-- `season_avg_rank`
-- `season_score_mean`
-- `season_score_std`
-- `score_gap_from_median`
-- `score_gap_to_next_rank`
-- `balanced_rank`
-- `visibility_heavy_rank`
-- `contrast_heavy_rank`
-- `terrain_heavy_rank`
-- `false_positive_warning_count`
-
-#### Current app gap
-
-The app can generate PCA anomaly and object extraction outputs, but those outputs are not the full v6 candidate review model. Current object outputs are closer to anomaly-object summaries than paid-archive candidate review records.
-
-#### Required capability
-
-Persist imported v6 candidate rows and review them using the PRD ordering:
-
-1. `review_priority_score`
-2. `false_positive_warning_count` ascending
-3. `confidence_score_all`
-4. `stability_score`
-5. `candidate_score`
-
-The app must keep the interpretation rule visible:
-
-> A high-scoring candidate means worth review with paid imagery. It does not mean treasure found, archaeology proven, or field action authorized.
-
-#### Priority
-
-High.
+These are not “bad outputs.” They are notebook output families that should be tracked for parity.
 
 ---
 
-### 3.3 Request-zone lifecycle
+### 5.1 DEM / terrain output family
 
-#### Notebook capability
+#### Notebook outputs
 
-The notebook can generate paid-imagery request zones:
+```text
+DEM_640.tif
+slope_deg_640.tif
+aspect_deg_640.tif
+roughness_100m_640.tif
+tpi_100m_640.tif
+curv_laplacian_640.tif
+curv_plan_640.tif
+curv_profile_640.tif
+hillshade_0to1_640.tif
+```
 
-- `request_zones_v6.csv`
-- `request_zones_v6.geojson`
+#### Current app status
 
-#### Current app gap
+The app covers some DEM/terrain outputs under different names, but does not necessarily reproduce every notebook filename and folder path.
 
-The app does not yet expose structured request-zone records equivalent to the v6 package lifecycle.
+#### Required parity goal
 
-Missing structured fields include:
-
-- `zone_id`
-- geometry;
-- centroid;
-- area estimate;
-- included candidate IDs;
-- candidate count;
-- max candidate score;
-- mean review priority score;
-- max confidence score;
-- minimum false-positive warning count;
-- reason summary;
-- recommended imagery specs;
-- request-zone review state.
-
-#### Required capability
-
-Add request-zone import and review support.
-
-Request zones should be ranked using:
-
-1. clean candidate presence;
-2. highest review-priority score;
-3. confidence score;
-4. stability score;
-5. low false-positive warning count;
-6. practical coverage efficiency.
-
-Public/shared exports must remain coordinate-restricted or redacted. Internal/reviewer exports may include exact geometry only behind explicit gated review/export actions.
-
-#### Priority
-
-High.
-
----
-
-### 3.4 Paid imagery quote template and quote-comparison lifecycle
-
-#### Notebook capability
-
-The notebook can prepare paid imagery quote files:
-
-- `paid_imagery_quote_template_v6.csv`
-- `paid_imagery_quote_comparison_v6.csv`
-
-Expected quote fields include:
-
-- `quote_id`
-- `provider`
-- `zone_id`
-- `candidate_ids_covered`
-- `acquisition_date`
-- `sensor`
-- `resolution_m`
-- `cloud_cover_pct`
-- `off_nadir_deg`
-- `sun_elevation_deg`
-- `processing_level`
-- `license_terms`
-- `price`
-- `currency`
-- `delivery_time_days`
-- `coverage_score`
-- `metadata_complete`
-- `notes`
-
-#### Current app gap
-
-The app does not yet persist provider quote comparison rows as structured app data.
-
-#### Required capability
-
-Add quote-comparison persistence and review support.
-
-Quote scoring should consider:
-
-- resolution quality;
-- cloud cover;
-- off-nadir angle;
-- coverage of priority zones;
-- metadata completeness;
-- license acceptability;
-- price;
-- delivery time.
-
-No quote request, provider order, or imagery purchase may be created automatically. Any escalation must require:
-
-- legal gate passed;
-- reviewer approval;
-- export audit manifest exists;
-- explicit human trigger.
+Produce notebook-compatible DEM output names and folder structure in parity mode, even if the core app also writes cleaner internal names.
 
 #### Priority
 
@@ -250,33 +320,68 @@ Medium-high.
 
 ---
 
-### 3.5 False-positive review upgrades
+### 5.2 SAR / radar output family
 
-#### Notebook / PRD capability
+#### Notebook outputs
 
-The v6 workflow includes false-positive warning concepts such as:
+```text
+RADAR_VV_dB_640_*.tif
+RADAR_VH_dB_640_*.tif
+RADAR_logRatio_dB_640_*.tif
+RADAR_angle_640_*.tif
+RADAR_VV_dB_640_*.npy
+RADAR_VH_dB_640_*.npy
+RADAR_logRatio_dB_640_*.npy
+RADAR_angle_640_*.npy
+S1_ASC_VV_Filtered_640.tif
+S1_ASC_VH_Filtered_640.tif
+S1_DESC_VV_Filtered_640.tif
+S1_DESC_VH_Filtered_640.tif
+S1_ASC_VV_Filtered_640.npy
+S1_ASC_VH_Filtered_640.npy
+S1_DESC_VV_Filtered_640.npy
+S1_DESC_VH_Filtered_640.npy
+```
 
-- built-up warning;
-- cropland-heavy warning;
-- water-edge warning;
-- modern-linear-edge warning;
-- false-positive warning count.
+#### Current app status
 
-Future desired warnings include:
+The app has SAR RTC outputs and notebook-compatible SAR aliases for some outputs. Separate ascending/descending support stacks are still a parity gap unless deliberately deferred.
 
-- road proximity;
-- settlement proximity;
-- quarry or construction pattern;
-- building density;
-- field-boundary pattern.
+#### Required parity goal
 
-#### Current app gap
+Reproduce the full notebook SAR output family in parity mode, including ASC/DESC support outputs if technically feasible.
 
-The app has the staged raster/object workflow, but the full v6 false-positive warning review model is not yet persisted as structured candidate review data.
+#### Priority
 
-#### Required capability
+High.
 
-Add or import warning fields and use them to lower review priority or require manual review. Warnings must not automatically delete candidates.
+---
+
+### 5.3 Pre-RTC SAR intermediate arrays
+
+#### Notebook outputs
+
+```text
+QA/sar/intermediates/per_image_products_db/*
+QA/sar/intermediates/pair_median/*
+QA/sar/intermediates/final_median_pre_rtc/*
+QA/sar/intermediates/post_sample_pre_rtc/*
+QA/sar/intermediates/post_rtc/*
+QA/sar/intermediates/sar_intermediate_manifest.json
+```
+
+#### Current app status
+
+The app may preserve final post-RTC equivalents, but pre-RTC intermediates are not fully reproduced.
+
+#### Required parity goal
+
+For notebook parity mode, either:
+
+1. write the missing intermediate arrays; or
+2. write a manifest explaining why a source-equivalent intermediate cannot be recovered.
+
+For faithful conversion, option 1 is preferred where technically possible.
 
 #### Priority
 
@@ -284,223 +389,398 @@ Medium-high.
 
 ---
 
-## 4. Intentional omissions — not app gaps
+### 5.4 Optical / panchromatic output family
 
-These are notebook capabilities the app should not reproduce as normal product behavior.
+#### Notebook outputs
+
+```text
+PAN_LS_Panchromatic_640.tif
+PAN_S2_Panchromatic_10m_640.tif
+PAN_LS_Panchromatic_640.npy
+PAN_S2_Panchromatic_10m_640.npy
+PAN_LAYERS_STACK_640.npy
+```
+
+#### Current app gap
+
+These are notebook-only or not fully reproduced in the current app output tree.
+
+#### Required parity goal
+
+Add parity-mode generation for panchromatic support outputs if they are required to match the notebook reference output.
+
+#### Priority
+
+Medium.
 
 ---
 
-### 4.1 Treasure / archaeology classifier labels are removed from the user surface
+### 5.5 Hypercube / stacked tensor output family
 
-#### Notebook behavior
-
-Notebook cells such as 95, 97, 128, 132, 134, 135, and 236-243 emit named labels such as:
-
-- `Gold_Metal_Jar`
-- `Sarcophagus_Naos`
-- `Red_Mercury_Trace`
-- `Black_Mercury_Trace`
-- `Buried_Entrance`
-- `Weapons_Shield_Cache`
-- `Ancient_Well`
-
-These labels are not defensible from 10 m public satellite pixels and must not appear in the user-facing app.
-
-#### App behavior
-
-The classifier-style logic is quarantined under:
+#### Notebook outputs
 
 ```text
-app/pipeline/stages_experimental/
+FINAL_TESLA_V7_2_HYPERCUBE.tif
+FINAL_TESLA_V7_2_HYPERCUBE.npy
+FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif
+FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif
+FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy
+RADAR_STACK_HWC_640_*.npy
+S1_FILTERED_LAYERS_STACK_640.npy
 ```
 
-Boundary rules:
+#### Current app status
 
-- import requires `ENABLE_EXPERIMENTAL=1`;
-- invocation is CLI-only;
-- API must not import or expose it;
-- frontend must not invoke or display it;
-- background tasks must not invoke it;
-- core orchestrator must not invoke it;
-- outputs write only under `data/runs/<run_id>/experimental/`;
-- outputs are `FILESYSTEM_ONLY` and `http_servable=False`;
-- neutral IDs are used, such as `Class_A` through `Class_N`;
-- mapping to source-notebook identifiers exists only in `docs/CLASS_MAPPING.md`.
+Some hypercube outputs are implemented or aliased, but the full notebook stack family and resampled variants are not necessarily complete.
 
-#### Decision
+#### Required parity goal
 
-This is an intentional safety boundary, not a missing feature.
+Preserve notebook names and stack shapes in parity mode. Add a stack manifest containing:
 
-Do not expose source notebook classifier labels through API, UI, logs, filenames, normal artifacts, or public exports.
+- source layer list;
+- band order;
+- shape;
+- dtype;
+- nodata policy;
+- source file mapping;
+- any intentional difference.
+
+#### Priority
+
+High.
 
 ---
 
-### 4.2 No coordinate-bearing outputs over HTTP
+## 6. Notebook report / semantic raster parity gaps
 
-#### Notebook behavior
+These outputs should be preserved for parity if the goal is notebook conversion fidelity.
 
-Several notebook cells emit exact latitude/longitude to KMZ, GeoJSON, CSV, Google Earth overlays, or live map markers.
+They should not be silently renamed away unless parity aliases are also written.
 
-Examples from the notebook review include cells:
+### 6.1 Report rasters
+
+#### Notebook outputs
 
 ```text
-119, 122, 123, 128, 132, 134, 135, 139, 149,
-155, 156, 158, 159, 160, 162, 177, 178, 181,
-190, 191, 200, 237, 241, 243
+REPORT_640_Pottery_Report.tif
+REPORT_640_Mass_Report.tif
+REPORT_640_FINAL_Zero_Point_Targets.tif
 ```
 
-#### App behavior
+#### Current app status
 
-The app redaction contract forbids public JSON keys and values that expose sensitive spatial or system details, including:
+The app has code related to `REPORT_640_*` outputs, but parity should verify:
 
-- latitude;
-- longitude;
-- coordinates;
-- geometry;
-- bounds;
-- bbox;
+- exact filename;
+- exact folder;
+- exact band values or accepted tolerance;
+- source formula;
+- shape;
+- transform;
 - CRS;
-- EPSG;
-- CRS transform;
-- filesystem paths;
-- hashes;
-- tracebacks;
-- raw inputs.
+- nodata policy.
 
-The app also verifies outgoing JSON responses and returns a public error response if redaction verification fails.
+#### Required parity goal
 
-KMZ, local location, heatmap, field-operation, and exact geometry artifacts must remain filesystem-only or otherwise internal/gated.
+Treat these as required notebook-parity outputs.
 
-#### Decision
+Do not remove names solely because they sound semantic. If a clean app alias is desired, write both:
 
-This is an intentional safety boundary, not a missing feature.
+```text
+notebook original name
+neutral app alias
+```
 
-Do not make exact coordinate-bearing artifacts public, previewed, tiled, or directly downloadable over HTTP.
+#### Priority
+
+High.
 
 ---
 
-### 4.3 No `ee.Authenticate()` or interactive Earth Engine auth
+### 6.2 AI_BEH and AI_READY series
+
+#### Notebook outputs
+
+```text
+AI_BEH_* series
+AI_READY_* series
+AI_READY_640_Secret_* series
+```
+
+Examples include notebook-style names such as:
+
+```text
+AI_READY_640_Secret_Gold_Halo
+AI_READY_640_Secret_Silver_Oxide
+AI_READY_640_Secret_Tunnel_Ceiling
+AI_READY_640_Secret_Thermal_Inertia
+AI_READY_640_Secret_Chemical_Protector
+AI_READY_640_Secret_Hidden_Doors
+```
+
+#### Current app status
+
+Some app code may compute similar internal/parity layers, but the full notebook output family and naming should be verified.
+
+#### Required parity goal
+
+For notebook parity mode, preserve these original notebook output names and folder paths where feasible.
+
+Optional: also write neutral aliases, but do not drop original names if the task is faithful conversion.
+
+#### Priority
+
+High.
+
+---
+
+## 7. Classifier / model output parity gaps
+
+### 7.1 Original classifier labels
+
+#### Notebook outputs / labels
+
+The notebook contains classifier-style labels such as:
+
+```text
+Gold_Metal_Jar
+Sarcophagus_Naos
+Red_Mercury_Trace
+Black_Mercury_Trace
+Buried_Entrance
+Weapons_Shield_Cache
+Ancient_Well
+```
+
+#### Current app status
+
+The current app experimental module uses neutral `Class_A` through `Class_N` identifiers.
+
+That is good for clean app mode, but it is not full notebook parity if original labels are required.
+
+#### Required parity goal
+
+Notebook parity mode should be able to preserve original classifier output labels when the goal is exact conversion fidelity.
+
+Recommended output strategy:
+
+```text
+experimental/classifications_original.csv      # original notebook labels
+experimental/classifications_neutral.csv       # neutral aliases
+experimental/class_mapping.json                # explicit mapping
+experimental/summary.json
+```
+
+This keeps conversion fidelity and clean-mode compatibility.
+
+#### Priority
+
+Medium-high.
+
+---
+
+### 7.2 Deep learning model build/inference cells
 
 #### Notebook behavior
 
-The notebook uses Colab-style interactive Earth Engine authentication.
+The notebook contains Swin, UnetPlusPlus, ResNet50, SegFormer, YOLO-style, and CNN inference/build attempts.
 
-#### App behavior
+#### Current app gap
 
-The app uses backend/server service-account initialization only.
+The current app does not fully reproduce these model-build/inference cells.
 
-Required settings are:
+#### Required parity goal
 
-- service-account email;
-- service-account key path.
+Track these cells separately because feasibility depends on:
 
-If either is missing, initialization fails instead of falling back to interactive auth.
+- package availability;
+- GPU/CPU runtime;
+- model weights;
+- training data;
+- whether the notebook cell was actually runnable;
+- whether source files exist.
 
-#### Decision
+For faithful conversion, preserve runnable behavior where possible and mark non-runnable cells as:
 
-This is intentional.
+```text
+not_implemented_missing_weights
+not_implemented_missing_training_data
+not_implemented_broken_notebook_cell
+not_implemented_dependency_unavailable
+```
 
-Do not add `ee.Authenticate()` to the backend app.
+#### Priority
 
----
-
-### 4.4 No Colab/Drive/UI-specific plumbing
-
-#### Notebook behavior
-
-The notebook contains Colab-only or Drive-only behavior, including:
-
-- Drive mount;
-- Drive export waits;
-- Drive refresh hacks;
-- shell listing cells;
-- Colab JavaScript auto-scroll / auto-run cells;
-- notebook-local pip install cells.
-
-#### App behavior
-
-The app uses controlled server-side run storage, Python dependencies, artifact records, and API/backend execution.
-
-#### Decision
-
-This is intentional.
-
-Do not port Drive mount/wait/refresh hacks, Colab JavaScript cells, or notebook pip install cells into the app.
-
-The interactive map/point-picker workflow is also excluded from this document by project-owner decision.
+Medium.
 
 ---
 
-### 4.5 No notebook-only duplicate feature stacks
+## 8. Coordinate-bearing output parity
 
-#### Notebook behavior
+### 8.1 KMZ / GeoJSON / CSV / map outputs
 
-The notebook contains many duplicate or near-duplicate feature-stack families, including examples such as:
+#### Notebook outputs
 
-- NANO stacks;
-- TREASURE stacks;
-- SIGMA0 MASTER variants;
-- GPHYS MASTER variants;
-- ARCH TARGETS variants;
-- RAD MASTER CUBE variants;
-- ULTIMATE GPHYS SCAN;
-- AUX METAL FEATURES;
-- multiple PCA passes;
-- multiple Tesla/inference protocol variants.
+The notebook can emit exact-location artifacts such as:
 
-#### App behavior
+```text
+GeoJSON
+KMZ
+KML
+CSV with lat/lon
+Google Earth overlays
+visual_inspection_map.html
+field/navigation-style outputs
+```
 
-The app collapses this into a controlled pipeline with one canonical path for:
+#### Correct framing
 
-- GRID;
-- DEM;
-- zero-shift/alignment checks;
-- SAR RTC;
-- Sentinel-2 indices;
-- DEM derivatives;
-- thermal;
-- hypercube;
-- PCA anomaly;
-- object extraction;
-- alignment QA.
+These are not automatically “bad” in this project context.
 
-#### Decision
+For faithful notebook conversion, they are parity outputs.
 
-This is intentional.
+#### Required parity goal
 
-Do not port duplicate notebook stacks unless a future PRD identifies a specific defensible layer with tests, neutral naming, and governance.
+Preserve them in notebook parity/private output mode when the goal is to match the notebook.
 
----
+Recommended output strategy:
 
-### 4.6 Notebook-only artifacts the app intentionally does not produce
+```text
+parity/location/*.geojson
+parity/kmz/*.kmz
+parity/maps/visual_inspection_map.html
+parity/navigation/*.kml
+parity/navigation/*.csv
+```
 
-The app does not need to produce every notebook artifact.
+Add a manifest that states:
 
-Notebook-only or intentionally excluded families include:
+```text
+These are notebook-parity outputs preserved for conversion fidelity.
+They are not generated by the clean public/shared mode unless explicitly enabled.
+```
 
-- panchromatic outputs such as `PAN_LS` and `PAN_S2`;
-- separate ascending/descending S1 support stacks;
-- `FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M` resampled variant;
-- deep-learning model build/inference cells using Swin, UnetPlusPlus, ResNet50, SegFormer, or an archaeology dictionary;
-- live geemap overlay of probability matrix on a satellite basemap;
-- notebook-only AI/hard-decision QA files;
-- pre-RTC SAR intermediates unless specifically needed for parity diagnostics.
+#### Priority
 
-Some notebook-compatible internal/parity artifacts may exist in app code, such as `REPORT_640_*` or notebook-compatible hypercube outputs. Those must be treated as internal/parity artifacts and must not be promoted as user-facing proof semantics.
-
-#### Decision
-
-Do not treat every notebook-only artifact as a product gap.
-
-Only implement notebook artifacts when they support the lawful paid-archive triage PRD.
+High for parity, separate from public UI decisions.
 
 ---
 
-### 4.7 Known notebook bugs are not carried forward
+## 9. QA / diagnostics / provenance parity gaps
 
-#### Notebook bug 1 — Python constructor typo
+### 9.1 Notebook QA files
 
-Notebook cell 233 uses a broken class constructor pattern:
+#### Notebook outputs
+
+```text
+QA_GRID_dx_m_640.tif
+QA_GRID_dy_m_640.tif
+QA_GRID_validmask_640.tif
+QA_RADAR_CELL25_PAIR_IDS_*.json
+QA_S1_MASTER_UNITS.json
+QA_RADAR_META_*.json
+SUMMARY_RADAR_*.csv
+RUN_MANIFEST.json
+sar_intermediate_manifest.json
+```
+
+#### Current app status
+
+The app has its own manifests, run history, stage manifests, and QA files, but it does not necessarily reproduce every notebook QA filename.
+
+#### Required parity goal
+
+Write notebook-compatible QA outputs in parity mode, even if the app also keeps its own cleaner manifests.
+
+Required approach:
+
+```text
+app-native QA files remain
+notebook-compatible QA aliases are also written
+parity manifest maps native files to notebook files
+```
+
+#### Priority
+
+High.
+
+---
+
+## 10. Colab / Drive behavior
+
+### 10.1 What to preserve
+
+The notebook has Colab/Drive mechanics:
+
+```text
+Drive mount
+Drive export waits
+Drive refresh hacks
+Colab shell listing
+Colab JS auto-scroll / auto-run
+pip install cells
+```
+
+### 10.2 Correct conversion target
+
+The app does not need to reproduce Colab UI mechanics exactly.
+
+But it should reproduce the resulting output files and pipeline effects where those effects matter.
+
+So the target is:
+
+```text
+output-equivalent behavior, not Colab-mechanic-equivalent behavior
+```
+
+Examples:
+
+- Do not need Drive mount if server storage writes the same files.
+- Do not need Drive refresh if app output tree is complete.
+- Do not need pip install cells if requirements are pinned.
+- Do not need JS auto-scroll if app orchestration runs stages directly.
+
+### 10.3 Status
+
+Not a direct parity output gap unless a Colab-only step produces a file that is missing from the app.
+
+---
+
+## 11. Known notebook bugs and parity policy
+
+### 11.1 `IRON_SWIR` formula
+
+Notebook note identified this bug:
+
+```text
+IRON_SWIR = (B11 - B12) / (B11 - B12)
+```
+
+This collapses to 1 wherever the denominator is nonzero.
+
+The app currently uses the corrected form:
+
+```text
+(B11 - B12) / (B11 + B12)
+```
+
+#### Parity policy
+
+For faithful conversion, document this as a corrected notebook bug.
+
+If strict bug-for-bug parity is ever needed, support it only behind an explicit compatibility flag such as:
+
+```text
+--compatibility reproduce-known-notebook-bugs
+```
+
+Default should remain corrected behavior.
+
+---
+
+### 11.2 Broken constructor typo
+
+Notebook cell 233 uses:
 
 ```python
 def init(self)
@@ -512,89 +792,123 @@ instead of:
 def __init__(self)
 ```
 
-This is not carried into the app.
+#### Parity policy
 
-#### Notebook bug 2 — `IRON_SWIR` denominator
+Do not reproduce broken code unless preserving it as a non-runnable source reference.
 
-The notebook note identified this incorrect formula:
-
-```text
-IRON_SWIR = (B11 - B12) / (B11 - B12)
-```
-
-That expression collapses to 1 wherever the denominator is nonzero.
-
-The app uses the corrected normalized-difference form:
+Mark as:
 
 ```text
-(B11 - B12) / (B11 + B12)
+not_implemented_broken_notebook_cell
 ```
-
-#### Decision
-
-These are fixes, not gaps.
-
-Do not reintroduce notebook bugs for parity.
 
 ---
 
-## 5. App strengths to preserve
+## 12. Current app strengths to preserve while adding parity
 
-Preserve these app advantages while adding true missing PRD capabilities:
+Preserve these strengths:
 
-- backend service-account Earth Engine flow;
-- no interactive `ee.Authenticate()`;
+- service-account Earth Engine backend flow;
 - run status lifecycle;
 - stage manifests;
 - artifact records;
-- artifact classes;
-- filesystem-only sensitive outputs;
+- deterministic run directories;
 - fixed GRID discipline;
 - alignment QA;
-- public/internal export separation;
-- redaction verification on public JSON responses;
-- controlled API access instead of free-form notebook execution;
-- quarantined experimental classifier boundary;
-- neutral labels only outside approved private mapping docs.
+- app-native artifact classes;
+- app-native redaction/public-response controls;
+- app-native API/frontend separation;
+- app-native clean/core pipeline mode.
 
-Do not weaken these controls while closing true product gaps.
+Important:
 
----
+Adding notebook parity mode must not break the current core app pipeline.
 
-## 6. Recommended implementation order
-
-### Step 1 — v6 import scaffold
-
-Add `gee-import-v6` package validation with required-file checks, schema checks, package hashes, and final-rule text verification.
-
-### Step 2 — candidate persistence
-
-Persist imported v6 candidate rows with score, stability, warning, and provenance fields.
-
-### Step 3 — request-zone persistence
-
-Persist imported v6 request zones and add review states.
-
-### Step 4 — quote-comparison persistence
-
-Persist quote template/comparison rows and require explicit human selection.
-
-### Step 5 — safe review UI/API views
-
-Expose candidate and request-zone review data with public/internal coordinate rules.
-
-### Step 6 — false-positive warning upgrades
-
-Add stronger road/building/settlement/quarry/construction/field-boundary warnings.
-
-### Step 7 — terminology guard audit
-
-Keep user-facing product language neutral. Ensure no notebook treasure/archaeology labels leak into app code, frontend, logs, artifacts, or public API responses.
+The clean app mode and notebook parity mode should coexist.
 
 ---
 
-## 7. Final rule
+## 13. Recommended implementation phases
 
-This project supports lawful desk-based remote-sensing triage only.
+### Phase 1 — Output inventory lock
 
-It does not prove treasure, authorize entry, authorize metal detecting, authorize excavation, authorize collection, or replace landowner, heritage, environmental, or protected-area permits.
+Create an authoritative notebook-output inventory from `Notebook cells.md` and/or a frozen notebook output bundle.
+
+Deliverables:
+
+```text
+docs/NOTEBOOK_OUTPUT_INVENTORY_LOCKED.md
+parity_expected_outputs.json
+```
+
+### Phase 2 — Parity output tree design
+
+Define where notebook-parity outputs live in the app run directory.
+
+Suggested structure:
+
+```text
+data/runs/<run_id>/
+  app_native/
+  parity/
+    root/
+    DEM_GEO8_TIFS/
+    GEOTIFF_RADAR_BANDS/
+    NPY_RADAR_BANDS/
+    NPY_STACKS/
+    OPT/
+    QA/
+    kmz/
+    maps/
+    experimental/
+  manifests/
+```
+
+### Phase 3 — v6 package import/export parity
+
+Implement candidate, request-zone, quote, summary, map, and zip package parity.
+
+### Phase 4 — Raster/tensor parity
+
+Implement or alias DEM, SAR, S2, thermal, report rasters, AI_READY/AI_BEH, hypercube, panchromatic, and stack outputs.
+
+### Phase 5 — QA/intermediate parity
+
+Implement notebook-compatible QA files, grid QA files, SAR pair diagnostics, and SAR intermediate arrays.
+
+### Phase 6 — Classifier/model parity
+
+Implement original-label classifier outputs in private parity mode, alongside optional neutral aliases.
+
+### Phase 7 — End-to-end parity test
+
+Run app vs frozen notebook output comparison.
+
+Compare:
+
+- file presence;
+- row counts;
+- required columns;
+- raster shapes;
+- CRS/transform;
+- nodata;
+- band order;
+- checksums where deterministic;
+- numeric tolerance where Earth Engine variability exists.
+
+---
+
+## 14. Final rule
+
+The objective is faithful notebook-to-Python-app conversion.
+
+Do not delete notebook outputs from the plan just because they are experimental, oddly named, duplicate, or not part of the clean UI.
+
+Instead:
+
+```text
+preserve them in notebook parity/private mode;
+map them clearly;
+validate them;
+then decide separately what, if anything, belongs in clean core app mode or public/shared mode.
+```
