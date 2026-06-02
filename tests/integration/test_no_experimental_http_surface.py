@@ -4,11 +4,12 @@ import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import Settings
-from app.db.base import Base
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
 
@@ -43,11 +44,9 @@ async def _seed_experimental_artifact(tmp_path: Path) -> None:
     db_path = data_dir / "gee_screening.db"
     data_dir.mkdir(parents=True, exist_ok=True)
     settings = Settings(data_dir=data_dir, database_path=db_path)
+    _upgrade_database(settings)
 
     engine = create_async_engine(settings.database_url, future=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     run_dir = data_dir / "runs" / "run-1" / "experimental"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -57,6 +56,13 @@ async def _seed_experimental_artifact(tmp_path: Path) -> None:
         await _seed_run_and_artifact(session)
 
     await engine.dispose()
+
+
+def _upgrade_database(settings: Settings) -> None:
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    command.upgrade(cfg, "head")
 
 
 async def _seed_run_and_artifact(session: AsyncSession) -> None:
