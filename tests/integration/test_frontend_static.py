@@ -85,6 +85,10 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     for marker in REACT_MARKERS:
         assert marker in bundle_text
 
+    assert "Run Workflow" in bundle_text
+    assert "Queue a new screening run" in bundle_text
+    assert "Queue Run" in bundle_text
+    assert "Target Preview" in bundle_text
     assert "Advanced / unavailable outputs" in bundle_text
     assert "Latitude" in bundle_text
     assert "Longitude" in bundle_text

@@ -267,7 +267,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
             Run Archive
           </h2>
           <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "2px" }}>
-            All screening runs for this operator session
+            Stored screening runs from the local archive
           </p>
         </div>
         <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)" }}>
