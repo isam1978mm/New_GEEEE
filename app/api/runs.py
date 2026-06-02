@@ -5,8 +5,8 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import func, select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -107,6 +107,12 @@ class RunDeleteError(AppError):
     public_message = "Run could not be deleted."
 
 
+class InvalidRunsQueryError(AppError):
+    status_code = 400
+    public_code = "invalid_runs_query"
+    public_message = "Run query is invalid."
+
+
 @router.post("/runs", response_model=RunPublic, status_code=201)
 async def create_run(
     payload: RunCreate,
@@ -140,10 +146,36 @@ async def create_run(
 
 @router.get("/runs", response_model=list[RunPublic])
 async def list_runs(
+    q: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    sort: str = Query(default="created_at"),
+    order: str = Query(default="desc"),
+    limit: int = Query(default=50),
+    offset: int = Query(default=0),
     settings: Settings = Depends(get_settings_from_request),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[RunPublic]:
-    result = await session.scalars(select(Run).order_by(Run.created_at.desc(), Run.id.desc()))
+    sort_column = _resolve_run_sort_column(sort)
+    sort_order = _resolve_run_sort_order(order)
+    status_filter = _resolve_run_status_filter(status)
+    safe_limit = min(max(limit, 1), 200)
+    safe_offset = max(offset, 0)
+
+    stmt = select(Run)
+    if q and q.strip():
+        pattern = f"%{q.strip().casefold()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(func.coalesce(Run.name, "")).like(pattern),
+                func.lower(Run.id).like(pattern),
+            )
+        )
+    if status_filter is not None:
+        stmt = stmt.where(Run.status == status_filter)
+
+    primary_order = sort_column.asc() if sort_order == "asc" else sort_column.desc()
+    secondary_order = Run.id.asc() if sort_order == "asc" else Run.id.desc()
+    result = await session.scalars(stmt.order_by(primary_order, secondary_order).offset(safe_offset).limit(safe_limit))
     runs = list(result)
     await _refresh_disk_summaries(session=session, settings=settings, runs=runs)
     return [_to_run_public(run) for run in runs]
@@ -378,6 +410,40 @@ def _validate_delete_run_id(run_id: str) -> None:
 
 def _is_active_run_status(status: RunStatus) -> bool:
     return status in {RunStatus.QUEUED, RunStatus.RUNNING}
+
+
+def _resolve_run_sort_column(sort: str):
+    mapping = {
+        "created_at": Run.created_at,
+        "updated_at": Run.updated_at,
+        "disk_usage_bytes": Run.disk_usage_bytes,
+        "output_file_count": Run.output_file_count,
+        "name": func.lower(func.coalesce(Run.name, "")),
+        "status": Run.status,
+    }
+    column = mapping.get(sort.strip().casefold())
+    if column is None:
+        raise InvalidRunsQueryError()
+    return column
+
+
+def _resolve_run_sort_order(order: str) -> str:
+    order_key = order.strip().casefold()
+    if order_key not in {"asc", "desc"}:
+        raise InvalidRunsQueryError()
+    return order_key
+
+
+def _resolve_run_status_filter(status: str | None) -> RunStatus | None:
+    if status is None:
+        return None
+    status_key = status.strip().casefold()
+    if not status_key:
+        return None
+    try:
+        return RunStatus(status_key)
+    except ValueError as exc:
+        raise InvalidRunsQueryError() from exc
 
 
 def _to_artifact_public(artifact: Artifact) -> ArtifactPublic:

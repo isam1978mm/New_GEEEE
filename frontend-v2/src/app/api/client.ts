@@ -122,6 +122,19 @@ export interface DeletionAuditSummary {
   records: DeletionAuditRecord[];
 }
 
+export type RunListSortField = "created_at" | "updated_at" | "disk_usage_bytes" | "output_file_count" | "name" | "status";
+export type RunListOrder = "asc" | "desc";
+export type RunListStatusFilter = "done" | "running" | "failed" | "stale_failed" | "queued";
+
+export interface RunListParams {
+  q?: string;
+  status?: RunListStatusFilter;
+  sort?: RunListSortField;
+  order?: RunListOrder;
+  limit?: number;
+  offset?: number;
+}
+
 interface RunPublicDto {
   id?: unknown;
   name?: unknown;
@@ -232,8 +245,28 @@ const OUTPUT_GROUP_ORDER = [
   "Root files",
 ];
 
-export async function listRuns(): Promise<Run[]> {
-  const payload = await fetchJson<unknown>("/runs");
+export async function listRuns(params: RunListParams = {}): Promise<Run[]> {
+  const query = new URLSearchParams();
+  if (params.q && params.q.trim()) {
+    query.set("q", params.q.trim());
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  if (params.sort) {
+    query.set("sort", params.sort);
+  }
+  if (params.order) {
+    query.set("order", params.order);
+  }
+  if (typeof params.limit === "number") {
+    query.set("limit", String(params.limit));
+  }
+  if (typeof params.offset === "number") {
+    query.set("offset", String(params.offset));
+  }
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  const payload = await fetchJson<unknown>(`/runs${suffix}`);
   return Array.isArray(payload) ? payload.map(mapRunPublic).filter(Boolean) : [];
 }
 

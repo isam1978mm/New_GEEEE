@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -10,7 +10,16 @@ import {
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
-import { formatFileSize, type DeletionAuditSummary, type DeleteRunResult, type Run } from "../api/client";
+import {
+  formatFileSize,
+  type DeletionAuditSummary,
+  type DeleteRunResult,
+  type Run,
+  type RunListOrder,
+  type RunListParams,
+  type RunListSortField,
+  type RunListStatusFilter,
+} from "../api/client";
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -77,42 +86,60 @@ interface RunArchivePageProps {
   runs: Run[];
   loading?: boolean;
   error?: string | null;
+  onQueryChange?: (query: RunListParams) => void | Promise<void>;
   onSelectRun?: (run: Run) => void;
   onDeleteRun?: (run: Run) => Promise<DeleteRunResult>;
   deletionAudit?: DeletionAuditSummary;
 }
 
+type SortOption = "newest" | "oldest" | "largest" | "smallest" | "most_files" | "name_asc";
+
 function canDeleteRun(run: Run) {
   return run.state === "done" || run.state === "failed" || run.state === "stale_failed" || run.state === "cancelled";
 }
 
-export function RunArchivePage({ runs, loading = false, error = null, onSelectRun, onDeleteRun, deletionAudit }: RunArchivePageProps) {
+function mapSortOption(sortOption: SortOption): { sort: RunListSortField; order: RunListOrder } {
+  switch (sortOption) {
+    case "oldest":
+      return { sort: "created_at", order: "asc" };
+    case "largest":
+      return { sort: "disk_usage_bytes", order: "desc" };
+    case "smallest":
+      return { sort: "disk_usage_bytes", order: "asc" };
+    case "most_files":
+      return { sort: "output_file_count", order: "desc" };
+    case "name_asc":
+      return { sort: "name", order: "asc" };
+    case "newest":
+    default:
+      return { sort: "created_at", order: "desc" };
+  }
+}
+
+export function RunArchivePage({ runs, loading = false, error = null, onQueryChange, onSelectRun, onDeleteRun, deletionAudit }: RunArchivePageProps) {
   const [search, setSearch] = useState("");
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
-  const [stateFilter, setStateFilter] = useState<Run["state"] | "all">("all");
+  const [stateFilter, setStateFilter] = useState<RunListStatusFilter | "all">("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [confirmRun, setConfirmRun] = useState<Run | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [deleteFeedback, setDeleteFeedback] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const filtered = runs.filter((r) => {
-    const matchSearch =
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.id.toLowerCase().includes(search.toLowerCase());
-    const matchState = stateFilter === "all" || r.state === stateFilter;
-    return matchSearch && matchState;
-  });
+  useEffect(() => {
+    const { sort, order } = mapSortOption(sortOption);
+    void onQueryChange?.({
+      q: search.trim() || undefined,
+      status: stateFilter === "all" ? undefined : stateFilter,
+      sort,
+      order,
+      limit: 100,
+      offset: 0,
+    });
+  }, [search, stateFilter, sortOption]);
 
-  const stateFilters: Array<{ key: Run["state"] | "all"; label: string }> = [
-    { key: "all", label: "All" },
-    { key: "done", label: "Done" },
-    { key: "running", label: "Running" },
-    { key: "failed", label: "Failed" },
-    { key: "stale_failed", label: "Stale failed" },
-    { key: "queued", label: "Queued" },
-    { key: "cancelled", label: "Cancelled" },
-  ];
+  const isDefaultQuery = search.trim().length === 0 && stateFilter === "all" && sortOption === "newest";
 
   const confirmMatches =
     confirmRun !== null &&
@@ -200,14 +227,18 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
       </div>
 
       {/* Search + filters */}
-      <div className="flex items-center gap-2">
+      <div className="grid gap-2" style={{ gridTemplateColumns: "minmax(0,1.5fr) minmax(160px,0.8fr) minmax(180px,1fr)" }}>
         <div className="relative flex-1">
+          <label htmlFor="archive-run-search" className="font-mono" style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "6px" }}>
+            Search runs
+          </label>
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--gs-slate)", opacity: 0.5 }} />
           <input
+            id="archive-run-search"
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or ID…"
+            placeholder="Search by name or ID..."
             className="rounded px-2.5 py-1.5 pl-7 w-full outline-none"
             style={{
               fontSize: "12px",
@@ -217,24 +248,43 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
             }}
           />
         </div>
-        <div className="flex items-center gap-0.5">
-          {stateFilters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setStateFilter(f.key)}
-              className="px-2.5 py-1 rounded transition-all"
-              style={{
-                fontSize: "11.5px",
-                fontWeight: stateFilter === f.key ? 600 : 400,
-                color: stateFilter === f.key ? "var(--gs-navy)" : "var(--gs-slate)",
-                backgroundColor: stateFilter === f.key ? "var(--card)" : "transparent",
-                border: stateFilter === f.key ? "1px solid rgba(28,43,94,0.18)" : "1px solid transparent",
-                cursor: "pointer",
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div>
+          <label htmlFor="archive-status-filter" className="font-mono" style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "6px" }}>
+            Status filter
+          </label>
+          <select
+            id="archive-status-filter"
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value as RunListStatusFilter | "all")}
+            className="rounded px-2.5 py-1.5 w-full outline-none"
+            style={{ fontSize: "12px", backgroundColor: "var(--card)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
+          >
+            <option value="all">All statuses</option>
+            <option value="done">Done</option>
+            <option value="running">Running</option>
+            <option value="failed">Failed</option>
+            <option value="stale_failed">Stale failed</option>
+            <option value="queued">Queued</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="archive-sort-runs" className="font-mono" style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "6px" }}>
+            Sort runs
+          </label>
+          <select
+            id="archive-sort-runs"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value as SortOption)}
+            className="rounded px-2.5 py-1.5 w-full outline-none"
+            style={{ fontSize: "12px", backgroundColor: "var(--card)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="largest">Largest first</option>
+            <option value="smallest">Smallest first</option>
+            <option value="most_files">Most files</option>
+            <option value="name_asc">Name A-Z</option>
+          </select>
         </div>
       </div>
 
@@ -273,12 +323,14 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
           <div className="px-4 py-8 text-center">
             <p style={{ fontSize: "13px", color: "var(--gs-red)" }}>{error}</p>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : runs.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p style={{ fontSize: "13px", color: "var(--gs-slate)" }}>No runs match your filter.</p>
+            <p style={{ fontSize: "13px", color: "var(--gs-slate)" }}>
+              {isDefaultQuery ? "No runs yet." : "No runs match this filter."}
+            </p>
           </div>
         ) : (
-          filtered.map((run, ri) => {
+          runs.map((run, ri) => {
             const isExpanded = expandedRun === run.id;
             const color = stateColor[run.state];
             const bg = stateBg[run.state];
@@ -286,7 +338,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onSelectRu
             return (
               <div
                 key={run.id}
-                style={{ borderBottom: ri < filtered.length - 1 ? "1px solid var(--border)" : "none" }}
+                style={{ borderBottom: ri < runs.length - 1 ? "1px solid var(--border)" : "none" }}
               >
                 {/* Row */}
                 <div

@@ -14,6 +14,7 @@ import {
   type OperatorOutputTree,
   type Run,
   type RunDetail,
+  type RunListParams,
   type RunState,
 } from "./api/client";
 import { NavBar } from "./components/NavBar";
@@ -48,6 +49,13 @@ const EMPTY_OUTPUT_TREE: OperatorOutputTree = {
 const EMPTY_DELETION_AUDIT: DeletionAuditSummary = {
   totalFreedBytes: 0,
   records: [],
+};
+
+const DEFAULT_ARCHIVE_QUERY: RunListParams = {
+  sort: "created_at",
+  order: "desc",
+  limit: 100,
+  offset: 0,
 };
 
 const UI_SETTINGS_STORAGE_KEY = "gs_operator_ui_settings_v1";
@@ -119,22 +127,27 @@ export default function App() {
   const [activeNav, setActiveNav] = useState<NavTab>("dashboard");
   const [activeRunTab, setActiveRunTab] = useState<RunTab>("overview");
   const [runs, setRuns] = useState<Run[]>([]);
+  const [archiveRuns, setArchiveRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
   const [outputTree, setOutputTree] = useState<OperatorOutputTree>(EMPTY_OUTPUT_TREE);
   const [deletionAudit, setDeletionAudit] = useState<DeletionAuditSummary>(EMPTY_DELETION_AUDIT);
   const [runsLoading, setRunsLoading] = useState(true);
+  const [archiveLoading, setArchiveLoading] = useState(true);
   const [runLoading, setRunLoading] = useState(false);
   const [outputsLoading, setOutputsLoading] = useState(false);
   const [runsError, setRunsError] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [outputsError, setOutputsError] = useState<string | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
   const [queueing, setQueueing] = useState(false);
   const [pollingPaused, setPollingPaused] = useState(false);
   const [uiSettings, setUiSettings] = useState<UiSettings>(() => loadUiSettings());
+  const [archiveQuery, setArchiveQuery] = useState<RunListParams>(DEFAULT_ARCHIVE_QUERY);
 
   useEffect(() => {
     void refreshRuns();
+    void refreshArchiveRuns(DEFAULT_ARCHIVE_QUERY);
     void refreshDeletionAudit();
   }, []);
 
@@ -187,6 +200,20 @@ export default function App() {
       setRunsError(error instanceof Error ? error.message : "Recent runs are temporarily unavailable.");
     } finally {
       setRunsLoading(false);
+    }
+  }
+
+  async function refreshArchiveRuns(query: RunListParams) {
+    setArchiveLoading(true);
+    setArchiveError(null);
+    try {
+      const loadedRuns = await listRuns(query);
+      setArchiveRuns(loadedRuns);
+    } catch (error) {
+      setArchiveRuns([]);
+      setArchiveError(error instanceof Error ? error.message : "Run archive is temporarily unavailable.");
+    } finally {
+      setArchiveLoading(false);
     }
   }
 
@@ -248,6 +275,7 @@ export default function App() {
       const queuedRun = await createRun(input);
       setQueueFeedback(`Run queued: ${queuedRun.id}`);
       await refreshRuns(false);
+      await refreshArchiveRuns(archiveQuery);
       await loadRun(queuedRun.id);
     } catch (error) {
       setQueueFeedback(error instanceof Error ? error.message : "Run request failed.");
@@ -259,6 +287,7 @@ export default function App() {
   async function handleDeleteRun(run: Run): Promise<DeleteRunResult> {
     const result = await deleteRun(run.id);
     setRuns((currentRuns) => currentRuns.filter((item) => item.id !== run.id));
+    setArchiveRuns((currentRuns) => currentRuns.filter((item) => item.id !== run.id));
     if (selectedRun?.id === run.id) {
       clearRunPollTimer();
       activePollRunIdRef.current = null;
@@ -266,8 +295,14 @@ export default function App() {
       setOutputTree(EMPTY_OUTPUT_TREE);
       setActiveRunTab("overview");
     }
+    await refreshArchiveRuns(archiveQuery);
     await refreshDeletionAudit();
     return result;
+  }
+
+  async function handleArchiveQueryChange(nextQuery: RunListParams) {
+    setArchiveQuery(nextQuery);
+    await refreshArchiveRuns(nextQuery);
   }
 
   const runId = selectedRun?.id ?? "Not started";
@@ -286,7 +321,7 @@ export default function App() {
   }
 
   function syncRunSummary(detail: RunDetail) {
-    setRuns((currentRuns) => {
+    const syncList = (currentRuns: Run[]) => {
       let matched = false;
       const nextRuns = currentRuns.map((run) => {
         if (run.id !== detail.id) {
@@ -306,7 +341,9 @@ export default function App() {
         };
       });
       return matched ? nextRuns : currentRuns;
-    });
+    };
+    setRuns(syncList);
+    setArchiveRuns(syncList);
   }
 
   async function pollSelectedRun(runId: string) {
@@ -519,9 +556,10 @@ export default function App() {
         {activeNav === "archive" && (
           <div style={{ maxWidth: "1140px", margin: "0 auto" }}>
             <RunArchivePage
-              runs={runs}
-              loading={runsLoading}
-              error={runsError}
+              runs={archiveRuns}
+              loading={archiveLoading}
+              error={archiveError}
+              onQueryChange={handleArchiveQueryChange}
               onSelectRun={handleSelectRun}
               onDeleteRun={handleDeleteRun}
               deletionAudit={deletionAudit}

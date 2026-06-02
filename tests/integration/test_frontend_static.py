@@ -106,6 +106,15 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Unknown size" in bundle_text
     assert "Deleted Runs / Cleanup Summary" in bundle_text
     assert "Total freed" in bundle_text
+    assert "Search runs" in bundle_text
+    assert "Status filter" in bundle_text
+    assert "Sort runs" in bundle_text
+    assert "Newest first" in bundle_text
+    assert "Oldest first" in bundle_text
+    assert "Largest first" in bundle_text
+    assert "Smallest first" in bundle_text
+    assert "Most files" in bundle_text
+    assert "Name A-Z" in bundle_text
     assert "DELETE" in bundle_text
     assert "External map tiles" in bundle_text
     assert "Disabled by default" in bundle_text

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
@@ -442,6 +443,140 @@ def test_delete_run_rejects_traversal_and_absolute_identifiers() -> None:
             assert "path" not in response.text.casefold()
 
 
+def test_list_runs_q_filters_by_name_and_id_fragment() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        first_id = str(uuid4())
+        second_id = str(uuid4())
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=first_id,
+                status=RunStatus.DONE,
+                name="alpha signal",
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=second_id,
+                status=RunStatus.FAILED,
+                name="beta window",
+                created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            )
+        )
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            by_name = client.get("/runs?q=alpha")
+            by_id = client.get(f"/runs?q={second_id[:8]}")
+
+        assert by_name.status_code == 200
+        assert [row["id"] for row in by_name.json()] == [first_id]
+        assert by_id.status_code == 200
+        assert [row["id"] for row in by_id.json()] == [second_id]
+        _assert_no_sensitive_public_fields(by_name.text)
+        _assert_no_sensitive_public_fields(by_id.text)
+
+
+def test_list_runs_status_filter_and_created_at_sorting() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        older_id = str(uuid4())
+        newer_id = str(uuid4())
+        failed_id = str(uuid4())
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=older_id,
+                status=RunStatus.DONE,
+                name="older done",
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=newer_id,
+                status=RunStatus.DONE,
+                name="newer done",
+                created_at=datetime(2026, 1, 3, tzinfo=timezone.utc),
+            )
+        )
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=failed_id,
+                status=RunStatus.FAILED,
+                name="failed run",
+                created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            )
+        )
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            filtered = client.get("/runs?status=done&sort=created_at&order=asc")
+
+        assert filtered.status_code == 200
+        assert [row["id"] for row in filtered.json()] == [older_id, newer_id]
+        assert all(row["status"] == "done" for row in filtered.json())
+        _assert_no_sensitive_public_fields(filtered.text)
+
+
+def test_list_runs_sorts_by_disk_usage_and_caps_limit() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        ids = [str(uuid4()) for _ in range(3)]
+        for offset, run_id in enumerate(ids):
+            asyncio.run(
+                _seed_run(
+                    settings,
+                    run_id=run_id,
+                    status=RunStatus.DONE,
+                    name=f"run-{offset}",
+                    disk_usage_bytes=(offset + 1) * 100,
+                    output_file_count=offset + 1,
+                    last_disk_scan_at=datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=offset),
+                    created_at=datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=offset),
+                )
+            )
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            sorted_response = client.get("/runs?sort=disk_usage_bytes&order=desc&limit=500")
+
+        assert sorted_response.status_code == 200
+        body = sorted_response.json()
+        assert [row["disk_usage_bytes"] for row in body] == [300, 200, 100]
+        assert len(body) == 3
+        _assert_no_sensitive_public_fields(sorted_response.text)
+
+
+def test_list_runs_rejects_invalid_sort_and_order() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        asyncio.run(_seed_run(settings, run_id=str(uuid4()), status=RunStatus.DONE, name="single"))
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            bad_sort = client.get("/runs?sort=latitude")
+            bad_order = client.get("/runs?order=sideways")
+
+        assert bad_sort.status_code == 400
+        assert bad_sort.json() == {
+            "error": "invalid_runs_query",
+            "message": "Run query is invalid.",
+        }
+        assert bad_order.status_code == 400
+        assert bad_order.json() == {
+            "error": "invalid_runs_query",
+            "message": "Run query is invalid.",
+        }
+        _assert_no_sensitive_public_fields(bad_sort.text)
+        _assert_no_sensitive_public_fields(bad_order.text)
+
+
 def _upgrade_database(settings: Settings) -> None:
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
     cfg = Config("alembic.ini")
@@ -518,7 +653,18 @@ async def _mark_run_done_with_public_and_hidden_artifacts(settings: Settings, ru
     await engine.dispose()
 
 
-async def _seed_run(settings: Settings, *, run_id: str, status: RunStatus, name: str) -> None:
+async def _seed_run(
+    settings: Settings,
+    *,
+    run_id: str,
+    status: RunStatus,
+    name: str,
+    created_at: datetime | None = None,
+    updated_at: datetime | None = None,
+    disk_usage_bytes: int | None = None,
+    output_file_count: int | None = None,
+    last_disk_scan_at: datetime | None = None,
+) -> None:
     engine = create_async_engine(settings.database_url, future=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
@@ -529,6 +675,11 @@ async def _seed_run(settings: Settings, *, run_id: str, status: RunStatus, name:
                 status=status,
                 latitude=35.59499,
                 longitude=36.12694,
+                created_at=created_at or datetime.now(timezone.utc),
+                updated_at=updated_at or created_at or datetime.now(timezone.utc),
+                disk_usage_bytes=disk_usage_bytes,
+                output_file_count=output_file_count,
+                last_disk_scan_at=last_disk_scan_at,
             )
         )
         await session.commit()
