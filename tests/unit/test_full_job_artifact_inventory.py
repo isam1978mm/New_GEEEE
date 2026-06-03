@@ -21,7 +21,7 @@ from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import INDEX_NAMES, S2IndicesStage, deterministic_s2_cube_fetcher
-from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
+from app.pipeline.stages.sar_rtc import SAR_NPY_OUTPUT_DIR, SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
@@ -331,10 +331,10 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "angle": "post_rtc/final_angle.npy",
         }
         assert sar_manifest["stages"]["post_rtc"]["source_mapping"] == {
-            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
-            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
-            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
-            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+            "post_rtc/final_VV_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy",
+            "post_rtc/final_VH_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy",
+            "post_rtc/final_logRatio_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy",
+            "post_rtc/final_angle.npy": f"{SAR_NPY_OUTPUT_DIR}/incidence.npy",
         }
         assert isinstance(sar_manifest["stages"]["post_rtc"]["source_description"], str)
 

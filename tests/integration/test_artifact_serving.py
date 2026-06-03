@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.config import Settings
 from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
+from app.pipeline.stages.sar_rtc import SAR_NPY_OUTPUT_DIR
 from app.services.artifact_response import is_expected_download_filename, public_download_filename
 
 
@@ -697,7 +698,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "full_job/field_ops/field_ops_report.json",
             "kmz/site_location.kmz",
             "objects/object_mask.npy",
-            "npy_radar_bands/VV_dB.npy",
+            f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy",
             "stage_hypercube.manifest.json",
         } & output_paths)
         assert not any(path.startswith("qa/") for path in output_paths | not_implemented_paths)
@@ -784,7 +785,7 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "run_status_history.json": b'{"events":[]}',
         "full_job/field_ops/field_ops_report.json": b'{"field_ops": true}',
         "kmz/site_location.kmz": b"kmz",
-        "npy_radar_bands/VV_dB.npy": b"internal-vv",
+        f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy": b"internal-vv",
         "stage_hypercube.manifest.json": b'{"stage":"hypercube"}',
         "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif": b"gold",
         "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif": b"silver",
@@ -835,12 +836,12 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
                             "angle": "post_rtc/final_angle.npy",
                         },
                         "source_mapping": {
-                            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
-                            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
-                            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
-                            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+                            "post_rtc/final_VV_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy",
+                            "post_rtc/final_VH_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy",
+                            "post_rtc/final_logRatio_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy",
+                            "post_rtc/final_angle.npy": f"{SAR_NPY_OUTPUT_DIR}/incidence.npy",
                         },
-                        "source_description": "QA post-RTC arrays are byte-equal copies of the canonical final SAR arrays under npy_radar_bands/.",
+                        "source_description": f"QA post-RTC arrays are byte-equal copies of the canonical final SAR arrays under {SAR_NPY_OUTPUT_DIR}/.",
                     },
                 }
             }

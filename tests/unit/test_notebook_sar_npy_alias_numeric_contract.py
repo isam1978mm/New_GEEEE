@@ -10,7 +10,11 @@ import numpy as np
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.grid import build_run_grid
-from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
+from app.pipeline.stages.sar_rtc import (
+    SAR_NPY_OUTPUT_DIR,
+    SarRtcStage,
+    deterministic_radar_cube_fetcher,
+)
 
 
 def test_notebook_sar_npy_aliases_match_local_sources_numerically() -> None:
@@ -19,10 +23,10 @@ def test_notebook_sar_npy_aliases_match_local_sources_numerically() -> None:
         _build_sar_run(run_dir)
 
         alias_pairs = [
-            ("NPY_RADAR_BANDS/RADAR_VV_dB_640_app.npy", "npy_radar_bands/VV_dB.npy"),
-            ("NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy", "npy_radar_bands/VH_dB.npy"),
-            ("NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy", "npy_radar_bands/logRatio_dB.npy"),
-            ("NPY_RADAR_BANDS/RADAR_angle_640_app.npy", "npy_radar_bands/incidence.npy"),
+            ("NPY_RADAR_BANDS/RADAR_VV_dB_640_app.npy", f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy"),
+            ("NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy", f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy"),
+            ("NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy", f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy"),
+            ("NPY_RADAR_BANDS/RADAR_angle_640_app.npy", f"{SAR_NPY_OUTPUT_DIR}/incidence.npy"),
         ]
 
         for alias_relative_path, source_relative_path in alias_pairs:
@@ -46,17 +50,17 @@ def test_notebook_sar_post_rtc_intermediates_match_local_sources_numerically() -
             "angle": "post_rtc/final_angle.npy",
         }
         assert post_rtc["source_mapping"] == {
-            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
-            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
-            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
-            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+            "post_rtc/final_VV_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy",
+            "post_rtc/final_VH_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy",
+            "post_rtc/final_logRatio_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy",
+            "post_rtc/final_angle.npy": f"{SAR_NPY_OUTPUT_DIR}/incidence.npy",
         }
 
         alias_pairs = [
-            ("QA/sar/intermediates/post_rtc/final_VV_dB.npy", "npy_radar_bands/VV_dB.npy"),
-            ("QA/sar/intermediates/post_rtc/final_VH_dB.npy", "npy_radar_bands/VH_dB.npy"),
-            ("QA/sar/intermediates/post_rtc/final_logRatio_dB.npy", "npy_radar_bands/logRatio_dB.npy"),
-            ("QA/sar/intermediates/post_rtc/final_angle.npy", "npy_radar_bands/incidence.npy"),
+            ("QA/sar/intermediates/post_rtc/final_VV_dB.npy", f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy"),
+            ("QA/sar/intermediates/post_rtc/final_VH_dB.npy", f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy"),
+            ("QA/sar/intermediates/post_rtc/final_logRatio_dB.npy", f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy"),
+            ("QA/sar/intermediates/post_rtc/final_angle.npy", f"{SAR_NPY_OUTPUT_DIR}/incidence.npy"),
         ]
         for alias_relative_path, source_relative_path in alias_pairs:
             _assert_npy_alias_exact(run_dir, alias_relative_path, source_relative_path)

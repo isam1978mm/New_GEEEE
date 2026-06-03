@@ -645,10 +645,10 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "angle": "post_rtc/final_angle.npy",
         }
         assert intermediate_manifest["stages"]["post_rtc"]["source_mapping"] == {
-            "post_rtc/final_VV_dB.npy": "npy_radar_bands/VV_dB.npy",
-            "post_rtc/final_VH_dB.npy": "npy_radar_bands/VH_dB.npy",
-            "post_rtc/final_logRatio_dB.npy": "npy_radar_bands/logRatio_dB.npy",
-            "post_rtc/final_angle.npy": "npy_radar_bands/incidence.npy",
+            "post_rtc/final_VV_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy",
+            "post_rtc/final_VH_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy",
+            "post_rtc/final_logRatio_dB.npy": f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy",
+            "post_rtc/final_angle.npy": f"{SAR_NPY_OUTPUT_DIR}/incidence.npy",
         }
         assert isinstance(intermediate_manifest["stages"]["post_rtc"]["source_description"], str)
         serialized_intermediate_manifest = json.dumps(intermediate_manifest, sort_keys=True)

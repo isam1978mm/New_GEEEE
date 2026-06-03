@@ -28,7 +28,7 @@ from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
-from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
+from app.pipeline.stages.sar_rtc import SAR_NPY_OUTPUT_DIR, SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.pipeline.stages.zero_shift import ZeroShiftStage
@@ -125,10 +125,10 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
 
     name_to_path = {artifact.name: artifact.relative_path for artifact in artifacts}
     assert name_to_path["grid_guard_summary"] == "QA/grid_dem/grid_guard_summary.json"
-    assert name_to_path["sar_npy_VV_dB"] == "npy_radar_bands/VV_dB.npy"
-    assert name_to_path["sar_npy_VH_dB"] == "npy_radar_bands/VH_dB.npy"
-    assert name_to_path["sar_npy_logRatio_dB"] == "npy_radar_bands/logRatio_dB.npy"
-    assert name_to_path["sar_npy_incidence"] == "npy_radar_bands/incidence.npy"
+    assert name_to_path["sar_npy_VV_dB"] == f"{SAR_NPY_OUTPUT_DIR}/VV_dB.npy"
+    assert name_to_path["sar_npy_VH_dB"] == f"{SAR_NPY_OUTPUT_DIR}/VH_dB.npy"
+    assert name_to_path["sar_npy_logRatio_dB"] == f"{SAR_NPY_OUTPUT_DIR}/logRatio_dB.npy"
+    assert name_to_path["sar_npy_incidence"] == f"{SAR_NPY_OUTPUT_DIR}/incidence.npy"
     assert name_to_path["sar_summary"] == "QA/sar/sar_summary.csv"
     assert name_to_path["science_core_stack_npy"] == "stacks/tensor_support/science_core_stack.npy"
     assert name_to_path["ai_ready_support_stack_npy"] == "stacks/tensor_support/ai_ready_support_stack.npy"
