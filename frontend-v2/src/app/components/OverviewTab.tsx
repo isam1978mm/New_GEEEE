@@ -234,7 +234,7 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
                     {run.name}
                   </div>
                   <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.7 }}>
-                    {fmtDate(run.updated)} · Run size {fmtRunSize(run)}
+                    {fmtDate(run.updated)} · Disk used {fmtRunSize(run)}
                   </div>
                 </div>
                 <button

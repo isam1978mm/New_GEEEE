@@ -103,7 +103,7 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Delete permanently" in bundle_text
     assert "Cannot delete active run" in bundle_text
     assert "This permanently deletes the run record and all files for this run." in bundle_text
-    assert "Run size" in bundle_text
+    assert "Disk used" in bundle_text
     assert "File count" in bundle_text
     assert "Last scanned" in bundle_text
     assert "Estimated size" in bundle_text
@@ -117,7 +117,7 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Oldest runs" in bundle_text
     assert "Stale failed runs" in bundle_text
     assert "No runs yet." in bundle_text
-    assert "Run sizes are still being scanned." in bundle_text
+    assert "Run disk usage is still being scanned." in bundle_text
     assert "Search runs" in bundle_text
     assert "Status filter" in bundle_text
     assert "Sort runs" in bundle_text

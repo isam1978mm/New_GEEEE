@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Iterable
 
 from sqlalchemy import select
@@ -14,7 +15,7 @@ from app.errors import ArtifactClassError, ParityMetadataError, StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult
 from app.pipeline.manifest import save_stage_manifest
 from app.services.run_history import append_run_event
-from app.services.storage import initialize_run_storage
+from app.services.storage import initialize_run_storage, summarize_run_directory
 
 
 @dataclass(slots=True)
@@ -78,10 +79,12 @@ class Orchestrator:
                 )
                 append_run_event(self.settings, run_id, "stage_failed", stage_name=stage.name)
                 await self._set_run_status(run_id, RunStatus.FAILED)
+                await self._persist_run_disk_summary(run_id)
                 append_run_event(self.settings, run_id, "run_failed")
                 raise
 
         await self._set_run_status(run_id, RunStatus.DONE)
+        await self._persist_run_disk_summary(run_id)
         append_run_event(self.settings, run_id, "run_done")
         return records
 
@@ -157,3 +160,15 @@ class Orchestrator:
         if metadata:
             payload["metadata"] = metadata
         save_stage_manifest(self.settings, run_id, stage_name, payload)
+
+    async def _persist_run_disk_summary(self, run_id: str) -> None:
+        summary = summarize_run_directory(self.settings, run_id)
+        async with self.session_factory() as session:
+            result = await session.execute(select(Run).where(Run.id == run_id))
+            run = result.scalar_one_or_none()
+            if run is None:
+                raise StageError(f"Run {run_id!r} does not exist.")
+            run.disk_usage_bytes = summary.freed_bytes
+            run.output_file_count = summary.deleted_files_count
+            run.last_disk_scan_at = datetime.now(timezone.utc)
+            await session.commit()

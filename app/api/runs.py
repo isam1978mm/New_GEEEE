@@ -56,6 +56,7 @@ from app.schemas.run import (
     RunStageProgressPublic,
 )
 from app.services.run_history import append_run_event, build_run_event, read_run_history_events
+from app.services.operator_outputs import build_operator_output_tree
 from app.services.run_state import ensure_single_active_run
 from app.services.storage import delete_run_directory, initialize_run_storage, read_manifest, get_run_dir, summarize_run_directory
 
@@ -422,6 +423,7 @@ async def _mark_run_failed_if_present(session_factory, run_id: str, *, settings:
         if run is None or run.status in {RunStatus.DONE, RunStatus.FAILED, RunStatus.STALE_FAILED}:
             return
         run.status = RunStatus.FAILED
+        _set_run_disk_summary(run, summarize_run_directory(settings, run_id))
         await session.commit()
     append_run_event(settings, run_id, "run_failed")
 
@@ -455,11 +457,7 @@ async def _refresh_disk_summaries(*, session: AsyncSession, settings: Settings, 
         return
     changed = False
     for run in runs:
-        if (
-            run.disk_usage_bytes is not None
-            and run.output_file_count is not None
-            and run.last_disk_scan_at is not None
-        ):
+        if not _should_refresh_disk_summary(settings=settings, run=run):
             continue
         _set_run_disk_summary(run, summarize_run_directory(settings, run.id))
         changed = True
@@ -471,6 +469,21 @@ def _set_run_disk_summary(run: Run, summary) -> None:
     run.disk_usage_bytes = summary.freed_bytes
     run.output_file_count = summary.deleted_files_count
     run.last_disk_scan_at = datetime.now(timezone.utc)
+
+
+def _should_refresh_disk_summary(*, settings: Settings, run: Run) -> bool:
+    if _is_active_run_status(run.status):
+        return False
+    if (
+        run.disk_usage_bytes is None
+        or run.output_file_count is None
+        or run.last_disk_scan_at is None
+    ):
+        return True
+    output_tree = build_operator_output_tree(settings=settings, run_id=run.id)
+    visible_output_bytes = sum(output.size_bytes for output in output_tree.outputs)
+    visible_output_count = len(output_tree.outputs)
+    return visible_output_bytes > int(run.disk_usage_bytes or 0) or visible_output_count > int(run.output_file_count or 0)
 
 
 def _validate_delete_run_id(run_id: str) -> None:

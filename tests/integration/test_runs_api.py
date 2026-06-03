@@ -174,6 +174,88 @@ def test_run_public_surfaces_include_safe_disk_summary_without_paths() -> None:
         _assert_no_sensitive_public_fields(detail_response.text)
 
 
+def test_terminal_run_refreshes_stale_disk_summary_when_exports_exceed_stored_size() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        run_id = str(uuid4())
+        stale_scan_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=run_id,
+                status=RunStatus.DONE,
+                name="stale-summary",
+                disk_usage_bytes=828,
+                output_file_count=1,
+                last_disk_scan_at=stale_scan_at,
+            )
+        )
+        run_dir = settings.data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        public_path = run_dir / "NDVI.tif"
+        public_bytes = b"x" * (2 * 1024 * 1024)
+        public_path.write_bytes(public_bytes)
+        hidden_path = run_dir / "internal.npy"
+        hidden_bytes = b"y" * 2048
+        hidden_path.write_bytes(hidden_bytes)
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            list_response = client.get("/runs")
+            detail_response = client.get(f"/runs/{run_id}")
+
+        assert list_response.status_code == 200
+        list_body = list_response.json()[0]
+        assert list_body["disk_usage_bytes"] >= len(public_bytes) + len(hidden_bytes)
+        assert list_body["disk_usage_bytes"] > 828
+        assert list_body["output_file_count"] == 2
+        assert list_body["last_disk_scan_at"] != stale_scan_at.isoformat()
+
+        assert detail_response.status_code == 200
+        detail_body = detail_response.json()
+        assert detail_body["disk_usage_bytes"] >= len(public_bytes)
+        assert detail_body["disk_usage_bytes"] > 828
+        assert detail_body["output_file_count"] == 2
+        _assert_no_sensitive_public_fields(list_response.text)
+        _assert_no_sensitive_public_fields(detail_response.text)
+
+
+def test_active_run_does_not_rescan_existing_disk_summary_on_every_request() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        run_id = str(uuid4())
+        last_scan_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id=run_id,
+                status=RunStatus.QUEUED,
+                name="active-summary",
+                disk_usage_bytes=828,
+                output_file_count=1,
+                last_disk_scan_at=last_scan_at,
+            )
+        )
+        run_dir = settings.data_dir / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        (run_dir / "NDVI.tif").write_bytes(b"x" * (2 * 1024 * 1024))
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            list_response = client.get("/runs")
+            detail_response = client.get(f"/runs/{run_id}")
+
+        assert list_response.status_code == 200
+        assert list_response.json()[0]["disk_usage_bytes"] == 828
+        assert list_response.json()[0]["last_disk_scan_at"].startswith("2026-01-01T00:00:00")
+
+        assert detail_response.status_code == 200
+        assert detail_response.json()["disk_usage_bytes"] == 828
+        assert detail_response.json()["last_disk_scan_at"].startswith("2026-01-01T00:00:00")
+        _assert_no_sensitive_public_fields(list_response.text)
+        _assert_no_sensitive_public_fields(detail_response.text)
+
+
 def test_disk_summary_counts_symlink_without_following_external_target() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))

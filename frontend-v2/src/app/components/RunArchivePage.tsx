@@ -36,7 +36,7 @@ function fmtMaybeDate(iso: string | null) {
   return iso ? fmtDate(iso) : "Not scanned";
 }
 
-function fmtRunSize(run: Run) {
+function fmtDiskUsed(run: Run) {
   return run.diskUsageBytes === null ? "Unknown size" : formatFileSize(run.diskUsageBytes);
 }
 
@@ -175,7 +175,7 @@ function CleanupSuggestionList({
                     {item.name || item.id.slice(0, 8)}
                   </div>
                   <div style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-                    {stateLabel(item.state)} · {fmtDate(item.created)} · {item.diskUsageBytes === null ? "Size not scanned" : formatFileSize(item.diskUsageBytes)}
+                    {stateLabel(item.state)} · {fmtDate(item.created)} · {item.diskUsageBytes === null ? "Disk not scanned" : formatFileSize(item.diskUsageBytes)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
           <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>No runs yet.</p>
         )}
         {cleanupSummary && cleanupSummary.totalRuns > 0 && cleanupSummary.totalDiskUsageBytes === 0 && (
-          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>Run sizes are still being scanned.</p>
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>Run disk usage is still being scanned.</p>
         )}
       </div>
 
@@ -640,9 +640,9 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Run size</span>
+                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Disk used</span>
                       <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)", fontWeight: 600 }}>
-                        {fmtRunSize(run)}
+                        {fmtDiskUsed(run)}
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
@@ -688,7 +688,7 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
               style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
             >
               <div style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-                Estimated size: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtRunSize(confirmRun)}</span>
+                Estimated size: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtDiskUsed(confirmRun)}</span>
               </div>
               <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "2px" }}>
                 File count: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtFileCount(confirmRun)}</span>
