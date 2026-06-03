@@ -22,6 +22,8 @@ Instead, notebook behavior should be separated into execution/output modes:
 
 Notebook-parity mode should preserve original notebook output families, names, folders, and artifacts where technically feasible.
 
+Classifier/model outputs must use probability-only wording. They may express class probabilities, probability bands, or model scores, but not confirmation language.
+
 ---
 
 ## 2. Mode model
@@ -66,7 +68,8 @@ Purpose:
 - preserve classifier/model-derived notebook behavior;
 - support original notebook classifier labels if needed for conversion fidelity;
 - optionally write neutral aliases beside original labels;
-- keep experimental outputs separate from core app outputs.
+- keep experimental outputs separate from core app outputs;
+- support probability-only ML/classifier outputs.
 
 Recommended classifier output strategy:
 
@@ -75,6 +78,9 @@ experimental/classifications_original.csv
 experimental/classifications_neutral.csv
 experimental/class_mapping.json
 experimental/summary.json
+experimental/probability_scores.csv
+experimental/model_card.json
+experimental/calibration_report.json
 ```
 
 ### 2.4 Public/shared mode
@@ -89,7 +95,72 @@ Public/shared mode is separate from notebook parity mode. A parity artifact may 
 
 ---
 
-## 3. Coverage principle
+## 3. Probability-only classifier language rule
+
+Future classifier/model outputs must use probability-only language.
+
+Allowed wording:
+
+```text
+probability
+class probability
+model-estimated probability
+likelihood score
+probability band
+candidate resembles training examples
+heuristic score
+uncalibrated model probability
+calibrated model probability
+```
+
+Forbidden output wording:
+
+```text
+confirmed
+found
+proven
+dig target
+definitely
+```
+
+Allowed output examples:
+
+```text
+object_id: 17
+top_class: tomb_like
+class_probability: 0.36
+probability_band: 30-40%
+model_version: tomb_classifier_v0.1
+training_dataset_version: training_set_v0.1
+calibration_status: uncalibrated
+```
+
+Explicit class names are allowed when framed as probabilities:
+
+```text
+tomb_like_probability
+entrance_like_probability
+mound_like_probability
+wall_or_linear_feature_like_probability
+natural_terrain_probability
+modern_disturbance_probability
+vegetation_or_crop_artifact_probability
+unknown_probability
+```
+
+Probability quality levels must be explicit:
+
+```text
+heuristic_score                  # no labeled/calibrated dataset
+uncalibrated_model_probability   # trained model, not calibrated
+calibrated_model_probability     # validation/calibration evidence exists
+```
+
+A value must not be called a calibrated probability unless calibration evidence exists.
+
+---
+
+## 4. Coverage principle
 
 Do not ask Codex to “convert the notebook” in one task.
 
@@ -107,7 +178,7 @@ Each phase must have:
 
 ---
 
-## 4. Phase 0 — Output inventory lock
+## 5. Phase 0 — Output inventory lock
 
 ### Goal
 
@@ -125,6 +196,7 @@ Which files require private/parity mode?
 Which files require external dependencies?
 Which files come from broken or non-runnable notebook cells?
 Which stage files exist but still need runtime/parity verification?
+Which classifier/model outputs should become probability-only outputs later?
 ```
 
 ### Deliverables
@@ -157,6 +229,7 @@ The inventory must cover:
 - `AI_BEH_*` outputs;
 - `AI_READY_*` outputs;
 - classifier/model outputs;
+- future probability-only classifier outputs;
 - coordinate/map/KMZ/GeoJSON outputs;
 - QA/provenance outputs.
 
@@ -182,6 +255,7 @@ For every stage file reviewed, Codex must record or summarize:
   - QA/provenance;
   - coordinate-bearing;
   - experimental/private;
+  - probability-classifier output;
 - whether runtime output presence is proven;
 - whether notebook-value parity is proven.
 
@@ -244,6 +318,8 @@ http_servable
 classification
 runtime_output_verified
 notebook_value_parity_verified
+probability_only_required
+calibration_required
 verification_notes
 ```
 
@@ -279,6 +355,7 @@ not_applicable
 - Markdown states original notebook names are preserved for parity where feasible.
 - Markdown states file existence is not parity proof.
 - Markdown states `secret_layers.py` and `report_640.py` are notebook-parity semantic/report raster stages, not clean defensible core by default.
+- Markdown states ML/classifier outputs must use probability-only wording.
 - Unknown or unverified outputs are listed honestly.
 
 ### Codex task status
@@ -287,7 +364,7 @@ Planned.
 
 ---
 
-## 5. Phase 1 — Parity mode architecture
+## 6. Phase 1 — Parity mode architecture
 
 ### Goal
 
@@ -341,7 +418,7 @@ tests/parity/
 
 ---
 
-## 6. Phase 2 — v6 package import/export parity
+## 7. Phase 2 — v6 package import/export parity
 
 ### Goal
 
@@ -388,7 +465,7 @@ package hash manifest
 
 ---
 
-## 7. Phase 3 — Raster and tensor parity aliases
+## 8. Phase 3 — Raster and tensor parity aliases
 
 ### Goal
 
@@ -415,7 +492,7 @@ hypercube.npy -> NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy
 
 ---
 
-## 8. Phase 4 — Missing notebook raster families
+## 9. Phase 4 — Missing notebook raster families
 
 ### Goal
 
@@ -453,7 +530,7 @@ No silent omissions.
 
 ---
 
-## 9. Phase 5 — QA and intermediate parity
+## 10. Phase 5 — QA and intermediate parity
 
 ### Goal
 
@@ -487,7 +564,7 @@ sar_intermediate_manifest.json
 
 ---
 
-## 10. Phase 6 — Coordinate/map/private parity outputs
+## 11. Phase 6 — Coordinate/map/private parity outputs
 
 ### Goal
 
@@ -528,11 +605,11 @@ parity/navigation/*.csv
 
 ---
 
-## 11. Phase 7 — Classifier/model parity
+## 12. Phase 7 — Classifier/model parity
 
 ### Goal
 
-Preserve notebook classifier/model outputs as conversion artifacts.
+Preserve notebook classifier/model outputs as conversion artifacts while enforcing probability-only wording for any interpreted model outputs.
 
 ### Original-label examples
 
@@ -553,6 +630,7 @@ experimental/classifications_original.csv
 experimental/classifications_neutral.csv
 experimental/class_mapping.json
 experimental/summary.json
+experimental/probability_scores.csv
 ```
 
 ### Deep learning/model cells to track
@@ -571,11 +649,72 @@ archeo_dictionary model cells
 - Runnable classifier outputs are reproduced.
 - Original labels are preserved for parity when required.
 - Neutral labels remain available for clean app mode.
+- Any model interpretation is expressed as probability or score only.
 - Missing weights/dependencies/data are documented, not hidden.
 
 ---
 
-## 12. Phase 8 — End-to-end parity harness
+## 13. Phase 8 — Probability-only ML classifier design
+
+### Goal
+
+Design the future candidate classifier that outputs class probabilities and probability bands, not confirmation wording.
+
+### Required output fields
+
+```text
+object_id
+cluster_id
+top_class
+class_probability
+probability_band
+top_3_classes
+model_version
+training_dataset_version
+calibration_status
+explanation_features
+```
+
+### Required probability levels
+
+```text
+heuristic_score
+uncalibrated_model_probability
+calibrated_model_probability
+```
+
+### Required design docs
+
+Potential deliverables:
+
+```text
+docs/PROBABILITY_CLASSIFIER_CONTRACT.md
+docs/ML_DATASET_REQUIREMENTS.md
+docs/CLASSIFIER_CALIBRATION_PLAN.md
+```
+
+### Required validation concepts
+
+```text
+positive examples
+negative examples
+train/validation split
+confusion matrix
+calibration report
+model card
+dataset version
+```
+
+### Success gate
+
+- The classifier contract forbids confirmation wording.
+- It distinguishes heuristic scores from calibrated probabilities.
+- It defines dataset and calibration requirements.
+- It does not require immediate model training.
+
+---
+
+## 14. Phase 9 — End-to-end parity harness
 
 ### Goal
 
@@ -618,7 +757,7 @@ accepted differences
 
 ---
 
-## 13. Phase 9 — Clean app vs parity app decision
+## 15. Phase 10 — Clean app vs parity app decision
 
 ### Goal
 
@@ -633,6 +772,7 @@ core app visible
 operator-only
 parity/private only
 experimental only
+probability-classifier output
 not exposed
 ```
 
@@ -640,10 +780,11 @@ not exposed
 
 - Decisions are based on complete parity inventory and working outputs.
 - No notebook output is dropped without explicit decision.
+- Any classifier result that is exposed uses probability-only wording.
 
 ---
 
-## 14. Immediate next Codex task
+## 16. Immediate next Codex task
 
 The next Codex task should be Phase 0 only.
 
@@ -673,6 +814,7 @@ Do not modify API, frontend, database models, tests, or runtime code.
 Do not rename existing app outputs.
 Do not remove or sanitize notebook output names.
 Do not treat original notebook labels as product claims; record them as parity output names.
+For classifier/model outputs, record the future requirement that interpreted outputs must use probability-only wording.
 
 Inputs to review:
 - gaps.md
@@ -695,7 +837,7 @@ For every stage file reviewed, record or summarize:
 - artifact_class
 - http_servable setting
 - output formulas or source inputs if visible
-- whether the output is app-native, notebook-compatible alias, notebook-parity semantic/report raster, QA/provenance, coordinate-bearing, or experimental/private
+- whether the output is app-native, notebook-compatible alias, notebook-parity semantic/report raster, QA/provenance, coordinate-bearing, experimental/private, or probability-classifier output
 - whether runtime output presence is proven
 - whether notebook-value parity is proven
 
@@ -729,6 +871,7 @@ The markdown document must include:
   - REPORT_640 outputs
   - AI_BEH / AI_READY outputs
   - classifier/model outputs
+  - future probability-only classifier outputs
   - coordinate/map/KMZ/GeoJSON outputs
   - QA/provenance outputs
 - for each family:
@@ -766,6 +909,8 @@ Optional but recommended JSON fields:
 - classification
 - runtime_output_verified
 - notebook_value_parity_verified
+- probability_only_required
+- calibration_required
 - verification_notes
 
 Allowed statuses:
@@ -793,7 +938,8 @@ Allowed phases:
 - phase_5_qa_intermediates
 - phase_6_coordinate_map_private_parity
 - phase_7_classifier_model_parity
-- phase_8_e2e_parity_harness
+- phase_8_probability_classifier_design
+- phase_9_e2e_parity_harness
 - later_decision
 
 Validation required before final report:
@@ -806,6 +952,7 @@ Validation required before final report:
 - Markdown must state original notebook names are preserved for parity where feasible.
 - Markdown must state file existence is not parity proof.
 - Markdown must state `secret_layers.py` and `report_640.py` are notebook-parity semantic/report raster stages, not clean defensible core by default.
+- Markdown must state classifier/model interpreted outputs must use probability-only wording.
 - Commit changes to main with message:
   "Lock notebook parity output inventory"
 
@@ -821,7 +968,7 @@ Final report must include:
 
 ---
 
-## 15. Validation plan after Codex returns
+## 17. Validation plan after Codex returns
 
 After Codex returns, validate with GitHub before approving Phase 1.
 
@@ -839,16 +986,17 @@ unknown_needs_verification items listed honestly
 partial items listed honestly
 stage files inspected are named
 secret_layers.py and report_640.py are not classified as clean defensible core
+classifier/model outputs are tracked with probability-only wording requirement
 ```
 
 Approve Phase 1 only after Phase 0 passes validation.
 
 ---
 
-## 16. Final rule
+## 18. Final rule
 
 The goal is faithful notebook-to-Python-app conversion first.
 
 Do not remove notebook outputs from the plan just because they are experimental, duplicate, coordinate-bearing, or not part of the clean UI.
 
-Preserve them in notebook parity/private mode, validate them, then decide later what belongs in core app mode or public/shared mode.
+Preserve them in notebook parity/private mode, validate them, express future classifier/model interpretations as probabilities or scores, then decide later what belongs in core app mode or public/shared mode.
