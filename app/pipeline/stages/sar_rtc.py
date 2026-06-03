@@ -514,7 +514,12 @@ def write_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list
 
 
 def write_notebook_sar_npy_outputs(run_dir: Path, outputs: dict[str, np.ndarray]) -> list[Path]:
-    output_dir = ensure_run_canonical_dir(run_dir, NOTEBOOK_SAR_NPY_OUTPUT_DIR)
+    # Keep the notebook-compatible alias directory separate from the canonical
+    # internal SAR NPY directory. Using the case-normalizing helper here can
+    # rename the already-written lowercase internal directory on Linux because
+    # the names differ only by case.
+    output_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
     written_paths: list[Path] = []
     for name in OUTPUT_BANDS:
         npy_path = output_dir / notebook_sar_filename(name, "npy")

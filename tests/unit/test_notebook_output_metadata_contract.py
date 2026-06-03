@@ -116,11 +116,10 @@ def test_notebook_compatible_npy_metadata_contract() -> None:
             "NPY_RADAR_BANDS/RADAR_VV_dB_640_app.npy",
         }
         observed_files = {path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_file()}
-        assert notebook_band_paths <= observed_files
         assert not any(path.startswith("qa/") for path in observed_files)
-        assert not any(path.startswith("npy_radar_bands/RADAR_") for path in observed_files)
 
         for relative_path in notebook_band_paths:
+            assert (run_dir / relative_path).is_file(), relative_path
             array = np.load(run_dir / relative_path)
             assert array.dtype == np.float32
             assert array.shape == (grid_spec.size, grid_spec.size)

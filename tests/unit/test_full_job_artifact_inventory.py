@@ -245,9 +245,9 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "QA/sar/intermediates",
             "objects",
         }
-        observed_dirs = {path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_dir()}
-        assert expected_groups <= observed_dirs
         assert "qa" not in {path.name for path in run_dir.iterdir() if path.is_dir()}
+        for relative_dir in expected_groups:
+            assert (run_dir / relative_dir).is_dir(), relative_dir
 
         observed_files = {path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_file()}
         required_files = {
@@ -293,7 +293,8 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "clusters_summary.csv",
             "objects/object_mask.npy",
         }
-        assert required_files <= observed_files
+        for relative_path in required_files:
+            assert (run_dir / relative_path).is_file(), relative_path
         assert not any(path.startswith("qa/") for path in observed_files)
 
         report_manifest = json.loads((run_dir / "QA" / "REPORT_640_manifest.json").read_text(encoding="utf-8"))
