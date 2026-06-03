@@ -1,0 +1,1063 @@
+{
+  "schema": "parity_expected_outputs_phase_0_v1",
+  "source_documents_reviewed": [
+    "docs/PRD_v0.5.md",
+    "gaps.md",
+    "notebook_gaps_coverage.md",
+    "docs/NOTEBOOK_VS_APP_OUTPUTS.md",
+    "docs/Notebook_Cells_E.md",
+    "docs/CLASS_MAPPING.md",
+    "docs/EXPERIMENTAL_MODULE.md",
+    "docs/NOTEBOOK_FULL_JOB_INVENTORY.md",
+    "docs/NOTEBOOK_FULL_JOB_ARTIFACT_CONTRACT.md",
+    "docs/NOTEBOOK_SECRET_REPORT_LAYER_CONTRACT.md"
+  ],
+  "stage_files_inspected": [
+    "app/pipeline/stages/__init__.py",
+    "app/pipeline/stages/alignment_qa.py",
+    "app/pipeline/stages/dem.py",
+    "app/pipeline/stages/dem_derivatives.py",
+    "app/pipeline/stages/feature_stacks.py",
+    "app/pipeline/stages/field_ops_exports.py",
+    "app/pipeline/stages/focus_mask.py",
+    "app/pipeline/stages/gps_compare.py",
+    "app/pipeline/stages/grid.py",
+    "app/pipeline/stages/hypercube.py",
+    "app/pipeline/stages/location_exports.py",
+    "app/pipeline/stages/object_extract.py",
+    "app/pipeline/stages/pca_anomaly.py",
+    "app/pipeline/stages/report_640.py",
+    "app/pipeline/stages/s2_indices.py",
+    "app/pipeline/stages/sar_rtc.py",
+    "app/pipeline/stages/secret_layers.py",
+    "app/pipeline/stages/thermal.py",
+    "app/pipeline/stages/zero_shift.py",
+    "app/pipeline/stages_experimental/__init__.py",
+    "app/pipeline/stages_experimental/classes.py",
+    "app/pipeline/stages_experimental/classifier.py",
+    "app/pipeline/stages_experimental/inputs.py",
+    "app/pipeline/stages_experimental/outputs.py",
+    "app/pipeline/stages_experimental/run.py"
+  ],
+  "expected_outputs": [
+    {
+      "id": "v6_candidate_package_outputs",
+      "family": "v6 candidate package outputs",
+      "notebook_paths_or_patterns": [
+        "paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip",
+        "paid_archive_request_summary.txt",
+        "visual_inspection_map.html"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_2_v6_package",
+      "parity_priority": "critical",
+      "requires_coordinates": true,
+      "requires_external_dependency": false,
+      "notes": "No package import/export writer was identified in app source. Original filenames should be preserved in parity mode."
+    },
+    {
+      "id": "candidate_ranking_csv_geojson",
+      "family": "candidate/ranking CSV + GeoJSON outputs",
+      "notebook_paths_or_patterns": [
+        "lawful_gee_candidate_scout_top_25_<timestamp>.csv",
+        "lawful_gee_candidate_scout_top_25_<timestamp>.geojson",
+        "top25_enhanced_v6.csv",
+        "top25_enhanced_v6.geojson",
+        "stable_candidate_priority_list_v6.csv",
+        "quality_diagnostics_all_cells_v6.csv"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "objects_index.csv",
+        "clusters_summary.csv"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_2_v6_package",
+      "parity_priority": "critical",
+      "requires_coordinates": true,
+      "requires_external_dependency": false,
+      "stage_file": "app/pipeline/stages/object_extract.py",
+      "stage_class": "ObjectExtractStage",
+      "stage_name": "object_extract",
+      "artifact_names": [
+        "objects_index",
+        "clusters_summary"
+      ],
+      "relative_paths": [
+        "objects_index.csv",
+        "clusters_summary.csv"
+      ],
+      "artifact_class": [
+        "REDACTED_PUBLIC"
+      ],
+      "http_servable": true,
+      "classification": "app-native candidate/object output, not v6 ranking parity",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "App object tables are source-inspected writer outputs but do not cover the v6 ranking CSV/GeoJSON family.",
+      "verification_notes": "No v6 writer source identified."
+    },
+    {
+      "id": "request_zone_outputs",
+      "family": "request-zone outputs",
+      "notebook_paths_or_patterns": [
+        "request_zones_v6.csv",
+        "request_zones_v6.geojson"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_2_v6_package",
+      "parity_priority": "critical",
+      "requires_coordinates": true,
+      "requires_external_dependency": false,
+      "notes": "No request-zone writer source identified."
+    },
+    {
+      "id": "quote_template_comparison_outputs",
+      "family": "quote-template/comparison outputs",
+      "notebook_paths_or_patterns": [
+        "paid_imagery_quote_template_v6.csv",
+        "paid_imagery_quote_comparison_v6.csv"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_2_v6_package",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "notes": "No quote-row writer source identified."
+    },
+    {
+      "id": "dem_terrain_outputs",
+      "family": "DEM/terrain outputs",
+      "notebook_paths_or_patterns": [
+        "DEM_GEO8_TIFS/DEM_640.tif",
+        "DEM_GEO8_TIFS/slope_deg_640.tif",
+        "DEM_GEO8_TIFS/aspect_deg_640.tif",
+        "DEM_GEO8_TIFS/roughness_100m_640.tif",
+        "DEM_GEO8_TIFS/tpi_100m_640.tif",
+        "DEM_GEO8_TIFS/hillshade_0to1_640.tif"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "dem.tif",
+        "dem.npy",
+        "slope.tif",
+        "aspect.tif",
+        "curvature.tif",
+        "TPI.tif",
+        "TRI.tif",
+        "roughness.tif",
+        "TWI.tif",
+        "DEM_GEO8_TIFS/DEM_640.tif",
+        "DEM_GEO8_TIFS/slope_deg_640.tif",
+        "DEM_GEO8_TIFS/aspect_deg_640.tif",
+        "DEM_GEO8_TIFS/roughness_100m_640.tif",
+        "DEM_GEO8_TIFS/tpi_100m_640.tif",
+        "DEM_GEO8_TIFS/hillshade_0to1_640.tif"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_3_raster_tensor_aliases",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": [
+        "app/pipeline/stages/dem.py",
+        "app/pipeline/stages/dem_derivatives.py"
+      ],
+      "stage_class": [
+        "DemStage",
+        "DemDerivativesStage"
+      ],
+      "stage_name": [
+        "dem",
+        "dem_derivatives"
+      ],
+      "artifact_names": [
+        "dem_tif",
+        "dem_npy",
+        "notebook_dem_640_tif",
+        "slope",
+        "aspect",
+        "curvature",
+        "TPI",
+        "TRI",
+        "roughness",
+        "TWI",
+        "notebook_DEM_640",
+        "notebook_slope_deg_640",
+        "notebook_aspect_deg_640",
+        "notebook_roughness_100m_640",
+        "notebook_tpi_100m_640",
+        "notebook_hillshade_0to1_640"
+      ],
+      "relative_paths": [
+        "dem.tif",
+        "dem.npy",
+        "DEM_GEO8_TIFS/DEM_640.tif",
+        "slope.tif",
+        "aspect.tif",
+        "curvature.tif",
+        "TPI.tif",
+        "TRI.tif",
+        "roughness.tif",
+        "TWI.tif",
+        "DEM_GEO8_TIFS/slope_deg_640.tif",
+        "DEM_GEO8_TIFS/aspect_deg_640.tif",
+        "DEM_GEO8_TIFS/roughness_100m_640.tif",
+        "DEM_GEO8_TIFS/tpi_100m_640.tif",
+        "DEM_GEO8_TIFS/hillshade_0to1_640.tif"
+      ],
+      "artifact_class": [
+        "LOCAL_SENSITIVE"
+      ],
+      "http_servable": true,
+      "classification": "app-native plus notebook-compatible alias",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified; runtime and notebook-value parity were not verified in Phase 0."
+    },
+    {
+      "id": "dem_curvature_variants",
+      "family": "DEM/terrain outputs",
+      "notebook_paths_or_patterns": [
+        "DEM_GEO8_TIFS/curv_laplacian_640.tif",
+        "DEM_GEO8_TIFS/curv_plan_640.tif",
+        "DEM_GEO8_TIFS/curv_profile_640.tif"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "curvature.tif"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": "app/pipeline/stages/dem_derivatives.py",
+      "stage_class": "DemDerivativesStage",
+      "stage_name": "dem_derivatives",
+      "artifact_names": [
+        "curvature"
+      ],
+      "relative_paths": [
+        "curvature.tif"
+      ],
+      "artifact_class": [
+        "LOCAL_SENSITIVE"
+      ],
+      "http_servable": true,
+      "classification": "app-native terrain raster, missing notebook curvature aliases",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "The app writes one curvature raster; the three notebook curvature variant names do not have distinct writer code."
+    },
+    {
+      "id": "sar_radar_core_outputs",
+      "family": "SAR/radar outputs",
+      "notebook_paths_or_patterns": [
+        "GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_*.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_*.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_*.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_angle_640_*.tif",
+        "NPY_RADAR_BANDS/RADAR_VV_dB_640_*.npy",
+        "NPY_RADAR_BANDS/RADAR_VH_dB_640_*.npy",
+        "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_*.npy",
+        "NPY_RADAR_BANDS/RADAR_angle_640_*.npy"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "VV_dB.tif",
+        "VH_dB.tif",
+        "logRatio_dB.tif",
+        "incidence.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_*_640_app.tif",
+        "npy_radar_bands/*.npy",
+        "NPY_RADAR_BANDS/RADAR_*_640_app.npy"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_3_raster_tensor_aliases",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/sar_rtc.py",
+      "stage_class": "SarRtcStage",
+      "stage_name": "sar_rtc",
+      "artifact_names": [
+        "VV_dB",
+        "VH_dB",
+        "logRatio_dB",
+        "incidence",
+        "notebook_RADAR_VV_dB_640",
+        "notebook_RADAR_VH_dB_640",
+        "notebook_RADAR_logRatio_dB_640",
+        "notebook_RADAR_angle_640",
+        "sar_npy_VV_dB",
+        "sar_npy_VH_dB",
+        "sar_npy_logRatio_dB",
+        "sar_npy_incidence",
+        "notebook_sar_npy_RADAR_VV_dB_640",
+        "notebook_sar_npy_RADAR_VH_dB_640",
+        "notebook_sar_npy_RADAR_logRatio_dB_640",
+        "notebook_sar_npy_RADAR_angle_640"
+      ],
+      "relative_paths": [
+        "VV_dB.tif",
+        "VH_dB.tif",
+        "logRatio_dB.tif",
+        "incidence.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_app.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_app.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_app.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_angle_640_app.tif",
+        "npy_radar_bands/VV_dB.npy",
+        "npy_radar_bands/VH_dB.npy",
+        "npy_radar_bands/logRatio_dB.npy",
+        "npy_radar_bands/incidence.npy",
+        "NPY_RADAR_BANDS/RADAR_VV_dB_640_app.npy",
+        "NPY_RADAR_BANDS/RADAR_VH_dB_640_app.npy",
+        "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_app.npy",
+        "NPY_RADAR_BANDS/RADAR_angle_640_app.npy"
+      ],
+      "artifact_class": [
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "TIF artifacts default true; NPY aliases false",
+      "classification": "app-native plus notebook-compatible alias",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified. Notebook angle is mapped to app incidence."
+    },
+    {
+      "id": "sar_asc_desc_filtered_outputs",
+      "family": "SAR/radar outputs",
+      "notebook_paths_or_patterns": [
+        "S1_ASC_VV_Filtered_640.tif",
+        "S1_ASC_VH_Filtered_640.tif",
+        "S1_DESC_VV_Filtered_640.tif",
+        "S1_DESC_VH_Filtered_640.tif",
+        "S1_ASC_VV_Filtered_640.npy",
+        "S1_ASC_VH_Filtered_640.npy",
+        "S1_DESC_VV_Filtered_640.npy",
+        "S1_DESC_VH_Filtered_640.npy"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/sar_rtc.py",
+      "stage_class": "SarRtcStage",
+      "stage_name": "sar_rtc",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "SAR source inspected; no separate ASC/DESC filtered writer identified."
+    },
+    {
+      "id": "pre_rtc_sar_intermediates",
+      "family": "pre-RTC SAR intermediates",
+      "notebook_paths_or_patterns": [
+        "QA/sar/intermediates/per_image_products_db/*",
+        "QA/sar/intermediates/pair_median/*",
+        "QA/sar/intermediates/final_median_pre_rtc/*",
+        "QA/sar/intermediates/post_sample_pre_rtc/*",
+        "QA/sar/intermediates/post_rtc/*",
+        "QA/sar/intermediates/sar_intermediate_manifest.json"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
+        "QA/sar/intermediates/post_rtc/final_VH_dB.npy",
+        "QA/sar/intermediates/post_rtc/final_logRatio_dB.npy",
+        "QA/sar/intermediates/post_rtc/final_angle.npy",
+        "QA/sar/intermediates/sar_intermediate_manifest.json"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_5_qa_intermediates",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/sar_rtc.py",
+      "stage_class": "SarRtcStage",
+      "stage_name": "sar_rtc",
+      "artifact_names": [
+        "notebook_sar_intermediate_manifest",
+        "notebook_sar_intermediate_post_rtc_VV_dB",
+        "notebook_sar_intermediate_post_rtc_VH_dB",
+        "notebook_sar_intermediate_post_rtc_logRatio_dB",
+        "notebook_sar_intermediate_post_rtc_angle"
+      ],
+      "artifact_class": [
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": false,
+      "classification": "notebook-compatible QA/provenance partial",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Only post-RTC arrays are written; earlier intermediate groups are documented as no-source-equivalent in the manifest."
+    },
+    {
+      "id": "panchromatic_optical_outputs",
+      "family": "panchromatic/optical outputs",
+      "notebook_paths_or_patterns": [
+        "PAN_LS_Panchromatic_640.tif",
+        "PAN_S2_Panchromatic_10m_640.tif",
+        "PAN_LS_Panchromatic_640.npy",
+        "PAN_S2_Panchromatic_10m_640.npy",
+        "PAN_LAYERS_STACK_640.npy",
+        "OPT/PAN_TIFS_640/*",
+        "OPT/PAN_NPY_640/*"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "stacks/optical_support/s2_mask_support_valid.tif"
+      ],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "medium",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/feature_stacks.py",
+      "stage_class": "FeatureStacksStage",
+      "stage_name": "feature_stacks",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Feature stack writer has optical support mask only; no panchromatic writer identified."
+    },
+    {
+      "id": "s2_optical_index_outputs",
+      "family": "panchromatic/optical outputs",
+      "notebook_paths_or_patterns": [
+        "S2 DEM-matched index/composite cells",
+        "NDVI",
+        "NDWI",
+        "NDMI",
+        "NBR",
+        "IRONOX",
+        "IRON_SWIR",
+        "BSI"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "NDVI.tif",
+        "NDWI.tif",
+        "NDMI.tif",
+        "NBR.tif",
+        "IRONOX.tif",
+        "IRON_SWIR.tif",
+        "BSI.tif",
+        "s2_raw_cube.npy",
+        "QA/stacks/s2_indices_summary.json"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "core_app",
+      "target_phase": "phase_9_e2e_parity_harness",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/s2_indices.py",
+      "stage_class": "S2IndicesStage",
+      "stage_name": "s2_indices",
+      "artifact_class": [
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "Index TIF artifacts default true; summary/raw cube false",
+      "classification": "app-native corrected parity",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "IRON_SWIR correction is an accepted difference required by PRD."
+    },
+    {
+      "id": "hypercube_tensor_outputs",
+      "family": "hypercube/tensor outputs",
+      "notebook_paths_or_patterns": [
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+        "NPY_STACKS/RADAR_STACK_HWC_640_*.npy"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "hypercube.tif",
+        "hypercube.npy",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+        "NPY_STACKS/RADAR_STACK_HWC_640_app.npy"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_3_raster_tensor_aliases",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": [
+        "app/pipeline/stages/hypercube.py",
+        "app/pipeline/stages/feature_stacks.py"
+      ],
+      "stage_class": [
+        "HypercubeStage",
+        "FeatureStacksStage"
+      ],
+      "stage_name": [
+        "hypercube",
+        "feature_stacks"
+      ],
+      "artifact_class": [
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "Core/conditional notebook TIF/NPY artifacts default true except support stacks false",
+      "classification": "app-native plus conditional notebook-compatible aliases",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Conditional FINAL_TESLA writers require secret/report source rasters. Resampled and S1 filtered stacks are separate items."
+    },
+    {
+      "id": "hypercube_resampled_filtered_missing",
+      "family": "hypercube/tensor outputs",
+      "notebook_paths_or_patterns": [
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy",
+        "NPY_STACKS/S1_FILTERED_LAYERS_STACK_640.npy"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "notes": "No app writer identified for resampled 2.5 m hypercube or S1 filtered layer stack."
+    },
+    {
+      "id": "report_640_outputs",
+      "family": "REPORT_640 outputs",
+      "notebook_paths_or_patterns": [
+        "REPORT_640_Pottery_Report.tif",
+        "REPORT_640_Mass_Report.tif",
+        "REPORT_640_FINAL_Zero_Point_Targets.tif"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "REPORT_640_Pottery_Report.tif",
+        "REPORT_640_Mass_Report.tif",
+        "REPORT_640_FINAL_Zero_Point_Targets.tif",
+        "QA/REPORT_640_manifest.json"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/report_640.py",
+      "stage_class": "Report640Stage",
+      "stage_name": "report_640",
+      "artifact_names": [
+        "REPORT_640_Pottery_Report",
+        "REPORT_640_Mass_Report",
+        "REPORT_640_FINAL_Zero_Point_Targets",
+        "REPORT_640_manifest"
+      ],
+      "relative_paths": [
+        "REPORT_640_Pottery_Report.tif",
+        "REPORT_640_Mass_Report.tif",
+        "REPORT_640_FINAL_Zero_Point_Targets.tif",
+        "QA/REPORT_640_manifest.json"
+      ],
+      "artifact_class": [
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "Rasters default true; manifest false",
+      "classification": "notebook-parity report/semantic raster stage",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified; not classified as clean defensible core by default."
+    },
+    {
+      "id": "ai_ready_secret_outputs",
+      "family": "AI_BEH / AI_READY outputs",
+      "notebook_paths_or_patterns": [
+        "AI_READY_640_Secret_Gold_Halo.tif",
+        "AI_READY_640_Secret_Silver_Oxide.tif",
+        "AI_READY_640_Secret_Tunnel_Ceiling.tif",
+        "AI_READY_640_Secret_Thermal_Inertia.tif",
+        "AI_READY_640_Secret_Chemical_Protector.tif",
+        "AI_READY_640_Secret_Hidden_Doors.tif"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif",
+        "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif",
+        "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif",
+        "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif",
+        "AI_READY_640/AI_READY_640_Secret_Chemical_Protector.tif",
+        "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif",
+        "QA/stacks/secret_layers_manifest.json"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/secret_layers.py",
+      "stage_class": "SecretLayersStage",
+      "stage_name": "secret_layers",
+      "artifact_class": [
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "Rasters default true; manifest false",
+      "classification": "notebook-parity semantic raster stage",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified for six AI_READY_640_Secret outputs; not clean defensible core by default."
+    },
+    {
+      "id": "ai_beh_broader_series",
+      "family": "AI_BEH / AI_READY outputs",
+      "notebook_paths_or_patterns": [
+        "AI_BEH_*",
+        "AI_READY_*"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "AI_READY_640/AI_READY_640_Secret_*.tif",
+        "stacks/tensor_support/ai_ready_support_stack.*"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_4_missing_raster_families",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": [
+        "app/pipeline/stages/secret_layers.py",
+        "app/pipeline/stages/feature_stacks.py"
+      ],
+      "stage_class": [
+        "SecretLayersStage",
+        "FeatureStacksStage"
+      ],
+      "stage_name": [
+        "secret_layers",
+        "feature_stacks"
+      ],
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Only six secret rasters and a neutral support stack have source writers; broader AI_BEH series remains pending."
+    },
+    {
+      "id": "classifier_neutral_current_outputs",
+      "family": "classifier/model outputs",
+      "notebook_paths_or_patterns": [
+        "classifier CSV/TXT/JSON outputs",
+        "classification summaries",
+        "class maps"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "experimental/classifications.csv",
+        "experimental/summary.json",
+        "experimental/neutral_target_labels.json"
+      ],
+      "status": "partial",
+      "target_mode": "experimental_private",
+      "target_phase": "phase_7_classifier_model_parity",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": [
+        "app/pipeline/stages_experimental/run.py",
+        "app/pipeline/stages_experimental/classifier.py",
+        "app/pipeline/stages_experimental/outputs.py",
+        "app/pipeline/stages_experimental/inputs.py"
+      ],
+      "stage_class": [
+        "NeutralClassification",
+        "ExperimentalInputs"
+      ],
+      "stage_name": null,
+      "artifact_names": [
+        "experimental_classifications",
+        "experimental_summary",
+        "experimental_neutral_labels"
+      ],
+      "relative_paths": [
+        "experimental/classifications.csv",
+        "experimental/summary.json",
+        "experimental/neutral_target_labels.json"
+      ],
+      "artifact_class": [
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": false,
+      "classification": "probability-classifier output",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "probability_only_required": true,
+      "calibration_required": false,
+      "notes": "Current experimental module writes neutral class IDs and class_score only; original-label parity outputs are separate."
+    },
+    {
+      "id": "classifier_original_label_parity_outputs",
+      "family": "classifier/model outputs",
+      "notebook_paths_or_patterns": [
+        "Original notebook classifier label outputs",
+        "docs/CLASS_MAPPING.md source identifiers"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "docs/CLASS_MAPPING.md"
+      ],
+      "status": "notebook_only_pending",
+      "target_mode": "experimental_private",
+      "target_phase": "phase_7_classifier_model_parity",
+      "parity_priority": "medium_high",
+      "requires_coordinates": true,
+      "requires_external_dependency": false,
+      "probability_only_required": true,
+      "calibration_required": false,
+      "notes": "Original labels are documented only in CLASS_MAPPING.md and must not enter app source, tests, logs, filenames, API responses, or frontend files."
+    },
+    {
+      "id": "future_probability_only_classifier_outputs",
+      "family": "future probability-only classifier outputs",
+      "notebook_paths_or_patterns": [
+        "future class probability tables",
+        "future probability bands",
+        "future heuristic score summaries",
+        "future uncalibrated model probability reports",
+        "future calibrated model probability reports"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "experimental/classifications.csv field class_score"
+      ],
+      "status": "notebook_only_pending",
+      "target_mode": "experimental_private",
+      "target_phase": "phase_8_probability_classifier_design",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "probability_only_required": true,
+      "calibration_required": true,
+      "notes": "Interpreted outputs must use probability-only wording. Calibration is required only for calibrated probability claims."
+    },
+    {
+      "id": "deep_learning_model_cells",
+      "family": "classifier/model outputs",
+      "notebook_paths_or_patterns": [
+        "Swin model cells",
+        "UnetPlusPlus cells",
+        "ResNet50 cells",
+        "SegFormer cells",
+        "YOLO-style / CNN cells",
+        "archeo_dictionary model cells"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "requires_external_dependency",
+      "target_mode": "experimental_private",
+      "target_phase": "phase_7_classifier_model_parity",
+      "parity_priority": "medium",
+      "requires_coordinates": true,
+      "requires_external_dependency": true,
+      "probability_only_required": true,
+      "calibration_required": true,
+      "notes": "Notebook model cells require optional ML dependencies, weights/training data decisions, and broken-cell separation before parity design."
+    },
+    {
+      "id": "broken_model_constructor_cell",
+      "family": "classifier/model outputs",
+      "notebook_paths_or_patterns": [
+        "Notebook cell 233 class constructor typo"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "broken_notebook_cell",
+      "target_mode": "not_applicable",
+      "target_phase": "later_decision",
+      "parity_priority": "low",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "probability_only_required": true,
+      "calibration_required": false,
+      "notes": "Cell uses a broken constructor shape and should be tracked as a source reference, not executed by default."
+    },
+    {
+      "id": "coordinate_map_kmz_geojson_outputs",
+      "family": "coordinate/map/KMZ/GeoJSON outputs",
+      "notebook_paths_or_patterns": [
+        "GeoJSON",
+        "KMZ",
+        "KML",
+        "CSV with lat/lon",
+        "Google Earth overlays",
+        "navigation-style files"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "full_job/location/site_location.geojson",
+        "kmz/site_location.kmz",
+        "kmz/field_ops_navigation.kmz",
+        "full_job/field_ops/field_ops_report.json",
+        "full_job/field_ops/field_ops_brief.txt",
+        "full_job/gps/gps_point_comparison.json",
+        "full_job/gps/gps_point_comparison.csv"
+      ],
+      "status": "partial",
+      "target_mode": "experimental_private",
+      "target_phase": "phase_6_coordinate_map_private_parity",
+      "parity_priority": "high",
+      "requires_coordinates": true,
+      "requires_external_dependency": false,
+      "stage_file": [
+        "app/pipeline/stages/location_exports.py",
+        "app/pipeline/stages/field_ops_exports.py",
+        "app/pipeline/stages/gps_compare.py"
+      ],
+      "stage_class": [
+        "LocationExportsStage",
+        "FieldOpsExportsStage",
+        "GpsComparisonStage"
+      ],
+      "stage_name": [
+        "location_exports",
+        "field_ops_exports",
+        "gps_compare"
+      ],
+      "artifact_class": [
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": false,
+      "classification": "coordinate-bearing local/private",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Local-only coordinate-bearing writers exist, but notebook filename/folder parity and map HTML remain incomplete."
+    },
+    {
+      "id": "visual_inspection_map_html",
+      "family": "coordinate/map/KMZ/GeoJSON outputs",
+      "notebook_paths_or_patterns": [
+        "visual_inspection_map.html"
+      ],
+      "app_current_equivalent_paths_or_patterns": [],
+      "status": "missing",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_6_coordinate_map_private_parity",
+      "parity_priority": "high",
+      "requires_coordinates": true,
+      "requires_external_dependency": false,
+      "notes": "No notebook-compatible static map HTML writer identified."
+    },
+    {
+      "id": "qa_grid_run_manifest_outputs",
+      "family": "QA/provenance outputs",
+      "notebook_paths_or_patterns": [
+        "QA/QA_GRID_dx_m_640.tif",
+        "QA/QA_GRID_dy_m_640.tif",
+        "QA/QA_GRID_validmask_640.tif",
+        "QA/RUN_MANIFEST.json"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "QA/QA_GRID_dx_m_640.tif",
+        "QA/QA_GRID_dy_m_640.tif",
+        "QA/QA_GRID_validmask_640.tif",
+        "QA/RUN_MANIFEST.json",
+        "QA/grid_dem/grid_guard_summary.json",
+        "grid_manifest.json"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_5_qa_intermediates",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": "app/pipeline/stages/grid.py",
+      "stage_class": "GridStage",
+      "stage_name": "grid",
+      "artifact_class": [
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "Notebook QA rasters and RUN_MANIFEST default true; guard summary false",
+      "classification": "notebook-compatible QA/provenance",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified; no runtime/reference verification in Phase 0."
+    },
+    {
+      "id": "qa_sar_provenance_outputs",
+      "family": "QA/provenance outputs",
+      "notebook_paths_or_patterns": [
+        "QA_RADAR_CELL25_PAIR_IDS_*.json",
+        "QA_S1_MASTER_UNITS.json",
+        "QA_RADAR_META_*.json",
+        "SUMMARY_RADAR_*.csv"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "QA/sar/sar_pair_diagnostics.json",
+        "QA/sar/sar_summary.csv",
+        "QA/sar/sar_nodata_audit.csv",
+        "QA/sar/sar_alignment_summary.json"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_5_qa_intermediates",
+      "parity_priority": "high",
+      "requires_coordinates": false,
+      "requires_external_dependency": true,
+      "stage_file": "app/pipeline/stages/sar_rtc.py",
+      "stage_class": "SarRtcStage",
+      "stage_name": "sar_rtc",
+      "artifact_class": [
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": false,
+      "classification": "QA/provenance",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "App folds notebook SAR provenance into app-native QA filenames; notebook filename parity remains incomplete."
+    },
+    {
+      "id": "qa_alignment_zero_pca_stack_outputs",
+      "family": "QA/provenance outputs",
+      "notebook_paths_or_patterns": [
+        "alignment QA reports",
+        "zero-shift reports",
+        "PCA parity QA reports",
+        "stack audit reports",
+        "stage_*.manifest.json"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "alignment_qa.json",
+        "alignment_audit.csv",
+        "alignment_mask_selection.json",
+        "QA/alignment/alignment_summary_redacted.json",
+        "QA/grid_dem/zero_shift_summary.json",
+        "QA/grid_dem/drift_audit.csv",
+        "QA/parity/parity_qa_summary.json",
+        "QA/parity/hypercube_audit.csv",
+        "QA/stacks/*.json",
+        "stage_*.manifest.json"
+      ],
+      "status": "partial",
+      "target_mode": "notebook_parity",
+      "target_phase": "phase_5_qa_intermediates",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": [
+        "app/pipeline/stages/alignment_qa.py",
+        "app/pipeline/stages/zero_shift.py",
+        "app/pipeline/stages/pca_anomaly.py",
+        "app/pipeline/stages/hypercube.py",
+        "app/pipeline/stages/feature_stacks.py"
+      ],
+      "stage_class": [
+        "AlignmentQaStage",
+        "ZeroShiftStage",
+        "PcaAnomalyStage",
+        "HypercubeStage",
+        "FeatureStacksStage"
+      ],
+      "stage_name": [
+        "alignment_qa",
+        "zero_shift",
+        "pca_anomaly",
+        "hypercube",
+        "feature_stacks"
+      ],
+      "artifact_class": [
+        "REDACTED_PUBLIC",
+        "LOCAL_SENSITIVE",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "Mixed; filesystem-only QA false",
+      "classification": "QA/provenance",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified for app-native QA; notebook-compatible QA naming is partial."
+    },
+    {
+      "id": "object_extraction_outputs",
+      "family": "candidate/ranking CSV + GeoJSON outputs",
+      "notebook_paths_or_patterns": [
+        "objects_index.csv",
+        "clusters_summary.csv",
+        "per-object NPY patches",
+        "object mask"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "objects_index.csv",
+        "clusters_summary.csv",
+        "objects/object_mask.npy",
+        "objects/object_patches/object_*.npy"
+      ],
+      "status": "unknown_needs_verification",
+      "target_mode": "core_app",
+      "target_phase": "phase_9_e2e_parity_harness",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": "app/pipeline/stages/object_extract.py",
+      "stage_class": "ObjectExtractStage",
+      "stage_name": "object_extract",
+      "artifact_names": [
+        "objects_index",
+        "clusters_summary",
+        "object_mask",
+        "object_patch_*"
+      ],
+      "relative_paths": [
+        "objects_index.csv",
+        "clusters_summary.csv",
+        "objects/object_mask.npy",
+        "objects/object_patches/object_*.npy"
+      ],
+      "artifact_class": [
+        "REDACTED_PUBLIC",
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": "CSV artifacts default true; mask/patches false",
+      "classification": "app-native candidate/object output and local object support",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "Writer code identified; not a v6 package replacement."
+    },
+    {
+      "id": "focus_mask_outputs",
+      "family": "coordinate/map/KMZ/GeoJSON outputs",
+      "notebook_paths_or_patterns": [
+        "QA/FOCUS_MASK_17m_inside_640.tif",
+        "QA/FOCUS_MASK_17m_inside_640.json",
+        "focus-region analysis products"
+      ],
+      "app_current_equivalent_paths_or_patterns": [
+        "full_job/focus/focus_zone_17m.tif",
+        "full_job/focus/focus_zone_17m.npy",
+        "full_job/focus/focus_zone_ai_ready_window.npy",
+        "full_job/focus/focus_zone_summary.json",
+        "full_job/focus/focus_zone_band_summary.csv"
+      ],
+      "status": "partial",
+      "target_mode": "experimental_private",
+      "target_phase": "phase_6_coordinate_map_private_parity",
+      "parity_priority": "medium_high",
+      "requires_coordinates": false,
+      "requires_external_dependency": false,
+      "stage_file": "app/pipeline/stages/focus_mask.py",
+      "stage_class": "FocusMaskStage",
+      "stage_name": "focus_mask",
+      "artifact_class": [
+        "FILESYSTEM_ONLY"
+      ],
+      "http_servable": false,
+      "classification": "experimental/private local focus output",
+      "runtime_output_verified": false,
+      "notebook_value_parity_verified": false,
+      "notes": "App writes neutral local focus files, not notebook-compatible QA alias names."
+    }
+  ]
+}
