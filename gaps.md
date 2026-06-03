@@ -12,26 +12,84 @@ The challenge is not to remove notebook behavior.
 
 The challenge is to convert the notebook into a Python app and preserve what the notebook does, including its output families, file names, folder structure, and experimental/classifier outputs where technically feasible.
 
-Earlier wording that treated some notebook outputs as simply “risky” or “intentional omissions” is not the right framing for this conversion goal.
+Notebook outputs should be tracked as notebook-parity requirements. They should not be lost merely because the core app or public UI does not expose them.
 
-Correct framing:
-
-```text
-The notebook outputs should be tracked as notebook-parity requirements.
-The app may keep them in a private/parity/experimental mode.
-They should not be lost merely because the core app or public UI does not expose them.
-```
-
-This document therefore separates:
+This document separates:
 
 1. outputs that must be reproduced for notebook parity;
 2. outputs already covered by the app, renamed, corrected, or partially covered;
-3. outputs that require private/parity-mode handling rather than public/product exposure;
-4. outputs that may require staged implementation because they depend on Earth Engine, model weights, Colab-only behavior, or unavailable source data.
+3. outputs that require private/parity-mode handling rather than clean/core exposure;
+4. outputs that may require staged implementation because they depend on Earth Engine, model weights, Colab-only behavior, or unavailable source data;
+5. outputs whose stage-file existence is known but whose runtime output/parity status is not yet proven.
 
 ---
 
-## 2. Scope decision
+## 2. Important correction: file existence is not parity proof
+
+A Python stage file existing in the repo is not enough to mark a notebook output as implemented.
+
+Before an output can be treated as implemented or authoritative, the relevant stage file must be opened and confirmed for:
+
+- stage class name;
+- `stage.name`;
+- artifact names written;
+- relative paths written;
+- artifact class;
+- `http_servable` setting;
+- formulas or source inputs if visible;
+- whether the output is app-native, notebook-compatible alias, semantic/report raster, QA/provenance, coordinate-bearing, or experimental/private;
+- whether runtime output presence has been proven;
+- whether notebook-value parity has been proven.
+
+If a file exists but runtime output presence or value parity has not been verified, use:
+
+```text
+unknown_needs_verification
+```
+
+Do not mark an output as implemented from filename existence alone.
+
+---
+
+## 3. Classification correction: `secret_layers.py` and `report_640.py`
+
+`app/pipeline/stages/secret_layers.py` and `app/pipeline/stages/report_640.py` must not be classified as clean defensible core by default.
+
+Correct classification:
+
+```text
+secret_layers.py  -> notebook-parity semantic raster stage
+report_640.py     -> notebook-parity report/semantic raster stage
+```
+
+They can be preserved for faithful notebook conversion, but they should not be grouped with neutral core science stages unless the document clearly qualifies them as notebook-parity semantic/report outputs.
+
+Clean/core examples are closer to:
+
+- GRID;
+- DEM;
+- SAR RTC;
+- Sentinel-2 indices;
+- DEM derivatives;
+- thermal;
+- hypercube assembly;
+- PCA anomaly;
+- object extraction;
+- QA/alignment.
+
+Notebook-parity semantic/report examples are:
+
+- `AI_READY_640_Secret_*` layers;
+- `AI_BEH_*` layers;
+- `REPORT_640_Pottery_Report.tif`;
+- `REPORT_640_Mass_Report.tif`;
+- `REPORT_640_FINAL_Zero_Point_Targets.tif`.
+
+These outputs may be valuable parity targets, but they need explicit verification of code path, runtime presence, formulas, metadata, and notebook parity.
+
+---
+
+## 4. Scope decision
 
 Excluded from this gap register by project-owner decision:
 
@@ -43,11 +101,11 @@ Everything else from the notebook should be evaluated as a parity target unless 
 
 ---
 
-## 3. Required mode separation
+## 5. Required mode separation
 
-To preserve the notebook “as is” without confusing it with the app’s clean review workflow, the app should support clear output modes.
+To preserve the notebook as-is without mixing conversion fidelity with the clean app workflow, the app should support clear output modes.
 
-### 3.1 Core app mode
+### 5.1 Core app mode
 
 Purpose:
 
@@ -57,9 +115,9 @@ Purpose:
 - artifact tracking;
 - current clean app behavior.
 
-This mode may use neutral names and controlled outputs.
+This mode may use app-native names and controlled outputs.
 
-### 3.2 Notebook parity mode
+### 5.2 Notebook parity mode
 
 Purpose:
 
@@ -69,19 +127,26 @@ Purpose:
 - preserve original report/classifier/KMZ/GeoJSON/CSV outputs where technically feasible;
 - produce an auditable output tree for comparison against notebook reference output.
 
-This mode may include original notebook names such as `AI_BEH_*`, `AI_READY_*`, `REPORT_640_*`, `FINAL_TESLA_V7_2_*`, and original classifier labels if the goal is exact conversion fidelity.
+This mode may include original notebook names such as:
 
-### 3.3 Experimental/private mode
+```text
+AI_BEH_*
+AI_READY_*
+REPORT_640_*
+FINAL_TESLA_V7_2_*
+RADAR_*_640_*
+```
+
+### 5.3 Experimental/private mode
 
 Purpose:
 
-- run classifier or model-derived outputs that are not part of the core pipeline;
+- run classifier or model-derived outputs that are not part of the clean core pipeline;
 - preserve notebook logic for audit and experimentation;
-- avoid blocking conversion fidelity because the label names are experimental.
+- keep original notebook labels when required for conversion fidelity;
+- optionally write neutral aliases beside original names.
 
-This mode can keep original notebook labels if required for parity, while also optionally writing neutral aliases.
-
-### 3.4 Public/shared mode
+### 5.4 Public/shared mode
 
 Purpose:
 
@@ -89,21 +154,15 @@ Purpose:
 - redacted summaries;
 - no accidental exposure of internal/private artifacts.
 
-Public/shared mode is separate from notebook parity mode. A parity artifact can exist privately without being public UI functionality.
+Public/shared mode is separate from notebook parity mode. A parity artifact can exist privately without becoming public UI functionality.
 
 ---
 
-## 4. Highest-priority true parity gaps
+## 6. Highest-priority true parity gaps
 
-These are the most important gaps to close to make the Python app match the notebook workflow.
+### 6.1 Full v6 paid-archive package outputs
 
----
-
-### 4.1 Full v6 paid-archive package outputs
-
-#### Notebook outputs
-
-The notebook can produce the final v6 candidate/request/quote package:
+Notebook outputs:
 
 ```text
 lawful_gee_candidate_scout_top_25_<timestamp>.csv
@@ -121,36 +180,21 @@ visual_inspection_map.html
 paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip
 ```
 
-#### Current app gap
+Current app gap:
 
 The app does not yet provide a complete v6 package import/export parity path that validates these files, stores provenance, and exposes them as structured run outputs.
 
-#### Required parity goal
+Required parity goal:
 
 Implement `gee-import-v6` or equivalent so the app can accept or reproduce the v6 package and keep every expected package file available under the run output tree.
 
-Required behavior:
-
-1. validate all required files;
-2. validate schemas;
-3. store package/file hashes;
-4. persist imported candidates;
-5. persist imported request zones;
-6. persist imported quote rows;
-7. preserve original v6 filenames;
-8. write a parity manifest proving what was imported or reproduced.
-
-#### Priority
-
-Critical.
+Priority: Critical.
 
 ---
 
-### 4.2 Candidate tables and ranking outputs
+### 6.2 Candidate tables and ranking outputs
 
-#### Notebook outputs
-
-The notebook can produce candidate tables with ranking and quality fields such as:
+Notebook ranking fields include:
 
 ```text
 candidate_score
@@ -175,13 +219,13 @@ terrain_heavy_rank
 false_positive_warning_count
 ```
 
-#### Current app gap
+Current app gap:
 
 The app can produce PCA anomaly and object extraction outputs, but those are not a full replacement for the notebook’s v6 candidate ranking tables.
 
-#### Required parity goal
+Required parity goal:
 
-Add candidate persistence and export so the app can preserve notebook candidate-table semantics and reproduce:
+Reproduce or import:
 
 ```text
 top25_enhanced_v6.csv
@@ -190,30 +234,20 @@ stable_candidate_priority_list_v6.csv
 quality_diagnostics_all_cells_v6.csv
 ```
 
-#### Priority
-
-Critical.
+Priority: Critical.
 
 ---
 
-### 4.3 Request-zone outputs
+### 6.3 Request-zone outputs
 
-#### Notebook outputs
-
-The notebook can produce:
+Notebook outputs:
 
 ```text
 request_zones_v6.csv
 request_zones_v6.geojson
 ```
 
-These are part of the paid archive workflow.
-
-#### Current app gap
-
-The app does not yet provide full request-zone persistence and parity export equivalent to the notebook.
-
-#### Required parity goal
+Required parity goal:
 
 Add request-zone import/export support preserving notebook fields such as:
 
@@ -232,67 +266,32 @@ reason summary
 recommended imagery specs
 ```
 
-#### Priority
-
-Critical.
+Priority: Critical.
 
 ---
 
-### 4.4 Paid imagery quote template and comparison outputs
+### 6.4 Paid imagery quote outputs
 
-#### Notebook outputs
-
-The notebook can produce:
+Notebook outputs:
 
 ```text
 paid_imagery_quote_template_v6.csv
 paid_imagery_quote_comparison_v6.csv
 ```
 
-#### Current app gap
+Required parity goal:
 
-The app does not yet persist or reproduce these quote workflow files as structured app entities.
+Add quote-row persistence and parity exports preserving fields such as provider, zone, candidate coverage, acquisition date, sensor, resolution, cloud cover, off-nadir angle, license, price, delivery time, coverage score, metadata completeness, and notes.
 
-#### Required parity goal
-
-Add quote-row persistence and parity exports preserving fields such as:
-
-```text
-quote_id
-provider
-zone_id
-candidate_ids_covered
-acquisition_date
-sensor
-resolution_m
-cloud_cover_pct
-off_nadir_deg
-sun_elevation_deg
-processing_level
-license_terms
-price
-currency
-delivery_time_days
-coverage_score
-metadata_complete
-notes
-```
-
-#### Priority
-
-High.
+Priority: High.
 
 ---
 
-## 5. Notebook raster and tensor parity gaps
+## 7. Notebook raster and tensor parity gaps
 
-These are not “bad outputs.” They are notebook output families that should be tracked for parity.
+### 7.1 DEM / terrain output family
 
----
-
-### 5.1 DEM / terrain output family
-
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 DEM_640.tif
@@ -306,23 +305,17 @@ curv_profile_640.tif
 hillshade_0to1_640.tif
 ```
 
-#### Current app status
-
-The app covers some DEM/terrain outputs under different names, but does not necessarily reproduce every notebook filename and folder path.
-
-#### Required parity goal
+Required parity goal:
 
 Produce notebook-compatible DEM output names and folder structure in parity mode, even if the core app also writes cleaner internal names.
 
-#### Priority
-
-Medium-high.
+Priority: Medium-high.
 
 ---
 
-### 5.2 SAR / radar output family
+### 7.2 SAR / radar output family
 
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 RADAR_VV_dB_640_*.tif
@@ -343,23 +336,17 @@ S1_DESC_VV_Filtered_640.npy
 S1_DESC_VH_Filtered_640.npy
 ```
 
-#### Current app status
-
-The app has SAR RTC outputs and notebook-compatible SAR aliases for some outputs. Separate ascending/descending support stacks are still a parity gap unless deliberately deferred.
-
-#### Required parity goal
+Required parity goal:
 
 Reproduce the full notebook SAR output family in parity mode, including ASC/DESC support outputs if technically feasible.
 
-#### Priority
-
-High.
+Priority: High.
 
 ---
 
-### 5.3 Pre-RTC SAR intermediate arrays
+### 7.3 Pre-RTC SAR intermediate arrays
 
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 QA/sar/intermediates/per_image_products_db/*
@@ -370,28 +357,17 @@ QA/sar/intermediates/post_rtc/*
 QA/sar/intermediates/sar_intermediate_manifest.json
 ```
 
-#### Current app status
+Required parity goal:
 
-The app may preserve final post-RTC equivalents, but pre-RTC intermediates are not fully reproduced.
+For notebook parity mode, either write the missing intermediate arrays or write a manifest explaining why a source-equivalent intermediate cannot be recovered. For faithful conversion, writing the arrays is preferred where technically possible.
 
-#### Required parity goal
-
-For notebook parity mode, either:
-
-1. write the missing intermediate arrays; or
-2. write a manifest explaining why a source-equivalent intermediate cannot be recovered.
-
-For faithful conversion, option 1 is preferred where technically possible.
-
-#### Priority
-
-Medium-high.
+Priority: Medium-high.
 
 ---
 
-### 5.4 Optical / panchromatic output family
+### 7.4 Optical / panchromatic output family
 
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 PAN_LS_Panchromatic_640.tif
@@ -401,23 +377,17 @@ PAN_S2_Panchromatic_10m_640.npy
 PAN_LAYERS_STACK_640.npy
 ```
 
-#### Current app gap
-
-These are notebook-only or not fully reproduced in the current app output tree.
-
-#### Required parity goal
+Required parity goal:
 
 Add parity-mode generation for panchromatic support outputs if they are required to match the notebook reference output.
 
-#### Priority
-
-Medium.
+Priority: Medium.
 
 ---
 
-### 5.5 Hypercube / stacked tensor output family
+### 7.5 Hypercube / stacked tensor output family
 
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 FINAL_TESLA_V7_2_HYPERCUBE.tif
@@ -429,37 +399,21 @@ RADAR_STACK_HWC_640_*.npy
 S1_FILTERED_LAYERS_STACK_640.npy
 ```
 
-#### Current app status
+Required parity goal:
 
-Some hypercube outputs are implemented or aliased, but the full notebook stack family and resampled variants are not necessarily complete.
+Preserve notebook names and stack shapes in parity mode. Add a stack manifest containing source layer list, band order, shape, dtype, nodata policy, source file mapping, and intentional differences.
 
-#### Required parity goal
-
-Preserve notebook names and stack shapes in parity mode. Add a stack manifest containing:
-
-- source layer list;
-- band order;
-- shape;
-- dtype;
-- nodata policy;
-- source file mapping;
-- any intentional difference.
-
-#### Priority
-
-High.
+Priority: High.
 
 ---
 
-## 6. Notebook report / semantic raster parity gaps
+## 8. Notebook semantic/report raster parity gaps
 
-These outputs should be preserved for parity if the goal is notebook conversion fidelity.
+These outputs should be preserved for parity if the goal is notebook conversion fidelity. They should not be silently renamed away unless parity aliases are also written.
 
-They should not be silently renamed away unless parity aliases are also written.
+### 8.1 `REPORT_640_*` rasters
 
-### 6.1 Report rasters
-
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 REPORT_640_Pottery_Report.tif
@@ -467,39 +421,40 @@ REPORT_640_Mass_Report.tif
 REPORT_640_FINAL_Zero_Point_Targets.tif
 ```
 
-#### Current app status
+Current code existence:
 
-The app has code related to `REPORT_640_*` outputs, but parity should verify:
+`report_640.py` exists and is intended to write these outputs, but Phase 0 must verify the stage source and mark runtime parity as unknown unless a real run proves it.
+
+Required verification:
 
 - exact filename;
 - exact folder;
-- exact band values or accepted tolerance;
-- source formula;
+- artifact names;
+- artifact class;
+- formulas;
+- source inputs;
 - shape;
 - transform;
 - CRS;
-- nodata policy.
+- nodata policy;
+- runtime output presence;
+- notebook-value parity or accepted tolerance.
 
-#### Required parity goal
-
-Treat these as required notebook-parity outputs.
-
-Do not remove names solely because they sound semantic. If a clean app alias is desired, write both:
+Required classification:
 
 ```text
-notebook original name
-neutral app alias
+notebook-parity report/semantic raster stage
 ```
 
-#### Priority
+Do not classify as clean defensible core by default.
 
-High.
+Priority: High.
 
 ---
 
-### 6.2 AI_BEH and AI_READY series
+### 8.2 `AI_BEH_*` and `AI_READY_*` series
 
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 AI_BEH_* series
@@ -507,7 +462,7 @@ AI_READY_* series
 AI_READY_640_Secret_* series
 ```
 
-Examples include notebook-style names such as:
+Examples:
 
 ```text
 AI_READY_640_Secret_Gold_Halo
@@ -518,29 +473,39 @@ AI_READY_640_Secret_Chemical_Protector
 AI_READY_640_Secret_Hidden_Doors
 ```
 
-#### Current app status
+Current code existence:
 
-Some app code may compute similar internal/parity layers, but the full notebook output family and naming should be verified.
+`secret_layers.py` exists and is intended to write `AI_READY_640_Secret_*` rasters, but Phase 0 must verify the stage source and mark runtime parity as unknown unless a real run proves it.
 
-#### Required parity goal
+Required verification:
 
-For notebook parity mode, preserve these original notebook output names and folder paths where feasible.
+- layer names;
+- formulas;
+- source inputs;
+- output folder;
+- artifact class;
+- manifest behavior;
+- missing-source behavior;
+- runtime output presence;
+- notebook-value parity or accepted tolerance.
 
-Optional: also write neutral aliases, but do not drop original names if the task is faithful conversion.
+Required classification:
 
-#### Priority
+```text
+notebook-parity semantic raster stage
+```
 
-High.
+Do not classify as clean defensible core by default.
+
+Priority: High.
 
 ---
 
-## 7. Classifier / model output parity gaps
+## 9. Classifier / model output parity gaps
 
-### 7.1 Original classifier labels
+### 9.1 Original classifier labels
 
-#### Notebook outputs / labels
-
-The notebook contains classifier-style labels such as:
+Notebook labels include:
 
 ```text
 Gold_Metal_Jar
@@ -552,55 +517,38 @@ Weapons_Shield_Cache
 Ancient_Well
 ```
 
-#### Current app status
+Current app status:
 
-The current app experimental module uses neutral `Class_A` through `Class_N` identifiers.
+The current app experimental module uses neutral `Class_A` through `Class_N` identifiers. That is good for clean app mode, but it is not full notebook parity if original labels are required.
 
-That is good for clean app mode, but it is not full notebook parity if original labels are required.
-
-#### Required parity goal
+Required parity goal:
 
 Notebook parity mode should be able to preserve original classifier output labels when the goal is exact conversion fidelity.
 
 Recommended output strategy:
 
 ```text
-experimental/classifications_original.csv      # original notebook labels
-experimental/classifications_neutral.csv       # neutral aliases
-experimental/class_mapping.json                # explicit mapping
+experimental/classifications_original.csv
+experimental/classifications_neutral.csv
+experimental/class_mapping.json
 experimental/summary.json
 ```
 
-This keeps conversion fidelity and clean-mode compatibility.
-
-#### Priority
-
-Medium-high.
+Priority: Medium-high.
 
 ---
 
-### 7.2 Deep learning model build/inference cells
+### 9.2 Deep learning model build/inference cells
 
-#### Notebook behavior
+Notebook behavior:
 
 The notebook contains Swin, UnetPlusPlus, ResNet50, SegFormer, YOLO-style, and CNN inference/build attempts.
 
-#### Current app gap
+Required parity goal:
 
-The current app does not fully reproduce these model-build/inference cells.
+Track these cells separately because feasibility depends on package availability, runtime, model weights, training data, whether the cell was runnable, and whether source files exist.
 
-#### Required parity goal
-
-Track these cells separately because feasibility depends on:
-
-- package availability;
-- GPU/CPU runtime;
-- model weights;
-- training data;
-- whether the notebook cell was actually runnable;
-- whether source files exist.
-
-For faithful conversion, preserve runnable behavior where possible and mark non-runnable cells as:
+Use explicit statuses such as:
 
 ```text
 not_implemented_missing_weights
@@ -609,19 +557,13 @@ not_implemented_broken_notebook_cell
 not_implemented_dependency_unavailable
 ```
 
-#### Priority
-
-Medium.
+Priority: Medium.
 
 ---
 
-## 8. Coordinate-bearing output parity
+## 10. Coordinate-bearing output parity
 
-### 8.1 KMZ / GeoJSON / CSV / map outputs
-
-#### Notebook outputs
-
-The notebook can emit exact-location artifacts such as:
+Notebook outputs:
 
 ```text
 GeoJSON
@@ -633,13 +575,11 @@ visual_inspection_map.html
 field/navigation-style outputs
 ```
 
-#### Correct framing
+Correct framing:
 
-These are not automatically “bad” in this project context.
+These are notebook-parity outputs, not automatically public app features.
 
-For faithful notebook conversion, they are parity outputs.
-
-#### Required parity goal
+Required parity goal:
 
 Preserve them in notebook parity/private output mode when the goal is to match the notebook.
 
@@ -653,24 +593,13 @@ parity/navigation/*.kml
 parity/navigation/*.csv
 ```
 
-Add a manifest that states:
-
-```text
-These are notebook-parity outputs preserved for conversion fidelity.
-They are not generated by the clean public/shared mode unless explicitly enabled.
-```
-
-#### Priority
-
-High for parity, separate from public UI decisions.
+Priority: High for parity, separate from public UI decisions.
 
 ---
 
-## 9. QA / diagnostics / provenance parity gaps
+## 11. QA / diagnostics / provenance parity gaps
 
-### 9.1 Notebook QA files
-
-#### Notebook outputs
+Notebook outputs:
 
 ```text
 QA_GRID_dx_m_640.tif
@@ -684,11 +613,7 @@ RUN_MANIFEST.json
 sar_intermediate_manifest.json
 ```
 
-#### Current app status
-
-The app has its own manifests, run history, stage manifests, and QA files, but it does not necessarily reproduce every notebook QA filename.
-
-#### Required parity goal
+Required parity goal:
 
 Write notebook-compatible QA outputs in parity mode, even if the app also keeps its own cleaner manifests.
 
@@ -700,34 +625,15 @@ notebook-compatible QA aliases are also written
 parity manifest maps native files to notebook files
 ```
 
-#### Priority
-
-High.
+Priority: High.
 
 ---
 
-## 10. Colab / Drive behavior
-
-### 10.1 What to preserve
-
-The notebook has Colab/Drive mechanics:
-
-```text
-Drive mount
-Drive export waits
-Drive refresh hacks
-Colab shell listing
-Colab JS auto-scroll / auto-run
-pip install cells
-```
-
-### 10.2 Correct conversion target
+## 12. Colab / Drive behavior
 
 The app does not need to reproduce Colab UI mechanics exactly.
 
-But it should reproduce the resulting output files and pipeline effects where those effects matter.
-
-So the target is:
+The conversion target is:
 
 ```text
 output-equivalent behavior, not Colab-mechanic-equivalent behavior
@@ -740,15 +646,13 @@ Examples:
 - Do not need pip install cells if requirements are pinned.
 - Do not need JS auto-scroll if app orchestration runs stages directly.
 
-### 10.3 Status
-
 Not a direct parity output gap unless a Colab-only step produces a file that is missing from the app.
 
 ---
 
-## 11. Known notebook bugs and parity policy
+## 13. Known notebook bugs and parity policy
 
-### 11.1 `IRON_SWIR` formula
+### 13.1 `IRON_SWIR` formula
 
 Notebook note identified this bug:
 
@@ -756,29 +660,19 @@ Notebook note identified this bug:
 IRON_SWIR = (B11 - B12) / (B11 - B12)
 ```
 
-This collapses to 1 wherever the denominator is nonzero.
-
 The app currently uses the corrected form:
 
 ```text
 (B11 - B12) / (B11 + B12)
 ```
 
-#### Parity policy
+Parity policy:
 
-For faithful conversion, document this as a corrected notebook bug.
-
-If strict bug-for-bug parity is ever needed, support it only behind an explicit compatibility flag such as:
-
-```text
---compatibility reproduce-known-notebook-bugs
-```
+Document this as a corrected notebook bug. If strict bug-for-bug parity is ever needed, support it only behind an explicit compatibility flag.
 
 Default should remain corrected behavior.
 
----
-
-### 11.2 Broken constructor typo
+### 13.2 Broken constructor typo
 
 Notebook cell 233 uses:
 
@@ -792,11 +686,9 @@ instead of:
 def __init__(self)
 ```
 
-#### Parity policy
+Parity policy:
 
-Do not reproduce broken code unless preserving it as a non-runnable source reference.
-
-Mark as:
+Do not reproduce broken code unless preserving it as a non-runnable source reference. Mark as:
 
 ```text
 not_implemented_broken_notebook_cell
@@ -804,7 +696,7 @@ not_implemented_broken_notebook_cell
 
 ---
 
-## 12. Current app strengths to preserve while adding parity
+## 14. Current app strengths to preserve while adding parity
 
 Preserve these strengths:
 
@@ -820,15 +712,11 @@ Preserve these strengths:
 - app-native API/frontend separation;
 - app-native clean/core pipeline mode.
 
-Important:
-
 Adding notebook parity mode must not break the current core app pipeline.
-
-The clean app mode and notebook parity mode should coexist.
 
 ---
 
-## 13. Recommended implementation phases
+## 15. Recommended implementation phases
 
 ### Phase 1 — Output inventory lock
 
@@ -841,28 +729,13 @@ docs/NOTEBOOK_OUTPUT_INVENTORY_LOCKED.md
 parity_expected_outputs.json
 ```
 
+Important Phase 1 rule:
+
+Every status must be backed by source-file inspection or marked `unknown_needs_verification`. `secret_layers.py` and `report_640.py` must be classified as notebook-parity semantic/report raster stages, not clean defensible core.
+
 ### Phase 2 — Parity output tree design
 
 Define where notebook-parity outputs live in the app run directory.
-
-Suggested structure:
-
-```text
-data/runs/<run_id>/
-  app_native/
-  parity/
-    root/
-    DEM_GEO8_TIFS/
-    GEOTIFF_RADAR_BANDS/
-    NPY_RADAR_BANDS/
-    NPY_STACKS/
-    OPT/
-    QA/
-    kmz/
-    maps/
-    experimental/
-  manifests/
-```
 
 ### Phase 3 — v6 package import/export parity
 
@@ -884,21 +757,11 @@ Implement original-label classifier outputs in private parity mode, alongside op
 
 Run app vs frozen notebook output comparison.
 
-Compare:
-
-- file presence;
-- row counts;
-- required columns;
-- raster shapes;
-- CRS/transform;
-- nodata;
-- band order;
-- checksums where deterministic;
-- numeric tolerance where Earth Engine variability exists.
+Compare file presence, row counts, required columns, raster shapes, CRS/transform, nodata, band order, checksums where deterministic, and numeric tolerance where Earth Engine variability exists.
 
 ---
 
-## 14. Final rule
+## 16. Final rule
 
 The objective is faithful notebook-to-Python-app conversion.
 
