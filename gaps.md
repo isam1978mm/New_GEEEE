@@ -19,7 +19,7 @@ This document separates:
 1. outputs that must be reproduced for notebook parity;
 2. outputs already covered by the app, renamed, corrected, or partially covered;
 3. outputs that require private/parity-mode handling rather than clean/core exposure;
-4. outputs that may require staged implementation because they depend on Earth Engine, model weights, Colab-only behavior, or unavailable source data;
+4. outputs that may require staged implementation because they depend on Earth Engine, model weights, Colab-only behavior, unavailable source data, or labeled training data;
 5. outputs whose stage-file existence is known but whose runtime output/parity status is not yet proven.
 
 ---
@@ -37,7 +37,7 @@ Before an output can be treated as implemented or authoritative, the relevant st
 - artifact class;
 - `http_servable` setting;
 - formulas or source inputs if visible;
-- whether the output is app-native, notebook-compatible alias, semantic/report raster, QA/provenance, coordinate-bearing, or experimental/private;
+- whether the output is app-native, notebook-compatible alias, semantic/report raster, QA/provenance, coordinate-bearing, experimental/private, or probability-classifier output;
 - whether runtime output presence has been proven;
 - whether notebook-value parity has been proven.
 
@@ -89,7 +89,49 @@ These outputs may be valuable parity targets, but they need explicit verificatio
 
 ---
 
-## 4. Scope decision
+## 4. Probability-only classifier rule
+
+Future ML/classifier outputs must be probability-based, not confirmation-based.
+
+Allowed wording patterns:
+
+```text
+probability
+class probability
+model-estimated probability
+likelihood score
+probability band
+candidate resembles training examples
+```
+
+Allowed example output shape:
+
+```text
+object_id: 17
+top_class: tomb_like
+class_probability: 0.36
+probability_band: 30-40%
+model_version: tomb_classifier_v0.1
+calibration_status: uncalibrated_or_calibrated
+```
+
+Forbidden output meaning:
+
+```text
+confirmed
+found
+proven
+dig target
+definitely
+```
+
+The app may support labels such as `tomb_like_probability` or `Buried_Entrance_probability` in private/parity/experimental mode, but the value must be documented as a model probability or score, never as confirmation.
+
+If there is no labeled/calibrated dataset, the output must be called a heuristic score or uncalibrated model score, not a calibrated probability.
+
+---
+
+## 5. Scope decision
 
 Excluded from this gap register by project-owner decision:
 
@@ -101,11 +143,11 @@ Everything else from the notebook should be evaluated as a parity target unless 
 
 ---
 
-## 5. Required mode separation
+## 6. Required mode separation
 
 To preserve the notebook as-is without mixing conversion fidelity with the clean app workflow, the app should support clear output modes.
 
-### 5.1 Core app mode
+### 6.1 Core app mode
 
 Purpose:
 
@@ -117,7 +159,7 @@ Purpose:
 
 This mode may use app-native names and controlled outputs.
 
-### 5.2 Notebook parity mode
+### 6.2 Notebook parity mode
 
 Purpose:
 
@@ -137,16 +179,17 @@ FINAL_TESLA_V7_2_*
 RADAR_*_640_*
 ```
 
-### 5.3 Experimental/private mode
+### 6.3 Experimental/private mode
 
 Purpose:
 
 - run classifier or model-derived outputs that are not part of the clean core pipeline;
 - preserve notebook logic for audit and experimentation;
 - keep original notebook labels when required for conversion fidelity;
-- optionally write neutral aliases beside original names.
+- optionally write neutral aliases beside original names;
+- support probability-only ML classifier outputs.
 
-### 5.4 Public/shared mode
+### 6.4 Public/shared mode
 
 Purpose:
 
@@ -158,9 +201,9 @@ Public/shared mode is separate from notebook parity mode. A parity artifact can 
 
 ---
 
-## 6. Highest-priority true parity gaps
+## 7. Highest-priority true parity gaps
 
-### 6.1 Full v6 paid-archive package outputs
+### 7.1 Full v6 paid-archive package outputs
 
 Notebook outputs:
 
@@ -192,7 +235,7 @@ Priority: Critical.
 
 ---
 
-### 6.2 Candidate tables and ranking outputs
+### 7.2 Candidate tables and ranking outputs
 
 Notebook ranking fields include:
 
@@ -238,7 +281,7 @@ Priority: Critical.
 
 ---
 
-### 6.3 Request-zone outputs
+### 7.3 Request-zone outputs
 
 Notebook outputs:
 
@@ -270,7 +313,7 @@ Priority: Critical.
 
 ---
 
-### 6.4 Paid imagery quote outputs
+### 7.4 Paid imagery quote outputs
 
 Notebook outputs:
 
@@ -287,9 +330,9 @@ Priority: High.
 
 ---
 
-## 7. Notebook raster and tensor parity gaps
+## 8. Notebook raster and tensor parity gaps
 
-### 7.1 DEM / terrain output family
+### 8.1 DEM / terrain output family
 
 Notebook outputs:
 
@@ -313,7 +356,7 @@ Priority: Medium-high.
 
 ---
 
-### 7.2 SAR / radar output family
+### 8.2 SAR / radar output family
 
 Notebook outputs:
 
@@ -344,7 +387,7 @@ Priority: High.
 
 ---
 
-### 7.3 Pre-RTC SAR intermediate arrays
+### 8.3 Pre-RTC SAR intermediate arrays
 
 Notebook outputs:
 
@@ -365,7 +408,7 @@ Priority: Medium-high.
 
 ---
 
-### 7.4 Optical / panchromatic output family
+### 8.4 Optical / panchromatic output family
 
 Notebook outputs:
 
@@ -385,7 +428,7 @@ Priority: Medium.
 
 ---
 
-### 7.5 Hypercube / stacked tensor output family
+### 8.5 Hypercube / stacked tensor output family
 
 Notebook outputs:
 
@@ -407,11 +450,11 @@ Priority: High.
 
 ---
 
-## 8. Notebook semantic/report raster parity gaps
+## 9. Notebook semantic/report raster parity gaps
 
 These outputs should be preserved for parity if the goal is notebook conversion fidelity. They should not be silently renamed away unless parity aliases are also written.
 
-### 8.1 `REPORT_640_*` rasters
+### 9.1 `REPORT_640_*` rasters
 
 Notebook outputs:
 
@@ -425,21 +468,6 @@ Current code existence:
 
 `report_640.py` exists and is intended to write these outputs, but Phase 0 must verify the stage source and mark runtime parity as unknown unless a real run proves it.
 
-Required verification:
-
-- exact filename;
-- exact folder;
-- artifact names;
-- artifact class;
-- formulas;
-- source inputs;
-- shape;
-- transform;
-- CRS;
-- nodata policy;
-- runtime output presence;
-- notebook-value parity or accepted tolerance.
-
 Required classification:
 
 ```text
@@ -452,7 +480,7 @@ Priority: High.
 
 ---
 
-### 8.2 `AI_BEH_*` and `AI_READY_*` series
+### 9.2 `AI_BEH_*` and `AI_READY_*` series
 
 Notebook outputs:
 
@@ -477,18 +505,6 @@ Current code existence:
 
 `secret_layers.py` exists and is intended to write `AI_READY_640_Secret_*` rasters, but Phase 0 must verify the stage source and mark runtime parity as unknown unless a real run proves it.
 
-Required verification:
-
-- layer names;
-- formulas;
-- source inputs;
-- output folder;
-- artifact class;
-- manifest behavior;
-- missing-source behavior;
-- runtime output presence;
-- notebook-value parity or accepted tolerance.
-
 Required classification:
 
 ```text
@@ -501,9 +517,9 @@ Priority: High.
 
 ---
 
-## 9. Classifier / model output parity gaps
+## 10. Classifier / model output parity gaps
 
-### 9.1 Original classifier labels
+### 10.1 Original classifier labels
 
 Notebook labels include:
 
@@ -538,7 +554,62 @@ Priority: Medium-high.
 
 ---
 
-### 9.2 Deep learning model build/inference cells
+### 10.2 Probability-only ML classifier
+
+Goal:
+
+Add a future classifier design that can output class probabilities or calibrated probability bands for candidate objects.
+
+Example output fields:
+
+```text
+object_id
+cluster_id
+top_class
+class_probability
+probability_band
+top_3_classes
+model_version
+training_dataset_version
+calibration_status
+explanation_features
+```
+
+Possible class names can be explicit but must remain probability-based:
+
+```text
+tomb_like_probability
+entrance_like_probability
+mound_like_probability
+wall_or_linear_feature_like_probability
+natural_terrain_probability
+modern_disturbance_probability
+vegetation_or_crop_artifact_probability
+unknown_probability
+```
+
+Probability quality levels:
+
+```text
+heuristic_score                  # no labeled/calibrated dataset
+uncalibrated_model_probability   # trained model, not calibrated
+calibrated_model_probability     # validation/calibration evidence exists
+```
+
+Required training data for meaningful probabilities:
+
+- positive examples;
+- negative examples;
+- train/validation split;
+- confusion matrix;
+- calibration report;
+- model/data versioning.
+
+Priority: Future high, after parity inventory and candidate/object persistence are stable.
+
+---
+
+### 10.3 Deep learning model build/inference cells
 
 Notebook behavior:
 
@@ -561,7 +632,7 @@ Priority: Medium.
 
 ---
 
-## 10. Coordinate-bearing output parity
+## 11. Coordinate-bearing output parity
 
 Notebook outputs:
 
@@ -583,21 +654,11 @@ Required parity goal:
 
 Preserve them in notebook parity/private output mode when the goal is to match the notebook.
 
-Recommended output strategy:
-
-```text
-parity/location/*.geojson
-parity/kmz/*.kmz
-parity/maps/visual_inspection_map.html
-parity/navigation/*.kml
-parity/navigation/*.csv
-```
-
 Priority: High for parity, separate from public UI decisions.
 
 ---
 
-## 11. QA / diagnostics / provenance parity gaps
+## 12. QA / diagnostics / provenance parity gaps
 
 Notebook outputs:
 
@@ -617,19 +678,11 @@ Required parity goal:
 
 Write notebook-compatible QA outputs in parity mode, even if the app also keeps its own cleaner manifests.
 
-Required approach:
-
-```text
-app-native QA files remain
-notebook-compatible QA aliases are also written
-parity manifest maps native files to notebook files
-```
-
 Priority: High.
 
 ---
 
-## 12. Colab / Drive behavior
+## 13. Colab / Drive behavior
 
 The app does not need to reproduce Colab UI mechanics exactly.
 
@@ -639,20 +692,13 @@ The conversion target is:
 output-equivalent behavior, not Colab-mechanic-equivalent behavior
 ```
 
-Examples:
-
-- Do not need Drive mount if server storage writes the same files.
-- Do not need Drive refresh if app output tree is complete.
-- Do not need pip install cells if requirements are pinned.
-- Do not need JS auto-scroll if app orchestration runs stages directly.
-
 Not a direct parity output gap unless a Colab-only step produces a file that is missing from the app.
 
 ---
 
-## 13. Known notebook bugs and parity policy
+## 14. Known notebook bugs and parity policy
 
-### 13.1 `IRON_SWIR` formula
+### 14.1 `IRON_SWIR` formula
 
 Notebook note identified this bug:
 
@@ -672,7 +718,7 @@ Document this as a corrected notebook bug. If strict bug-for-bug parity is ever 
 
 Default should remain corrected behavior.
 
-### 13.2 Broken constructor typo
+### 14.2 Broken constructor typo
 
 Notebook cell 233 uses:
 
@@ -696,7 +742,7 @@ not_implemented_broken_notebook_cell
 
 ---
 
-## 14. Current app strengths to preserve while adding parity
+## 15. Current app strengths to preserve while adding parity
 
 Preserve these strengths:
 
@@ -716,7 +762,7 @@ Adding notebook parity mode must not break the current core app pipeline.
 
 ---
 
-## 15. Recommended implementation phases
+## 16. Recommended implementation phases
 
 ### Phase 1 — Output inventory lock
 
@@ -753,7 +799,11 @@ Implement notebook-compatible QA files, grid QA files, SAR pair diagnostics, and
 
 Implement original-label classifier outputs in private parity mode, alongside optional neutral aliases.
 
-### Phase 7 — End-to-end parity test
+### Phase 7 — Probability-only ML classifier design
+
+Design probability-based candidate classification with class probabilities, probability bands, model versioning, dataset versioning, calibration status, and explicit prohibition of confirmation wording.
+
+### Phase 8 — End-to-end parity test
 
 Run app vs frozen notebook output comparison.
 
@@ -761,17 +811,20 @@ Compare file presence, row counts, required columns, raster shapes, CRS/transfor
 
 ---
 
-## 16. Final rule
+## 17. Final rule
 
 The objective is faithful notebook-to-Python-app conversion.
 
 Do not delete notebook outputs from the plan just because they are experimental, oddly named, duplicate, or not part of the clean UI.
 
+Use probability-only language for ML/classifier outputs. Do not use confirmation language.
+
 Instead:
 
 ```text
-preserve them in notebook parity/private mode;
+preserve notebook outputs in notebook parity/private mode;
 map them clearly;
 validate them;
-then decide separately what, if anything, belongs in clean core app mode or public/shared mode.
+represent classifier results as probabilities or scores;
+then decide separately what belongs in clean core app mode or public/shared mode.
 ```
