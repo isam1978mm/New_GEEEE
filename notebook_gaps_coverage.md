@@ -124,6 +124,7 @@ Which files are missing?
 Which files require private/parity mode?
 Which files require external dependencies?
 Which files come from broken or non-runnable notebook cells?
+Which stage files exist but still need runtime/parity verification?
 ```
 
 ### Deliverables
@@ -159,6 +160,59 @@ The inventory must cover:
 - coordinate/map/KMZ/GeoJSON outputs;
 - QA/provenance outputs.
 
+### Critical Phase 0 verification rule
+
+File existence is not enough.
+
+Before Codex marks any app output as `implemented`, Codex must open the relevant stage/source file and confirm the code path that writes it.
+
+For every stage file reviewed, Codex must record or summarize:
+
+- stage class name;
+- `stage.name`;
+- artifact names written;
+- relative paths written;
+- artifact class;
+- `http_servable` setting;
+- formulas or source inputs if visible;
+- output category:
+  - app-native;
+  - notebook-compatible alias;
+  - notebook-parity semantic/report raster;
+  - QA/provenance;
+  - coordinate-bearing;
+  - experimental/private;
+- whether runtime output presence is proven;
+- whether notebook-value parity is proven.
+
+If code exists but runtime output presence or notebook-value parity is not proven, Codex must use:
+
+```text
+unknown_needs_verification
+```
+
+or `partial`, not `implemented`.
+
+### `secret_layers.py` and `report_640.py` classification rule
+
+Codex must not classify these as clean defensible core by default:
+
+```text
+app/pipeline/stages/secret_layers.py
+app/pipeline/stages/report_640.py
+```
+
+Correct classification:
+
+```text
+secret_layers.py  -> notebook-parity semantic raster stage
+report_640.py     -> notebook-parity report/semantic raster stage
+```
+
+They may be preserved for faithful notebook parity, but Phase 0 must not treat them as neutral core science unless clearly qualified.
+
+The inventory should mark their runtime and value parity as unproven unless a real run/reference comparison proves otherwise.
+
 ### JSON schema expectation
 
 Each JSON item should include:
@@ -175,6 +229,22 @@ parity_priority
 requires_coordinates
 requires_external_dependency
 notes
+```
+
+Recommended optional fields:
+
+```text
+stage_file
+stage_class
+stage_name
+artifact_names
+relative_paths
+artifact_class
+http_servable
+classification
+runtime_output_verified
+notebook_value_parity_verified
+verification_notes
 ```
 
 Allowed statuses:
@@ -207,7 +277,9 @@ not_applicable
 - Markdown states faithful notebook conversion is the objective.
 - Markdown does not say notebook outputs should be removed because they are risky.
 - Markdown states original notebook names are preserved for parity where feasible.
-- Unknown outputs are listed honestly.
+- Markdown states file existence is not parity proof.
+- Markdown states `secret_layers.py` and `report_640.py` are notebook-parity semantic/report raster stages, not clean defensible core by default.
+- Unknown or unverified outputs are listed honestly.
 
 ### Codex task status
 
@@ -612,6 +684,27 @@ Inputs to review:
 - app/pipeline/stages/*
 - app/pipeline/stages_experimental/*
 
+Important correction:
+File existence is not enough. Do not mark an output as implemented unless the code path writing it is identified from source-file inspection. If runtime output presence or notebook-value parity is not proven, use `unknown_needs_verification` or `partial`.
+
+For every stage file reviewed, record or summarize:
+- stage class name
+- stage.name
+- artifact names written
+- relative paths written
+- artifact_class
+- http_servable setting
+- output formulas or source inputs if visible
+- whether the output is app-native, notebook-compatible alias, notebook-parity semantic/report raster, QA/provenance, coordinate-bearing, or experimental/private
+- whether runtime output presence is proven
+- whether notebook-value parity is proven
+
+Special classification rule:
+Do not classify `app/pipeline/stages/secret_layers.py` or `app/pipeline/stages/report_640.py` as clean defensible core by default.
+Classify them as:
+- `secret_layers.py`: notebook-parity semantic raster stage
+- `report_640.py`: notebook-parity report/semantic raster stage
+
 Create:
 1. docs/PARITY_PHASE_0_OUTPUT_INVENTORY_LOCK.md
 2. docs/parity_expected_outputs.json
@@ -646,6 +739,7 @@ The markdown document must include:
   - parity requirement
   - known blocker if any
   - accepted difference if any
+  - verification status
 
 The JSON file must be machine-readable and include an array of expected outputs or output families.
 Each item must include:
@@ -660,6 +754,19 @@ Each item must include:
 - requires_coordinates
 - requires_external_dependency
 - notes
+
+Optional but recommended JSON fields:
+- stage_file
+- stage_class
+- stage_name
+- artifact_names
+- relative_paths
+- artifact_class
+- http_servable
+- classification
+- runtime_output_verified
+- notebook_value_parity_verified
+- verification_notes
 
 Allowed statuses:
 - implemented
@@ -697,6 +804,8 @@ Validation required before final report:
 - Markdown must mention that faithful notebook conversion is the objective.
 - Markdown must not say risky outputs should be removed.
 - Markdown must state original notebook names are preserved for parity where feasible.
+- Markdown must state file existence is not parity proof.
+- Markdown must state `secret_layers.py` and `report_640.py` are notebook-parity semantic/report raster stages, not clean defensible core by default.
 - Commit changes to main with message:
   "Lock notebook parity output inventory"
 
@@ -706,6 +815,8 @@ Final report must include:
 - confirmation no runtime code changed
 - JSON item count
 - any outputs marked unknown_needs_verification
+- any outputs marked partial
+- list of stage files inspected
 ```
 
 ---
@@ -725,6 +836,9 @@ no runtime files changed
 no API/frontend/database/pipeline implementation hidden in docs task
 all required output families included
 unknown_needs_verification items listed honestly
+partial items listed honestly
+stage files inspected are named
+secret_layers.py and report_640.py are not classified as clean defensible core
 ```
 
 Approve Phase 1 only after Phase 0 passes validation.
