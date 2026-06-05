@@ -97,17 +97,18 @@ def test_h9_h10_h11_are_marked_complete_with_correct_hashes():
     assert expected_lines[2] in full_text
 
 
-def test_phase_4z_remains_closeout_and_phase_5_remains_next():
+def test_phase_4z_is_closed_out_in_the_phase_4_docs():
     full_text = _read(FULL_CHECKLIST)
     phase_4_text = _read(PHASE_4_CHECKLIST)
 
-    assert "[ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup" in full_text
-    assert "[ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup" in phase_4_text
-    phase_4z_line = "[ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup"
-    phase_5_line = "[ ] Phase 5 — QA and intermediate parity"
-
-    assert phase_5_line in full_text
-    assert full_text.index(phase_4z_line) < full_text.index(phase_5_line)
+    assert (
+        "[x] Phase 4Z — Phase 4 final coverage summary / naming cleanup — approved — "
+        "ddb362ed7175bda4d65446f6278a3d54fe130e05"
+    ) in full_text
+    assert (
+        "[x] Phase 4Z — Phase 4 final coverage summary / naming cleanup — approved — "
+        "ddb362ed7175bda4d65446f6278a3d54fe130e05"
+    ) in phase_4_text
 
 
 def test_final_summary_lists_all_phase_4_major_branches_and_invariants():
@@ -120,8 +121,8 @@ def test_final_summary_lists_all_phase_4_major_branches_and_invariants():
         "Sentinel-1 support stacks",
         "panchromatic support outputs",
         "resampled hypercube",
-            "`AI_READY` semantic outputs",
-            "`AI_BEH` semantic outputs",
+        "`AI_READY` semantic outputs",
+        "`AI_BEH` semantic outputs",
         "anchor / non-TIF semantic pattern decision",
     ]:
         assert branch in text
@@ -145,8 +146,8 @@ def test_semantic_inventory_references_later_contracts_instead_of_describing_h2_
         "covered by dedicated AI_READY metal-hardness recovery and verifier contract",
         "covered by dedicated AI_READY fraction recovery and verifier contract",
         "covered by dedicated AI_BEH relation recovery and verifier contract for the trio",
-            "covered by dedicated AI_BEH extended, logic, density/artifact, rare-material, ",
-            "covered by dedicated anchor-pattern decision; the four names remain internal ",
+        "covered by dedicated AI_BEH extended, logic, density/artifact, rare-material, ",
+        "covered by dedicated anchor-pattern decision; the four names remain internal ",
     ]:
         assert snippet in text
 

@@ -73,9 +73,9 @@ Rules:
 
 [x] Phase 4H11 — anchor / non-TIF semantic patterns decision — approved — 28cc36325f7443a695727ce8a14812bd7242f040
 
-[ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup
+[x] Phase 4Z — Phase 4 final coverage summary / naming cleanup — approved — ddb362ed7175bda4d65446f6278a3d54fe130e05
 
-[ ] Phase 5 — QA and intermediate parity — contract: `docs/PHASE_5_QA_INTERMEDIATE_PARITY_CONTRACT.md`
+[x] Phase 5 — QA and intermediate parity — approved — 8ec135c68957cc92f3d62b91dd445896b8d4eb85 — contract: `docs/PHASE_5_QA_INTERMEDIATE_PARITY_CONTRACT.md`
     Covers:
     - QA manifests
     - provenance reports
