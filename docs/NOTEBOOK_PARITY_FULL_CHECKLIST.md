@@ -92,7 +92,7 @@ Rules:
     Rule:
     - no HTTP/public exposure by default
 
-[ ] Phase 7 — Classifier/model parity
+[ ] Phase 7 — Classifier/model parity — contract: `docs/PHASE_7_CLASSIFIER_MODEL_PARITY_CONTRACT.md`
     Covers:
     - neutral class labels
     - CLI-only experimental classifier
