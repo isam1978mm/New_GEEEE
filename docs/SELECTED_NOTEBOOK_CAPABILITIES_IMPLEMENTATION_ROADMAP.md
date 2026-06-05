@@ -211,7 +211,7 @@ Acceptance gates:
 
 Goal: make the existing Phase 9 harness useful with a real frozen notebook reference bundle.
 
-Status: complete by `docs/IMPLEMENTATION_PHASE_E_PRIVATE_PARITY_VERIFIER.md`; implementation commit will be recorded after the Phase E commit is created.
+Status: complete by `docs/IMPLEMENTATION_PHASE_E_PRIVATE_PARITY_VERIFIER.md`; implementation commit `c7412bcc838f2c26bec6845ec2fb724a4782fa27`.
 
 Scope:
 
