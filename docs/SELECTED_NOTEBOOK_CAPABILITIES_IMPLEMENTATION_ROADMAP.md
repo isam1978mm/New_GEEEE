@@ -24,7 +24,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 [x] Phase A — Add app map point picker + ROI/grid preview
 [x] Phase B — Add controlled backend Earth Engine run flow
 [x] Phase C — Add only defensible missing raster/feature writers
-[ ] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
+[x] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
 [ ] Phase E — Add private parity verifier against frozen notebook outputs
 [ ] Phase F — Add optional private CLI classifier using neutral labels and probability/score wording only
 ```
@@ -181,6 +181,8 @@ Acceptance gates:
 ## Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
 
 Goal: add private filesystem-only writers for selected map artifacts, without public exposure.
+
+Status: complete by `docs/IMPLEMENTATION_PHASE_D_PRIVATE_MAP_ARTIFACT_WRITERS.md`; implementation commit will be recorded after the Phase D commit is created.
 
 Scope:
 
@@ -379,7 +381,7 @@ Acceptance gates:
 [x] Phase A
 [x] Phase B
 [x] Phase C1 — first selected writer slice
-[ ] Phase D1 — private map artifact writer contract and first writer
+[x] Phase D1 — private map artifact writer contract and first writer
 [ ] Phase E1 — frozen reference bundle validator
 [ ] Phase E2 — verifier execution against frozen references
 [ ] Phase F1 — private neutral probability CLI classifier, if still desired
