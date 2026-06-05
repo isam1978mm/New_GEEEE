@@ -23,7 +23,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 ```text
 [x] Phase A — Add app map point picker + ROI/grid preview
 [x] Phase B — Add controlled backend Earth Engine run flow
-[ ] Phase C — Add only defensible missing raster/feature writers
+[x] Phase C — Add only defensible missing raster/feature writers
 [ ] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
 [ ] Phase E — Add private parity verifier against frozen notebook outputs
 [ ] Phase F — Add optional private CLI classifier using neutral labels and probability/score wording only
@@ -151,6 +151,8 @@ Acceptance gates:
 ## Phase C — Add only defensible missing raster/feature writers
 
 Goal: implement only selected missing raster/feature writers that have exact source formula, clear metadata contract, and frozen or obtainable reference expectations.
+
+Status: complete by `docs/IMPLEMENTATION_PHASE_C_DEFENSIBLE_RASTER_FEATURE_WRITERS.md`; implementation commit will be recorded after the Phase C commit is created.
 
 Scope:
 
@@ -376,7 +378,7 @@ Acceptance gates:
 ```text
 [x] Phase A
 [x] Phase B
-[ ] Phase C1 — first selected writer slice
+[x] Phase C1 — first selected writer slice
 [ ] Phase D1 — private map artifact writer contract and first writer
 [ ] Phase E1 — frozen reference bundle validator
 [ ] Phase E2 — verifier execution against frozen references
