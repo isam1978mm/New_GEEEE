@@ -99,7 +99,7 @@ Rules:
     - no public API exposure
     - no confirmation wording
 
-[ ] Phase 8 — Probability-only ML classifier design — contract: `docs/PHASE_8_PROBABILITY_ONLY_CLASSIFIER_DESIGN.md`
+[x] Phase 8 — Probability-only ML classifier design — approved — 8abab1a556c9788bc00555c856375c9921c26074 — contract: `docs/PHASE_8_PROBABILITY_ONLY_CLASSIFIER_DESIGN.md`
     Rule:
     - probability-only outputs
     - no confirmation wording
