@@ -75,7 +75,7 @@ Rules:
 
 [ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup
 
-[ ] Phase 5 — QA and intermediate parity
+[ ] Phase 5 — QA and intermediate parity — contract: `docs/PHASE_5_QA_INTERMEDIATE_PARITY_CONTRACT.md`
     Covers:
     - QA manifests
     - provenance reports

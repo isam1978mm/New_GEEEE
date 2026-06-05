@@ -14,6 +14,7 @@ Current phase tracking lives in:
 - `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`
 - `docs/PHASE_4_COVERAGE_CHECKLIST.md`
 - `docs/PHASE_4_FINAL_COVERAGE_SUMMARY.md`
+- `docs/PHASE_5_QA_INTERMEDIATE_PARITY_CONTRACT.md`
 
 The objective is **faithful notebook-to-Python-app conversion**.
 
