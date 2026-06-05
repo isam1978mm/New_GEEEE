@@ -21,7 +21,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 ### Approved for implementation planning now
 
 ```text
-[ ] Phase A — Add app map point picker + ROI/grid preview
+[x] Phase A — Add app map point picker + ROI/grid preview
 [ ] Phase B — Add controlled backend Earth Engine run flow
 [ ] Phase C — Add only defensible missing raster/feature writers
 [ ] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
@@ -89,6 +89,8 @@ Not allowed:
 ## Phase A — Add app map point picker + ROI/grid preview
 
 Goal: add a normal app UI/operator workflow for selecting a point or small AOI and previewing the resulting ROI/grid before a backend run.
+
+Status: complete by `docs/IMPLEMENTATION_PHASE_A_MAP_ROI_PREVIEW.md`; implementation commit will be recorded after the Phase A commit is created.
 
 Scope:
 

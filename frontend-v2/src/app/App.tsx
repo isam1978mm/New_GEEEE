@@ -9,11 +9,14 @@ import {
   getOperatorOutputs,
   getRunDetail,
   listRuns,
+  previewRoi,
   type CleanupSummary,
   type CreateRunInput,
   type DeletionAuditSummary,
   type DeleteRunResult,
   type OperatorOutputTree,
+  type RoiPreview,
+  type RoiPreviewInput,
   type Run,
   type RunDetail,
   type RunListParams,
@@ -312,6 +315,10 @@ export default function App() {
     }
   }
 
+  async function handlePreviewRoi(input: RoiPreviewInput): Promise<RoiPreview> {
+    return previewRoi(input);
+  }
+
   async function handleDeleteRun(run: Run): Promise<DeleteRunResult> {
     const result = await deleteRun(run.id);
     setRuns((currentRuns) => currentRuns.filter((item) => item.id !== run.id));
@@ -456,6 +463,7 @@ export default function App() {
               >
                 <RunWorkflowCard
                   onQueueRun={handleQueueRun}
+                  onPreviewRoi={handlePreviewRoi}
                   isQueueing={queueing}
                   feedback={queueFeedback}
                   externalTilesEnabled={uiSettings.externalTilesEnabled}

@@ -96,6 +96,38 @@ export interface CreateRunInput {
   name: string | null;
 }
 
+export interface RoiPreviewInput {
+  lat: number;
+  lon: number;
+}
+
+export interface RoiPreview {
+  mode: string;
+  selectedPointPreview: {
+    northSouthDegrees: number;
+    eastWestDegrees: number;
+  };
+  roiWindowPreview: {
+    westMeters: number;
+    southMeters: number;
+    eastMeters: number;
+    northMeters: number;
+    widthMeters: number;
+    heightMeters: number;
+  };
+  gridPreview: {
+    referenceSystemLabel: string;
+    referenceCodeValue: number;
+    zoneNumber: number;
+    hemisphere: string;
+    widthCells: number;
+    heightCells: number;
+    cellSizeMeters: number;
+    affineCoefficients: number[];
+  };
+  warnings: string[];
+}
+
 export interface DeleteRunResult {
   runId: string;
   deleted: boolean;
@@ -264,6 +296,39 @@ interface CleanupSummaryDto {
   threshold_bytes?: unknown;
 }
 
+interface RoiPreviewDto {
+  mode?: unknown;
+  selected_point_preview?: unknown;
+  roi_window_preview?: unknown;
+  grid_preview?: unknown;
+  warnings?: unknown;
+}
+
+interface SelectedPointPreviewDto {
+  north_south_degrees?: unknown;
+  east_west_degrees?: unknown;
+}
+
+interface RoiWindowPreviewDto {
+  west_meters?: unknown;
+  south_meters?: unknown;
+  east_meters?: unknown;
+  north_meters?: unknown;
+  width_meters?: unknown;
+  height_meters?: unknown;
+}
+
+interface GridPreviewDto {
+  reference_system_label?: unknown;
+  reference_code_value?: unknown;
+  zone_number?: unknown;
+  hemisphere?: unknown;
+  width_cells?: unknown;
+  height_cells?: unknown;
+  cell_size_meters?: unknown;
+  affine_coefficients?: unknown;
+}
+
 const KEY_DOWNLOAD_PATHS = [
   "QA/RUN_MANIFEST.json",
   "DEM_GEO8_TIFS/DEM_640.tif",
@@ -327,6 +392,16 @@ export async function createRun(input: CreateRunInput): Promise<Run> {
     body: JSON.stringify(input),
   });
   return mapRunPublic(payload) ?? emptyRun();
+}
+
+export async function previewRoi(input: RoiPreviewInput): Promise<RoiPreview> {
+  return mapRoiPreview(
+    await fetchJson<RoiPreviewDto>("/roi/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
 }
 
 export async function deleteRun(runId: string): Promise<DeleteRunResult> {
@@ -566,6 +641,40 @@ function mapCleanupSummary(payload: CleanupSummaryDto): CleanupSummary {
   };
 }
 
+function mapRoiPreview(payload: RoiPreviewDto): RoiPreview {
+  const selected = asObject<SelectedPointPreviewDto>(payload.selected_point_preview);
+  const roiWindow = asObject<RoiWindowPreviewDto>(payload.roi_window_preview);
+  const grid = asObject<GridPreviewDto>(payload.grid_preview);
+  return {
+    mode: asString(payload.mode) || "point",
+    selectedPointPreview: {
+      northSouthDegrees: asNumber(selected.north_south_degrees),
+      eastWestDegrees: asNumber(selected.east_west_degrees),
+    },
+    roiWindowPreview: {
+      westMeters: asNumber(roiWindow.west_meters),
+      southMeters: asNumber(roiWindow.south_meters),
+      eastMeters: asNumber(roiWindow.east_meters),
+      northMeters: asNumber(roiWindow.north_meters),
+      widthMeters: asNumber(roiWindow.width_meters),
+      heightMeters: asNumber(roiWindow.height_meters),
+    },
+    gridPreview: {
+      referenceSystemLabel: asString(grid.reference_system_label) || "unavailable",
+      referenceCodeValue: asNumber(grid.reference_code_value),
+      zoneNumber: asNumber(grid.zone_number),
+      hemisphere: asString(grid.hemisphere) || "unknown",
+      widthCells: asNumber(grid.width_cells),
+      heightCells: asNumber(grid.height_cells),
+      cellSizeMeters: asNumber(grid.cell_size_meters),
+      affineCoefficients: Array.isArray(grid.affine_coefficients)
+        ? grid.affine_coefficients.map(asNumber)
+        : [],
+    },
+    warnings: Array.isArray(payload.warnings) ? payload.warnings.map(asString).filter(Boolean) : [],
+  };
+}
+
 function mapDeletionAuditRecord(payload: unknown): DeletionAuditRecord | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -762,6 +871,10 @@ function asNumber(value: unknown): number {
 
 function asNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asObject<T extends object>(value: unknown): Partial<T> {
+  return value && typeof value === "object" ? (value as Partial<T>) : {};
 }
 
 function emptyRun(): Run {

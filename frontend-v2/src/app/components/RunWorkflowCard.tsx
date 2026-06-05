@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, WifiOff, Play, RotateCcw } from "lucide-react";
-import type { CreateRunInput } from "../api/client";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { ChevronDown, ChevronRight, WifiOff, Play, RotateCcw, MapPin, Search } from "lucide-react";
+import type { CreateRunInput, RoiPreview, RoiPreviewInput } from "../api/client";
 
 const steps = [
   { n: 1, label: "Define Target" },
@@ -10,6 +10,7 @@ const steps = [
 
 interface RunWorkflowCardProps {
   onQueueRun?: (input: CreateRunInput) => Promise<void>;
+  onPreviewRoi?: (input: RoiPreviewInput) => Promise<RoiPreview>;
   isQueueing?: boolean;
   feedback?: string | null;
   externalTilesEnabled?: boolean;
@@ -22,6 +23,7 @@ type TileLoadState = "loading" | "success" | "error";
 
 export function RunWorkflowCard({
   onQueueRun,
+  onPreviewRoi,
   isQueueing = false,
   feedback = null,
   externalTilesEnabled = false,
@@ -35,6 +37,9 @@ export function RunWorkflowCard({
   const [resolution, setResolution] = useState("640");
   const [tilePreviewStatus, setTilePreviewStatus] = useState<TilePreviewStatus>("idle");
   const [tileStates, setTileStates] = useState<Record<string, TileLoadState>>({});
+  const [roiPreview, setRoiPreview] = useState<RoiPreview | null>(null);
+  const [roiPreviewError, setRoiPreviewError] = useState<string | null>(null);
+  const [isPreviewingRoi, setIsPreviewingRoi] = useState(false);
 
   const latitudeValue = Number.parseFloat(latitude);
   const longitudeValue = Number.parseFloat(longitude);
@@ -43,6 +48,7 @@ export function RunWorkflowCard({
   const latitudeValid = Number.isFinite(latitudeValue) && latitudeValue >= -90 && latitudeValue <= 90;
   const longitudeValid = Number.isFinite(longitudeValue) && longitudeValue >= -180 && longitudeValue <= 180;
   const canQueue = latitudeValid && longitudeValid;
+  const canPreviewRoi = canQueue && !isPreviewingRoi && Boolean(onPreviewRoi);
   const hasPreview = hasLatitude || hasLongitude || runName.trim().length > 0;
   const tileTemplateValid = hasTileTemplatePlaceholders(tileUrlTemplate);
   const tilePreview = useMemo(
@@ -69,6 +75,37 @@ export function RunWorkflowCard({
     setLatitude(""); setLongitude(""); setRunName("");
     setBufferKm("2.0"); setResolution("640");
     setShowAdvanced(false);
+    setRoiPreview(null);
+    setRoiPreviewError(null);
+  }
+
+  function handleLatitudeChange(value: string) {
+    setLatitude(value);
+    setRoiPreview(null);
+    setRoiPreviewError(null);
+  }
+
+  function handleLongitudeChange(value: string) {
+    setLongitude(value);
+    setRoiPreview(null);
+    setRoiPreviewError(null);
+  }
+
+  async function handlePreviewRoi() {
+    if (!canPreviewRoi) {
+      return;
+    }
+    setIsPreviewingRoi(true);
+    setRoiPreviewError(null);
+    try {
+      const preview = await onPreviewRoi?.({ lat: latitudeValue, lon: longitudeValue });
+      setRoiPreview(preview ?? null);
+    } catch (error) {
+      setRoiPreview(null);
+      setRoiPreviewError(error instanceof Error ? error.message : "Preview request failed.");
+    } finally {
+      setIsPreviewingRoi(false);
+    }
   }
 
   async function handleQueueRun() {
@@ -99,6 +136,20 @@ export function RunWorkflowCard({
     if (isCenter) {
       setTilePreviewStatus("error");
     }
+  }
+
+  function handleLocalPickerClick(event: MouseEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const xRatio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const yRatio = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    const baseLatitude = latitudeValid ? latitudeValue : 0;
+    const baseLongitude = longitudeValid ? longitudeValue : 0;
+    const nextLatitude = clamp(baseLatitude + (0.5 - yRatio) * 0.1, -90, 90);
+    const nextLongitude = clamp(baseLongitude + (xRatio - 0.5) * 0.1, -180, 180);
+    setLatitude(nextLatitude.toFixed(6));
+    setLongitude(nextLongitude.toFixed(6));
+    setRoiPreview(null);
+    setRoiPreviewError(null);
   }
 
   return (
@@ -173,7 +224,7 @@ export function RunWorkflowCard({
               max={90}
               step="any"
               value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
+              onChange={(e) => handleLatitudeChange(e.target.value)}
               placeholder="e.g. 43.6532"
               aria-invalid={hasLatitude && !latitudeValid}
               className="font-mono rounded outline-none"
@@ -198,7 +249,7 @@ export function RunWorkflowCard({
               max={180}
               step="any"
               value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
+              onChange={(e) => handleLongitudeChange(e.target.value)}
               placeholder="e.g. -79.3832"
               aria-invalid={hasLongitude && !longitudeValid}
               className="font-mono rounded outline-none"
@@ -211,6 +262,76 @@ export function RunWorkflowCard({
               }}
             />
           </div>
+        </div>
+        {((hasLatitude && !latitudeValid) || (hasLongitude && !longitudeValid)) && (
+          <div
+            className="rounded px-3 py-2"
+            style={{
+              fontSize: "11px",
+              color: "var(--gs-red)",
+              backgroundColor: "var(--gs-red-bg)",
+              border: "1px solid var(--gs-red-border)",
+            }}
+          >
+            Latitude must be -90 to 90 and longitude must be -180 to 180.
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--gs-navy)" }}>
+              Point picker
+            </span>
+            <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>local preview</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleLocalPickerClick}
+            className="rounded"
+            style={{
+              position: "relative",
+              minHeight: "128px",
+              backgroundColor: "rgba(248,247,242,0.95)",
+              border: "1px solid rgba(28,43,94,0.14)",
+              cursor: "crosshair",
+              overflow: "hidden",
+            }}
+          >
+            <span style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(28,43,94,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(28,43,94,0.08) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+            <span style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: "1px", backgroundColor: "rgba(28,43,94,0.18)" }} />
+            <span style={{ position: "absolute", top: "50%", left: 0, right: 0, height: "1px", backgroundColor: "rgba(28,43,94,0.18)" }} />
+            {latitudeValid && longitudeValid ? (
+              <span
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "24px",
+                  height: "24px",
+                  border: "2px solid var(--gs-red)",
+                  borderRadius: "999px",
+                  backgroundColor: "rgba(255,255,255,0.82)",
+                  boxShadow: "0 1px 4px rgba(28,43,94,0.18)",
+                }}
+              >
+                <MapPin size={13} style={{ color: "var(--gs-red)", margin: "2px auto 0" }} />
+              </span>
+            ) : (
+              <span
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontSize: "11px",
+                  color: "var(--gs-slate)",
+                }}
+              >
+                Click to seed point
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Run name */}
@@ -532,6 +653,68 @@ export function RunWorkflowCard({
           </div>
         )}
 
+        <div
+          className="rounded px-3 py-2 flex flex-col gap-2"
+          style={{ backgroundColor: "rgba(255,255,255,0.72)", border: "1px solid rgba(28,43,94,0.12)" }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div
+                className="font-mono"
+                style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+              >
+                ROI / Grid Preview
+              </div>
+              <div style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
+                Preview metadata is computed before queueing.
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={!canPreviewRoi}
+              onClick={() => void handlePreviewRoi()}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1.5"
+              style={{
+                backgroundColor: canPreviewRoi ? "var(--gs-navy)" : "var(--muted)",
+                color: canPreviewRoi ? "white" : "var(--gs-slate)",
+                border: "none",
+                cursor: canPreviewRoi ? "pointer" : "not-allowed",
+                fontSize: "11px",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Search size={11} />
+              {isPreviewingRoi ? "Previewing..." : "Preview"}
+            </button>
+          </div>
+
+          {roiPreviewError && (
+            <div
+              className="rounded px-2 py-1.5"
+              style={{ fontSize: "11px", color: "var(--gs-red)", backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}
+            >
+              {roiPreviewError}
+            </div>
+          )}
+
+          {roiPreview && (
+            <div className="grid grid-cols-2 gap-2">
+              <PreviewMetric label="Reference" value={roiPreview.gridPreview.referenceSystemLabel} />
+              <PreviewMetric label="Zone" value={`${roiPreview.gridPreview.zoneNumber} ${roiPreview.gridPreview.hemisphere}`} />
+              <PreviewMetric label="Grid" value={`${roiPreview.gridPreview.widthCells} x ${roiPreview.gridPreview.heightCells} cells`} />
+              <PreviewMetric label="Cell" value={`${roiPreview.gridPreview.cellSizeMeters} m`} />
+              <PreviewMetric label="Window" value={`${roiPreview.roiWindowPreview.widthMeters.toFixed(0)} x ${roiPreview.roiWindowPreview.heightMeters.toFixed(0)} m`} />
+              <PreviewMetric label="Affine" value={roiPreview.gridPreview.affineCoefficients.map((item) => item.toFixed(2)).join(", ")} wide />
+              {roiPreview.warnings.length > 0 && (
+                <div className="col-span-2" style={{ fontSize: "10px", color: "var(--gs-slate)" }}>
+                  {roiPreview.warnings[0]}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2">
           <button
@@ -571,6 +754,19 @@ export function RunWorkflowCard({
             {feedback}
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PreviewMetric({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={wide ? "col-span-2" : ""}>
+      <div className="font-mono" style={{ fontSize: "9px", color: "var(--gs-slate)", textTransform: "uppercase" }}>
+        {label}
+      </div>
+      <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", wordBreak: "break-word" }}>
+        {value}
       </div>
     </div>
   );
@@ -626,4 +822,8 @@ function tileTemplateLabel(template: string): string {
   } catch (_error) {
     return "custom tile template";
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
