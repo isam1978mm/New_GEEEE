@@ -24,7 +24,7 @@ def test_roadmap_checklist_marks_phase_4z_and_phase_5_complete():
     ) in text
 
 
-def test_phase_6_is_complete_and_phase_7_is_next_unchecked_roadmap_phase():
+def test_phase_6_and_phase_7_are_complete_and_phase_8_is_next_unchecked_roadmap_phase():
     text = _read(FULL_CHECKLIST)
 
     phase_5_line = "[x] Phase 5 — QA and intermediate parity — approved —"
@@ -33,16 +33,24 @@ def test_phase_6_is_complete_and_phase_7_is_next_unchecked_roadmap_phase():
         "b17dacbbe07bd40cc40b0e10022d51669e142578 — contract: "
         "`docs/PHASE_6_PRIVATE_MAP_ARTIFACT_PARITY_CONTRACT.md`"
     )
-    phase_7_line = "[ ] Phase 7 — Classifier/model parity"
+    phase_7_line = (
+        "[x] Phase 7 — Classifier/model parity — approved — "
+        "383446289214b52012c3ce9d49745cec3bdce376 — contract: "
+        "`docs/PHASE_7_CLASSIFIER_MODEL_PARITY_CONTRACT.md`"
+    )
+    phase_8_line = "[ ] Phase 8 — Probability-only ML classifier design"
 
     assert phase_5_line in text
     assert phase_6_line in text
     assert phase_7_line in text
+    assert phase_8_line in text
     assert text.index(phase_5_line) < text.index(phase_6_line)
     assert text.index(phase_6_line) < text.index(phase_7_line)
+    assert text.index(phase_7_line) < text.index(phase_8_line)
     assert "Phase 4Z" in text
     assert text.index("Phase 4Z") < text.index(phase_5_line)
     assert "[ ] Phase 6 — Coordinate/map/private parity outputs" not in text
+    assert "[ ] Phase 7 — Classifier/model parity" not in text
 
 
 def test_phase_4_checklist_marks_phase_4z_complete():
@@ -62,3 +70,4 @@ def test_no_competing_roadmap_list_is_introduced():
     assert text.count("Phase 10 — Clean app vs parity app decision") == 1
     assert "Phase 4H12" not in text
     assert "Phase 6A" not in text
+    assert "Phase 7A" not in text
