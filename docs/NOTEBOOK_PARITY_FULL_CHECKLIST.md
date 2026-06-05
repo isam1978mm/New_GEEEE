@@ -84,7 +84,7 @@ Rules:
     - PCA stack QA
     - GRID consistency reports
 
-[ ] Phase 6 — Coordinate/map/private parity outputs
+[ ] Phase 6 — Coordinate/map/private parity outputs — contract: `docs/PHASE_6_PRIVATE_MAP_ARTIFACT_PARITY_CONTRACT.md`
     Covers:
     - private coordinate-bearing filesystem artifacts
     - private map artifacts
