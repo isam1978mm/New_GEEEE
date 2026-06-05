@@ -152,7 +152,7 @@ Acceptance gates:
 
 Goal: implement only selected missing raster/feature writers that have exact source formula, clear metadata contract, and frozen or obtainable reference expectations.
 
-Status: complete by `docs/IMPLEMENTATION_PHASE_C_DEFENSIBLE_RASTER_FEATURE_WRITERS.md`; implementation commit will be recorded after the Phase C commit is created.
+Status: complete by `docs/IMPLEMENTATION_PHASE_C_DEFENSIBLE_RASTER_FEATURE_WRITERS.md`; implementation commit `28e8c6234d1d4bffe9af79f806a1c49421955570`.
 
 Scope:
 
