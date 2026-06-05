@@ -182,7 +182,7 @@ Acceptance gates:
 
 Goal: add private filesystem-only writers for selected map artifacts, without public exposure.
 
-Status: complete by `docs/IMPLEMENTATION_PHASE_D_PRIVATE_MAP_ARTIFACT_WRITERS.md`; implementation commit will be recorded after the Phase D commit is created.
+Status: complete by `docs/IMPLEMENTATION_PHASE_D_PRIVATE_MAP_ARTIFACT_WRITERS.md`; implementation commit `747662f00d38dbebf569ee0290f31d5cd47bfa20`.
 
 Scope:
 
