@@ -65,7 +65,7 @@ Rules:
 
 [x] Phase 4H7 — semantic logic rasters recovery + verifier — approved — 4c550313f89dd55f7f09ef1bab36d24a401d1822
 
-[x] Phase 4H8 — semantic density/artifact rasters recovery + verifier — approved — 3ce545e43a6dd0d455b0816ee33555a33ddc2ac4
+[x] Phase 4H8 — semantic density/artifact rasters recovery + verifier — approved — 3ce545e43a6dd0d455c856375c9921c26074
 
 [x] Phase 4H9 — remaining rare-material semantic rasters recovery + verifier — approved — 19550c010405a5cfce56358fec040d1163b1e4a0
 
@@ -104,7 +104,7 @@ Rules:
     - probability-only outputs
     - no confirmation wording
 
-[ ] Phase 9 — End-to-end parity harness
+[x] Phase 9 — End-to-end parity harness — approved — ff5fb2f31abeaa40912e2486de6d5bf17ee8bb6c — contract: `docs/PHASE_9_END_TO_END_PARITY_HARNESS.md`
     Goal:
     - one command/test suite to compare app outputs vs frozen notebook reference bundle
     - runtime presence separate from notebook-value parity
