@@ -122,7 +122,7 @@ Acceptance gates:
 
 Goal: add a controlled backend execution path for Earth Engine data acquisition and export, replacing notebook/Colab behavior with app-safe backend behavior.
 
-Status: complete by `docs/IMPLEMENTATION_PHASE_B_CONTROLLED_EE_RUN_FLOW.md`; implementation commit will be recorded after the Phase B commit is created.
+Status: complete by `docs/IMPLEMENTATION_PHASE_B_CONTROLLED_EE_RUN_FLOW.md`; implementation commit `1c5a84b619de1e70a49f16ba98c8f07702044a38`.
 
 Scope:
 
