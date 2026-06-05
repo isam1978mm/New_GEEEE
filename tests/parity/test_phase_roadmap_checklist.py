@@ -24,7 +24,7 @@ def test_roadmap_checklist_marks_phase_4z_and_phase_5_complete():
     ) in text
 
 
-def test_phase_6_and_phase_7_are_complete_and_phase_8_is_complete_and_phase_9_is_next_unchecked_roadmap_phase():
+def test_phase_6_through_phase_10_are_complete_and_the_roadmap_is_closed():
     text = _read(FULL_CHECKLIST)
 
     phase_5_line = "[x] Phase 5 — QA and intermediate parity — approved —"
@@ -48,7 +48,11 @@ def test_phase_6_and_phase_7_are_complete_and_phase_8_is_complete_and_phase_9_is
         "ff5fb2f31abeaa40912e2486de6d5bf17ee8bb6c — contract: "
         "`docs/PHASE_9_END_TO_END_PARITY_HARNESS.md`"
     )
-    phase_10_line = "[ ] Phase 10 — Clean app vs parity app decision"
+    phase_10_line = (
+        "[x] Phase 10 — Clean app vs parity app decision — approved — "
+        "ff07adc5be43ea83186dbd55f69dab1bcfbc49bd — contract: "
+        "`docs/PHASE_10_CLEAN_VS_PARITY_DECISION.md`"
+    )
 
     assert phase_5_line in text
     assert phase_6_line in text
@@ -67,6 +71,9 @@ def test_phase_6_and_phase_7_are_complete_and_phase_8_is_complete_and_phase_9_is
     assert "[ ] Phase 7 — Classifier/model parity" not in text
     assert "[ ] Phase 8 — Probability-only ML classifier design" not in text
     assert "[ ] Phase 9 — End-to-end parity harness" not in text
+    assert "[ ] Phase 10 — Clean app vs parity app decision" not in text
+    assert "Roadmap status: closed at Phase 10." in text
+    assert "No later phase exists unless the user opens a new roadmap." in text
 
 
 def test_phase_4_checklist_marks_phase_4z_complete():
@@ -88,3 +95,5 @@ def test_no_competing_roadmap_list_is_introduced():
     assert "Phase 6A" not in text
     assert "Phase 7A" not in text
     assert "Phase 8A" not in text
+    assert "[ ] Phase 11" not in text
+    assert "[x] Phase 11" not in text

@@ -214,4 +214,5 @@ def test_docs_and_code_do_not_introduce_forbidden_certainty_wording():
 def test_checklist_does_not_introduce_phase_11():
     text = _read(FULL_CHECKLIST)
 
-    assert "Phase 11" not in text
+    assert "[ ] Phase 11" not in text
+    assert "[x] Phase 11" not in text

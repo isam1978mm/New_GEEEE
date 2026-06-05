@@ -57,8 +57,11 @@ Rules:
 [x] Phase 7 — Classifier/model parity — approved — 383446289214b52012c3ce9d49745cec3bdce376 — contract: `docs/PHASE_7_CLASSIFIER_MODEL_PARITY_CONTRACT.md`
 [x] Phase 8 — Probability-only ML classifier design — approved — 8abab1a556c9788bc00555c856375c9921c26074 — contract: `docs/PHASE_8_PROBABILITY_ONLY_CLASSIFIER_DESIGN.md`
 [x] Phase 9 — End-to-end parity harness — approved — ff5fb2f31abeaa40912e2486de6d5bf17ee8bb6c — contract: `docs/PHASE_9_END_TO_END_PARITY_HARNESS.md`
-[ ] Phase 10 — Clean app vs parity app decision
+[x] Phase 10 — Clean app vs parity app decision — approved — ff07adc5be43ea83186dbd55f69dab1bcfbc49bd — contract: `docs/PHASE_10_CLEAN_VS_PARITY_DECISION.md`
 ```
+
+Roadmap status: closed at Phase 10.
+No later phase exists unless the user opens a new roadmap.
 
 ## Required read order for future Codex work
 
