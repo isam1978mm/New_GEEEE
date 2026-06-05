@@ -25,7 +25,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 [x] Phase B — Add controlled backend Earth Engine run flow
 [x] Phase C — Add only defensible missing raster/feature writers
 [x] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
-[ ] Phase E — Add private parity verifier against frozen notebook outputs
+[x] Phase E — Add private parity verifier against frozen notebook outputs
 [ ] Phase F — Add optional private CLI classifier using neutral labels and probability/score wording only
 ```
 
@@ -211,6 +211,8 @@ Acceptance gates:
 
 Goal: make the existing Phase 9 harness useful with a real frozen notebook reference bundle.
 
+Status: complete by `docs/IMPLEMENTATION_PHASE_E_PRIVATE_PARITY_VERIFIER.md`; implementation commit will be recorded after the Phase E commit is created.
+
 Scope:
 
 - define expected reference bundle layout
@@ -382,8 +384,8 @@ Acceptance gates:
 [x] Phase B
 [x] Phase C1 — first selected writer slice
 [x] Phase D1 — private map artifact writer contract and first writer
-[ ] Phase E1 — frozen reference bundle validator
-[ ] Phase E2 — verifier execution against frozen references
+[x] Phase E1 — frozen reference bundle validator
+[x] Phase E2 — verifier execution against frozen references
 [ ] Phase F1 — private neutral probability CLI classifier, if still desired
 [ ] Special Track G1 — exact-coordinate public overlay access-control design
 [ ] Special Track H1 — deep-learning model feasibility with good data/weights
