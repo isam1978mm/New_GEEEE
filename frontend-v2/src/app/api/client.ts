@@ -128,6 +128,37 @@ export interface RoiPreview {
   warnings: string[];
 }
 
+export interface EarthEnginePlanInput {
+  lat: number;
+  lon: number;
+  acquisition_start: string;
+  acquisition_end: string;
+  cloud_percent_max?: number | null;
+  sar_orbit?: "any" | "ascending" | "descending";
+  sar_polarization?: "VV" | "VH" | "VV_VH";
+  dry_run?: boolean;
+}
+
+export interface EarthEnginePlan {
+  planId: string;
+  mode: string;
+  dryRun: boolean;
+  executionStatus: string;
+  authReadiness: {
+    status: string;
+    backendAuthConfigured: boolean;
+    keyFilePresent: boolean;
+    realExecutionEnabled: boolean;
+  };
+  acquisitionWindow: {
+    start: string;
+    end: string;
+  };
+  plannedProviderFamilies: string[];
+  plannedQueryFilters: Record<string, string | number | null>;
+  warnings: string[];
+}
+
 export interface DeleteRunResult {
   runId: string;
   deleted: boolean;
@@ -329,6 +360,25 @@ interface GridPreviewDto {
   affine_coefficients?: unknown;
 }
 
+interface EarthEnginePlanDto {
+  plan_id?: unknown;
+  mode?: unknown;
+  dry_run?: unknown;
+  execution_status?: unknown;
+  auth_readiness?: unknown;
+  acquisition_window?: unknown;
+  planned_provider_families?: unknown;
+  planned_query_filters?: unknown;
+  warnings?: unknown;
+}
+
+interface EarthEngineAuthReadinessDto {
+  status?: unknown;
+  backend_auth_configured?: unknown;
+  key_file_present?: unknown;
+  real_execution_enabled?: unknown;
+}
+
 const KEY_DOWNLOAD_PATHS = [
   "QA/RUN_MANIFEST.json",
   "DEM_GEO8_TIFS/DEM_640.tif",
@@ -397,6 +447,16 @@ export async function createRun(input: CreateRunInput): Promise<Run> {
 export async function previewRoi(input: RoiPreviewInput): Promise<RoiPreview> {
   return mapRoiPreview(
     await fetchJson<RoiPreviewDto>("/roi/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function planEarthEngineRun(input: EarthEnginePlanInput): Promise<EarthEnginePlan> {
+  return mapEarthEnginePlan(
+    await fetchJson<EarthEnginePlanDto>("/earth-engine/plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -675,6 +735,39 @@ function mapRoiPreview(payload: RoiPreviewDto): RoiPreview {
   };
 }
 
+function mapEarthEnginePlan(payload: EarthEnginePlanDto): EarthEnginePlan {
+  const auth = asObject<EarthEngineAuthReadinessDto>(payload.auth_readiness);
+  const acquisitionWindow = asRecord(payload.acquisition_window);
+  const plannedFilters = asRecord(payload.planned_query_filters);
+  const filters: Record<string, string | number | null> = {};
+  for (const [key, value] of Object.entries(plannedFilters)) {
+    if (typeof value === "string" || typeof value === "number" || value === null) {
+      filters[key] = value;
+    }
+  }
+  return {
+    planId: asString(payload.plan_id) || "",
+    mode: asString(payload.mode) || "controlled_earth_engine_planning",
+    dryRun: payload.dry_run !== false,
+    executionStatus: asString(payload.execution_status) || "auth_not_configured",
+    authReadiness: {
+      status: asString(auth.status) || "auth_not_configured",
+      backendAuthConfigured: auth.backend_auth_configured === true,
+      keyFilePresent: auth.key_file_present === true,
+      realExecutionEnabled: auth.real_execution_enabled === true,
+    },
+    acquisitionWindow: {
+      start: asString(acquisitionWindow.start) || "",
+      end: asString(acquisitionWindow.end) || "",
+    },
+    plannedProviderFamilies: Array.isArray(payload.planned_provider_families)
+      ? payload.planned_provider_families.map(asString).filter(Boolean)
+      : [],
+    plannedQueryFilters: filters,
+    warnings: Array.isArray(payload.warnings) ? payload.warnings.map(asString).filter(Boolean) : [],
+  };
+}
+
 function mapDeletionAuditRecord(payload: unknown): DeletionAuditRecord | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -875,6 +968,10 @@ function asNullableNumber(value: unknown): number | null {
 
 function asObject<T extends object>(value: unknown): Partial<T> {
   return value && typeof value === "object" ? (value as Partial<T>) : {};
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function emptyRun(): Run {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { ChevronDown, ChevronRight, WifiOff, Play, RotateCcw, MapPin, Search } from "lucide-react";
-import type { CreateRunInput, RoiPreview, RoiPreviewInput } from "../api/client";
+import { ChevronDown, ChevronRight, WifiOff, Play, RotateCcw, MapPin, Search, Satellite } from "lucide-react";
+import type { CreateRunInput, EarthEnginePlan, EarthEnginePlanInput, RoiPreview, RoiPreviewInput } from "../api/client";
 
 const steps = [
   { n: 1, label: "Define Target" },
@@ -11,6 +11,7 @@ const steps = [
 interface RunWorkflowCardProps {
   onQueueRun?: (input: CreateRunInput) => Promise<void>;
   onPreviewRoi?: (input: RoiPreviewInput) => Promise<RoiPreview>;
+  onPlanEarthEngine?: (input: EarthEnginePlanInput) => Promise<EarthEnginePlan>;
   isQueueing?: boolean;
   feedback?: string | null;
   externalTilesEnabled?: boolean;
@@ -24,6 +25,7 @@ type TileLoadState = "loading" | "success" | "error";
 export function RunWorkflowCard({
   onQueueRun,
   onPreviewRoi,
+  onPlanEarthEngine,
   isQueueing = false,
   feedback = null,
   externalTilesEnabled = false,
@@ -40,6 +42,12 @@ export function RunWorkflowCard({
   const [roiPreview, setRoiPreview] = useState<RoiPreview | null>(null);
   const [roiPreviewError, setRoiPreviewError] = useState<string | null>(null);
   const [isPreviewingRoi, setIsPreviewingRoi] = useState(false);
+  const [acquisitionStart, setAcquisitionStart] = useState(defaultAcquisitionStart());
+  const [acquisitionEnd, setAcquisitionEnd] = useState(defaultAcquisitionEnd());
+  const [cloudPercentMax, setCloudPercentMax] = useState("20");
+  const [eePlan, setEePlan] = useState<EarthEnginePlan | null>(null);
+  const [eePlanError, setEePlanError] = useState<string | null>(null);
+  const [isPlanningEe, setIsPlanningEe] = useState(false);
 
   const latitudeValue = Number.parseFloat(latitude);
   const longitudeValue = Number.parseFloat(longitude);
@@ -49,6 +57,18 @@ export function RunWorkflowCard({
   const longitudeValid = Number.isFinite(longitudeValue) && longitudeValue >= -180 && longitudeValue <= 180;
   const canQueue = latitudeValid && longitudeValid;
   const canPreviewRoi = canQueue && !isPreviewingRoi && Boolean(onPreviewRoi);
+  const acquisitionStartDate = Date.parse(`${acquisitionStart}T00:00:00Z`);
+  const acquisitionEndDate = Date.parse(`${acquisitionEnd}T00:00:00Z`);
+  const acquisitionWindowValid =
+    acquisitionStart.length > 0 &&
+    acquisitionEnd.length > 0 &&
+    Number.isFinite(acquisitionStartDate) &&
+    Number.isFinite(acquisitionEndDate) &&
+    acquisitionEndDate >= acquisitionStartDate;
+  const cloudPercentValue = Number.parseFloat(cloudPercentMax);
+  const cloudPercentValid =
+    cloudPercentMax.trim().length === 0 || (Number.isFinite(cloudPercentValue) && cloudPercentValue >= 0 && cloudPercentValue <= 100);
+  const canPlanEe = canQueue && acquisitionWindowValid && cloudPercentValid && !isPlanningEe && Boolean(onPlanEarthEngine);
   const hasPreview = hasLatitude || hasLongitude || runName.trim().length > 0;
   const tileTemplateValid = hasTileTemplatePlaceholders(tileUrlTemplate);
   const tilePreview = useMemo(
@@ -77,18 +97,24 @@ export function RunWorkflowCard({
     setShowAdvanced(false);
     setRoiPreview(null);
     setRoiPreviewError(null);
+    setEePlan(null);
+    setEePlanError(null);
   }
 
   function handleLatitudeChange(value: string) {
     setLatitude(value);
     setRoiPreview(null);
     setRoiPreviewError(null);
+    setEePlan(null);
+    setEePlanError(null);
   }
 
   function handleLongitudeChange(value: string) {
     setLongitude(value);
     setRoiPreview(null);
     setRoiPreviewError(null);
+    setEePlan(null);
+    setEePlanError(null);
   }
 
   async function handlePreviewRoi() {
@@ -105,6 +131,32 @@ export function RunWorkflowCard({
       setRoiPreviewError(error instanceof Error ? error.message : "Preview request failed.");
     } finally {
       setIsPreviewingRoi(false);
+    }
+  }
+
+  async function handlePlanEarthEngine() {
+    if (!canPlanEe) {
+      return;
+    }
+    setIsPlanningEe(true);
+    setEePlanError(null);
+    try {
+      const plan = await onPlanEarthEngine?.({
+        lat: latitudeValue,
+        lon: longitudeValue,
+        acquisition_start: acquisitionStart,
+        acquisition_end: acquisitionEnd,
+        cloud_percent_max: cloudPercentMax.trim().length > 0 ? cloudPercentValue : null,
+        sar_orbit: "any",
+        sar_polarization: "VV_VH",
+        dry_run: true,
+      });
+      setEePlan(plan ?? null);
+    } catch (error) {
+      setEePlan(null);
+      setEePlanError(error instanceof Error ? error.message : "Planning request failed.");
+    } finally {
+      setIsPlanningEe(false);
     }
   }
 
@@ -150,6 +202,8 @@ export function RunWorkflowCard({
     setLongitude(nextLongitude.toFixed(6));
     setRoiPreview(null);
     setRoiPreviewError(null);
+    setEePlan(null);
+    setEePlanError(null);
   }
 
   return (
@@ -715,6 +769,129 @@ export function RunWorkflowCard({
           )}
         </div>
 
+        <div
+          className="rounded px-3 py-2 flex flex-col gap-2"
+          style={{ backgroundColor: "rgba(255,255,255,0.72)", border: "1px solid rgba(28,43,94,0.12)" }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div
+                className="font-mono"
+                style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+              >
+                Earth Engine Backend
+              </div>
+              <div style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
+                Planning only. Real execution stays disabled unless backend config allows it.
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={!canPlanEe}
+              onClick={() => void handlePlanEarthEngine()}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1.5"
+              style={{
+                backgroundColor: canPlanEe ? "var(--gs-navy)" : "var(--muted)",
+                color: canPlanEe ? "white" : "var(--gs-slate)",
+                border: "none",
+                cursor: canPlanEe ? "pointer" : "not-allowed",
+                fontSize: "11px",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Satellite size={11} />
+              {isPlanningEe ? "Planning..." : "Plan"}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col gap-1">
+              <label style={{ fontSize: "10px", fontWeight: 600, color: "var(--gs-slate)" }}>
+                Start
+              </label>
+              <input
+                type="date"
+                value={acquisitionStart}
+                onChange={(event) => {
+                  setAcquisitionStart(event.target.value);
+                  setEePlan(null);
+                  setEePlanError(null);
+                }}
+                className="font-mono rounded outline-none"
+                style={{ fontSize: "11px", padding: "5px 7px", backgroundColor: "var(--input-background)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label style={{ fontSize: "10px", fontWeight: 600, color: "var(--gs-slate)" }}>
+                End
+              </label>
+              <input
+                type="date"
+                value={acquisitionEnd}
+                onChange={(event) => {
+                  setAcquisitionEnd(event.target.value);
+                  setEePlan(null);
+                  setEePlanError(null);
+                }}
+                className="font-mono rounded outline-none"
+                style={{ fontSize: "11px", padding: "5px 7px", backgroundColor: "var(--input-background)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label style={{ fontSize: "10px", fontWeight: 600, color: "var(--gs-slate)" }}>
+                Cloud max
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="1"
+                value={cloudPercentMax}
+                onChange={(event) => {
+                  setCloudPercentMax(event.target.value);
+                  setEePlan(null);
+                  setEePlanError(null);
+                }}
+                className="font-mono rounded outline-none"
+                style={{ fontSize: "11px", padding: "5px 7px", backgroundColor: "var(--input-background)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
+              />
+            </div>
+          </div>
+
+          {(!acquisitionWindowValid || !cloudPercentValid) && (
+            <div
+              className="rounded px-2 py-1.5"
+              style={{ fontSize: "11px", color: "var(--gs-red)", backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}
+            >
+              Acquisition dates must be ordered and cloud max must be 0 to 100.
+            </div>
+          )}
+
+          {eePlanError && (
+            <div
+              className="rounded px-2 py-1.5"
+              style={{ fontSize: "11px", color: "var(--gs-red)", backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}
+            >
+              {eePlanError}
+            </div>
+          )}
+
+          {eePlan && (
+            <div className="grid grid-cols-2 gap-2">
+              <PreviewMetric label="Status" value={formatStatus(eePlan.executionStatus)} />
+              <PreviewMetric label="Dry run" value={eePlan.dryRun ? "yes" : "no"} />
+              <PreviewMetric label="Auth" value={formatStatus(eePlan.authReadiness.status)} />
+              <PreviewMetric label="Providers" value={eePlan.plannedProviderFamilies.join(", ")} wide />
+              {eePlan.warnings.length > 0 && (
+                <div className="col-span-2" style={{ fontSize: "10px", color: "var(--gs-slate)" }}>
+                  {eePlan.warnings[0]}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2">
           <button
@@ -826,4 +1003,22 @@ function tileTemplateLabel(template: string): string {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function defaultAcquisitionEnd(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function defaultAcquisitionStart(): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - 30);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatStatus(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
 }

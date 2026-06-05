@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.api.artifacts import router as artifacts_router
+from app.api.earth_engine import router as earth_engine_router
 from app.api.errors import add_exception_handlers, public_error_response
 from app.api.health import router as health_router
 from app.api.roi_preview import router as roi_preview_router
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     add_exception_handlers(app)
+    app.include_router(earth_engine_router)
     app.include_router(health_router)
     app.include_router(roi_preview_router)
     app.include_router(runs_router)

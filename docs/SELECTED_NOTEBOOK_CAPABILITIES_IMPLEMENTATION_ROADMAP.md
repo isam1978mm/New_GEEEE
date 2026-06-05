@@ -22,7 +22,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 
 ```text
 [x] Phase A — Add app map point picker + ROI/grid preview
-[ ] Phase B — Add controlled backend Earth Engine run flow
+[x] Phase B — Add controlled backend Earth Engine run flow
 [ ] Phase C — Add only defensible missing raster/feature writers
 [ ] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
 [ ] Phase E — Add private parity verifier against frozen notebook outputs
@@ -121,6 +121,8 @@ Acceptance gates:
 ## Phase B — Add controlled backend Earth Engine run flow
 
 Goal: add a controlled backend execution path for Earth Engine data acquisition and export, replacing notebook/Colab behavior with app-safe backend behavior.
+
+Status: complete by `docs/IMPLEMENTATION_PHASE_B_CONTROLLED_EE_RUN_FLOW.md`; implementation commit will be recorded after the Phase B commit is created.
 
 Scope:
 
@@ -373,7 +375,7 @@ Acceptance gates:
 
 ```text
 [x] Phase A
-[ ] Phase B
+[x] Phase B
 [ ] Phase C1 — first selected writer slice
 [ ] Phase D1 — private map artifact writer contract and first writer
 [ ] Phase E1 — frozen reference bundle validator

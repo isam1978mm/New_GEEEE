@@ -9,11 +9,14 @@ import {
   getOperatorOutputs,
   getRunDetail,
   listRuns,
+  planEarthEngineRun,
   previewRoi,
   type CleanupSummary,
   type CreateRunInput,
   type DeletionAuditSummary,
   type DeleteRunResult,
+  type EarthEnginePlan,
+  type EarthEnginePlanInput,
   type OperatorOutputTree,
   type RoiPreview,
   type RoiPreviewInput,
@@ -319,6 +322,10 @@ export default function App() {
     return previewRoi(input);
   }
 
+  async function handlePlanEarthEngine(input: EarthEnginePlanInput): Promise<EarthEnginePlan> {
+    return planEarthEngineRun(input);
+  }
+
   async function handleDeleteRun(run: Run): Promise<DeleteRunResult> {
     const result = await deleteRun(run.id);
     setRuns((currentRuns) => currentRuns.filter((item) => item.id !== run.id));
@@ -464,6 +471,7 @@ export default function App() {
                 <RunWorkflowCard
                   onQueueRun={handleQueueRun}
                   onPreviewRoi={handlePreviewRoi}
+                  onPlanEarthEngine={handlePlanEarthEngine}
                   isQueueing={queueing}
                   feedback={queueFeedback}
                   externalTilesEnabled={uiSettings.externalTilesEnabled}
