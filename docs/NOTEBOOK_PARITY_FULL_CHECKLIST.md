@@ -69,9 +69,9 @@ Rules:
 
 [x] Phase 4H9 — remaining rare-material semantic rasters recovery + verifier — approved — 19550c010405a5cfce56358fec040d1163b1e4a0
 
-[ ] Phase 4H10 — remaining alloy/statue semantic rasters recovery + verifier
+[x] Phase 4H10 — remaining alloy/statue semantic rasters recovery + verifier — approved — 23308ae0ed1cf6a28cc761af949e88f208d4ab80
 
-[ ] Phase 4H11 — anchor / non-TIF semantic patterns decision
+[x] Phase 4H11 — anchor / non-TIF semantic patterns decision — approved — 28cc36325f7443a695727ce8a14812bd7242f040
 
 [ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup
 

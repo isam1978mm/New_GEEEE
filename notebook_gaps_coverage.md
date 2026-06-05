@@ -9,6 +9,12 @@
 
 This document defines the phases and goals required to cover notebook-to-app gaps.
 
+Current phase tracking lives in:
+
+- `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`
+- `docs/PHASE_4_COVERAGE_CHECKLIST.md`
+- `docs/PHASE_4_FINAL_COVERAGE_SUMMARY.md`
+
 The objective is **faithful notebook-to-Python-app conversion**.
 
 The app should not drop notebook outputs simply because they are experimental, oddly named, duplicate, Colab-specific, coordinate-bearing, or not part of the clean public UI.

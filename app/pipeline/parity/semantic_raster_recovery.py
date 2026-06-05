@@ -446,7 +446,10 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         id="ai_beh_pattern",
         notebook_output_or_pattern="AI_BEH_*",
         family="AI_BEH semantic rasters",
-        current_app_status="partial; notebook names exist but app does not export a broad AI_BEH raster family",
+        current_app_status=(
+            "covered at inventory level; the umbrella family is now split across dedicated "
+            "Phase 4H5 through Phase 4H11 contracts and decisions"
+        ),
         source_status="partial_source_found",
         authoritative_source_available=True,
         source_reference=(
@@ -454,7 +457,15 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
             "notebooks/new.ipynb contains multiple AI_BEH_* definitions and later consumers."
         ),
         covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        existing_contract_reference=(
+            "docs/AI_BEH_RELATION_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_EXTENDED_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_LOGIC_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_DENSITY_ARTIFACT_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_RARE_MATERIAL_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_ALLOY_STATUE_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_ANCHOR_PATTERN_DECISION.md"
+        ),
         known_stage_file=None,
         known_stage_class=None,
         expected_input_outputs=("Sentinel-2 composites", "thermal inputs where applicable"),
@@ -466,16 +477,28 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         http_servable=False,
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
-        implementation_status="requires_source_reconstruction",
-        blocker="Exact app writer mapping for the full AI_BEH family does not exist; only selected formulas are source-identified in notebook cells.",
-        recommended_next_action="Break the umbrella AI_BEH family into notebook-backed subfamilies and verify each against frozen references.",
-        notes="File existence is not parity proof. No classifier/model confirmation wording is introduced here.",
+        implementation_status="deferred",
+        blocker=(
+            "The umbrella family is no longer the implementation unit. The narrower Phase 4H5 "
+            "through Phase 4H11 documents now carry the branch-level status."
+        ),
+        recommended_next_action=(
+            "Use the narrower AI_BEH contracts and the anchor decision doc instead of treating "
+            "AI_BEH_* as one unresolved output family."
+        ),
+        notes=(
+            "File existence is not parity proof. This umbrella entry remains branch context only "
+            "and does not imply a single runtime writer or verifier."
+        ),
     ),
     SemanticRasterRecoveryItem(
         id="ai_ready_pattern",
         notebook_output_or_pattern="AI_READY_*",
         family="AI_READY semantic rasters",
-        current_app_status="partial; six secret outputs are covered, broader notebook-only AI_READY names remain unresolved",
+        current_app_status=(
+            "covered at inventory level; the umbrella family is now split across the secret-layer, "
+            "anomaly, metal-hardness, and fraction contracts"
+        ),
         source_status="partial_source_found",
         authoritative_source_available=True,
         source_reference=(
@@ -483,7 +506,12 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
             "additional AI_READY names such as Magnetic_Anomaly, EM_Anomaly, Metal_Hardness, and Fraction_*."
         ),
         covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        existing_contract_reference=(
+            "docs/SECRET_LAYERS_PARITY_VERIFICATION_CONTRACT.md; "
+            "docs/AI_READY_ANOMALY_PARITY_CONTRACT.md; "
+            "docs/AI_READY_METAL_HARDNESS_PARITY_CONTRACT.md; "
+            "docs/AI_READY_FRACTION_PARITY_CONTRACT.md"
+        ),
         known_stage_file="app/pipeline/stages/secret_layers.py",
         known_stage_class="SecretLayersStage",
         expected_input_outputs=("AI_READY_640_Secret_*", "other notebook-only semantic intermediates"),
@@ -495,10 +523,18 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         http_servable=False,
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
-        implementation_status="requires_source_reconstruction",
-        blocker="Broader AI_READY notebook outputs are referenced but not source-recovered as app writers.",
-        recommended_next_action="Recover each non-secret AI_READY notebook branch separately before implementation.",
-        notes="This family must remain private/local and does not default to public/shared exposure.",
+        implementation_status="deferred",
+        blocker=(
+            "The umbrella family is no longer the implementation unit. Dedicated Phase 4H2 "
+            "through Phase 4H4 contracts now carry the branch-level status."
+        ),
+        recommended_next_action=(
+            "Use the dedicated AI_READY contracts instead of treating AI_READY_* as one missing family."
+        ),
+        notes=(
+            "This family remains private and notebook-parity only. Runtime output presence and "
+            "notebook-value parity still stay separate."
+        ),
     ),
     SemanticRasterRecoveryItem(
         id="ai_beh_known_relation_rasters",
@@ -508,15 +544,15 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
             "AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif"
         ),
         family="AI_BEH semantic rasters",
-        current_app_status="missing as standalone app notebook-parity outputs",
-        source_status="exact_source_found",
+        current_app_status="covered by dedicated AI_BEH relation recovery and verifier contract for the trio",
+        source_status="covered_by_existing_contract",
         authoritative_source_available=True,
         source_reference=(
             "notebooks/new.ipynb lines around 23418-23424 and repeated stack assembly cells around "
             "23644-23732, 23972-23976, and 35469-35471."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference="docs/AI_BEH_RELATION_PARITY_CONTRACT.md",
         known_stage_file=None,
         known_stage_class=None,
         expected_input_outputs=("Sentinel-2 composite bands B3, B4, B8, B11, B12",),
@@ -534,10 +570,13 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         http_servable=False,
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
-        implementation_status="requires_reference_output",
-        blocker="Notebook formulas and names are explicit, but the app has no standalone writer or parity verifier for this trio.",
-        recommended_next_action="Capture frozen references for the trio, then decide whether to implement as standalone rasters or as documented notebook-only outputs.",
-        notes="These are notebook semantic outputs, not classifier/model confirmations.",
+        implementation_status="covered_no_action_needed",
+        blocker="Dedicated contract exists, but this inventory entry does not assert a passing parity run.",
+        recommended_next_action="Use the dedicated AI_BEH relation contract when a frozen notebook reference bundle is available.",
+        notes=(
+            "These are notebook semantic outputs. Coverage here is by dedicated contract linkage, "
+            "not by a claim that notebook-value parity already passed."
+        ),
     ),
     SemanticRasterRecoveryItem(
         id="ai_beh_extended_notebook_semantics",
@@ -554,15 +593,24 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
             "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif"
         ),
         family="AI_BEH semantic rasters",
-        current_app_status="missing as standalone app notebook-parity outputs",
-        source_status="exact_source_found",
+        current_app_status=(
+            "covered by dedicated AI_BEH extended, logic, density/artifact, rare-material, "
+            "and alloy/statue contracts"
+        ),
+        source_status="covered_by_existing_contract",
         authoritative_source_available=True,
         source_reference=(
             "notebooks/new.ipynb lines around 24193-24310, 24368-24372, and the later "
             "candidate_files table around 35469-35480."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference=(
+            "docs/AI_BEH_EXTENDED_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_LOGIC_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_DENSITY_ARTIFACT_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_RARE_MATERIAL_PARITY_CONTRACT.md; "
+            "docs/AI_BEH_ALLOY_STATUE_PARITY_CONTRACT.md"
+        ),
         known_stage_file=None,
         known_stage_class=None,
         expected_input_outputs=("Sentinel-2 composites",),
@@ -578,10 +626,15 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         http_servable=False,
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
-        implementation_status="requires_reference_output",
-        blocker="Formulas and names are notebook-visible, but there is no app writer surface or frozen reference lock for this branch.",
-        recommended_next_action="Split the extended AI_BEH list into reference-backed implementation slices rather than treating it as one opaque family.",
-        notes="The names are parity inventory labels only, not product claims.",
+        implementation_status="covered_no_action_needed",
+        blocker="Dedicated contracts exist, but this umbrella inventory entry does not assert a passing parity run.",
+        recommended_next_action=(
+            "Read the narrower AI_BEH family contracts instead of treating this extended list as one unresolved branch."
+        ),
+        notes=(
+            "The names remain parity inventory labels only. Coverage here is by contract linkage, "
+            "not by runtime output proof."
+        ),
     ),
     SemanticRasterRecoveryItem(
         id="ai_beh_report_precursor_tensors",
@@ -590,15 +643,18 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
             "AI_BEH_GoldAlloy_Signal | AI_BEH_MassVolume_Shadow"
         ),
         family="AI_BEH semantic rasters",
-        current_app_status="partial; formulas are reproduced inside report_640 logic, but standalone notebook-named rasters are not exported",
-        source_status="existing_app_equivalent_found",
+        current_app_status=(
+            "covered by dedicated anchor-pattern decision; the four names remain internal "
+            "precursors or downstream-covered report logic, not standalone parity outputs"
+        ),
+        source_status="covered_by_existing_contract",
         authoritative_source_available=True,
         source_reference=(
             "notebooks/new.ipynb lines around 24460-24484 define these four behavior tensors; "
             "app/pipeline/stages/report_640.py reproduces the same calculations inside REPORT_640 generation."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference="docs/AI_BEH_ANCHOR_PATTERN_DECISION.md",
         known_stage_file="app/pipeline/stages/report_640.py",
         known_stage_class="Report640Stage",
         expected_input_outputs=("s2_raw_cube.npy", "RAW_ST_B10.npy"),
@@ -618,24 +674,33 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         http_servable=False,
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
-        implementation_status="requires_reference_output",
-        blocker="Exact notebook formulas are known, but standalone notebook-named outputs are not part of the current app writer surface.",
-        recommended_next_action="Decide whether these four behavior tensors require standalone parity outputs or remain documented as internal report precursors only.",
-        notes="Runtime output presence and notebook-value parity remain separate from formula recovery.",
+        implementation_status="covered_no_action_needed",
+        blocker=(
+            "Dedicated decision doc exists, but this inventory entry does not assert standalone "
+            "notebook exports or notebook-value parity."
+        ),
+        recommended_next_action=(
+            "Use the anchor-pattern decision doc to determine whether later standalone parity "
+            "work is needed for any of the four names."
+        ),
+        notes=(
+            "Runtime output presence and notebook-value parity remain separate. Existing "
+            "REPORT_640 downstream coverage does not create standalone notebook-named outputs."
+        ),
     ),
     SemanticRasterRecoveryItem(
         id="ai_ready_magnetic_anomaly",
         notebook_output_or_pattern="AI_READY_640_Magnetic_Anomaly.tif",
         family="AI_READY semantic rasters",
-        current_app_status="missing; referenced by notebook patch and downstream scoring cells only",
-        source_status="partial_source_found",
+        current_app_status="covered by dedicated AI_READY anomaly recovery and verifier contract",
+        source_status="covered_by_existing_contract",
         authoritative_source_available=False,
         source_reference=(
             "notebooks/new.ipynb patch and optional-band cells around 27117-27123, 27966-28042, "
             "30873-31251, and later scoring cells reference this output name but do not provide a recovered writer formula."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference="docs/AI_READY_ANOMALY_PARITY_CONTRACT.md",
         known_stage_file="app/pipeline/stages/hypercube.py",
         known_stage_class="HypercubeStage",
         expected_input_outputs=(),
@@ -648,23 +713,26 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
         implementation_status="blocked_no_source_formula",
-        blocker="Notebook references exist, but no authoritative writer formula or source stage was recovered.",
-        recommended_next_action="Recover the exact notebook source cell or frozen reference before any implementation attempt.",
+        blocker=(
+            "Dedicated contract exists, but the contract still records missing authoritative source "
+            "and missing frozen reference."
+        ),
+        recommended_next_action="Use the dedicated anomaly contract for the remaining source and reference gaps.",
         notes="Do not fabricate this layer from existing app outputs or from the patched hypercube name alone.",
     ),
     SemanticRasterRecoveryItem(
         id="ai_ready_em_anomaly",
         notebook_output_or_pattern="AI_READY_640_EM_Anomaly.tif",
         family="AI_READY semantic rasters",
-        current_app_status="missing; referenced by notebook patch and downstream scoring cells only",
-        source_status="partial_source_found",
+        current_app_status="covered by dedicated AI_READY anomaly recovery and verifier contract",
+        source_status="covered_by_existing_contract",
         authoritative_source_available=False,
         source_reference=(
             "notebooks/new.ipynb patch and optional-band cells around 27122-27125, 27966-28042, "
             "30882-31251, and later scoring cells reference this output name but do not provide a recovered writer formula."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference="docs/AI_READY_ANOMALY_PARITY_CONTRACT.md",
         known_stage_file="app/pipeline/stages/hypercube.py",
         known_stage_class="HypercubeStage",
         expected_input_outputs=(),
@@ -677,23 +745,26 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
         implementation_status="blocked_no_source_formula",
-        blocker="Notebook references exist, but no authoritative writer formula or source stage was recovered.",
-        recommended_next_action="Recover the exact notebook source cell or frozen reference before any implementation attempt.",
+        blocker=(
+            "Dedicated contract exists, but the contract still records missing authoritative source "
+            "and missing frozen reference."
+        ),
+        recommended_next_action="Use the dedicated anomaly contract for the remaining source and reference gaps.",
         notes="Do not fabricate this layer from existing app outputs or from the patched hypercube name alone.",
     ),
     SemanticRasterRecoveryItem(
         id="ai_ready_metal_hardness",
         notebook_output_or_pattern="AI_READY_640_Metal_Hardness.tif",
         family="AI_READY semantic rasters",
-        current_app_status="missing; notebook uses it as a spatial reference and success check, but app has no source writer",
-        source_status="partial_source_found",
+        current_app_status="covered by dedicated AI_READY metal-hardness recovery and verifier contract",
+        source_status="covered_by_existing_contract",
         authoritative_source_available=False,
         source_reference=(
             "notebooks/new.ipynb references the file around 45081, 45168, 45221, 45303, 45455, and 45528 "
             "as a pixel-lock or reference layer, but no authoritative generation formula was recovered."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference="docs/AI_READY_METAL_HARDNESS_PARITY_CONTRACT.md",
         known_stage_file=None,
         known_stage_class=None,
         expected_input_outputs=(),
@@ -706,9 +777,14 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
         implementation_status="blocked_no_source_formula",
-        blocker="A notebook reference path exists, but no authoritative source formula or app-equivalent writer was recovered.",
-        recommended_next_action="Treat this as a missing semantic source artifact until notebook writer logic or frozen references are recovered.",
-        notes="This is inventory only; no attempt should be made to infer the layer from reference-path usage.",
+        blocker=(
+            "Dedicated contract exists, but the contract still records missing authoritative source "
+            "and missing frozen reference."
+        ),
+        recommended_next_action="Use the dedicated metal-hardness contract for the remaining source and reference gaps.",
+        notes=(
+            "This inventory entry now points to the narrower contract rather than treating the layer as an untracked gap."
+        ),
     ),
     SemanticRasterRecoveryItem(
         id="ai_ready_fraction_family",
@@ -717,15 +793,15 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
             "AI_READY_640_Fraction_Carbon_Age.tif | AI_READY_640_Fraction_Silver_Lead.tif"
         ),
         family="AI_READY semantic rasters",
-        current_app_status="missing; notebook names are visible but no app writer exists",
-        source_status="partial_source_found",
-        authoritative_source_available=False,
+        current_app_status="covered by dedicated AI_READY fraction recovery and verifier contract",
+        source_status="covered_by_existing_contract",
+        authoritative_source_available=True,
         source_reference=(
             "notebooks/new.ipynb lines around 45306-45310 and 45458-45462 list the four expected "
             "fraction outputs, but the generating formulas and metadata contract are not recovered."
         ),
-        covered_by_existing_contract=False,
-        existing_contract_reference=None,
+        covered_by_existing_contract=True,
+        existing_contract_reference="docs/AI_READY_FRACTION_PARITY_CONTRACT.md",
         known_stage_file=None,
         known_stage_class=None,
         expected_input_outputs=(),
@@ -742,10 +818,12 @@ _INVENTORY: tuple[SemanticRasterRecoveryItem, ...] = (
         http_servable=False,
         runtime_output_verified=False,
         notebook_value_parity_verified=False,
-        implementation_status="blocked_missing_metadata_contract",
-        blocker="Output names are visible, but formula, units, nodata policy, and source-writer contract are not recovered.",
-        recommended_next_action="Recover the generating notebook cell and frozen references before any implementation or verification slice.",
-        notes="The filenames are preserved for parity inventory only and are not treated as validated app outputs.",
+        implementation_status="covered_no_action_needed",
+        blocker="Dedicated contract exists, but the contract still records remaining metadata and reference gaps.",
+        recommended_next_action="Use the dedicated fraction contract for the remaining reference and metadata checks.",
+        notes=(
+            "The inventory now points at the dedicated fraction contract rather than describing the family as an untracked gap."
+        ),
     ),
 )
 

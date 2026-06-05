@@ -41,9 +41,9 @@ Rules:
 [x] Phase 4H6 — extended semantic rasters recovery + verifier — approved — 9051c36d905b4d715e9b2fde227cdf7431bf4d73
 [x] Phase 4H7 — semantic logic rasters recovery + verifier — approved — 4c550313f89dd55f7f09ef1bab36d24a401d1822
 [x] Phase 4H8 — semantic density/artifact rasters recovery + verifier — approved — 3ce545e43a6dd0d455b0816ee33555a33ddc2ac4
-[ ] Phase 4H9 — remaining rare-material semantic rasters recovery + verifier
-[ ] Phase 4H10 — remaining alloy/statue semantic rasters recovery + verifier
-[ ] Phase 4H11 — anchor / non-TIF semantic patterns decision
+[x] Phase 4H9 — remaining rare-material semantic rasters recovery + verifier — approved — 19550c010405a5cfce56358fec040d1163b1e4a0
+[x] Phase 4H10 — remaining alloy/statue semantic rasters recovery + verifier — approved — 23308ae0ed1cf6a28cc761af949e88f208d4ab80
+[x] Phase 4H11 — anchor / non-TIF semantic patterns decision — approved — 28cc36325f7443a695727ce8a14812bd7242f040
 [ ] Phase 4Z — Phase 4 final coverage summary / naming cleanup
 [ ] Phase 5 — QA and intermediate parity
 [ ] Phase 6 — private coordinate/map parity outputs

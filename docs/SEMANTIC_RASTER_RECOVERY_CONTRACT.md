@@ -4,6 +4,8 @@
 
 Phase 4J locks a recovery inventory for notebook semantic raster families broader than the six `AI_READY_640_Secret_*` outputs. The objective remains faithful notebook conversion. This phase records what is already covered by existing contracts, what notebook semantic outputs have source evidence, and what remains missing or ambiguous before any implementation work can be attempted.
 
+Phase `4Z` reconciles this inventory with the later Phase `4H2` through `4H11` contract documents. The inventory remains a summary layer. It does not replace the later per-family contracts or decisions.
+
 ## Scope
 
 Phase 4J covers:
@@ -67,6 +69,19 @@ Contract linkage:
 
 Phase 4J does not claim those contracts have already passed on a real run. It only records that a recovery or verification contract already exists.
 
+Later Phase 4 contracts also cover the broader semantic families that were unresolved at the time of Phase 4J:
+
+- `docs/AI_READY_ANOMALY_PARITY_CONTRACT.md`
+- `docs/AI_READY_METAL_HARDNESS_PARITY_CONTRACT.md`
+- `docs/AI_READY_FRACTION_PARITY_CONTRACT.md`
+- `docs/AI_BEH_RELATION_PARITY_CONTRACT.md`
+- `docs/AI_BEH_EXTENDED_PARITY_CONTRACT.md`
+- `docs/AI_BEH_LOGIC_PARITY_CONTRACT.md`
+- `docs/AI_BEH_DENSITY_ARTIFACT_PARITY_CONTRACT.md`
+- `docs/AI_BEH_RARE_MATERIAL_PARITY_CONTRACT.md`
+- `docs/AI_BEH_ALLOY_STATUE_PARITY_CONTRACT.md`
+- `docs/AI_BEH_ANCHOR_PATTERN_DECISION.md`
+
 ## Final Tesla Semantic Family
 
 `app/pipeline/stages/hypercube.py` and `notebooks/new.ipynb` establish an evidence-backed semantic/report source family for `FINAL_TESLA_V7_2_HYPERCUBE*`.
@@ -114,19 +129,18 @@ Evidence recovered from `notebooks/new.ipynb` and `docs/NOTEBOOK_VS_APP_OUTPUTS.
 
 These names are preserved as parity inventory labels only. They are not product claims.
 
-## Missing Or Ambiguous Notebook Families
+## Later Phase 4 Semantic Split
 
-The inventory also records notebook semantic outputs that are referenced but not sufficiently recovered for implementation:
+The inventory originally kept several `AI_READY` and `AI_BEH` branches grouped together because dedicated contracts did not yet exist. After Phase `4H2` through Phase `4H11`, those branches are now split into narrower recovery, verifier, or decision documents.
+
+Use the later family contracts for detailed status on:
 
 - `AI_READY_640_Magnetic_Anomaly.tif`
 - `AI_READY_640_EM_Anomaly.tif`
 - `AI_READY_640_Metal_Hardness.tif`
-- `AI_READY_640_Fraction_Gold.tif`
-- `AI_READY_640_Fraction_Pottery.tif`
-- `AI_READY_640_Fraction_Carbon_Age.tif`
-- `AI_READY_640_Fraction_Silver_Lead.tif`
-
-For these items, the notebook currently provides filename references, optional-band logic, or downstream consumers, but not a recovered authoritative writer formula or a locked metadata contract. Phase 4J marks that honestly.
+- `AI_READY_640_Fraction_*`
+- `AI_BEH_*_DOM_lin_640.tif` per-family branches
+- non-TIF anchor patterns such as `AI_BEH_VegRoot_Anomaly`
 
 ## Inventory Model
 
@@ -199,21 +213,24 @@ Phase 4J report writing does not create `.tif` or `.npy` files.
 
 Read the Phase 4J inventory conservatively:
 
-- `covered_by_existing_contract` means recovery or verification work already exists elsewhere.
+- `covered_by_existing_contract` means recovery, verification, or decision work already exists elsewhere.
 - `exact_source_found` means notebook naming and source logic were recovered well enough to inventory the branch.
 - `partial_source_found` means notebook evidence exists but formula, metadata, or writer recovery is incomplete.
 - `existing_app_equivalent_found` means the app reproduces some of the semantic logic internally, but not as a standalone notebook-named output.
 
 No Phase 4J item is marked notebook-value parity verified. Frozen notebook references are still required before any later implementation or verification slice can claim parity.
 
-## Recommended Next Direction
+Runtime output presence remains separate from notebook-value parity throughout the later Phase `4H*` contracts as well.
 
-The next clean Phase 4K target should be one unresolved notebook semantic branch with explicit names but incomplete writer recovery. The strongest candidate is the `AI_READY_640_Magnetic_Anomaly` / `AI_READY_640_EM_Anomaly` pair, because:
+## Phase 4Z Reconciliation
 
-- both names are used repeatedly in downstream notebook logic
-- both are already connected to `FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B`
-- both remain blocked on source recovery rather than on public-surface policy
+After Phase `4H2` through Phase `4H11`:
+
+- the semantic inventory remains useful as a branch map
+- the later per-family contracts are the authoritative detailed status documents
+- the later `AI_BEH` anchor decision doc explains why some notebook names are not standalone parity outputs
+- private and not-public exposure boundaries remain unchanged
 
 ## Confirmation
 
-Phase 4J changes no semantic raster formulas, no `secret_layers.py` formulas, no `report_640.py` formulas, no hypercube math, no raster math, no API behavior, no database behavior, and no artifact serving behavior.
+Phase 4J and the later Phase 4 semantic reconciliation change no semantic raster formulas, no `secret_layers.py` formulas, no `report_640.py` formulas, no hypercube math, no raster math, no API behavior, no database behavior, and no artifact serving behavior.
