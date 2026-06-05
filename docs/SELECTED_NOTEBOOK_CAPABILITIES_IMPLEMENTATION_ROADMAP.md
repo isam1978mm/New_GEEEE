@@ -372,7 +372,7 @@ Acceptance gates:
 ## Recommended Codex execution order
 
 ```text
-[ ] Phase A
+[x] Phase A
 [ ] Phase B
 [ ] Phase C1 — first selected writer slice
 [ ] Phase D1 — private map artifact writer contract and first writer
