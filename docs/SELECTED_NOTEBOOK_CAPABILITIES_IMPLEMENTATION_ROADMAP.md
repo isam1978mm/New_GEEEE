@@ -132,6 +132,8 @@ H1 recommends the first future ML candidate as a private probability classifier 
 
 ## Special Track I — Training cells with a real dataset
 
+Status: I1 dataset/training design complete by `docs/SPECIAL_TRACK_I_DATASET_TRAINING_DESIGN.md`; dataset creation, training, inference, and model integration remain blocked until the I1 gates are satisfied by real private data.
+
 Goal: turn notebook training-cell ideas into a real dataset-driven training roadmap.
 
 ## Special Track J — Full Tesla inference flow decomposition and implementation decision
@@ -151,7 +153,7 @@ Goal: preserve the full Tesla inference flow as a desired capability, but decomp
 [x] Special Track G1 — controlled location overlay access-control design
 [x] Special Track G2 — operator-only private generated-overlay UI design
 [x] Special Track H1 — deep-learning model feasibility with good data/weights
-[ ] Special Track I1 — real dataset/training design
+[x] Special Track I1 — real dataset/training design
 [ ] Special Track J1 — full Tesla inference flow decomposition
 ```
 
