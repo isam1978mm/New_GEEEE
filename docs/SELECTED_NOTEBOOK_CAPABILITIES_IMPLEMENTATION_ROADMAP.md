@@ -168,7 +168,7 @@ These are not mutually exclusive options. The user wants all of this work done o
 Recommended sequence:
 
 ```text
-[ ] 01 — J2 source-lock one Tesla-flow substep
+[x] 01 — J2 source-lock one Tesla-flow substep
 [ ] 02 — Phase C2 implement another defensible feature writer
 [ ] 03 — Phase E3 add comparator for Phase C semantic feature outputs
 [ ] 04 — Phase D2 add private KMZ writer
@@ -185,7 +185,7 @@ Recommended sequence:
 ### App capability track
 
 ```text
-[ ] A1 — J2 source-lock one Tesla substep
+[x] A1 — J2 source-lock one Tesla substep
 [ ] A2 — Phase C2 implement another defensible feature writer
 [ ] A3 — Phase D2 add private KMZ writer
 [ ] A4 — Phase D3 add private heatmap writer
@@ -281,7 +281,7 @@ Rules:
 The best next slice is:
 
 ```text
-01 — J2 source-lock one Tesla-flow substep
+02 — Phase C2 implement another defensible feature writer
 ```
 
-Reason: it is the safest bridge from decomposition to implementation. It chooses one small Tesla-flow piece, locks the evidence, and decides whether it should become a Phase C writer, Phase D private artifact, Phase E comparator, G2 operator overlay task, or ML/data task.
+Reason: J2 selected and source-locked the AI_BEH extended semantic raster family as the next private Phase C writer candidate. Phase C2 should implement that one family only, using local arrays and tests, without opening public exposure or runtime Tesla-flow behavior.
