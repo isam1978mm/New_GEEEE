@@ -172,7 +172,7 @@ Recommended sequence:
 [x] 02 — Phase C2 implement another defensible feature writer
 [x] 03 — Phase E3 add comparator for Phase C semantic feature outputs
 [x] 04 — Phase D2 add private KMZ writer
-[ ] 05 — Phase D3 add private heatmap writer
+[x] 05 — Phase D3 add private heatmap writer
 [ ] 06 — Phase E4 add comparator for Phase D private map artifacts
 [ ] 07 — H1 revisit after I1/J1
 [ ] 08 — I2 create private dataset pack outside git
@@ -188,7 +188,7 @@ Recommended sequence:
 [x] A1 — J2 source-lock one Tesla substep
 [x] A2 — Phase C2 implement another defensible feature writer
 [x] A3 — Phase D2 add private KMZ writer
-[ ] A4 — Phase D3 add private heatmap writer
+[x] A4 — Phase D3 add private heatmap writer
 ```
 
 Purpose: move from decomposition into safe app capability, one small source-locked implementation slice at a time.
@@ -281,7 +281,7 @@ Rules:
 The best next slice is:
 
 ```text
-05 — Phase D3 add private heatmap writer
+06 — Phase E4 add comparator for Phase D private map artifacts
 ```
 
-Reason: Phase D2 added a private filesystem-only KMZ writer. The next app-capability slice is the private heatmap writer, still without public coordinate exposure or artifact-serving policy changes.
+Reason: Phase D3 added a private filesystem-only heatmap JSON writer. The next parity/reference slice is a comparator for Phase D private map artifacts, still without generating app outputs or changing public exposure.

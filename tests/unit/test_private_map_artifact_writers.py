@@ -12,6 +12,7 @@ from app.pipeline.parity import ParityPathError
 from app.pipeline.parity.private_map_artifact_writers import (
     PRIVATE_KMZ_KML_FILENAME,
     write_private_geojson_feature_collection,
+    write_private_heatmap_json,
     write_private_kmz_points,
 )
 from app.services.redaction import verify_redacted
@@ -399,6 +400,177 @@ def test_kmz_writer_creates_only_temporary_private_kmz(tmp_path: Path) -> None:
 
     assert forbidden == []
     assert len(kmz_files) == 1
+
+
+def test_valid_private_weighted_points_write_heatmap_json_under_run_dir(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+
+    result = write_private_heatmap_json(
+        run_dir=run_dir,
+        points=_private_points(),
+        filename="operator_private_heatmap.json",
+    )
+
+    private_path = result.private_path
+    assert private_path.is_file()
+    assert private_path.suffix == ".json"
+    assert private_path.resolve().is_relative_to(run_dir.resolve())
+
+
+def test_heatmap_output_path_stays_under_run_dir(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+
+    result = write_private_heatmap_json(
+        run_dir=run_dir,
+        points=_private_points(),
+    )
+
+    assert result.private_path.resolve().is_relative_to(run_dir.resolve())
+
+
+def test_heatmap_path_traversal_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ParityPathError):
+        write_private_heatmap_json(
+            run_dir=tmp_path / "run",
+            points=_private_points(),
+            output_relative_dir="../outside",
+        )
+
+    with pytest.raises(ParityPathError):
+        write_private_heatmap_json(
+            run_dir=tmp_path / "run",
+            points=_private_points(),
+            filename="../outside.json",
+        )
+
+
+def test_heatmap_json_parses_and_contains_expected_private_points(
+    tmp_path: Path,
+) -> None:
+    weighted_points = [
+        {**_private_points()[0], "weight": 2.5},
+        {**_private_points()[1], "score": 0.44},
+    ]
+
+    result = write_private_heatmap_json(
+        run_dir=tmp_path / "run",
+        points=weighted_points,
+    )
+
+    payload = json.loads(result.private_path.read_text(encoding="utf-8"))
+    assert payload["artifact_type"] == "Private Heatmap JSON"
+    assert payload["point_count"] == 2
+    assert payload["points"][0]["latitude"] == 35.59499
+    assert payload["points"][0]["longitude"] == 36.12694
+    assert payload["points"][0]["weight"] == 2.5
+    assert payload["points"][1]["score"] == 0.44
+
+
+def test_heatmap_redacted_summary_contains_no_coordinates_geometry_paths_or_hashes(
+    tmp_path: Path,
+) -> None:
+    result = write_private_heatmap_json(
+        run_dir=tmp_path / "run",
+        points=_private_points(),
+    )
+
+    summary = result.redacted_summary
+
+    verify_redacted(summary)
+    serialized = json.dumps(summary, sort_keys=True).lower()
+    assert "latitude" not in serialized
+    assert "longitude" not in serialized
+    assert "coordinates" not in serialized
+    assert "geometry" not in serialized
+    assert "36.12694" not in serialized
+    assert "35.59499" not in serialized
+    assert ".json" not in serialized
+    assert "hash" not in serialized
+    assert "download_url" not in serialized
+    assert "download_href" not in serialized
+    assert "artifact_url" not in serialized
+    assert str(tmp_path).lower() not in serialized
+
+
+def test_heatmap_artifact_metadata_is_private_filesystem_only(tmp_path: Path) -> None:
+    result = write_private_heatmap_json(
+        run_dir=tmp_path / "run",
+        points=_private_points(),
+    )
+
+    metadata = result.artifact_metadata
+    assert metadata["artifact_type"] == "Private Heatmap JSON"
+    assert metadata["artifact_class"] == "FILESYSTEM_ONLY"
+    assert metadata["private_classification"] == "PRIVATE_COORDINATE_ARTIFACT"
+    assert metadata["filesystem_only"] is True
+    assert metadata["http_servable"] is False
+    assert metadata["frontend_visible"] is False
+    assert metadata["downloadable_via_api"] is False
+
+
+def test_invalid_heatmap_point_payload_is_rejected(tmp_path: Path) -> None:
+    invalid_points = [
+        {"id": "missing-latitude", "longitude": 36.0},
+        {"id": "bad-latitude", "latitude": "north", "longitude": 36.0},
+        {"id": "bad-range", "latitude": 91.0, "longitude": 36.0},
+        {"id": "bad-longitude", "latitude": 35.0, "longitude": -181.0},
+        {"latitude": 35.0, "longitude": 36.0},
+        {"id": "bad-label", "latitude": 35.0, "longitude": 36.0, "class_label": "A"},
+        {"id": "bad-weight", "latitude": 35.0, "longitude": 36.0, "weight": "heavy"},
+    ]
+
+    for point in invalid_points:
+        with pytest.raises(ValueError):
+            write_private_heatmap_json(
+                run_dir=tmp_path / "run",
+                points=[point],
+            )
+
+
+def test_heatmap_json_uses_neutral_score_wording_only(tmp_path: Path) -> None:
+    result = write_private_heatmap_json(
+        run_dir=tmp_path / "run",
+        points=_private_points(),
+    )
+
+    payload = result.private_path.read_text(encoding="utf-8").lower()
+
+    assert "class_a" in payload
+    assert "score" in payload
+    assert "probability" in payload
+    forbidden_terms = [
+        "con" + "firmed",
+        "fo" + "und",
+        "pro" + "ven",
+        "dig " + "target",
+        "def" + "initely",
+        "dis" + "covery",
+        "burial " + "pro" + "ven",
+        "tomb " + "con" + "firmed",
+        "target " + "con" + "firmed",
+    ]
+    for term in forbidden_terms:
+        assert term not in payload
+
+
+def test_heatmap_writer_creates_only_temporary_private_json(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    write_private_heatmap_json(
+        run_dir=run_dir,
+        points=_private_points(),
+    )
+
+    forbidden = [
+        path
+        for path in run_dir.rglob("*")
+        if path.suffix.lower() in FORBIDDEN_ARTIFACT_SUFFIXES
+    ]
+    json_files = [path for path in run_dir.rglob("*.json")]
+
+    assert forbidden == []
+    assert len(json_files) == 1
 
 
 def test_phase_d_writer_adds_no_public_exposure_or_runtime_calls() -> None:
