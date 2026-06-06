@@ -171,7 +171,7 @@ Recommended sequence:
 [x] 01 — J2 source-lock one Tesla-flow substep
 [x] 02 — Phase C2 implement another defensible feature writer
 [x] 03 — Phase E3 add comparator for Phase C semantic feature outputs
-[ ] 04 — Phase D2 add private KMZ writer
+[x] 04 — Phase D2 add private KMZ writer
 [ ] 05 — Phase D3 add private heatmap writer
 [ ] 06 — Phase E4 add comparator for Phase D private map artifacts
 [ ] 07 — H1 revisit after I1/J1
@@ -187,7 +187,7 @@ Recommended sequence:
 ```text
 [x] A1 — J2 source-lock one Tesla substep
 [x] A2 — Phase C2 implement another defensible feature writer
-[ ] A3 — Phase D2 add private KMZ writer
+[x] A3 — Phase D2 add private KMZ writer
 [ ] A4 — Phase D3 add private heatmap writer
 ```
 
@@ -281,7 +281,7 @@ Rules:
 The best next slice is:
 
 ```text
-04 — Phase D2 add private KMZ writer
+05 — Phase D3 add private heatmap writer
 ```
 
-Reason: Phase E3 added a private comparator for Phase C semantic feature outputs. The next app-capability slice is the private KMZ writer, still without public coordinate exposure or artifact-serving policy changes.
+Reason: Phase D2 added a private filesystem-only KMZ writer. The next app-capability slice is the private heatmap writer, still without public coordinate exposure or artifact-serving policy changes.
