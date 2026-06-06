@@ -102,7 +102,7 @@ Goal: design and later implement controlled location overlays only after access-
 
 ## Special Track G2 — Operator-only private generated-overlay UI
 
-Status: later, not implemented.
+Status: G2 design complete by `docs/SPECIAL_TRACK_G2_OPERATOR_ONLY_OVERLAY_UI_DESIGN.md`; operator-only UI implementation remains blocked until a later explicit user-approved phase.
 
 Goal: allow an authorized operator to view generated private overlay results in the UI without making them public.
 
@@ -145,7 +145,7 @@ Goal: preserve the full Tesla inference flow as a desired capability, but decomp
 [x] Phase E2 — verifier execution against frozen references
 [x] Phase F1 — private neutral probability CLI classifier
 [x] Special Track G1 — controlled location overlay access-control design
-[ ] Special Track G2 — operator-only private generated-overlay UI design
+[x] Special Track G2 — operator-only private generated-overlay UI design
 [ ] Special Track H1 — deep-learning model feasibility with good data/weights
 [ ] Special Track I1 — real dataset/training design
 [ ] Special Track J1 — full Tesla inference flow decomposition
