@@ -26,7 +26,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 [x] Phase C — Add only defensible missing raster/feature writers
 [x] Phase D — Add private KMZ/GeoJSON/heatmap artifact writers
 [x] Phase E — Add private parity verifier against frozen notebook outputs
-[ ] Phase F — Add optional private CLI classifier using neutral labels and probability/score wording only
+[x] Phase F — Add optional private CLI classifier using neutral labels and probability/score wording only
 ```
 
 ### Not approved
@@ -239,6 +239,8 @@ Acceptance gates:
 
 Goal: add or refine a private CLI-only classifier path using neutral labels and probability/score wording only.
 
+Status: complete by `docs/IMPLEMENTATION_PHASE_F_PRIVATE_CLI_CLASSIFIER.md`; implementation commit is recorded in the Phase F final report.
+
 Scope:
 
 - CLI-only
@@ -386,7 +388,7 @@ Acceptance gates:
 [x] Phase D1 — private map artifact writer contract and first writer
 [x] Phase E1 — frozen reference bundle validator
 [x] Phase E2 — verifier execution against frozen references
-[ ] Phase F1 — private neutral probability CLI classifier, if still desired
+[x] Phase F1 — private neutral probability CLI classifier
 [ ] Special Track G1 — exact-coordinate public overlay access-control design
 [ ] Special Track H1 — deep-learning model feasibility with good data/weights
 [ ] Special Track I1 — real dataset/training design
