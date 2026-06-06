@@ -176,7 +176,7 @@ Recommended sequence:
 [x] 06 — Phase E4 add comparator for Phase D private map artifacts
 [x] 07 — H1 revisit after I1/J1
 [x] 08 — I2 create private dataset pack outside git
-[ ] 09 — H2 optional ML dependency sandbox
+[x] 09 — H2 optional ML dependency sandbox
 [ ] 10 — G2 implementation design/details
 [ ] 11 — G2 auth/role/audit foundation
 [ ] 12 — G2 operator-only private overlay preview
@@ -212,7 +212,7 @@ Rules:
 ```text
 [x] B1 — H1 revisit after I1/J1
 [x] B2 — I2 create private dataset pack outside git
-[ ] B3 — H2 optional ML dependency sandbox
+[x] B3 — H2 optional ML dependency sandbox
 ```
 
 Purpose: prepare real ML work only after the governance gates are satisfied.
@@ -281,9 +281,9 @@ Rules:
 The best next slice is:
 
 ```text
-09 — H2 optional ML dependency sandbox
+10 — G2 implementation design/details
 ```
 
-Reason: Future Slice 08 (I2) added the private dataset-pack schema, validator, and readiness report. It validates an operator-supplied local dataset pack against the binding data gates and reports `not_ready` with `training_allowed=false` unless every gate passes, including independent evidence-backed labels, dataset manifest/hash fields, leakage-safe splits, a temporal holdout, numeric holdout/negative/hard-negative minimums, and a preregistered baseline margin. No real dataset is created or committed. The next backlog item is H2 — an optional ML dependency sandbox — which stays design-gated: the base app must remain free of heavy ML packages, and a sandbox is justified only after a real dataset pack reaches `ready_for_private_training_later`. Training (H3) and private inference (H4) remain blocked until the data and evaluation gates pass.
+Reason: Future Slice 09 (H2) added the optional ML dependency sandbox policy and checker. It defines that the base app stays free of required ML packages, that optional ML dependencies may be added only in a later approved `optional_extra` group, that ML code must not be imported at app startup and must be CLI/private first, and it blocks training without a ready I2 dataset, inference without trained/evaluated or approved-weight validation, and weight downloads without a source/license/hash/model-card policy. No ML dependencies were added. The ML and data track (B1–B3) is now complete at the design/readiness level; the remaining ML steps (H3 training, H4 private inference) stay blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The next backlog item is the operator overlay UI track, beginning with `10 — G2 implementation design/details`, which remains design-only and must precede any auth/role/audit foundation or operator-only private overlay preview, with no public exposure.
 
-Future Slice 08 is dataset-pack readiness/validation only. It does not create or commit a real dataset, train, run inference, download data or weights, add ML dependencies, change artifact-serving policy, or call Earth Engine. See `docs/FUTURE_SLICE_08_I2_PRIVATE_DATASET_PACK_READINESS.md`.
+Future Slice 09 is ML dependency sandbox policy/readiness only. It does not add PyTorch/TensorFlow/CUDA/heavy ML dependencies, modify dependency files, train, run inference, download weights, create datasets, change API/frontend/artifact-serving policy, or call Earth Engine. See `docs/FUTURE_SLICE_09_H2_ML_DEPENDENCY_SANDBOX.md`.
