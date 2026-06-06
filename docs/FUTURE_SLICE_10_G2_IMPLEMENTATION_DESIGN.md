@@ -148,3 +148,12 @@ Future Slice 10 does not:
 
 The operator-only overlay UI remains blocked until Future Slice 11 and Future Slice
 12.
+
+## Cross-Reference: Future Slice 11 Foundation
+
+The backend-internal access-control and audit foundation for this design is
+implemented in `docs/FUTURE_SLICE_11_G2_AUTH_ROLE_AUDIT_FOUNDATION.md` and
+`app/pipeline/parity/operator_overlay_access_foundation.py` (foundation only). That
+cross-reference does not change or weaken any gate in this document; it adds no API
+route, no frontend UI, no artifact-serving change, and no public exposure, and the
+operator-only overlay preview remains blocked until Future Slice 12.
