@@ -138,6 +138,8 @@ Goal: turn notebook training-cell ideas into a real dataset-driven training road
 
 ## Special Track J — Full Tesla inference flow decomposition and implementation decision
 
+Status: J1 decomposition complete by `docs/SPECIAL_TRACK_J_TESLA_FLOW_DECOMPOSITION.md`; full runtime implementation remains blocked unless a later user-approved slice is opened.
+
 Goal: preserve the full Tesla inference flow as a desired capability, but decompose it before implementation.
 
 ## Recommended Codex execution order
@@ -154,7 +156,7 @@ Goal: preserve the full Tesla inference flow as a desired capability, but decomp
 [x] Special Track G2 — operator-only private generated-overlay UI design
 [x] Special Track H1 — deep-learning model feasibility with good data/weights
 [x] Special Track I1 — real dataset/training design
-[ ] Special Track J1 — full Tesla inference flow decomposition
+[x] Special Track J1 — full Tesla inference flow decomposition
 ```
 
-Do not run Special Track G2 implementation, Special Track H model implementation, Special Track I training, or Special Track J runtime implementation until their design/decomposition phases are accepted by the user.
+No further execution-order item is opened by this roadmap. Do not run Special Track G2 implementation, Special Track H model implementation, Special Track I training, or Special Track J runtime implementation until a new user-approved implementation slice is accepted.
