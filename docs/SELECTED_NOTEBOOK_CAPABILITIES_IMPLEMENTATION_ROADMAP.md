@@ -169,7 +169,7 @@ Recommended sequence:
 
 ```text
 [x] 01 — J2 source-lock one Tesla-flow substep
-[ ] 02 — Phase C2 implement another defensible feature writer
+[x] 02 — Phase C2 implement another defensible feature writer
 [ ] 03 — Phase E3 add comparator for Phase C semantic feature outputs
 [ ] 04 — Phase D2 add private KMZ writer
 [ ] 05 — Phase D3 add private heatmap writer
@@ -186,7 +186,7 @@ Recommended sequence:
 
 ```text
 [x] A1 — J2 source-lock one Tesla substep
-[ ] A2 — Phase C2 implement another defensible feature writer
+[x] A2 — Phase C2 implement another defensible feature writer
 [ ] A3 — Phase D2 add private KMZ writer
 [ ] A4 — Phase D3 add private heatmap writer
 ```
@@ -281,7 +281,7 @@ Rules:
 The best next slice is:
 
 ```text
-02 — Phase C2 implement another defensible feature writer
+03 — Phase E3 add comparator for Phase C semantic feature outputs
 ```
 
-Reason: J2 selected and source-locked the AI_BEH extended semantic raster family as the next private Phase C writer candidate. Phase C2 should implement that one family only, using local arrays and tests, without opening public exposure or runtime Tesla-flow behavior.
+Reason: Phase C2 added the source-locked AI_BEH extended semantic feature writer family. Phase E3 should add frozen-reference comparison for Phase C semantic feature outputs without changing runtime pipeline behavior or public exposure.
