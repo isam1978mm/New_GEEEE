@@ -33,7 +33,7 @@ No real ML work should happen until the data gate is satisfied.
 
 Notebook outputs and heuristic outputs may be useful as features, weak signals, review hints, or QA inputs. They are not enough to create reviewed labels by themselves.
 
-A reviewed label must have at least one independent evidence source that did not come only from the heuristic pipeline being modeled.
+A reviewed-tier label must have at least one independent evidence source that did not come only from the heuristic pipeline being modeled.
 
 ## Single Source Of Truth: ML Gate Table
 
@@ -47,15 +47,15 @@ This table is the authoritative gate table. Other roadmap wording should refer b
 | Download model weights | After H1 weights policy | Source, license, version, hash, storage, reproducibility notes, and model card are accepted. No random or unpinned downloads. |
 | Add PyTorch/TensorFlow or similar | After H1 dependency policy | Optional dependency group only. Normal app startup must not require heavy ML packages. |
 | Train a model | After H1 and I1 | Independent ground-truth gate passes, dataset manifest exists, split policy exists, metrics are preregistered, threshold policy exists, and baseline comparison rule is accepted. |
-| Private CLI inference | After training/evaluation or approved-weight validation passes | Must beat or meet the preregistered baseline rule on the untouched holdout. Output stays private and probability/score-only. |
+| Private CLI inference | After training/evaluation or approved-weight validation passes | Must beat the preregistered baseline by the preregistered margin on the untouched holdout. Output stays private and probability/score-only. |
 | Connect model output to API/frontend | After private CLI evaluation passes | Requires access control, redaction, DTO policy, audit logging, serving-policy review, and intended-use / acceptable-use / misuse review. |
 | Generated overlay UI for operators | After G2 implementation approval | Operator-only auth, role checks, per-run authorization, audit logging, and default-off config. No general public visibility. |
 | Public location overlays | After a separate public-exposure approval | Requires serving-policy review, redaction review, audit policy, intended-use / acceptable-use / misuse review, and explicit user approval. |
 | Full Tesla flow runtime | After J1 decomposition | Must be split into small approved modules. No single monolithic engine. |
 
-## Hard Gates Before Any Reviewed Label Count
+## Hard Gates Before Any Reviewed-Tier Label Count
 
-A label may count as `reviewed` only if it has at least one independent evidence source.
+A label may count as `reviewed_independent` or `reviewed_adjudicated` only if it has at least one independent evidence source.
 
 Allowed independent evidence examples:
 
@@ -124,7 +124,7 @@ I1 should answer:
 
 1. What is one training example?
 2. What is one label?
-3. What independent evidence source supports each reviewed label?
+3. What independent evidence source supports each reviewed-tier label?
 4. What label quality levels exist?
 5. How are train, validation, and test splits made?
 6. How do we prevent geographic, group, and temporal leakage?
@@ -135,6 +135,7 @@ I1 should answer:
 11. What class prevalence/base rate exists in each split?
 12. How are negatives and hard negatives sampled?
 13. How are thresholds selected without contaminating the holdout?
+14. How are adjudication disagreements handled, and is inter-rater agreement recorded when multiple reviewers are involved?
 
 I1 should not train.
 
@@ -144,6 +145,7 @@ I1 should produce:
 - label schema
 - independent evidence policy
 - label QA policy
+- adjudication and reviewer-disagreement policy
 - split policy
 - metadata policy
 - dataset manifest policy
@@ -226,7 +228,7 @@ A label record must include:
 - timestamp or version
 - notes
 
-`label_evidence_source` is mandatory for reviewed labels.
+`label_evidence_source` is mandatory for reviewed-tier labels.
 
 Label quality levels should distinguish:
 
@@ -365,7 +367,7 @@ Those later options need much stronger datasets.
   "label_evidence_source": "external_reference_dataset_v1:item_12345",
   "evidence_source_type": "authoritative_external_dataset",
   "evidence_source_version": "external_reference_dataset_v1",
-  "evidence_review_method": "expert_adjudication_against_independent_evidence",
+  "evidence_review_method": "direct_match_to_external_reference",
   "features": {
     "semantic_feature_1_mean": 0.62,
     "semantic_feature_2_mean": 0.41,
@@ -462,7 +464,8 @@ Baseline requirement:
 - The Phase F private heuristic classifier is the default baseline for neutral probability/score outputs.
 - The Phase E frozen-reference verifier remains the private reference-comparison boundary where applicable.
 - A future ML model must outperform the Phase F baseline on the untouched holdout by a preregistered margin on the primary metric, or it is not adopted.
-- If the model does not beat the baseline, keep the simpler Phase F path.
+- The preregistered margin must clear holdout noise. For example, the model lower confidence bound should exceed the baseline point estimate, or a paired bootstrap should support the gain.
+- If the model does not beat the baseline by the preregistered margin, keep the simpler Phase F path.
 
 Threshold policy:
 
@@ -471,6 +474,12 @@ Threshold policy:
 - threshold choice must be recorded before final holdout evaluation
 
 Evaluation reports must use neutral class names and probability/score language.
+
+## Inference-Time Drift Monitoring
+
+Input-distribution drift after deployment is a later separate concern.
+
+Any future serving or recurring private inference path must define monitoring for new sensors, new regions, new acquisition windows, preprocessing changes, and feature-distribution shifts before it is treated as production-ready.
 
 ## Output Boundary
 
@@ -533,7 +542,7 @@ Recommended order:
 Do not proceed to training if:
 
 - labels are not defined
-- reviewed labels lack independent evidence
+- reviewed-tier labels lack independent evidence
 - `label_evidence_source` is missing
 - label quality is weak or unknown
 - class prevalence/base rate is not recorded
