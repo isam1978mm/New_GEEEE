@@ -174,7 +174,7 @@ Recommended sequence:
 [x] 04 — Phase D2 add private KMZ writer
 [x] 05 — Phase D3 add private heatmap writer
 [x] 06 — Phase E4 add comparator for Phase D private map artifacts
-[ ] 07 — H1 revisit after I1/J1
+[x] 07 — H1 revisit after I1/J1
 [ ] 08 — I2 create private dataset pack outside git
 [ ] 09 — H2 optional ML dependency sandbox
 [ ] 10 — G2 implementation design/details
@@ -210,7 +210,7 @@ Rules:
 ### ML and data track
 
 ```text
-[ ] B1 — H1 revisit after I1/J1
+[x] B1 — H1 revisit after I1/J1
 [ ] B2 — I2 create private dataset pack outside git
 [ ] B3 — H2 optional ML dependency sandbox
 ```
@@ -281,9 +281,9 @@ Rules:
 The best next slice is:
 
 ```text
-07 — H1 revisit after I1/J1
+08 — I2 create private dataset pack outside git
 ```
 
-Reason: Phase E4 (Future Slice 06) added the private comparator for Phase D private map artifacts (GeoJSON, KMZ, heatmap JSON) without generating app outputs or changing public exposure, completing the near-term parity/reference work in the app-capability and parity tracks. The remaining backlog moves into the ML and data track, beginning with revisiting the H1 deep-learning feasibility rankings against the I1 dataset gates and the J1 Tesla-flow decomposition. That revisit remains design-only and stays blocked from training, inference, weights, and ML dependencies until the governance gates are satisfied.
+Reason: Future Slice 07 revisited the H1 deep-learning feasibility ranking against the I1 dataset gates and the J1 Tesla-flow decomposition. The recommended first future model remains the private feature-summary probability classifier, and every image-model and weight-dependent path stays blocked until a real dataset pack exists. The next ML/data slice is I2 — create a private dataset pack outside git — but only once the I1 independent evidence gate can be satisfied. I2 must keep datasets, labels, chips, and coordinate-bearing metadata out of git, and training stays blocked until the I1 dataset manifest/hash, leakage-safe split, numeric holdout, and preregistered baseline-margin gates pass.
 
-Phase E4 is comparator/verifier work only. It does not implement new writers, change existing writer behavior, expose artifacts through API or frontend, change artifact-serving policy, add public overlays or operator overlay UI, or call Earth Engine. See `docs/FUTURE_SLICE_PHASE_E4_PRIVATE_MAP_ARTIFACT_COMPARATOR.md`.
+Future Slice 07 is H1 revisit/design only. It does not train, run inference, download weights, add ML dependencies, create a dataset, expose model outputs through API or frontend, change artifact-serving policy, or call Earth Engine. See `docs/FUTURE_SLICE_07_H1_REVISIT_AFTER_I1_J1.md`.

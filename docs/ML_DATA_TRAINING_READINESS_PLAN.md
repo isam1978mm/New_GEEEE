@@ -530,7 +530,7 @@ Recommended order:
 1. H1 — deep-learning/model feasibility and candidate ranking
 2. I1 — dataset and training design
 3. J1 — full Tesla flow decomposition
-4. H1 revisit — update feasibility ranking after I1 defines real data constraints
+4. H1 revisit — update feasibility ranking after I1 defines real data constraints (completed as Future Slice 07; see `docs/FUTURE_SLICE_07_H1_REVISIT_AFTER_I1_J1.md`. This cross-reference does not change or weaken any gate in this plan.)
 5. H2 — optional ML dependency sandbox, if H1 approves it
 6. I2 — create dataset pack outside git, if I1 approves it
 7. H3 — baseline training, if data gate passes
