@@ -31,20 +31,60 @@ Remaining later tracks:
 
 No real ML work should happen until the data gate is satisfied.
 
-The project should not train, infer, download weights, add required ML dependencies, connect model outputs to API/frontend, expose generated overlay locations, or port the Tesla flow as a single engine until the required design and data gates pass.
+Notebook outputs and heuristic outputs may be useful as features, weak signals, review hints, or QA inputs. They are not enough to create reviewed labels by themselves.
 
-## When Each Deferred Item Can Happen
+A reviewed label must have at least one independent evidence source that did not come only from the heuristic pipeline being modeled.
+
+## Single Source Of Truth: ML Gate Table
+
+This table is the authoritative gate table. Other roadmap wording should refer back to this table to avoid drift.
 
 | Deferred item | Earliest allowed stage | Required gate |
 |---|---|---|
-| Train a model | After H1 and I1 | Dataset schema, labels, split policy, metrics, and storage policy accepted |
-| Run inference | After a trained or approved-weight model exists | Private CLI inference boundary and evaluation criteria accepted |
-| Download model weights | After H1 weights policy | License, version, source, hash, storage, and reproducibility policy accepted |
-| Add PyTorch/TensorFlow or similar | After H1 dependency policy | Optional dependency group only; normal app startup must not require it |
-| Connect model output to API/frontend | After private CLI evaluation passes | Access control, redaction, DTO, audit, and exposure policy accepted |
-| Generated location overlays in UI | After G2 implementation approval | Operator-only auth, role checks, per-run authorization, audit, and default-off config |
-| Public location overlays | After a separate public-exposure approval | Serving policy, audit, redaction, and user approval accepted |
-| Full Tesla flow | After J1 decomposition | Split into small approved modules; no single monolithic engine |
+| H1 feasibility design | Now, if requested | Design only. Must inventory model attempts, define data requirements, define weights/dependency policy, define metrics, and name blockers. No training or inference. |
+| I1 dataset/training design | After or alongside H1 | Must define dataset schema, label schema, independent evidence policy, split policy, dataset manifest, storage class, metrics, baseline, and stop conditions. No training. |
+| Approved-weight inference | After H1 and I1 | Even approved weights require a labeled holdout with independent evidence and a baseline comparison. No unlabeled zero-validation inference. |
+| Download model weights | After H1 weights policy | Source, license, version, hash, storage, reproducibility notes, and model card are accepted. No random or unpinned downloads. |
+| Add PyTorch/TensorFlow or similar | After H1 dependency policy | Optional dependency group only. Normal app startup must not require heavy ML packages. |
+| Train a model | After H1 and I1 | Independent ground-truth gate passes, dataset manifest exists, split policy exists, metrics are preregistered, threshold policy exists, and baseline comparison rule is accepted. |
+| Private CLI inference | After training/evaluation or approved-weight validation passes | Must beat or meet the preregistered baseline rule on the untouched holdout. Output stays private and probability/score-only. |
+| Connect model output to API/frontend | After private CLI evaluation passes | Requires access control, redaction, DTO policy, audit logging, serving-policy review, and intended-use / acceptable-use / misuse review. |
+| Generated overlay UI for operators | After G2 implementation approval | Operator-only auth, role checks, per-run authorization, audit logging, and default-off config. No general public visibility. |
+| Public location overlays | After a separate public-exposure approval | Requires serving-policy review, redaction review, audit policy, intended-use / acceptable-use / misuse review, and explicit user approval. |
+| Full Tesla flow runtime | After J1 decomposition | Must be split into small approved modules. No single monolithic engine. |
+
+## Hard Gates Before Any Reviewed Label Count
+
+A label may count as `reviewed` only if it has at least one independent evidence source.
+
+Allowed independent evidence examples:
+
+- field validation
+- authoritative external dataset
+- expert adjudication using evidence the heuristic pipeline did not see
+- independently produced reference labels with documented source and method
+
+Not enough by itself:
+
+- the notebook heuristic output
+- the Phase F classifier output
+- the same Sentinel/SAR/DEM/feature stack used by the heuristic, reviewed without independent evidence
+- a human simply agreeing with the heuristic output without independent support
+
+Every label record must include `label_evidence_source`.
+
+Every dataset manifest must count labels by evidence source and label quality.
+
+## H1 And I1 Feedback Loop
+
+H1 feasibility depends on what data can realistically be obtained. I1 defines that data more precisely.
+
+Therefore:
+
+- H1 rankings are provisional.
+- H1 must feed data requirements into I1.
+- H1 must be revisited after I1 if the real dataset differs from H1 assumptions.
+- No model path should be treated as final until I1 has defined real label sources, split rules, dataset storage, and evaluation gates.
 
 ## What H1 Should Decide
 
@@ -58,6 +98,8 @@ Special Track H1 should answer:
 6. Which metrics prove usefulness?
 7. Which outputs stay private?
 8. Which candidate should be the first ML implementation path?
+9. Which independent evidence sources would be required for each candidate?
+10. What baseline must a future model beat?
 
 H1 should not train or run inference.
 
@@ -66,9 +108,11 @@ H1 should produce:
 - a model-attempt inventory
 - candidate model ranking
 - data requirements
+- independent evidence requirements
 - weights policy
 - dependency policy
 - metrics policy
+- baseline comparison policy
 - private inference boundary
 - blockers and next actions
 
@@ -80,14 +124,17 @@ I1 should answer:
 
 1. What is one training example?
 2. What is one label?
-3. Who or what provides labels?
+3. What independent evidence source supports each reviewed label?
 4. What label quality levels exist?
 5. How are train, validation, and test splits made?
-6. How do we prevent geographic leakage?
+6. How do we prevent geographic, group, and temporal leakage?
 7. Where is the dataset stored?
 8. What metadata is required?
 9. What is allowed in git and what must stay outside git?
 10. What minimum dataset size is required before training?
+11. What class prevalence/base rate exists in each split?
+12. How are negatives and hard negatives sampled?
+13. How are thresholds selected without contaminating the holdout?
 
 I1 should not train.
 
@@ -95,10 +142,12 @@ I1 should produce:
 
 - dataset schema
 - label schema
+- independent evidence policy
 - label QA policy
 - split policy
 - metadata policy
-- storage policy
+- dataset manifest policy
+- storage and artifact-class policy
 - dataset readiness checklist
 
 ## What J1 Should Decide
@@ -162,25 +211,33 @@ Allowed label style:
 - Class_C
 - Class_D
 
-A label record should include:
+A label record must include:
 
-- sample id
-- class label
-- label source
-- label quality level
-- reviewer or source reference when available
+- sample_id
+- area_id
+- group_id
+- class_label
+- label_quality
+- label_evidence_source
+- evidence_source_type
+- evidence_source_version
+- evidence_review_method
+- reviewer_or_source_reference when available
 - timestamp or version
 - notes
 
+`label_evidence_source` is mandatory for reviewed labels.
+
 Label quality levels should distinguish:
 
-- reviewed
+- reviewed_independent
+- reviewed_adjudicated
 - weak_label
 - synthetic_or_proxy
 - uncertain
 - excluded
 
-Training should start only after enough reviewed or accepted-quality labels exist.
+Training should start only after enough `reviewed_independent` or `reviewed_adjudicated` labels exist.
 
 ## Negative And Background Examples
 
@@ -194,21 +251,80 @@ These should include:
 - sensor-noise or cloud/shadow edge cases
 - false-positive-like examples from earlier heuristics
 
+This is hard-negative mining and should be documented explicitly in the dataset manifest.
+
+Every split must record:
+
+- class prevalence/base rate
+- number of positive examples per class
+- number of negative/background examples
+- hard-negative sampling method
+- geographic coverage summary
+- temporal coverage summary
+
 Without negative/background examples, a model can learn to over-score everything.
 
 ## Split Policy
 
-Train/validation/test splits should be geographic, not random pixels.
+Train/validation/test splits must prevent geographic, group, and temporal leakage.
 
-Recommended split logic:
+Required split logic:
 
-- training areas
-- validation areas
-- final holdout areas
+- group by `area_id` or a stronger `group_id`
+- keep the same local area, chip family, and near-duplicate pixels in only one split
+- prevent the same area across different dates from leaking across splits unless explicitly designed and documented
+- reserve a final untouched holdout set
+- include a temporal holdout rule where the final holdout uses later or otherwise separated acquisition windows
+- document all split seeds and deterministic split rules
 
-Do not allow the same local area, chip family, or near-duplicate pixels to appear in both train and test.
+Threshold selection must use training/validation data only.
 
-The final holdout set should stay untouched until evaluation.
+The final holdout must not be used for:
+
+- threshold selection
+- feature selection
+- model selection
+- hyperparameter tuning
+- calibration tuning
+- manual cherry-picking
+
+The final holdout set should stay untouched until final evaluation.
+
+## Dataset Provenance And Storage Policy
+
+Dataset provenance must be as strict as weights provenance.
+
+No training dataset, labeled chips, coordinate-bearing metadata, or generated overlays should be committed to git.
+
+Every dataset pack must have a dataset manifest with:
+
+- dataset_id
+- schema_version
+- created_at
+- build_commit
+- build_command or build procedure
+- content hash or manifest hash
+- split seed and split policy version
+- data source list
+- label source list
+- label evidence source counts
+- class prevalence by split
+- storage path outside git
+- artifact_class
+- filesystem_only flag
+- redaction policy
+- dataset card or internal equivalent
+- known limitations
+
+Dataset storage classification:
+
+- `artifact_class=LOCAL_SENSITIVE` or `FILESYSTEM_ONLY`
+- `filesystem_only=true`
+- `http_servable=false`
+- `frontend_visible=false` unless a later operator-only design approves it
+- `downloadable_via_api=false` unless a later explicit serving-policy phase approves it
+
+Area identifiers, chip identifiers, local paths, bounds, and grid metadata can be coordinate proxies. They must follow the same redaction rules as private map artifacts.
 
 ## First Model Recommendation
 
@@ -225,7 +341,7 @@ Why:
 - works with tabular feature summaries
 - can stay CLI-only and private
 - easier to calibrate
-- easier to compare against a frozen reference
+- easier to compare against a baseline and frozen references
 
 Later model options may include:
 
@@ -242,9 +358,14 @@ Those later options need much stronger datasets.
   "schema_version": "training_example_v1",
   "sample_id": "sample_0001",
   "area_id": "area_001",
+  "group_id": "area_001_all_dates",
   "split": "train",
   "label": "Class_A",
-  "label_quality": "reviewed",
+  "label_quality": "reviewed_independent",
+  "label_evidence_source": "external_reference_dataset_v1:item_12345",
+  "evidence_source_type": "authoritative_external_dataset",
+  "evidence_source_version": "external_reference_dataset_v1",
+  "evidence_review_method": "expert_adjudication_against_independent_evidence",
   "features": {
     "semantic_feature_1_mean": 0.62,
     "semantic_feature_2_mean": 0.41,
@@ -256,13 +377,13 @@ Those later options need much stronger datasets.
   "metadata": {
     "pixel_size_m": 10,
     "grid_version": "local_grid_v1",
-    "preprocessing_commit": "<commit-sha>",
-    "sensor_window": "<date-range>"
+    "preprocessing_commit": "real-commit-sha",
+    "sensor_window": "2025-01-01_to_2025-03-31"
   }
 }
 ```
 
-The placeholders in this example are documentation placeholders only. Codex prompts must replace them with real values before execution.
+The identifiers above are examples. Codex prompts must replace example values with real values before execution.
 
 ## Model Weights Policy
 
@@ -281,6 +402,8 @@ Any future model weights must have:
 
 Random or unpinned model downloads should not be used.
 
+Approved weights do not bypass dataset validation. Any approved-weight inference still requires a labeled holdout with independent evidence and a baseline comparison.
+
 ## Dependency Policy
 
 ML dependencies should be optional.
@@ -294,18 +417,23 @@ Recommended structure:
 - CLI-only private inference first
 - no API/frontend dependency on ML packages until later approval
 
-## Evaluation Metrics
+## Evaluation Metrics And Baseline Policy
+
+Every model evaluation must specify a primary metric before training.
+
+For rare-class or low-prevalence problems, PR-AUC, recall at fixed precision, and calibration are usually more informative than ROC-AUC alone.
 
 For probability/classifier models:
 
 - precision
 - recall
 - F1
-- ROC-AUC
 - PR-AUC
+- recall at fixed precision
 - Brier score
 - calibration curve
 - confusion matrix
+- ROC-AUC as secondary context only when class prevalence is reported
 
 For segmentation models:
 
@@ -320,6 +448,27 @@ For ranking outputs:
 - top-k precision
 - ranking stability
 - calibration by score bucket
+
+Every metric table must include:
+
+- class prevalence/base rate
+- split name
+- sample count
+- label evidence source counts
+- confidence intervals or bootstrap uncertainty when feasible
+
+Baseline requirement:
+
+- The Phase F private heuristic classifier is the default baseline for neutral probability/score outputs.
+- The Phase E frozen-reference verifier remains the private reference-comparison boundary where applicable.
+- A future ML model must outperform the Phase F baseline on the untouched holdout by a preregistered margin on the primary metric, or it is not adopted.
+- If the model does not beat the baseline, keep the simpler Phase F path.
+
+Threshold policy:
+
+- decision thresholds must be chosen on training/validation only
+- thresholds must not be chosen on the final holdout
+- threshold choice must be recorded before final holdout evaluation
 
 Evaluation reports must use neutral class names and probability/score language.
 
@@ -349,6 +498,22 @@ Not allowed without later approval:
 - app-facing hard claims
 - field-action recommendations
 
+## Public Exposure And Use/Misuse Review
+
+Any later API/frontend/public overlay exposure must pass more than technical access-control gates.
+
+It must include:
+
+- intended-use review
+- acceptable-use review
+- misuse review
+- redaction review
+- access-control review
+- audit logging review
+- serving-policy review
+
+Without this review, model outputs and generated overlays remain private/offline.
+
 ## Suggested Roadmap After This Document
 
 Recommended order:
@@ -356,37 +521,57 @@ Recommended order:
 1. H1 — deep-learning/model feasibility and candidate ranking
 2. I1 — dataset and training design
 3. J1 — full Tesla flow decomposition
-4. H2 — optional ML dependency sandbox, if H1 approves it
-5. I2 — create dataset pack outside git, if I1 approves it
-6. H3 — baseline training, if data gate passes
-7. H4 — private CLI inference, if training/evaluation passes
-8. G2 implementation slice, if operator UI exposure is still desired and approved
+4. H1 revisit — update feasibility ranking after I1 defines real data constraints
+5. H2 — optional ML dependency sandbox, if H1 approves it
+6. I2 — create dataset pack outside git, if I1 approves it
+7. H3 — baseline training, if data gate passes
+8. H4 — private CLI inference, if training/evaluation beats the baseline gate
+9. G2 implementation slice, if operator UI exposure is still desired and approved
 
 ## Stop Conditions
 
 Do not proceed to training if:
 
 - labels are not defined
+- reviewed labels lack independent evidence
+- `label_evidence_source` is missing
 - label quality is weak or unknown
-- train/validation/test split is not defined
-- dataset storage policy is missing
+- class prevalence/base rate is not recorded
+- negative/background sampling is undefined
+- hard-negative sampling is undefined for rare-class tasks
+- group split policy is missing
+- temporal holdout policy is missing
+- final holdout is not protected
+- threshold selection policy is missing
+- dataset manifest/hash is missing
+- dataset storage classification is missing
 - evaluation metrics are missing
+- Phase F baseline comparison rule is missing
 - weights policy is missing
 - dependency policy is missing
 - output boundary is unclear
 
+Do not proceed to approved-weight inference if:
+
+- no labeled holdout exists
+- independent evidence is missing
+- no baseline comparison is defined
+- weights source/license/hash/version are missing
+
 Do not proceed to API/frontend integration if:
 
 - private CLI inference is not validated
+- model does not meet the baseline-beating gate
 - access control is not implemented
 - redaction is not implemented
 - audit logging is not implemented
 - serving policy has not been reviewed
+- intended-use / acceptable-use / misuse review is missing
 
 ## Summary
 
 The next ML step should be H1, but H1 should be a feasibility and readiness design only.
 
-The most important requirement is the real dataset.
+The central requirement is not just data volume. The central requirement is independent evidence-backed labels.
 
-No real model should be trained until I1 defines the dataset schema, label policy, split policy, metadata policy, storage policy, and evaluation gates.
+No real model should be trained until I1 defines the dataset schema, label policy, independent evidence gate, split policy, metadata policy, dataset manifest, storage classification, baseline comparison, and evaluation gates.
