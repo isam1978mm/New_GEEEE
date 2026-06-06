@@ -40,7 +40,7 @@ Purpose: turn selected notebook capabilities into controlled app implementation 
 
 ```text
 [ ] Special Track G — Controlled location overlay policy and public-exposure decision
-[ ] Special Track G2 — Operator-only private generated-overlay UI
+[x] Special Track G2 — Operator-only private generated-overlay UI design
 [ ] Special Track H — Deep-learning model attempts with good data/weights
 [ ] Special Track I — Training cells with a real dataset
 [ ] Special Track J — Full Tesla inference flow decomposition and implementation decision
