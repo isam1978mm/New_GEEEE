@@ -107,3 +107,12 @@ Future implementation must be split into small user-approved slices. A sensible
 first slice would be authentication and role policy, followed by per-run
 authorization, audit logging, private DTO review, frontend preview review, and
 serving-policy review.
+
+## Cross-Reference: Future Slice 10 Implementation Design
+
+The detailed implementation contract for the later operator-only private overlay
+UI is recorded in `docs/FUTURE_SLICE_10_G2_IMPLEMENTATION_DESIGN.md` (design only).
+That cross-reference does not change or weaken any gate in this document; it adds no
+API route, no frontend UI, no artifact-serving change, and no public exposure, and
+the operator-only overlay UI remains blocked until Future Slice 11 and Future Slice
+12.

@@ -177,7 +177,7 @@ Recommended sequence:
 [x] 07 — H1 revisit after I1/J1
 [x] 08 — I2 create private dataset pack outside git
 [x] 09 — H2 optional ML dependency sandbox
-[ ] 10 — G2 implementation design/details
+[x] 10 — G2 implementation design/details
 [ ] 11 — G2 auth/role/audit foundation
 [ ] 12 — G2 operator-only private overlay preview
 ```
@@ -233,7 +233,7 @@ Rules:
 ### Operator overlay UI track
 
 ```text
-[ ] C1 — G2 implementation design/details
+[x] C1 — G2 implementation design/details
 [ ] C2 — auth/role/audit foundation
 [ ] C3 — operator-only private overlay preview
 ```
@@ -281,9 +281,9 @@ Rules:
 The best next slice is:
 
 ```text
-10 — G2 implementation design/details
+11 — G2 auth/role/audit foundation
 ```
 
-Reason: Future Slice 09 (H2) added the optional ML dependency sandbox policy and checker. It defines that the base app stays free of required ML packages, that optional ML dependencies may be added only in a later approved `optional_extra` group, that ML code must not be imported at app startup and must be CLI/private first, and it blocks training without a ready I2 dataset, inference without trained/evaluated or approved-weight validation, and weight downloads without a source/license/hash/model-card policy. No ML dependencies were added. The ML and data track (B1–B3) is now complete at the design/readiness level; the remaining ML steps (H3 training, H4 private inference) stay blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The next backlog item is the operator overlay UI track, beginning with `10 — G2 implementation design/details`, which remains design-only and must precede any auth/role/audit foundation or operator-only private overlay preview, with no public exposure.
+Reason: Future Slice 10 (G2 implementation design/details) specified the detailed contract for a later operator-only private generated-overlay UI: the future backend route shape (`GET /runs/{run_id}/operator/private-overlays`), the future frontend panel (`OperatorPrivateOverlayPanel`), the operator-only success DTO and redacted denial DTO, the audit event fields and their forbidden fields, the default-off configuration, and the Phase D private GeoJSON/KMZ/heatmap artifact families. No API route, frontend UI, artifact-serving change, or public exposure was added. The operator-only overlay UI remains blocked until the foundation is built. The next backlog item is `11 — G2 auth/role/audit foundation`, which should implement authentication, operator role, per-run authorization, audit logging, and default-off configuration without exposing any overlay payload; `12 — G2 operator-only private overlay preview` follows only after Slice 11 passes. Public overlay exposure remains out of scope.
 
-Future Slice 09 is ML dependency sandbox policy/readiness only. It does not add PyTorch/TensorFlow/CUDA/heavy ML dependencies, modify dependency files, train, run inference, download weights, create datasets, change API/frontend/artifact-serving policy, or call Earth Engine. See `docs/FUTURE_SLICE_09_H2_ML_DEPENDENCY_SANDBOX.md`.
+Future Slice 10 is design/details only. It does not implement an API route or frontend UI, expose private overlays or exact coordinates, change artifact serving, call Earth Engine, or generate map artifacts. See `docs/FUTURE_SLICE_10_G2_IMPLEMENTATION_DESIGN.md`.
