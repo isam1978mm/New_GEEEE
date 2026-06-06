@@ -142,7 +142,7 @@ Status: J1 decomposition complete by `docs/SPECIAL_TRACK_J_TESLA_FLOW_DECOMPOSIT
 
 Goal: preserve the full Tesla inference flow as a desired capability, but decompose it before implementation.
 
-## Recommended Codex execution order
+## Completed Codex execution order
 
 ```text
 [x] Phase A
@@ -159,98 +159,129 @@ Goal: preserve the full Tesla inference flow as a desired capability, but decomp
 [x] Special Track J1 — full Tesla inference flow decomposition
 ```
 
-No further execution-order item is opened by this roadmap. Do not run Special Track G2 implementation, Special Track H model implementation, Special Track I training, or Special Track J runtime implementation until a new user-approved implementation slice is accepted.
+No further automatic execution-order item is opened by the completed roadmap. The future work below is user-approved directionally, but each item still needs its own scoped Codex goal before execution.
 
-## Future Slice Decision Queue
+## Future Work Backlog: Best Order And Priority
 
-The next decision is not another automatic roadmap phase. The next decision is which user-approved future slice to open first.
+These are not mutually exclusive options. The user wants all of this work done over time. The decision is the order, priority, and exact scope of each next Codex slice.
 
-This is primarily an order and priority decision, but each choice also changes what Codex is allowed to touch.
-
-```text
-[ ] Option A — J2 source-lock one Tesla-flow substep
-[ ] Option B — I2 create private dataset pack outside git
-[ ] Option C — H2 optional ML dependency sandbox
-[ ] Option D — G2 implementation foundation for operator-only private overlay UI
-[ ] Option E — Phase C2 implement one additional formula-backed feature writer
-[ ] Option F — Phase D2 implement one additional private map artifact writer
-[ ] Option G — Phase E follow-up comparator for Phase C or Phase D outputs
-```
-
-### Option A — J2 source-lock one Tesla-flow substep
-
-Purpose: choose one decomposed Tesla-flow substep and lock its evidence, source formula, inputs, outputs, status, and implementation boundary before coding.
-
-Best when: the next priority is turning the Tesla decomposition into a safe implementation slice.
-
-Not allowed: implementing the full Tesla runtime as one block.
-
-### Option B — I2 create private dataset pack outside git
-
-Purpose: start building the real private dataset pack only if independent evidence-backed labels are available or can be supplied.
-
-Best when: the next priority is real ML/data preparation.
-
-Required first: real independent evidence sources, dataset storage location outside git, label policy, split policy, and manifest policy from I1.
-
-Not allowed: training or inference.
-
-### Option C — H2 optional ML dependency sandbox
-
-Purpose: create an optional ML dependency environment that does not affect normal app startup.
-
-Best when: the next priority is preparing later private ML experiments.
-
-Required first: H1/I1 gates remain binding.
-
-Not allowed: adding PyTorch/TensorFlow as required base app dependencies, training, inference, or downloading weights.
-
-### Option D — G2 implementation foundation for operator-only private overlay UI
-
-Purpose: implement the foundation needed before an operator can view generated private overlays in the UI.
-
-Best when: the next priority is operator UI access to generated private overlay results.
-
-Required first: authentication, operator role, per-run authorization, audit logging, default-off config, and redacted denial policy.
-
-Not allowed: public overlay exposure or public downloads.
-
-### Option E — Phase C2 implement one additional formula-backed feature writer
-
-Purpose: add exactly one more defensible feature writer with locked formula evidence and tests.
-
-Best when: the next priority is expanding app-side private feature generation.
-
-Required first: exact source formula, metadata/grid policy, and tiny fixture tests.
-
-Not allowed: broad notebook stack port or guessed formulas.
-
-### Option F — Phase D2 implement one additional private map artifact writer
-
-Purpose: add exactly one more private filesystem-only map artifact writer, such as a private KMZ or heatmap slice.
-
-Best when: the next priority is private operator artifacts.
-
-Required first: private-only path safety, redaction metadata, and no public serving.
-
-Not allowed: public frontend previews or public downloads.
-
-### Option G — Phase E follow-up comparator for Phase C or Phase D outputs
-
-Purpose: add a real comparator for outputs that are currently presence-gated or verifier-not-available.
-
-Best when: the next priority is stronger frozen-reference parity.
-
-Required first: frozen notebook reference files or tiny reference fixtures for tests.
-
-Not allowed: generating app outputs or marking notebook-value parity true without comparison.
-
-## Recommended default next slice
-
-If no other priority is chosen, the recommended default is:
+Recommended sequence:
 
 ```text
-Option A — J2 source-lock one Tesla-flow substep
+[ ] 01 — J2 source-lock one Tesla-flow substep
+[ ] 02 — Phase C2 implement another defensible feature writer
+[ ] 03 — Phase E3 add comparator for Phase C semantic feature outputs
+[ ] 04 — Phase D2 add private KMZ writer
+[ ] 05 — Phase D3 add private heatmap writer
+[ ] 06 — Phase E4 add comparator for Phase D private map artifacts
+[ ] 07 — H1 revisit after I1/J1
+[ ] 08 — I2 create private dataset pack outside git
+[ ] 09 — H2 optional ML dependency sandbox
+[ ] 10 — G2 implementation design/details
+[ ] 11 — G2 auth/role/audit foundation
+[ ] 12 — G2 operator-only private overlay preview
 ```
 
-Reason: it is the safest bridge from decomposition to implementation. It lets the user choose one small Tesla-flow piece, lock the evidence, and decide whether it should become a Phase C, D, E, G2, H, or I follow-up slice.
+### App capability track
+
+```text
+[ ] A1 — J2 source-lock one Tesla substep
+[ ] A2 — Phase C2 implement another defensible feature writer
+[ ] A3 — Phase D2 add private KMZ writer
+[ ] A4 — Phase D3 add private heatmap writer
+```
+
+Purpose: move from decomposition into safe app capability, one small source-locked implementation slice at a time.
+
+Best order inside this track:
+
+1. J2 source-lock one Tesla substep.
+2. Implement one formula-backed feature writer from that locked substep if it qualifies.
+3. Add private KMZ writer.
+4. Add private heatmap writer.
+
+Rules:
+
+- Do not implement the full Tesla runtime as one block.
+- Do not guess formulas.
+- Do not add public coordinate exposure.
+- Do not add broad notebook stack ports.
+
+### ML and data track
+
+```text
+[ ] B1 — H1 revisit after I1/J1
+[ ] B2 — I2 create private dataset pack outside git
+[ ] B3 — H2 optional ML dependency sandbox
+```
+
+Purpose: prepare real ML work only after the governance gates are satisfied.
+
+Best order inside this track:
+
+1. Revisit H1 after I1 and J1 to update candidate rankings based on real dataset constraints and Tesla-flow decomposition.
+2. Create the private dataset pack outside git only if independent evidence-backed labels are available or can be supplied.
+3. Add an optional ML dependency sandbox only after dataset and dependency policies remain satisfied.
+
+Rules:
+
+- No training until I2 data gate passes.
+- No inference until training/evaluation or approved-weight validation passes.
+- No required PyTorch/TensorFlow dependency in the base app.
+- No model output API/frontend integration at this stage.
+
+### Operator overlay UI track
+
+```text
+[ ] C1 — G2 implementation design/details
+[ ] C2 — auth/role/audit foundation
+[ ] C3 — operator-only private overlay preview
+```
+
+Purpose: let an authorized operator view generated private overlay results in the UI later, without making them public.
+
+Best order inside this track:
+
+1. Finalize G2 implementation details.
+2. Implement auth, operator role, per-run authorization, default-off config, and audit logging foundation.
+3. Add operator-only private overlay preview.
+
+Rules:
+
+- Do not jump straight to public overlays.
+- Do not add public downloads.
+- Do not expose generated private overlays to general users.
+- Keep denial responses redacted.
+
+### Parity and reference verification track
+
+```text
+[ ] D1 — collect frozen notebook reference bundle outside git
+[ ] D2 — add comparator for Phase C semantic feature writer
+[ ] D3 — add comparator for Phase D private GeoJSON writer
+```
+
+Purpose: make private parity stronger by comparing generated app outputs to frozen notebook references when references exist.
+
+Best order inside this track:
+
+1. Collect frozen notebook reference bundle outside git.
+2. Add comparator for Phase C semantic feature outputs.
+3. Add comparator for Phase D private GeoJSON outputs.
+
+Rules:
+
+- Missing references are not success.
+- Do not commit frozen reference artifacts to git.
+- Do not mark notebook-value parity true without comparison.
+- Do not generate app outputs inside verifier-only tasks.
+
+## Recommended next slice
+
+The best next slice is:
+
+```text
+01 — J2 source-lock one Tesla-flow substep
+```
+
+Reason: it is the safest bridge from decomposition to implementation. It chooses one small Tesla-flow piece, locks the evidence, and decides whether it should become a Phase C writer, Phase D private artifact, Phase E comparator, G2 operator overlay task, or ML/data task.
