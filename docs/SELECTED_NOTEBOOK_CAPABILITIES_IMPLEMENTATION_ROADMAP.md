@@ -170,7 +170,7 @@ Recommended sequence:
 ```text
 [x] 01 — J2 source-lock one Tesla-flow substep
 [x] 02 — Phase C2 implement another defensible feature writer
-[ ] 03 — Phase E3 add comparator for Phase C semantic feature outputs
+[x] 03 — Phase E3 add comparator for Phase C semantic feature outputs
 [ ] 04 — Phase D2 add private KMZ writer
 [ ] 05 — Phase D3 add private heatmap writer
 [ ] 06 — Phase E4 add comparator for Phase D private map artifacts
@@ -257,7 +257,7 @@ Rules:
 
 ```text
 [ ] D1 — collect frozen notebook reference bundle outside git
-[ ] D2 — add comparator for Phase C semantic feature writer
+[x] D2 — add comparator for Phase C semantic feature writer
 [ ] D3 — add comparator for Phase D private GeoJSON writer
 ```
 
@@ -281,7 +281,7 @@ Rules:
 The best next slice is:
 
 ```text
-03 — Phase E3 add comparator for Phase C semantic feature outputs
+04 — Phase D2 add private KMZ writer
 ```
 
-Reason: Phase C2 added the source-locked AI_BEH extended semantic feature writer family. Phase E3 should add frozen-reference comparison for Phase C semantic feature outputs without changing runtime pipeline behavior or public exposure.
+Reason: Phase E3 added a private comparator for Phase C semantic feature outputs. The next app-capability slice is the private KMZ writer, still without public coordinate exposure or artifact-serving policy changes.
