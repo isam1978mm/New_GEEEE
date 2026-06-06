@@ -124,7 +124,11 @@ G2 must not be mixed with Special Track H, I, or J.
 
 ## Special Track H — Deep-learning model attempts with good data/weights
 
+Status: H1 feasibility and candidate-ranking design complete by `docs/SPECIAL_TRACK_H_DEEP_LEARNING_FEASIBILITY.md`; model training, inference, weights, ML dependencies, and runtime integration remain blocked by the binding gates in `docs/ML_DATA_TRAINING_READINESS_PLAN.md`.
+
 Goal: make deep-learning model attempts feasible only when good data, approved weights, dependency policy, and evaluation requirements exist.
+
+H1 recommends the first future ML candidate as a private probability classifier over verified feature summaries, only after I1 defines the dataset, independent evidence, split, holdout, baseline-margin, and storage gates.
 
 ## Special Track I — Training cells with a real dataset
 
@@ -146,9 +150,9 @@ Goal: preserve the full Tesla inference flow as a desired capability, but decomp
 [x] Phase F1 — private neutral probability CLI classifier
 [x] Special Track G1 — controlled location overlay access-control design
 [x] Special Track G2 — operator-only private generated-overlay UI design
-[ ] Special Track H1 — deep-learning model feasibility with good data/weights
+[x] Special Track H1 — deep-learning model feasibility with good data/weights
 [ ] Special Track I1 — real dataset/training design
 [ ] Special Track J1 — full Tesla inference flow decomposition
 ```
 
-Do not run Special Track G2 implementation, Special Track H implementation, Special Track I training, or Special Track J runtime implementation until their design/decomposition phases are accepted by the user.
+Do not run Special Track G2 implementation, Special Track H model implementation, Special Track I training, or Special Track J runtime implementation until their design/decomposition phases are accepted by the user.
