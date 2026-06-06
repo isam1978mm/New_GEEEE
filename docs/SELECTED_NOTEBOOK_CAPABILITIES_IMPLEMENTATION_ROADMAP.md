@@ -173,7 +173,7 @@ Recommended sequence:
 [x] 03 — Phase E3 add comparator for Phase C semantic feature outputs
 [x] 04 — Phase D2 add private KMZ writer
 [x] 05 — Phase D3 add private heatmap writer
-[ ] 06 — Phase E4 add comparator for Phase D private map artifacts
+[x] 06 — Phase E4 add comparator for Phase D private map artifacts
 [ ] 07 — H1 revisit after I1/J1
 [ ] 08 — I2 create private dataset pack outside git
 [ ] 09 — H2 optional ML dependency sandbox
@@ -258,7 +258,7 @@ Rules:
 ```text
 [ ] D1 — collect frozen notebook reference bundle outside git
 [x] D2 — add comparator for Phase C semantic feature writer
-[ ] D3 — add comparator for Phase D private GeoJSON writer
+[x] D3 — add comparator for Phase D private map artifacts (GeoJSON, KMZ, heatmap JSON)
 ```
 
 Purpose: make private parity stronger by comparing generated app outputs to frozen notebook references when references exist.
@@ -281,7 +281,9 @@ Rules:
 The best next slice is:
 
 ```text
-06 — Phase E4 add comparator for Phase D private map artifacts
+07 — H1 revisit after I1/J1
 ```
 
-Reason: Phase D3 added a private filesystem-only heatmap JSON writer. The next parity/reference slice is a comparator for Phase D private map artifacts, still without generating app outputs or changing public exposure.
+Reason: Phase E4 (Future Slice 06) added the private comparator for Phase D private map artifacts (GeoJSON, KMZ, heatmap JSON) without generating app outputs or changing public exposure, completing the near-term parity/reference work in the app-capability and parity tracks. The remaining backlog moves into the ML and data track, beginning with revisiting the H1 deep-learning feasibility rankings against the I1 dataset gates and the J1 Tesla-flow decomposition. That revisit remains design-only and stays blocked from training, inference, weights, and ML dependencies until the governance gates are satisfied.
+
+Phase E4 is comparator/verifier work only. It does not implement new writers, change existing writer behavior, expose artifacts through API or frontend, change artifact-serving policy, add public overlays or operator overlay UI, or call Earth Engine. See `docs/FUTURE_SLICE_PHASE_E4_PRIVATE_MAP_ARTIFACT_COMPARATOR.md`.
