@@ -270,6 +270,8 @@ Acceptance gates:
 
 Goal: design and later implement exact-coordinate public map overlays only after access-control, redaction, audit, and explicit public-exposure rules are approved.
 
+Status: G1 access-control design complete by `docs/SPECIAL_TRACK_G_EXACT_COORDINATE_OVERLAY_ACCESS_CONTROL.md`; public overlay implementation remains blocked until a later explicit user-approved phase.
+
 Scope:
 
 - operator-only overlay mode first
@@ -389,7 +391,7 @@ Acceptance gates:
 [x] Phase E1 — frozen reference bundle validator
 [x] Phase E2 — verifier execution against frozen references
 [x] Phase F1 — private neutral probability CLI classifier
-[ ] Special Track G1 — exact-coordinate public overlay access-control design
+[x] Special Track G1 — exact-coordinate public overlay access-control design
 [ ] Special Track H1 — deep-learning model feasibility with good data/weights
 [ ] Special Track I1 — real dataset/training design
 [ ] Special Track J1 — full Tesla inference flow decomposition
