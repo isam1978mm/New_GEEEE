@@ -90,11 +90,27 @@ names. The denial path reads no artifact file.
 
 ## Frontend
 
-The operator-only frontend panel (`OperatorPrivateOverlayPanel`) is left pending.
-This slice implements the backend route, service, schemas, and tests only, and does
-not modify frontend files or built assets. The panel and client hook remain a later
-step, kept hidden/default-off with redacted denial display and no public download or
-overlay layer.
+The operator-only frontend panel and client hook have been added as a default-off,
+run-scoped UI section:
+
+- Client: `frontend-v2/src/app/api/operatorOverlays.ts`.
+- Panel: `frontend-v2/src/app/components/OperatorPrivateOverlayPanel.tsx`.
+- Settings/default-off wiring: `frontend-v2/src/app/components/SettingsPage.tsx` and
+  `frontend-v2/src/app/App.tsx`.
+
+The frontend does not fabricate operator authentication and does not set
+`X-Operator-*` headers. It relies on an upstream authenticated proxy or equivalent
+trusted layer to provide operator context to the backend. With no trusted operator
+context, the panel shows the backend's generic redacted denial or `not_available`
+state.
+
+The panel is coordinate-free and displays only neutral preview summaries: feature
+counts and geometry-kind names for GeoJSON, placemark counts for KMZ, and point
+counts plus scalar weight summaries for heatmap JSON. It has no public download
+button, no artifact-serving link, no map layer, and no exact-coordinate display.
+
+`npm run build` in `frontend-v2` was run by the operator after implementation and
+passed.
 
 ## Safety Boundary
 
