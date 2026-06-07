@@ -180,10 +180,12 @@ Recommended sequence:
 [x] 10 — G2 implementation design/details
 [x] 11 — G2 auth/role/audit foundation
 [x] 12 — G2 operator-only private overlay preview
-[ ] 13 — Dataset source approval for H3/H4 (precondition before H3/H4; 13A scaffold, 13B first review, and 13C DAFA-LS Gate 1 decision complete; source approval remains open)
+[ ] 13 — Dataset source approval for H3/H4 (precondition before H3/H4; 13A, 13B, and 13C complete; 13D and 13E pending; source approval remains open)
     [x] 13A — Private candidate register scaffold
     [x] 13B — First private source review through the six gates
     [x] 13C — DAFA-LS sensitivity/misuse decision record
+    [ ] 13D — Second known-lead review: arXiv:2602.19608
+    [ ] 13E — Slice 13 closeout: all known leads rejected/deferred or one routed to I2
 ```
 
 ### App capability track
@@ -217,7 +219,7 @@ Rules:
 [x] B1 — H1 revisit after I1/J1
 [x] B2 — I2 create private dataset pack outside git
 [x] B3 — H2 optional ML dependency sandbox
-[ ] B4 — Slice 13 dataset discovery and source approval for H3/H4 (13A scaffold complete; source reviews pending)
+[ ] B4 — Slice 13 dataset source approval for H3/H4 (13A, 13B, and 13C complete; 13D and 13E pending)
 ```
 
 Purpose: prepare real ML work only after the governance gates are satisfied.
@@ -293,6 +295,8 @@ Future Slice 13C recorded the DAFA-LS Gate 1 sensitivity/misuse decision in `doc
 
 Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
+- Slice 13D should review the second known lead (`arXiv:2602.19608`) through the same six Slice 13 gates before any I2 routing is considered.
+- Slice 13E should close Slice 13 only after all known leads are rejected/deferred or one candidate is conditionally approved for I2.
 - The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
@@ -301,5 +305,5 @@ Remaining work is not auto-opened and each item needs its own scoped, user-appro
 Recommended next Slice 13 step:
 
 ```text
-13D — Review another candidate lead through the same six gates or route operator-provided independent evidence through Slice 13
+13D — Review arXiv:2602.19608 through the same six gates
 ```
