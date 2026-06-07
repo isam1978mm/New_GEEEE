@@ -15,6 +15,15 @@ or classifier runtime logic. It does not expose overlays or coordinates publicly
 It is the missing precondition before H3/H4: the next blocker is data discovery and
 approval, not code.
 
+Execution checklist:
+
+```text
+docs/FUTURE_SLICE_13_EXECUTION_CHECKLIST.md
+```
+
+The checklist is the operator-facing plan for running Slice 13 reviews. This policy
+document remains the governance contract.
+
 ## Relationship To Existing Gates
 
 The binding gates remain in `docs/ML_DATA_TRAINING_READINESS_PLAN.md`. The dataset
@@ -106,6 +115,9 @@ recorded in a private candidate register kept **outside git** under the operator
 private dataset root, alongside the eventual I2 pack. This doc does not store the
 register. No coordinates, local paths, private hashes, or raw site labels appear in
 any committed file or public summary.
+
+The execution checklist defines the recommended register structure and review fields.
+Do not commit the register.
 
 ## Illustrative Worked Examples (Unverified Leads — Not Approved)
 
