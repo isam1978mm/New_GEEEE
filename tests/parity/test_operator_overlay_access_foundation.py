@@ -369,7 +369,10 @@ def test_module_adds_no_route_artifact_read_or_earth_engine_hooks() -> None:
     assert "drive.mount" not in source
 
 
-def test_no_api_or_frontend_or_serving_files_reference_this_slice() -> None:
+def test_foundation_is_not_imported_directly_into_the_api_layer() -> None:
+    # The foundation is consumed through the Future Slice 12 service, not imported
+    # directly into API modules or app startup. The dedicated Slice 12 route module
+    # (operator_overlays.py) is the only API file that may reference the route path.
     repo_root = Path(__file__).resolve().parents[2]
     for relative in ("app/api", "app/main.py"):
         path = repo_root / relative
@@ -379,6 +382,8 @@ def test_no_api_or_frontend_or_serving_files_reference_this_slice() -> None:
                 continue
             text = file_path.read_text(encoding="utf-8")
             assert "operator_overlay_access_foundation" not in text
+            if file_path.name == "operator_overlays.py":
+                continue
             assert "operator/private-overlays" not in text
 
 

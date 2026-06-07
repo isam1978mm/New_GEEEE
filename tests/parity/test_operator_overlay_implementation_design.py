@@ -85,9 +85,16 @@ def test_backend_route_design_exists_but_no_real_route_is_added() -> None:
     assert route.implementation_allowed_now is False
     assert route.required_future_slice == "Future Slice 12"
 
-    # No real API route module references this design path or route name.
+    # The design module itself stays design-only and defines no route. The dedicated
+    # Future Slice 12 route module (operator_overlays.py) is the only API file that
+    # may reference the route path/name.
+    design_source = inspect.getsource(module)
+    assert "APIRouter" not in design_source
+    assert "add_api_route" not in design_source
     api_dir = Path("app/api")
     for path in api_dir.rglob("*.py"):
+        if path.name == "operator_overlays.py":
+            continue
         text = path.read_text(encoding="utf-8")
         assert "operator/private-overlays" not in text
         assert "operator_private_overlays" not in text

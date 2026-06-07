@@ -110,3 +110,12 @@ Future Slice 11 does not:
 Future Slice 12 should implement the operator-only private overlay preview only
 after this foundation passes, keeping default-off, redacted denials, and no public
 exposure.
+
+## Cross-Reference: Future Slice 12 Preview
+
+The operator-only private overlay preview built on this foundation is implemented in
+`docs/FUTURE_SLICE_12_G2_OPERATOR_PRIVATE_OVERLAY_PREVIEW.md`,
+`app/api/operator_overlays.py`, and `app/services/operator_overlay_preview.py`
+(default-off). That cross-reference does not change or weaken any gate in this
+document; the preview enforces every gate here, audits every decision, returns
+generic redacted denials, and adds no public exposure or artifact-serving change.

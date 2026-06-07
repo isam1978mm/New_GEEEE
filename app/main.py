@@ -14,6 +14,7 @@ from app.api.artifacts import router as artifacts_router
 from app.api.earth_engine import router as earth_engine_router
 from app.api.errors import add_exception_handlers, public_error_response
 from app.api.health import router as health_router
+from app.api.operator_overlays import router as operator_overlays_router
 from app.api.roi_preview import router as roi_preview_router
 from app.api.runs import router as runs_router
 from app.config import Settings, get_settings
@@ -82,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(roi_preview_router)
     app.include_router(runs_router)
     app.include_router(artifacts_router)
+    app.include_router(operator_overlays_router)
     frontend_v2_dist_dir = Path(__file__).resolve().parent.parent / "frontend-v2" / "dist"
     if frontend_v2_dist_dir.is_dir():
         frontend_v2_index_path = frontend_v2_dist_dir / "index.html"

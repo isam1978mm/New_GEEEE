@@ -179,7 +179,7 @@ Recommended sequence:
 [x] 09 — H2 optional ML dependency sandbox
 [x] 10 — G2 implementation design/details
 [x] 11 — G2 auth/role/audit foundation
-[ ] 12 — G2 operator-only private overlay preview
+[x] 12 — G2 operator-only private overlay preview
 ```
 
 ### App capability track
@@ -235,7 +235,7 @@ Rules:
 ```text
 [x] C1 — G2 implementation design/details
 [x] C2 — auth/role/audit foundation
-[ ] C3 — operator-only private overlay preview
+[x] C3 — operator-only private overlay preview
 ```
 
 Purpose: let an authorized operator view generated private overlay results in the UI later, without making them public.
@@ -278,12 +278,13 @@ Rules:
 
 ## Recommended next slice
 
-The best next slice is:
+The recommended backlog (Future Slices 01–12) is complete. No further automatic slice is opened.
 
-```text
-12 — G2 operator-only private overlay preview
-```
+Future Slice 12 (G2 operator-only private overlay preview) implemented the default-off, operator-only private overlay preview route (`GET /runs/{run_id}/operator/private-overlays`) on top of the Slice 11 access/audit foundation. It enforces every gate (default-off enablement, authentication, operator role, per-run authorization, allowed Phase D artifact family, and `operator_only_preview` mode), builds an audit event on every decision, returns a generic redacted denial that does not reveal artifact existence, and returns a coordinate-free operator-only preview (counts, neutral geometry kinds, scalar weight summary) reading only under the run directory. The operator frontend panel was left pending. No public overlay exposure, public downloads, artifact-serving change, Earth Engine call, raster/math change, or ML/training/inference work was added. See `docs/FUTURE_SLICE_12_G2_OPERATOR_PRIVATE_OVERLAY_PREVIEW.md`.
 
-Reason: Future Slice 11 (G2 auth/role/audit foundation) added the backend-internal access-control and audit foundation: an access-decision helper (default-off, authentication, operator role, per-run authorization, allowed artifact family, and `operator_only_preview` mode), a generic redacted denial builder that cannot reveal artifact or run existence, and an audit-event builder that excludes coordinates, geometry, paths, hashes, and artifact contents. No API route, frontend UI, overlay runtime, artifact-serving change, or public exposure was added, and no private artifact file is read or served. The next backlog item is `12 — G2 operator-only private overlay preview`, which should implement the operator-only private overlay preview route and panel only after this foundation passes, keeping default-off, redacted denials, audit on every decision, and no public exposure. Public overlay exposure remains out of scope and requires a separate explicit approval.
+Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
-Future Slice 11 is auth/role/audit foundation only. It does not implement the overlay API route or frontend UI, expose private overlays or exact coordinates, read or serve private artifact files, change artifact serving, call Earth Engine, or generate map artifacts. See `docs/FUTURE_SLICE_11_G2_AUTH_ROLE_AUDIT_FOUNDATION.md`.
+- The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
+- Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
+- Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
+- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist.

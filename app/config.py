@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     ee_service_account_key_path: Path | None = Field(default=None)
     ee_real_execution_enabled: bool = Field(default=False)
     notebook_reference_bundle_dir: Path | None = Field(default=None)
+    operator_private_overlay_preview_enabled: bool = Field(default=False)
 
     @property
     def database_url(self) -> str:
