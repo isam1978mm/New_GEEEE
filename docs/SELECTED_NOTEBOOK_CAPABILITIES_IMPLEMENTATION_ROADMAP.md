@@ -180,9 +180,9 @@ Recommended sequence:
 [x] 10 — G2 implementation design/details
 [x] 11 — G2 auth/role/audit foundation
 [x] 12 — G2 operator-only private overlay preview
-[ ] 13 — Dataset discovery and source approval for H3/H4 (precondition before H3/H4; 13A scaffold complete)
+[ ] 13 — Dataset source approval for H3/H4 (precondition before H3/H4; 13A scaffold and 13B first review complete; source approval remains open)
     [x] 13A — Private candidate register scaffold
-    [ ] 13B — First private source review through the six gates
+    [x] 13B — First private source review through the six gates
 ```
 
 ### App capability track
@@ -286,15 +286,17 @@ The recommended backlog (Future Slices 01–12) is complete. No further automati
 
 Future Slice 12 (G2 operator-only private overlay preview) implemented the default-off, operator-only private overlay preview route (`GET /runs/{run_id}/operator/private-overlays`) on top of the Slice 11 access/audit foundation. It enforces every gate (default-off enablement, authentication, operator role, per-run authorization, allowed Phase D artifact family, and `operator_only_preview` mode), builds an audit event on every decision, returns a generic redacted denial that does not reveal artifact existence, and returns a coordinate-free operator-only preview (counts, neutral geometry kinds, scalar weight summary) reading only under the run directory. The operator frontend panel was left pending. No public overlay exposure, public downloads, artifact-serving change, Earth Engine call, raster/math change, or ML/training/inference work was added. See `docs/FUTURE_SLICE_12_G2_OPERATOR_PRIVATE_OVERLAY_PREVIEW.md`.
 
+Future Slice 13B reviewed the DAFA-LS / `arXiv:2409.09432` public metadata lead through the six Slice 13 gates and recorded the result in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`. The candidate remains `under_review`, not `conditionally_approved_for_I2`, because sensitivity/misuse requires human review and the independent-evidence, method, license/access, storage/redaction, and I2-fit gates are not complete from metadata-only review. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
+
 Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
 - The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
-- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is dataset discovery and source approval, designed (design-only) in `docs/FUTURE_SLICE_13_DATASET_DISCOVERY_AND_SOURCE_APPROVAL.md`; Slice 13A added the private candidate register scaffold in `docs/FUTURE_SLICE_13A_CANDIDATE_REGISTER_SCAFFOLD.md`. A candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
+- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is Slice 13 source approval; Slice 13A added the private candidate register scaffold in `docs/FUTURE_SLICE_13A_CANDIDATE_REGISTER_SCAFFOLD.md`, and Slice 13B completed the first DAFA-LS source review in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`. A candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
 
 Recommended next Slice 13 step:
 
 ```text
-13B — First private source review through the six gates
+13C — Human sensitivity/misuse review for DAFA-LS or a separate review of another candidate lead
 ```
