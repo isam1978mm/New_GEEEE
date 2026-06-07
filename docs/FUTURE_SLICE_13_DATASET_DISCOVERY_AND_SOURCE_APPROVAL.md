@@ -24,6 +24,15 @@ docs/FUTURE_SLICE_13_EXECUTION_CHECKLIST.md
 The checklist is the operator-facing plan for running Slice 13 reviews. This policy
 document remains the governance contract.
 
+Acceptable-source spec:
+
+```text
+docs/FUTURE_SLICE_13_ACCEPTABLE_SOURCE_SPEC.md
+```
+
+The spec defines the minimum a candidate source must meet — Gate-1-clean
+(sensitivity/misuse) and independence — before a Slice 13 review is opened.
+
 ## Relationship To Existing Gates
 
 The binding gates remain in `docs/ML_DATA_TRAINING_READINESS_PLAN.md`. The dataset

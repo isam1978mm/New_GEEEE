@@ -309,3 +309,5 @@ Recommended next Slice 13 step:
 ```text
 No H3/H4 until a future candidate passes Slice 13-style source approval and I2 readiness.
 ```
+
+Any future candidate or operator-provided independent evidence must first meet the acceptable-source spec in `docs/FUTURE_SLICE_13_ACCEPTABLE_SOURCE_SPEC.md` (Gate-1-clean sensitivity/misuse and independence) before a new scoped Slice 13-style review is opened.

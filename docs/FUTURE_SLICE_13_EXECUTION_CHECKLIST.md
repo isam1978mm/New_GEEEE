@@ -4,6 +4,8 @@ This checklist turns `docs/FUTURE_SLICE_13_DATASET_DISCOVERY_AND_SOURCE_APPROVAL
 
 Slice 13 is not training. It is not inference. It is not data download. It is not dataset assembly. It is a source-discovery and source-approval phase that decides whether a candidate source may be routed to the I2 dataset-pack validator.
 
+Before opening a review, confirm the candidate meets the acceptable-source spec in `docs/FUTURE_SLICE_13_ACCEPTABLE_SOURCE_SPEC.md` (Gate-1-clean sensitivity/misuse and independence). A candidate that cannot meet the spec is not ready for review.
+
 ## Hard Boundary
 
 ```text
