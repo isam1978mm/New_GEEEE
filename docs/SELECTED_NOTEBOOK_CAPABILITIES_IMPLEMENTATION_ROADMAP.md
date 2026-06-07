@@ -180,6 +180,7 @@ Recommended sequence:
 [x] 10 — G2 implementation design/details
 [x] 11 — G2 auth/role/audit foundation
 [x] 12 — G2 operator-only private overlay preview
+[ ] 13 — Dataset discovery and source approval for H3/H4 (precondition before H3/H4)
 ```
 
 ### App capability track
@@ -213,6 +214,7 @@ Rules:
 [x] B1 — H1 revisit after I1/J1
 [x] B2 — I2 create private dataset pack outside git
 [x] B3 — H2 optional ML dependency sandbox
+[ ] B4 — Slice 13 dataset discovery and source approval for H3/H4 (precondition before H3/H4)
 ```
 
 Purpose: prepare real ML work only after the governance gates are satisfied.
@@ -287,4 +289,4 @@ Remaining work is not auto-opened and each item needs its own scoped, user-appro
 - The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
-- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist.
+- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is dataset discovery and source approval, designed (design-only) in `docs/FUTURE_SLICE_13_DATASET_DISCOVERY_AND_SOURCE_APPROVAL.md`; a candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
