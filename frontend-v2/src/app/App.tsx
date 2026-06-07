@@ -35,6 +35,7 @@ import { StatusHistoryTab } from "./components/StatusHistoryTab";
 import { DiagnosticsTab } from "./components/DiagnosticsTab";
 import { RunArchivePage } from "./components/RunArchivePage";
 import { SettingsPage } from "./components/SettingsPage";
+import { OperatorPrivateOverlayPanel } from "./components/OperatorPrivateOverlayPanel";
 
 type NavTab = "dashboard" | "archive" | "exports" | "settings";
 type RunTab = "overview" | "exports" | "status-history" | "diagnostics";
@@ -89,6 +90,7 @@ interface UiSettings {
   externalTilesEnabled: boolean;
   tileUrlTemplate: string;
   showAdvancedUnavailableOutputs: boolean;
+  operatorPrivateOverlayEnabled: boolean;
 }
 
 function loadUiSettings(): UiSettings {
@@ -108,6 +110,7 @@ function loadUiSettings(): UiSettings {
           ? parsed.tileUrlTemplate
           : DEFAULT_TILE_URL_TEMPLATE,
       showAdvancedUnavailableOutputs: parsed.showAdvancedUnavailableOutputs === true,
+      operatorPrivateOverlayEnabled: parsed.operatorPrivateOverlayEnabled === true,
     };
   } catch (_error) {
     return defaultUiSettings();
@@ -119,6 +122,7 @@ function defaultUiSettings(): UiSettings {
     externalTilesEnabled: false,
     tileUrlTemplate: DEFAULT_TILE_URL_TEMPLATE,
     showAdvancedUnavailableOutputs: false,
+    operatorPrivateOverlayEnabled: false,
   };
 }
 
@@ -593,6 +597,9 @@ export default function App() {
                 {activeRunTab === "diagnostics" && (
                   <DiagnosticsTab outputTree={outputTree} artifacts={selectedRun.artifacts} />
                 )}
+                {uiSettings.operatorPrivateOverlayEnabled && (
+                  <OperatorPrivateOverlayPanel runId={selectedRun.id} />
+                )}
               </div>
             )}
           </>
@@ -640,6 +647,7 @@ export default function App() {
             externalTilesEnabled={uiSettings.externalTilesEnabled}
             tileUrlTemplate={uiSettings.tileUrlTemplate}
             showAdvancedUnavailableOutputs={uiSettings.showAdvancedUnavailableOutputs}
+            operatorPrivateOverlayEnabled={uiSettings.operatorPrivateOverlayEnabled}
             pollingIntervalSeconds={RUN_POLLING_INTERVAL_SECONDS}
             onToggleExternalTiles={(externalTilesEnabled) =>
               setUiSettings((current) => ({ ...current, externalTilesEnabled }))
@@ -649,6 +657,9 @@ export default function App() {
             }
             onToggleAdvancedUnavailableOutputs={(showAdvancedUnavailableOutputs) =>
               setUiSettings((current) => ({ ...current, showAdvancedUnavailableOutputs }))
+            }
+            onToggleOperatorPrivateOverlay={(operatorPrivateOverlayEnabled) =>
+              setUiSettings((current) => ({ ...current, operatorPrivateOverlayEnabled }))
             }
           />
         )}
