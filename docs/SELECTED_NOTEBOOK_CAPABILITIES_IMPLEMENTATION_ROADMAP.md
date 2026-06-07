@@ -180,12 +180,12 @@ Recommended sequence:
 [x] 10 — G2 implementation design/details
 [x] 11 — G2 auth/role/audit foundation
 [x] 12 — G2 operator-only private overlay preview
-[ ] 13 — Dataset source approval for H3/H4 (precondition before H3/H4; 13A, 13B, 13C, and 13D complete; 13E pending; source approval remains open)
+[x] 13 — Dataset source approval for H3/H4 current known-lead set (13A through 13E complete; no source approved for I2; future candidates require a new scoped Slice 13-style review)
     [x] 13A — Private candidate register scaffold
     [x] 13B — First private source review through the six gates
     [x] 13C — DAFA-LS sensitivity/misuse decision record
     [x] 13D — arXiv 2602.19608 source review through the six gates
-    [ ] 13E — Slice 13 closeout: all known leads rejected/deferred or one routed to I2
+    [x] 13E — Slice 13 closeout: current known leads rejected and no candidate routed to I2
 ```
 
 ### App capability track
@@ -219,7 +219,7 @@ Rules:
 [x] B1 — H1 revisit after I1/J1
 [x] B2 — I2 create private dataset pack outside git
 [x] B3 — H2 optional ML dependency sandbox
-[ ] B4 — Slice 13 dataset source approval for H3/H4 (13A through 13D complete; 13E pending; no source approved for I2)
+[x] B4 — Slice 13 dataset source approval closeout for current known leads (13A through 13E complete; no source approved for I2; H3/H4 remain blocked)
 ```
 
 Purpose: prepare real ML work only after the governance gates are satisfied.
@@ -295,9 +295,10 @@ Future Slice 13C recorded the DAFA-LS Gate 1 sensitivity/misuse decision in `doc
 
 Future Slice 13D reviewed the `arXiv:2602.19608` public metadata lead through the six Slice 13 gates and recorded the result in `docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md`. The candidate is rejected at Gate 1, not `conditionally_approved_for_I2`, because the metadata concerns looting-related heritage-place imagery, preserved-place examples, and footprint-mask material. Independent evidence remains weak-signal-only, method/provenance and dataset-payload access terms are incomplete, storage/redaction needs human review, and I2 fit is not evaluated because no private pack was assembled. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
 
+Future Slice 13E closed the current known-lead Slice 13 review set in `docs/FUTURE_SLICE_13E_SOURCE_APPROVAL_CLOSEOUT.md`. The current known public leads, DAFA-LS / `arXiv:2409.09432` and `arXiv:2602.19608`, are both rejected at Gate 1. No candidate is `conditionally_approved_for_I2`, I2 routing is not allowed, and H3/H4 remain blocked. This closeout does not reject future unknown candidates; any future candidate or operator-provided independent evidence requires a new scoped Slice 13-style review. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
+
 Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
-- Slice 13E should close Slice 13 only after all known leads are rejected/deferred or one candidate is conditionally approved for I2.
 - The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
@@ -306,5 +307,5 @@ Remaining work is not auto-opened and each item needs its own scoped, user-appro
 Recommended next Slice 13 step:
 
 ```text
-13E — Review any new operator-provided candidate lead through the same six gates, or close the current known-lead set only after the external private-register criteria are satisfied
+No H3/H4 until a future candidate passes Slice 13-style source approval and I2 readiness.
 ```
