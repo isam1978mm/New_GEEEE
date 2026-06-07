@@ -2,20 +2,24 @@ interface SettingsPageProps {
   externalTilesEnabled: boolean;
   tileUrlTemplate: string;
   showAdvancedUnavailableOutputs: boolean;
+  operatorPrivateOverlayEnabled?: boolean;
   pollingIntervalSeconds: number;
   onToggleExternalTiles: (enabled: boolean) => void;
   onTileUrlTemplateChange: (value: string) => void;
   onToggleAdvancedUnavailableOutputs: (enabled: boolean) => void;
+  onToggleOperatorPrivateOverlay?: (enabled: boolean) => void;
 }
 
 export function SettingsPage({
   externalTilesEnabled,
   tileUrlTemplate,
   showAdvancedUnavailableOutputs,
+  operatorPrivateOverlayEnabled = false,
   pollingIntervalSeconds,
   onToggleExternalTiles,
   onTileUrlTemplateChange,
   onToggleAdvancedUnavailableOutputs,
+  onToggleOperatorPrivateOverlay,
 }: SettingsPageProps) {
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto" }}>
@@ -103,6 +107,50 @@ export function SettingsPage({
                 {externalTilesEnabled
                   ? "Stored locally and used by the target map preview only when external tiles are enabled."
                   : "External tiles disabled. No external tile URL is requested."}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="rounded-lg bg-card overflow-hidden"
+          style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
+        >
+          <div className="px-4 py-2" style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)" }}>
+            <span
+              className="font-mono"
+              style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+            >
+              Operator private overlays
+            </span>
+          </div>
+          <div className="px-4 py-3 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--gs-navy)" }}>
+                  Operator-only private preview
+                </div>
+                <div style={{ fontSize: "11px", color: "var(--gs-slate)", marginTop: "2px", lineHeight: "1.5" }}>
+                  Disabled by default. Requires the backend preview flag and trusted upstream operator authentication. Shows coordinate-free counts only; no public downloads or public overlay layer are added.
+                </div>
+              </div>
+              <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={operatorPrivateOverlayEnabled}
+                  onChange={(event) => onToggleOperatorPrivateOverlay?.(event.target.checked)}
+                />
+                <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)" }}>
+                  {operatorPrivateOverlayEnabled ? "Shown" : "Hidden"}
+                </span>
+              </label>
+            </div>
+            <div
+              className="rounded px-3 py-2"
+              style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
+            >
+              <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them before the backend allows preview access.
               </div>
             </div>
           </div>
