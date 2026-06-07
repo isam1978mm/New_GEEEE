@@ -242,7 +242,8 @@ Rules:
 ```text
 [x] C1 — G2 implementation design/details
 [x] C2 — auth/role/audit foundation
-[x] C3 — operator-only private overlay preview
+[x] C3 — operator-only private overlay preview backend
+[x] C4 — operator frontend panel/client hook
 ```
 
 Purpose: let an authorized operator view generated private overlay results in the UI later, without making them public.
@@ -251,7 +252,8 @@ Best order inside this track:
 
 1. Finalize G2 implementation details.
 2. Implement auth, operator role, per-run authorization, default-off config, and audit logging foundation.
-3. Add operator-only private overlay preview.
+3. Add operator-only private overlay preview backend.
+4. Add the default-off operator frontend panel/client hook in the selected run view.
 
 Rules:
 
@@ -259,6 +261,7 @@ Rules:
 - Do not add public downloads.
 - Do not expose generated private overlays to general users.
 - Keep denial responses redacted.
+- Do not fabricate operator authentication headers in browser code.
 
 ### Parity and reference verification track
 
@@ -287,7 +290,7 @@ Rules:
 
 The recommended backlog (Future Slices 01–12) is complete. No further automatic slice is opened.
 
-Future Slice 12 (G2 operator-only private overlay preview) implemented the default-off, operator-only private overlay preview route (`GET /runs/{run_id}/operator/private-overlays`) on top of the Slice 11 access/audit foundation. It enforces every gate (default-off enablement, authentication, operator role, per-run authorization, allowed Phase D artifact family, and `operator_only_preview` mode), builds an audit event on every decision, returns a generic redacted denial that does not reveal artifact existence, and returns a coordinate-free operator-only preview (counts, neutral geometry kinds, scalar weight summary) reading only under the run directory. The operator frontend panel was left pending. No public overlay exposure, public downloads, artifact-serving change, Earth Engine call, raster/math change, or ML/training/inference work was added. See `docs/FUTURE_SLICE_12_G2_OPERATOR_PRIVATE_OVERLAY_PREVIEW.md`.
+Future Slice 12 (G2 operator-only private overlay preview) implemented the default-off, operator-only private overlay preview route (`GET /runs/{run_id}/operator/private-overlays`) on top of the Slice 11 access/audit foundation. It enforces every gate (default-off enablement, authentication, operator role, per-run authorization, allowed Phase D artifact family, and `operator_only_preview` mode), builds an audit event on every decision, returns a generic redacted denial that does not reveal artifact existence, and returns a coordinate-free operator-only preview (counts, neutral geometry kinds, scalar weight summary) reading only under the run directory. The operator frontend panel/client hook is now implemented as a default-off section in the selected run view, uses no browser-fabricated operator headers, and was build-checked with `npm run build` in `frontend-v2`. No public overlay exposure, public downloads, artifact-serving change, Earth Engine call, raster/math change, or ML/training/inference work was added. See `docs/FUTURE_SLICE_12_G2_OPERATOR_PRIVATE_OVERLAY_PREVIEW.md`.
 
 Future Slice 13B reviewed the DAFA-LS / `arXiv:2409.09432` public metadata lead through the six Slice 13 gates and recorded the result in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`. The candidate remains `under_review`, not `conditionally_approved_for_I2`, because sensitivity/misuse requires human review and the independent-evidence, method, license/access, storage/redaction, and I2-fit gates are not complete from metadata-only review. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
 
@@ -301,7 +304,6 @@ Future Slice D1 created the frozen notebook reference bundle scaffold and operat
 
 Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
-- The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
 - H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is Slice 13 source approval; Slice 13A added the private candidate register scaffold in `docs/FUTURE_SLICE_13A_CANDIDATE_REGISTER_SCAFFOLD.md`, Slice 13B completed the first DAFA-LS source review in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`, Slice 13C rejected DAFA-LS at Gate 1 in `docs/FUTURE_SLICE_13C_DAFA_LS_SENSITIVITY_DECISION.md`, and Slice 13D rejected `arXiv:2602.19608` at Gate 1 in `docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md`. A candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
