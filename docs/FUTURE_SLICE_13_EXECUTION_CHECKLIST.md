@@ -261,6 +261,8 @@ Checklist:
 [ ] If not, mark rejected or not_ready_for_I2.
 ```
 
+The field list above is representative, not exhaustive. The authoritative I1/I2 training-example and dataset-manifest schema is defined in `app/pipeline/parity/dataset_pack_readiness.py` and `docs/SPECIAL_TRACK_I_DATASET_TRAINING_DESIGN.md`; defer to those to prevent field-list drift.
+
 ## Phase 13.9 — Candidate Decision
 
 Only two end states matter:
