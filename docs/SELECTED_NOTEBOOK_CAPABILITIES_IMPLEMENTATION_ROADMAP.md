@@ -180,9 +180,10 @@ Recommended sequence:
 [x] 10 — G2 implementation design/details
 [x] 11 — G2 auth/role/audit foundation
 [x] 12 — G2 operator-only private overlay preview
-[ ] 13 — Dataset source approval for H3/H4 (precondition before H3/H4; 13A scaffold and 13B first review complete; source approval remains open)
+[ ] 13 — Dataset source approval for H3/H4 (precondition before H3/H4; 13A scaffold, 13B first review, and 13C DAFA-LS Gate 1 decision complete; source approval remains open)
     [x] 13A — Private candidate register scaffold
     [x] 13B — First private source review through the six gates
+    [x] 13C — DAFA-LS sensitivity/misuse decision record
 ```
 
 ### App capability track
@@ -288,15 +289,17 @@ Future Slice 12 (G2 operator-only private overlay preview) implemented the defau
 
 Future Slice 13B reviewed the DAFA-LS / `arXiv:2409.09432` public metadata lead through the six Slice 13 gates and recorded the result in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`. The candidate remains `under_review`, not `conditionally_approved_for_I2`, because sensitivity/misuse requires human review and the independent-evidence, method, license/access, storage/redaction, and I2-fit gates are not complete from metadata-only review. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
 
+Future Slice 13C recorded the DAFA-LS Gate 1 sensitivity/misuse decision in `docs/FUTURE_SLICE_13C_DAFA_LS_SENSITIVITY_DECISION.md`. The candidate is rejected at Gate 1, I2 routing is not allowed, and H3/H4 remain blocked. Gates 2 through 6 were not changed. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
+
 Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
 - The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
-- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is Slice 13 source approval; Slice 13A added the private candidate register scaffold in `docs/FUTURE_SLICE_13A_CANDIDATE_REGISTER_SCAFFOLD.md`, and Slice 13B completed the first DAFA-LS source review in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`. A candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
+- H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is Slice 13 source approval; Slice 13A added the private candidate register scaffold in `docs/FUTURE_SLICE_13A_CANDIDATE_REGISTER_SCAFFOLD.md`, Slice 13B completed the first DAFA-LS source review in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`, and Slice 13C rejected DAFA-LS at Gate 1 in `docs/FUTURE_SLICE_13C_DAFA_LS_SENSITIVITY_DECISION.md`. A candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
 
 Recommended next Slice 13 step:
 
 ```text
-13C — Human sensitivity/misuse review for DAFA-LS or a separate review of another candidate lead
+13D — Review another candidate lead through the same six gates or route operator-provided independent evidence through Slice 13
 ```
