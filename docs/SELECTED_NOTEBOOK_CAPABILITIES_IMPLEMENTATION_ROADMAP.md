@@ -263,7 +263,7 @@ Rules:
 ### Parity and reference verification track
 
 ```text
-[ ] D1 — collect frozen notebook reference bundle outside git
+[x] D1 — frozen notebook reference bundle scaffold and operator collection plan
 [x] D2 — add comparator for Phase C semantic feature writer
 [x] D3 — add comparator for Phase D private map artifacts (GeoJSON, KMZ, heatmap JSON)
 ```
@@ -297,12 +297,15 @@ Future Slice 13D reviewed the `arXiv:2602.19608` public metadata lead through th
 
 Future Slice 13E closed the current known-lead Slice 13 review set in `docs/FUTURE_SLICE_13E_SOURCE_APPROVAL_CLOSEOUT.md`. The current known public leads, DAFA-LS / `arXiv:2409.09432` and `arXiv:2602.19608`, are both rejected at Gate 1. No candidate is `conditionally_approved_for_I2`, I2 routing is not allowed, and H3/H4 remain blocked. This closeout does not reject future unknown candidates; any future candidate or operator-provided independent evidence requires a new scoped Slice 13-style review. No dataset, I2 pack, training, inference, ML dependency, Earth Engine call, public exposure, API/frontend change, or artifact-serving change was added.
 
+Future Slice D1 created the frozen notebook reference bundle scaffold and operator collection plan in `docs/FUTURE_SLICE_D1_FROZEN_REFERENCE_BUNDLE_COLLECTION_PLAN.md`. It defines the private bundle layout, required manifest fields, family directories, storage/redaction policy, collection checklist, validator behavior, and handoff to Phase E/E3/E4 verifiers. No real frozen references were collected or committed, no app outputs were generated, and notebook-value parity remains false until real comparisons pass.
+
 Remaining work is not auto-opened and each item needs its own scoped, user-approved goal:
 
 - The operator-only frontend panel (`OperatorPrivateOverlayPanel`) and client hook remain pending, kept hidden/default-off with redacted denial display.
 - Wiring the operator identity/role/per-run-authorization headers to a real authentication provider remains a later integration step.
 - Public location overlay exposure (Special Track G) remains blocked and requires separate explicit user approval after intended-use, acceptable-use, misuse, redaction, access-control, audit, and serving-policy review.
 - H3 training and H4 private inference remain blocked until a real `ready_for_private_training_later` dataset pack and the evaluation gates exist. The precondition is Slice 13 source approval; Slice 13A added the private candidate register scaffold in `docs/FUTURE_SLICE_13A_CANDIDATE_REGISTER_SCAFFOLD.md`, Slice 13B completed the first DAFA-LS source review in `docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md`, Slice 13C rejected DAFA-LS at Gate 1 in `docs/FUTURE_SLICE_13C_DAFA_LS_SENSITIVITY_DECISION.md`, and Slice 13D rejected `arXiv:2602.19608` at Gate 1 in `docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md`. A candidate must pass a sensitivity/misuse-first gate set and then the I2 validator before any H3/H4 slice is opened.
+- Frozen notebook reference collection remains operator-owned and outside git. D1 defines the scaffold only; missing references are not success and notebook-value parity is not complete until Phase E/E3/E4 verifiers pass against real private references.
 
 Recommended next Slice 13 step:
 

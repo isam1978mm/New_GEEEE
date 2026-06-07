@@ -36,6 +36,11 @@ The manifest must be a JSON object with:
 
 The Phase E validator does not require real frozen references to be committed to the repository. Tests create tiny fake bundles under pytest temporary directories only.
 
+Future Slice D1 defines the operator collection scaffold and manifest checklist in
+`docs/FUTURE_SLICE_D1_FROZEN_REFERENCE_BUNDLE_COLLECTION_PLAN.md`. D1 is a plan
+only; it does not collect real references and does not change the Phase E rule
+that missing references are not success.
+
 ## Supported Families
 
 Phase E supports selected-family filtering for:
