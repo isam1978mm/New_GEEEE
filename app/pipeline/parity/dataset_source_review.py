@@ -18,6 +18,10 @@ FUTURE_SLICE_13B_SCHEMA_VERSION = "future_slice_13b_first_source_review_v1"
 FUTURE_SLICE_13B_REPORT_RELATIVE_PATH = (
     "manifests/future_slice_13b_first_source_review.json"
 )
+FUTURE_SLICE_13D_SCHEMA_VERSION = "future_slice_13d_arxiv_2602_19608_source_review_v1"
+FUTURE_SLICE_13D_REPORT_RELATIVE_PATH = (
+    "manifests/future_slice_13d_arxiv_2602_19608_source_review.json"
+)
 
 GATE_STATUS_VALUES = (
     "pass",
@@ -217,6 +221,76 @@ def get_first_candidate_source_review_record(
     )
 
 
+def get_arxiv_2602_19608_source_review_record(
+    *,
+    reviewer: str = "codex_slice_13d",
+    review_date: str | None = None,
+) -> dict[str, str]:
+    """Return the redacted metadata-only review for the Slice 13D lead."""
+
+    return build_candidate_source_review_record(
+        candidate_id="arxiv_2602_19608_looted_sites",
+        source_name="arXiv 2602.19608 public metadata lead",
+        source_reference=(
+            "arXiv:2602.19608; microsoft/looted_site_detection public "
+            "repository metadata"
+        ),
+        source_url_or_doi="https://doi.org/10.48550/arXiv.2602.19608",
+        source_type="public_paper_and_repository_metadata",
+        reviewer=reviewer,
+        review_date=review_date or datetime.now(UTC).date().isoformat(),
+        sensitivity_status="reject",
+        sensitivity_decision="reject_before_i2",
+        sensitivity_blocker=(
+            "Gate 1 rejects I2 routing because public metadata describes "
+            "looting-related heritage-place imagery, preserved-place examples, "
+            "and footprint-mask material."
+        ),
+        independence_status="weak_signal_only",
+        independence_decision="block_i2_until_independent_evidence_is_documented",
+        independence_blocker=(
+            "Public metadata does not establish reviewed-tier labels independent "
+            "of modeled imagery signals."
+        ),
+        provenance_status="insufficient_information",
+        provenance_decision="block_i2_until_labeling_method_is_reviewed",
+        provenance_blocker=(
+            "Metadata-only review does not establish a reviewed-tier label "
+            "production, review, and adjudication method acceptable for I2."
+        ),
+        license_status="insufficient_information",
+        license_decision="block_i2_until_license_terms_are_reviewed",
+        license_blocker=(
+            "Paper and code metadata do not establish acceptable dataset-payload "
+            "access, reuse, and redistribution terms for a private I2 pack."
+        ),
+        storage_status="needs_human_review",
+        storage_decision="block_i2_until_storage_redaction_plan_is_reviewed",
+        storage_blocker=(
+            "Footprint masks, place identifiers, and related source material "
+            "would need restricted LOCAL_SENSITIVE or FILESYSTEM_ONLY handling "
+            "and redaction review."
+        ),
+        i2_compatibility_status="insufficient_information",
+        i2_compatibility_decision="block_i2_until_schema_fit_is_reviewed",
+        i2_compatibility_blocker=(
+            "No private pack was assembled, so I1/I2 schema fit cannot be "
+            "evaluated."
+        ),
+        final_decision="rejected",
+        final_blocker=(
+            "Gate 1 sensitivity/misuse rejection blocks I2 routing. Independent "
+            "evidence, method, license/access, storage/redaction, and I2-fit "
+            "reviews also do not pass from metadata-only review."
+        ),
+        notes=(
+            "Metadata-only review of public paper and repository metadata. No "
+            "source payload, imagery, masks, labels, place records, archives, "
+            "private register, I2 pack, training, or inference were created."
+        ),
+    )
+
+
 def build_candidate_source_review_record(
     *,
     candidate_id: str,
@@ -371,6 +445,52 @@ def write_first_source_review_report(
         "notes": (
             "Slice 13B writes a redacted, metadata-only first source review. It "
             "does not create candidate data, an I2 pack, training, inference, or "
+            "public exposure."
+        ),
+    }
+    verify_redacted(payload)
+    report_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def write_arxiv_2602_19608_source_review_report(
+    *,
+    run_dir: str | Path,
+    run_id: str,
+    candidate_review: Mapping[str, str] | None = None,
+    report_relative_path: str | Path = FUTURE_SLICE_13D_REPORT_RELATIVE_PATH,
+) -> Path:
+    report_path = resolve_run_output_path(run_dir, report_relative_path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    review = dict(candidate_review or get_arxiv_2602_19608_source_review_record())
+    _validate_record(review)
+    if review["candidate_id"] != "arxiv_2602_19608_looted_sites":
+        raise ValueError("Slice 13D report requires the arXiv 2602.19608 candidate")
+
+    payload: dict[str, Any] = {
+        "schema_version": FUTURE_SLICE_13D_SCHEMA_VERSION,
+        "run_id": run_id,
+        "created_at": datetime.now(UTC).isoformat(),
+        "candidate_review": review,
+        "gates_reviewed": list(CANDIDATE_REVIEW_GATE_NAMES),
+        "final_decision": review["final_decision"],
+        "h3_training_allowed": False,
+        "h4_inference_allowed": False,
+        "dataset_downloaded": False,
+        "dataset_created": False,
+        "i2_pack_created": False,
+        "training_added": False,
+        "inference_added": False,
+        "ml_dependencies_added": False,
+        "earth_engine_calls_added": False,
+        "public_exposure_changes": False,
+        "notes": (
+            "Slice 13D writes a redacted, metadata-only source review. It does "
+            "not create candidate data, an I2 pack, training, inference, or "
             "public exposure."
         ),
     }

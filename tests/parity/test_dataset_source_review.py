@@ -109,6 +109,7 @@ def test_conditionally_approved_for_i2_requires_all_six_gates_to_pass() -> None:
         {"license_status": "insufficient_information"},
         {"license_status": "reject"},
         {"storage_status": "reject"},
+        {"storage_status": "needs_human_review"},
         {"i2_compatibility_status": "reject"},
         {"i2_compatibility_status": "insufficient_information"},
     ]
@@ -165,6 +166,156 @@ def test_dafa_ls_review_records_sensitivity_concern_and_blocks_h3_h4(
     assert record["sensitivity_blocker"]
     assert payload["h3_training_allowed"] is False
     assert payload["h4_inference_allowed"] is False
+
+
+def test_arxiv_2602_19608_review_contains_fields_and_starts_unverified() -> None:
+    from app.pipeline.parity.dataset_source_review import (
+        get_arxiv_2602_19608_source_review_record,
+        summarize_gate_statuses,
+    )
+
+    record = get_arxiv_2602_19608_source_review_record(
+        reviewer="pytest",
+        review_date="2026-06-07",
+    )
+
+    assert set(record) == REQUIRED_REVIEW_FIELDS
+    assert record["candidate_id"] == "arxiv_2602_19608_looted_sites"
+    assert record["source_url_or_doi"] == "https://doi.org/10.48550/arXiv.2602.19608"
+    assert record["lead_status"] == "unverified_lead"
+    assert tuple(summarize_gate_statuses(record)) == CANDIDATE_REVIEW_GATE_NAMES
+
+
+def test_arxiv_2602_19608_review_blocks_i2_h3_h4_and_records_sensitivity() -> None:
+    from app.pipeline.parity.dataset_source_review import (
+        get_arxiv_2602_19608_source_review_record,
+    )
+
+    record = get_arxiv_2602_19608_source_review_record(
+        reviewer="pytest",
+        review_date="2026-06-07",
+    )
+
+    assert record["final_decision"] == "rejected"
+    assert record["review_status"] == "rejected"
+    assert record["sensitivity_status"] == "reject"
+    assert record["sensitivity_decision"] == "reject_before_i2"
+    assert record["sensitivity_blocker"]
+    assert record["independence_status"] == "weak_signal_only"
+    assert record["provenance_status"] == "insufficient_information"
+    assert record["license_status"] == "insufficient_information"
+    assert record["storage_status"] == "needs_human_review"
+    assert record["i2_compatibility_status"] == "insufficient_information"
+
+
+def test_arxiv_2602_19608_report_writes_parses_and_stays_under_run_dir(
+    tmp_path: Path,
+) -> None:
+    from app.pipeline.parity.dataset_source_review import (
+        get_arxiv_2602_19608_source_review_record,
+        write_arxiv_2602_19608_source_review_report,
+    )
+
+    run_dir = tmp_path / "run"
+    report_path = write_arxiv_2602_19608_source_review_report(
+        run_dir=run_dir,
+        run_id="run-13d",
+        candidate_review=get_arxiv_2602_19608_source_review_record(
+            reviewer="pytest",
+            review_date="2026-06-07",
+        ),
+    )
+
+    assert report_path.resolve().is_relative_to(run_dir.resolve())
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "future_slice_13d_arxiv_2602_19608_source_review_v1"
+    assert payload["run_id"] == "run-13d"
+    assert payload["gates_reviewed"] == list(CANDIDATE_REVIEW_GATE_NAMES)
+    assert payload["final_decision"] == "rejected"
+    assert payload["h3_training_allowed"] is False
+    assert payload["h4_inference_allowed"] is False
+    assert payload["dataset_downloaded"] is False
+    assert payload["dataset_created"] is False
+    assert payload["i2_pack_created"] is False
+    assert payload["training_added"] is False
+    assert payload["inference_added"] is False
+    assert payload["ml_dependencies_added"] is False
+    assert payload["earth_engine_calls_added"] is False
+    assert payload["public_exposure_changes"] is False
+
+
+def test_arxiv_2602_19608_report_is_redacted(tmp_path: Path) -> None:
+    from app.pipeline.parity.dataset_source_review import (
+        get_arxiv_2602_19608_source_review_record,
+        write_arxiv_2602_19608_source_review_report,
+    )
+
+    report_path = write_arxiv_2602_19608_source_review_report(
+        run_dir=tmp_path / "run",
+        run_id="run-13d",
+        candidate_review=get_arxiv_2602_19608_source_review_record(
+            reviewer="pytest",
+            review_date="2026-06-07",
+        ),
+    )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    verify_redacted(payload)
+    serialized = json.dumps(payload, sort_keys=True).lower()
+
+    forbidden_fragments = (
+        "latitude",
+        "longitude",
+        "coordinate",
+        "raw geometry",
+        "geometry",
+        "site list",
+        "site_list",
+        "local path",
+        "local_path",
+        "private hash",
+        "private_hash",
+        "payload content",
+        "archive content",
+        str(tmp_path).lower(),
+    )
+    for fragment in forbidden_fragments:
+        assert fragment not in serialized
+
+
+def test_arxiv_2602_19608_report_creates_only_private_review_report(
+    tmp_path: Path,
+) -> None:
+    from app.pipeline.parity.dataset_source_review import (
+        get_arxiv_2602_19608_source_review_record,
+        write_arxiv_2602_19608_source_review_report,
+    )
+
+    run_dir = tmp_path / "run"
+    write_arxiv_2602_19608_source_review_report(
+        run_dir=run_dir,
+        run_id="run-13d",
+        candidate_review=get_arxiv_2602_19608_source_review_record(
+            reviewer="pytest",
+            review_date="2026-06-07",
+        ),
+    )
+
+    created_files = [path for path in run_dir.rglob("*") if path.is_file()]
+    assert [path.name for path in created_files] == [
+        "future_slice_13d_arxiv_2602_19608_source_review.json"
+    ]
+    blocked_fragments = (
+        "dataset_pack",
+        "training_examples",
+        "label",
+        "chip",
+        "mask",
+        "imagery",
+        "site_list",
+    )
+    for path in created_files:
+        lowered = path.name.lower()
+        assert not any(fragment in lowered for fragment in blocked_fragments)
 
 
 def test_report_writes_parses_and_stays_under_run_dir(tmp_path: Path) -> None:
@@ -311,6 +462,11 @@ def test_no_forbidden_certainty_wording_is_present() -> None:
             encoding="utf-8"
         ).lower()
         if Path("docs/FUTURE_SLICE_13B_FIRST_SOURCE_REVIEW.md").exists()
+        else "",
+        Path("docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md").read_text(
+            encoding="utf-8"
+        ).lower()
+        if Path("docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md").exists()
         else "",
     ]
     forbidden_patterns = [
