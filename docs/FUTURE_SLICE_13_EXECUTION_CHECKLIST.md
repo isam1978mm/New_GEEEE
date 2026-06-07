@@ -29,6 +29,20 @@ unverified_lead
 
 No candidate is approved because it is public, published, cited, or available on GitHub.
 
+## Slice 13 Sub-Slice Sequence
+
+These sub-slices make the Slice 13 execution order explicit. Do not add new sub-slices or change this order without first telling the user.
+
+```text
+[x] 13A — Private candidate register scaffold
+[x] 13B — First private source review through the six gates
+[x] 13C — DAFA-LS sensitivity/misuse decision record
+[ ] 13D — Second known-lead review: arXiv:2602.19608
+[ ] 13E — Slice 13 closeout: all known leads rejected/deferred or one routed to I2
+```
+
+13D must stay source-review only. 13E must not route anything to I2 unless the candidate passed every Slice 13 gate.
+
 ## Phase 13.0 — Setup The Private Review Workspace
 
 Checklist:
