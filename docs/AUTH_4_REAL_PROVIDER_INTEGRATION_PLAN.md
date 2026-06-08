@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Planning document only — implementation not started
-Implementation status: Not started; Auth-1, Auth-2, and Auth-3 complete
+Status: Step 1 complete — Generic OIDC provider selected
+Implementation status: Provider selected; implementation not started
 
 ## Purpose
 
@@ -76,6 +76,31 @@ Implementation may not begin until:
 1. The provider decision is made and recorded in this document.
 2. A separate implementation goal is issued after this planning document is
    committed.
+
+## Provider Decision
+
+**Chosen provider: Option B — Generic OIDC Provider.**
+
+Reason for selection:
+- Provider-neutral and portable.
+- Works with Auth0, Keycloak, Azure AD, Google Workspace, or a self-hosted OIDC
+  server without locking the project to one vendor.
+- Avoids silently adopting Supabase, which is not an existing project dependency.
+- Keeps implementation independent of a specific vendor.
+- Matches the plan recommendation when no specific vendor is required.
+
+Implementation remains not started. No OIDC code, no JWT verification, no provider
+SDK, and no login/logout UI has been added.
+
+## Progress Checklist
+
+- [x] Step 1: choose Generic OIDC provider path
+- [ ] Step 2: add Generic OIDC config settings
+- [ ] Step 3: add token verifier service
+- [ ] Step 4: wire verifier into auth context adapter
+- [ ] Step 5: add focused token/auth-context tests
+- [ ] Step 6: add frontend Authorization header path only if required
+- [ ] Step 7: run focused and broad validation / closeout
 
 ## Provider Decision Required Before Implementation
 
