@@ -51,6 +51,8 @@ Until then, future goals must stay local-first and must not instruct the operato
 
 - Local app run and validation.
 - Local smoke script checks.
+- The local-only OIDC dev harness at `docs/LOCAL_1_OIDC_DEV_HARNESS.md` — the
+  correct current path for testing the OIDC valid-token flow locally.
 - Repo documentation and tests.
 - Frontend build checks.
 - No VPS assumptions.

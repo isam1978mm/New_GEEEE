@@ -13,6 +13,8 @@ The default app surface is local-only. FastAPI binds to `127.0.0.1` by default, 
 
 VPS deployment is a separate future milestone and is not assumed by the local-first track.
 
+A local-only Generic OIDC development harness is available at [docs/LOCAL_1_OIDC_DEV_HARNESS.md](docs/LOCAL_1_OIDC_DEV_HARNESS.md) for testing the OIDC valid-token path on a developer machine with no real provider, secret, token, or deployment.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
