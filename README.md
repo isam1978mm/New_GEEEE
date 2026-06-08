@@ -38,7 +38,7 @@ A local operator session shell is implemented for development use only. It keeps
 - No public API response may expose coordinates, geometry, bounds, filesystem paths, hashes, or CRS transforms.
 - Experimental outputs are always `FILESYSTEM_ONLY` and are never listed or served over HTTP.
 
-See [docs/SAFETY_CONSTANTS.md](docs/SAFETY_CONSTANTS.md), [docs/PIPELINE.md](docs/PIPELINE.md), and [docs/EXPERIMENTAL_MODULE.md).
+See [docs/SAFETY_CONSTANTS.md](docs/SAFETY_CONSTANTS.md), [docs/PIPELINE.md](docs/PIPELINE.md), and [docs/EXPERIMENTAL_MODULE.md](docs/EXPERIMENTAL_MODULE.md).
 
 ## Local setup
 
