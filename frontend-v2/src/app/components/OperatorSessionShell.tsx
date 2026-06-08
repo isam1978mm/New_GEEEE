@@ -79,7 +79,7 @@ export function OperatorSessionShell({ session, onStartSession, onEndSession }: 
           <div className="grid gap-2" style={{ gridTemplateColumns: "minmax(180px, 1fr) minmax(150px, 0.6fr) minmax(120px, 0.4fr) auto" }}>
             <label className="flex flex-col gap-1">
               <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--gs-navy)" }}>Bearer value</span>
-              <input type="text" value={draftAccessToken} onChange={(event) => setDraftAccessToken(event.target.value)} placeholder="Paste local bearer value" autoComplete="off" className="font-mono rounded outline-none" style={{ fontSize: "11px", padding: "7px 10px", backgroundColor: "var(--input-background)", border: "1px solid var(--border)", color: "var(--gs-navy)" }} />
+              <input type="password" value={draftAccessToken} onChange={(event) => setDraftAccessToken(event.target.value)} placeholder="Paste local bearer value" autoComplete="off" className="font-mono rounded outline-none" style={{ fontSize: "11px", padding: "7px 10px", backgroundColor: "var(--input-background)", border: "1px solid var(--border)", color: "var(--gs-navy)" }} />
             </label>
             <label className="flex flex-col gap-1">
               <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--gs-navy)" }}>Actor</span>
