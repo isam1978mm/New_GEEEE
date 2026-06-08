@@ -1,8 +1,8 @@
 # Auth-3 — Per-Run Authorization Source/Store Plan
 
 Date: 2026-06-08
-Status: Planning document only — implementation not started
-Implementation status: Not started; Auth-1 and Auth-2 complete
+Status: Step 1 complete — config-backed store direction selected
+Implementation status: Store direction selected; implementation not started
 
 ## Purpose
 
@@ -117,6 +117,8 @@ Proposed behavior:
 
 ## Proposed Authorization Store Direction
 
+**Decision: config-backed first.**
+
 The backing store for Auth-3 should be the smallest option consistent with the
 existing project architecture.
 
@@ -136,9 +138,14 @@ an operator hard-configure which runs are pre-authorized in the `.env` file. Thi
 is simpler to implement first and can be superseded by a SQLite-backed store in a
 later slice if needed.
 
-Both directions are documented here for the implementation author to choose. The
-preferred order is: config-backed first (simpler), then migrate to SQLite-backed if
-dynamic per-actor-per-run management is needed.
+**Reason for selecting config-backed first:**
+- Smaller first slice
+- No migration required
+- No new infrastructure
+- Easier validation
+- Proves the authorization_result resolver seam before adding SQLite-backed dynamic storage
+
+Both directions are documented here. The selected order is: **config-backed first**, then migrate to SQLite-backed if dynamic per-actor-per-run management is needed.
 
 ## Allowed Scope
 
@@ -199,10 +206,20 @@ Auth-3 is not OIDC.
 Auth-3 is not JWT verification.
 Auth-3 does not add login/logout UI.
 
+## Progress Checklist
+
+- [x] Step 1: choose config-backed store direction
+- [ ] Step 2: add config-backed authorization setting
+- [ ] Step 3: add operator run authorization resolver
+- [ ] Step 4: wire resolver output into authorization_result
+- [ ] Step 5: add focused unit tests
+- [ ] Step 6: run focused and broad validation
+
 ## Proposed Implementation Steps
 
-1. Choose and document the backing store direction (config-backed or SQLite-backed)
-   before writing any code. Commit the choice as a one-line note in this document.
+1. ~~Choose and document the backing store direction (config-backed or SQLite-backed)
+    before writing any code. Commit the choice as a one-line note in this document.~~
+   **Done:** config-backed first selected.
 
 2. Add `app/services/operator_run_authorization.py`:
    - Define a small `OperatorRunAuthorizationResult` dataclass (or plain `bool`
