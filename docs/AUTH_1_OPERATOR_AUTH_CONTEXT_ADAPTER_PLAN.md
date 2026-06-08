@@ -1,8 +1,8 @@
 # Auth-1 — Operator Auth Context Adapter Plan
 
 Date: 2026-06-07
-Status: Step 2 complete — route refactor added
-Implementation status: Step 2 route refactor complete; unit tests not started
+Status: Step 3 complete — focused unit tests added
+Implementation status: Step 3 unit tests complete; existing API behavior confirmation not started
 
 ## Purpose
 
@@ -139,14 +139,15 @@ Status: Complete. This checkpoint was completed as a docs-only commit. Auth-1 im
 
 ### Step 3 — Unit tests
 
-- [ ] Test authenticated true parsing.
-- [ ] Test non-true values parse as unauthenticated.
-- [ ] Test actor ID trimming and empty-to-None behavior.
-- [ ] Test roles trimming, comma splitting, and empty removal.
-- [ ] Test authorized run IDs trimming, comma splitting, and empty removal.
-- [ ] Test request ID preservation when provided.
-- [ ] Test request ID fallback when missing or blank.
-- [ ] Test resolver returns immutable tuple fields.
+- [x] Test authenticated true parsing.
+- [x] Test non-true values parse as unauthenticated.
+- [x] Test actor ID trimming and empty-to-None behavior.
+- [x] Test roles trimming, comma splitting, and empty removal.
+- [x] Test authorized run IDs trimming, comma splitting, and empty removal.
+- [x] Test request ID preservation when provided.
+- [x] Test request ID fallback when missing or blank.
+- [x] Test resolver returns immutable tuple fields.
+- [x] Test `OperatorAuthContext` is frozen.
 
 ### Step 4 — Existing API behavior tests
 
