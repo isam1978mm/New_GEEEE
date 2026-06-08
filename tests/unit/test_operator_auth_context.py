@@ -9,6 +9,7 @@ from app.services.operator_auth_context import OperatorAuthContext, resolve_oper
 
 def _resolve(
     *,
+    trusted_proxy_enabled: bool = True,
     x_operator_authenticated: str | None = None,
     x_operator_id: str | None = None,
     x_operator_roles: str | None = None,
@@ -16,6 +17,7 @@ def _resolve(
     x_request_id: str | None = None,
 ) -> OperatorAuthContext:
     return resolve_operator_auth_context(
+        trusted_proxy_enabled=trusted_proxy_enabled,
         x_operator_authenticated=x_operator_authenticated,
         x_operator_id=x_operator_id,
         x_operator_roles=x_operator_roles,
@@ -77,6 +79,41 @@ def test_resolver_returns_immutable_tuple_fields() -> None:
 
     assert isinstance(context.roles, tuple)
     assert isinstance(context.authorized_run_ids, tuple)
+
+
+def test_trusted_proxy_disabled_fails_closed_even_with_truthy_headers() -> None:
+    context = _resolve(
+        trusted_proxy_enabled=False,
+        x_operator_authenticated="true",
+        x_operator_id="operator-1",
+        x_operator_roles="operator,admin",
+        x_operator_authorized_runs="run-a,run-b",
+        x_request_id="req-test",
+    )
+
+    assert context.actor_id is None
+    assert context.is_authenticated is False
+    assert context.roles == ()
+    assert context.authorized_run_ids == ()
+    assert context.request_id.startswith("req_")
+    assert context.request_id != "req-test"
+
+
+def test_trusted_proxy_enabled_preserves_existing_parsing_behavior() -> None:
+    context = _resolve(
+        trusted_proxy_enabled=True,
+        x_operator_authenticated=" true ",
+        x_operator_id=" operator-1 ",
+        x_operator_roles="operator, admin, ,",
+        x_operator_authorized_runs="run-a, run-b, ,",
+        x_request_id=" req-test ",
+    )
+
+    assert context.actor_id == "operator-1"
+    assert context.is_authenticated is True
+    assert context.roles == ("operator", "admin")
+    assert context.authorized_run_ids == ("run-a", "run-b")
+    assert context.request_id == "req-test"
 
 
 def test_operator_auth_context_is_frozen() -> None:

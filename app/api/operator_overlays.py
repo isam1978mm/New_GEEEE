@@ -34,6 +34,7 @@ async def get_operator_private_overlay_preview(
     """
 
     auth_context = resolve_operator_auth_context(
+        trusted_proxy_enabled=settings.operator_auth_trusted_proxy_enabled,
         x_operator_authenticated=x_operator_authenticated,
         x_operator_id=x_operator_id,
         x_operator_roles=x_operator_roles,

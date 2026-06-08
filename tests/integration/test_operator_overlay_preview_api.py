@@ -32,6 +32,7 @@ def _settings(root: Path, *, enabled: bool) -> Settings:
         data_dir=data_dir,
         database_path=data_dir / "gee_screening.db",
         operator_private_overlay_preview_enabled=enabled,
+        operator_auth_trusted_proxy_enabled=enabled,
     )
 
 

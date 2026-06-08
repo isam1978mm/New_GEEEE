@@ -1,8 +1,8 @@
 # Auth-2 — Trusted Proxy Mode / Settings Gate Plan
 
 Date: 2026-06-08
-Status: Step 1 complete — default-off trusted proxy setting added
-Implementation status: Step 1 setting added; trusted-proxy gate enforcement not started
+Status: Step 2 complete — trusted-proxy gate enforced
+Implementation status: Step 2 gate enforcement complete; integration fail-closed coverage not started
 
 ## Purpose
 
@@ -157,7 +157,7 @@ Auth-2 does not add login/logout UI.
 ## Progress Checklist
 
 - [x] Step 1: add `operator_auth_trusted_proxy_enabled` to `Settings` with default `False`
-- [ ] Step 2: enforce trusted-proxy gate in operator auth context resolution
+- [x] Step 2: enforce trusted-proxy gate in operator auth context resolution
 - [ ] Step 3: add integration coverage for fail-closed behavior when trusted proxy mode is disabled
 - [ ] Step 4: confirm post-gate operator overlay behavior remains redacted and operator-only
 
