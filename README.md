@@ -15,6 +15,8 @@ VPS deployment is a separate future milestone and is not assumed by the local-fi
 
 A local-only Generic OIDC development harness is available at [docs/LOCAL_1_OIDC_DEV_HARNESS.md](docs/LOCAL_1_OIDC_DEV_HARNESS.md) for testing the OIDC valid-token path on a developer machine with no real provider, secret, token, or deployment.
 
+The local operator UI token handoff contract is documented at [docs/LOCAL_2_OPERATOR_UI_TOKEN_HANDOFF.md](docs/LOCAL_2_OPERATOR_UI_TOKEN_HANDOFF.md). It remains local-only and adds no login UI and no token storage.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
