@@ -27,6 +27,8 @@ The operator auth login/logout UX wireframe and state model are documented at [d
 
 A local operator session shell is implemented for development use only. It keeps the operator session in page memory, forwards it through the existing private-preview handoff path, and adds no real provider, provider SDK, persistence, Supabase, or VPS deployment.
 
+The real map point picker replacement is documented at [docs/UI_MAP_1_REAL_POINT_PICKER.md](docs/UI_MAP_1_REAL_POINT_PICKER.md). It replaces the fake local grid picker with a tile-based map click target picker while keeping external tiles controlled by Settings.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
