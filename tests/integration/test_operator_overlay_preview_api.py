@@ -25,14 +25,19 @@ _RUN_ID = "run_authorized"
 _PATH = f"/runs/{_RUN_ID}/operator/private-overlays"
 
 
-def _settings(root: Path, *, enabled: bool) -> Settings:
+def _settings(
+    root: Path,
+    *,
+    enabled: bool,
+    trusted_proxy_enabled: bool | None = None,
+) -> Settings:
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     return Settings(
         data_dir=data_dir,
         database_path=data_dir / "gee_screening.db",
         operator_private_overlay_preview_enabled=enabled,
-        operator_auth_trusted_proxy_enabled=enabled,
+        operator_auth_trusted_proxy_enabled=enabled if trusted_proxy_enabled is None else trusted_proxy_enabled,
     )
 
 
@@ -161,6 +166,26 @@ def test_public_modes_denied() -> None:
                     headers=_operator_headers(),
                 )
                 assert response.status_code == 403, mode
+
+
+def test_trusted_proxy_disabled_denies_even_with_operator_headers() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir), enabled=True, trusted_proxy_enabled=False)
+        _upgrade_database(settings)
+        _write_artifacts(settings)
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get(
+                _PATH,
+                params={"artifact_family": PHASE_D1_GEOJSON_FAMILY_ID},
+                headers=_operator_headers(),
+            )
+    assert response.status_code == 403
+    body = response.json()
+    assert body["outcome"] == "denied"
+    assert "preview_payload" not in body
+    assert "run_id" not in body
+    assert "artifact_family" not in body
+    _assert_no_public_surface(response.text, settings)
 
 
 def test_valid_operator_preview_allowed_for_each_family() -> None:
