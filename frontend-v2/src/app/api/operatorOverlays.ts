@@ -44,15 +44,23 @@ const OPERATOR_ONLY_ACCESS_MODE = "operator_only_preview";
 export async function getOperatorPrivateOverlayPreview(
   runId: string,
   artifactFamily: OperatorPrivateOverlayArtifactFamily,
+  options?: { accessToken?: string | null },
 ): Promise<OperatorPrivateOverlayPreview> {
   const query = new URLSearchParams({
     artifact_family: artifactFamily,
     access_mode: OPERATOR_ONLY_ACCESS_MODE,
   });
 
+  const fetchOptions: RequestInit = {};
+  const trimmedToken = (options?.accessToken ?? "").trim();
+  if (trimmedToken) {
+    fetchOptions.headers = { Authorization: `Bearer ${trimmedToken}` };
+  }
+
   try {
     const response = await fetch(
       `/runs/${encodeURIComponent(runId)}/operator/private-overlays?${query.toString()}`,
+      fetchOptions,
     );
     const payload = await readJson(response);
 

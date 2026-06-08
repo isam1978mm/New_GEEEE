@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Step 5 complete — focused token/auth-context tests added
-Implementation status: Focused post-wiring tests added; frontend Authorization header path not started
+Status: Step 6 complete — frontend Authorization header path added
+Implementation status: Frontend Authorization header path added; Auth-4 validation/closeout not started
 
 ## Purpose
 
@@ -123,7 +123,14 @@ SDK, and no login/logout UI has been added.
     invalid OIDC token fails closed even when raw X-Operator-* headers claim access.
   - Added 1 unit test proving OIDC verified token authenticates regardless of trusted_proxy_enabled.
   - All 68 focused tests pass.
-- [ ] Step 6: add frontend Authorization header path only if required
+- [x] Step 6: add frontend Authorization header path only if required
+  - Extended `getOperatorPrivateOverlayPreview` with optional `options.accessToken` parameter.
+  - Sends `Authorization: Bearer <token>` only when token is a non-empty string after trim.
+  - Missing, null, blank, or whitespace accessToken preserves no-Authorization behavior.
+  - Added `operatorAccessToken?: string | null` prop to `OperatorPrivateOverlayPanel`.
+  - Updated explanatory text to reflect that a provider-supplied token may be forwarded.
+  - No token storage, no localStorage/sessionStorage reads, no login/logout UI, no provider SDK.
+  - Frontend build passes. Token acquisition remains outside this step.
 - [ ] Step 7: run focused and broad validation / closeout
 
 ## Provider Decision Required Before Implementation

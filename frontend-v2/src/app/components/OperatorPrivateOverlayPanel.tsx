@@ -7,6 +7,7 @@ import {
 
 interface OperatorPrivateOverlayPanelProps {
   runId: string;
+  operatorAccessToken?: string | null;
 }
 
 const ARTIFACT_FAMILIES: { key: OperatorPrivateOverlayArtifactFamily; label: string }[] = [
@@ -15,7 +16,7 @@ const ARTIFACT_FAMILIES: { key: OperatorPrivateOverlayArtifactFamily; label: str
   { key: "phase_d3_private_heatmap_json", label: "D3 Heatmap" },
 ];
 
-export function OperatorPrivateOverlayPanel({ runId }: OperatorPrivateOverlayPanelProps) {
+export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: OperatorPrivateOverlayPanelProps) {
   const [activeFamily, setActiveFamily] = useState<OperatorPrivateOverlayArtifactFamily>("phase_d1_private_geojson");
   const [preview, setPreview] = useState<OperatorPrivateOverlayPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export function OperatorPrivateOverlayPanel({ runId }: OperatorPrivateOverlayPan
     let cancelled = false;
     async function loadPreview() {
       setLoading(true);
-      const nextPreview = await getOperatorPrivateOverlayPreview(runId, activeFamily);
+      const nextPreview = await getOperatorPrivateOverlayPreview(runId, activeFamily, { accessToken: operatorAccessToken });
       if (!cancelled) {
         setPreview(nextPreview);
         setLoading(false);
@@ -34,7 +35,7 @@ export function OperatorPrivateOverlayPanel({ runId }: OperatorPrivateOverlayPan
     return () => {
       cancelled = true;
     };
-  }, [runId, activeFamily]);
+  }, [runId, activeFamily, operatorAccessToken]);
 
   return (
     <section
@@ -60,7 +61,7 @@ export function OperatorPrivateOverlayPanel({ runId }: OperatorPrivateOverlayPan
 
         <div className="px-4 py-3 flex flex-col gap-3">
           <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-            Uses the existing default-off backend gate. Operator identity must come from a trusted upstream proxy; this browser does not set operator identity headers.
+            Uses the default-off backend gate. May forward a provider-supplied bearer token when one is available. Operator identity is not set directly by this browser.
           </div>
 
           <div className="flex flex-wrap gap-2">
