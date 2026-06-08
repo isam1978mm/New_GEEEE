@@ -1,4 +1,4 @@
-"""Static contract tests for UI-MAP-1 real point picker."""
+"""Static contract tests for UI-MAP-1 large navigable real point picker."""
 from __future__ import annotations
 
 import json
@@ -15,11 +15,12 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_ui_map_doc_exists_and_states_problem() -> None:
+def test_ui_map_doc_requires_large_navigable_map() -> None:
     text = _read(_DOC)
-    assert "blank local grid" in text
-    assert "real map-style point picker" in text
-    assert "External map tiles are disabled by default" in text
+    assert "large navigable tile map" in text
+    assert "Pan controls" in text
+    assert "Zoom controls" in text
+    assert "click the map" in text
 
 
 def test_fake_point_grid_removed() -> None:
@@ -29,18 +30,28 @@ def test_fake_point_grid_removed() -> None:
     assert "linear-gradient" not in text
 
 
-def test_real_map_picker_present() -> None:
+def test_large_map_picker_present() -> None:
     text = _read(_RUN_WORKFLOW_CARD)
-    assert "Map point picker" in text
-    assert "real map tiles" in text
+    assert "Large map target picker" in text
+    assert "height: 560" in text
+    assert "Pan and zoom" in text
     assert "Click map to place target pin" in text
-    assert "Target map center tile" in text
+
+
+def test_map_has_pan_and_zoom_controls() -> None:
+    text = _read(_RUN_WORKFLOW_CARD)
+    assert "function panMap" in text
+    assert "function zoomMap" in text
+    assert "onPan" in text
+    assert "onZoom" in text
+    assert "MapButton" in text
 
 
 def test_map_click_updates_target_from_web_mercator_math() -> None:
     text = _read(_RUN_WORKFLOW_CARD)
     assert "function handleMapClick" in text
     assert "pixelToLatLon" in text
+    assert "chooseTarget" in text
     assert "setLatitude(point.lat.toFixed(8))" in text
     assert "setLongitude(point.lon.toFixed(8))" in text
     assert "latLonToPixel" in text
@@ -50,7 +61,7 @@ def test_map_uses_existing_external_tile_setting_boundary() -> None:
     text = _read(_RUN_WORKFLOW_CARD)
     assert "externalTilesEnabled" in text
     assert "tileUrlTemplate" in text
-    assert "Map picker disabled" in text
+    assert "Map disabled" in text
     assert "Enable External map tiles in Settings" in text
 
 
