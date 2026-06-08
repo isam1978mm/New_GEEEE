@@ -1,8 +1,8 @@
 # Auth-2 — Trusted Proxy Mode / Settings Gate Plan
 
 Date: 2026-06-08
-Status: Step 3 complete — trusted-proxy disabled integration coverage added
-Implementation status: Step 3 integration fail-closed coverage complete; post-gate behavior confirmation not started
+Status: Auth-2 complete — trusted proxy mode gate validated
+Implementation status: Auth-2 complete; real auth provider integration not started
 
 ## Purpose
 
@@ -159,7 +159,7 @@ Auth-2 does not add login/logout UI.
 - [x] Step 1: add `operator_auth_trusted_proxy_enabled` to `Settings` with default `False`
 - [x] Step 2: enforce trusted-proxy gate in operator auth context resolution
 - [x] Step 3: add integration coverage for fail-closed behavior when trusted proxy mode is disabled
-- [ ] Step 4: confirm post-gate operator overlay behavior remains redacted and operator-only
+- [x] Step 4: confirm post-gate operator overlay behavior remains redacted and operator-only
 
 ## Expected Changed Files for Later Implementation
 
@@ -188,20 +188,48 @@ git status --short
 git diff --stat
 ```
 
+## Step 4 Validation Results
+
+Validation command run on 2026-06-08:
+
+```bash
+uv run python -m pytest tests/unit/test_config_auth_settings.py tests/unit/test_operator_auth_context.py tests/integration/test_operator_overlay_preview_api.py -v
+```
+
+Result: **26 passed** in 2.04s — all focused Auth-2 tests pass.
+
+Broad regression check:
+
+```bash
+uv run python -m pytest tests/unit/ tests/integration/ -v
+```
+
+Result: **422 passed** in 77s — no regressions across full unit and integration suite.
+
+Post-gate behavior confirmed:
+- Operator overlay responses remain redacted (no coordinates, no local paths, no SHA256, no download URLs).
+- All denial paths return HTTP 403 with generic identical body.
+- Trusted-proxy disabled fails closed even with full operator headers present.
+- Operator-only preview allowed only when all gates pass.
+- No public overlay, no public download, no artifact-serving policy change.
+- No frontend/UI trusted-proxy setting added.
+- No real auth provider added.
+- `app/config.py`, `app/services/operator_auth_context.py`, and `app/api/operator_overlays.py` unchanged.
+
 ## Acceptance Criteria
 
 Auth-2 should be accepted only if all are true in the later implementation slice:
 
-- A trusted-proxy settings flag exists and defaults to `False`.
-- Header-based operator identity is not trusted when trusted proxy mode is disabled.
-- The route still goes through `resolve_operator_auth_context(...)`.
-- Operator-only preview requests fail closed when the trusted-proxy gate is off.
-- Existing operator overlay response shape remains unchanged.
-- Existing redaction behavior remains unchanged.
-- No public overlay or artifact-serving behavior changes are introduced.
-- No frontend changes are required.
-- No Supabase/OIDC/JWT/provider dependency is added.
-- No H3/H4/SAR/GRID/notebook parity/screening math behavior changes are introduced.
+- [x] A trusted-proxy settings flag exists and defaults to `False`.
+- [x] Header-based operator identity is not trusted when trusted proxy mode is disabled.
+- [x] The route still goes through `resolve_operator_auth_context(...)`.
+- [x] Operator-only preview requests fail closed when the trusted-proxy gate is off.
+- [x] Existing operator overlay response shape remains unchanged.
+- [x] Existing redaction behavior remains unchanged.
+- [x] No public overlay or artifact-serving behavior changes are introduced.
+- [x] No frontend changes are required.
+- [x] No Supabase/OIDC/JWT/provider dependency is added.
+- [x] No H3/H4/SAR/GRID/notebook parity/screening math behavior changes are introduced.
 
 ## Rollback Plan
 
