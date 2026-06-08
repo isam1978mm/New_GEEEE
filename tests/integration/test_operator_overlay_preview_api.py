@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from alembic import command
 from alembic.config import Config
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+from app.services.operator_token_verifier import TokenVerificationResult
 from app.pipeline.parity.private_map_artifact_comparator import (
     PHASE_D1_GEOJSON_FAMILY_ID,
     PHASE_D2_KMZ_FAMILY_ID,
@@ -31,15 +33,27 @@ def _settings(
     enabled: bool,
     trusted_proxy_enabled: bool | None = None,
     operator_run_authorizations: dict[str, list[str]] | None = None,
+    oidc_enabled: bool = False,
 ) -> Settings:
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
+    oidc_kwargs: dict[str, object] = (
+        dict(
+            operator_auth_oidc_enabled=True,
+            operator_auth_oidc_issuer_url="https://issuer.example.test",
+            operator_auth_oidc_client_id="gee-operator-ui",
+            operator_auth_oidc_jwks_uri="https://issuer.example.test/.well-known/jwks.json",
+        )
+        if oidc_enabled
+        else {}
+    )
     return Settings(
         data_dir=data_dir,
         database_path=data_dir / "gee_screening.db",
         operator_private_overlay_preview_enabled=enabled,
         operator_auth_trusted_proxy_enabled=enabled if trusted_proxy_enabled is None else trusted_proxy_enabled,
         operator_run_authorizations=operator_run_authorizations or {},
+        **oidc_kwargs,  # type: ignore[arg-type]
     )
 
 
@@ -306,3 +320,108 @@ def _assert_no_public_surface(text: str, settings: Settings) -> None:
     assert "/download/" not in lowered
     assert str(settings.data_dir).lower() not in lowered
     assert "sha256" not in lowered
+
+
+# ---------------------------------------------------------------------------
+# OIDC route-level tests — verify_operator_token patched, no real JWKS calls
+# ---------------------------------------------------------------------------
+
+_PATCH_VERIFY = "app.services.operator_auth_context.verify_operator_token"
+
+
+def test_oidc_verified_token_allows_when_backend_authorizes_actor_run() -> None:
+    verified = TokenVerificationResult(
+        verified=True, actor_id="operator_oidc", roles=("operator",), reason="verified"
+    )
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            trusted_proxy_enabled=False,
+            oidc_enabled=True,
+            operator_run_authorizations={"operator_oidc": [_RUN_ID]},
+        )
+        _upgrade_database(settings)
+        _write_artifacts(settings)
+        with (
+            TestClient(create_app(settings), raise_server_exceptions=False) as client,
+            patch(_PATCH_VERIFY, return_value=verified),
+        ):
+            response = client.get(
+                _PATH,
+                params={"artifact_family": PHASE_D1_GEOJSON_FAMILY_ID},
+                headers={"Authorization": "Bearer good.token"},
+            )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["outcome"] == "allowed"
+    assert body["frontend_visible"] == "operator_only"
+    assert body["downloadable_via_api"] is False
+    _assert_no_public_surface(response.text, settings)
+
+
+def test_oidc_verified_token_does_not_bypass_backend_run_authorization() -> None:
+    verified = TokenVerificationResult(
+        verified=True, actor_id="operator_oidc", roles=("operator",), reason="verified"
+    )
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            trusted_proxy_enabled=False,
+            oidc_enabled=True,
+            operator_run_authorizations={},
+        )
+        _upgrade_database(settings)
+        _write_artifacts(settings)
+        with (
+            TestClient(create_app(settings), raise_server_exceptions=False) as client,
+            patch(_PATCH_VERIFY, return_value=verified),
+        ):
+            response = client.get(
+                _PATH,
+                params={"artifact_family": PHASE_D1_GEOJSON_FAMILY_ID},
+                headers={"Authorization": "Bearer good.token"},
+            )
+    assert response.status_code == 403
+    body = response.json()
+    assert body["outcome"] == "denied"
+    assert "preview_payload" not in body
+    assert "run_id" not in body
+    assert "artifact_family" not in body
+    _assert_no_public_surface(response.text, settings)
+
+
+def test_oidc_invalid_token_fails_closed_even_with_truthy_operator_headers() -> None:
+    denied_result = TokenVerificationResult(
+        verified=False, actor_id=None, roles=(), reason="invalid_token"
+    )
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            trusted_proxy_enabled=True,
+            oidc_enabled=True,
+            operator_run_authorizations={"operator_1": [_RUN_ID]},
+        )
+        _upgrade_database(settings)
+        _write_artifacts(settings)
+        with (
+            TestClient(create_app(settings), raise_server_exceptions=False) as client,
+            patch(_PATCH_VERIFY, return_value=denied_result),
+        ):
+            response = client.get(
+                _PATH,
+                params={"artifact_family": PHASE_D1_GEOJSON_FAMILY_ID},
+                headers={
+                    **_operator_headers(),
+                    "Authorization": "Bearer bad.token",
+                },
+            )
+    assert response.status_code == 403
+    body = response.json()
+    assert body["outcome"] == "denied"
+    assert "preview_payload" not in body
+    assert "run_id" not in body
+    assert "artifact_family" not in body
+    _assert_no_public_surface(response.text, settings)

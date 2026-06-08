@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Step 4 complete — token verifier wired into auth context adapter
-Implementation status: Token verifier wired into auth context adapter; focused post-wiring tests not complete
+Status: Step 5 complete — focused token/auth-context tests added
+Implementation status: Focused post-wiring tests added; frontend Authorization header path not started
 
 ## Purpose
 
@@ -117,7 +117,12 @@ SDK, and no login/logout UI has been added.
   - When OIDC disabled: existing trusted-proxy behavior preserved exactly.
   - Route forwards `Authorization` header; no inline token logic in route.
   - 6 new adapter unit tests added; all 64 focused tests pass.
-- [ ] Step 5: add focused token/auth-context tests
+- [x] Step 5: add focused token/auth-context tests
+  - Added 3 integration tests proving: verified OIDC token identity can access route when Auth-3
+    backend config authorizes the actor/run; verified OIDC token cannot bypass Auth-3 per-run gate;
+    invalid OIDC token fails closed even when raw X-Operator-* headers claim access.
+  - Added 1 unit test proving OIDC verified token authenticates regardless of trusted_proxy_enabled.
+  - All 68 focused tests pass.
 - [ ] Step 6: add frontend Authorization header path only if required
 - [ ] Step 7: run focused and broad validation / closeout
 

@@ -255,3 +255,21 @@ def test_oidc_enabled_non_bearer_authorization_passes_none_token() -> None:
             )
         passed = mock_verify.call_args.kwargs["token"]
         assert passed is None, f"Expected None for authorization={bad_auth!r}, got {passed!r}"
+
+
+def test_oidc_enabled_verified_token_authenticates_regardless_of_trusted_proxy_flag() -> None:
+    with patch(_PATCH, return_value=_VERIFIED):
+        context = resolve_operator_auth_context(
+            trusted_proxy_enabled=False,
+            x_operator_authenticated=None,
+            x_operator_id=None,
+            x_operator_roles=None,
+            x_operator_authorized_runs=None,
+            x_request_id=None,
+            settings=_OIDC_SETTINGS,
+            authorization="Bearer fake.token.value",
+        )
+    assert context.actor_id == "operator-abc"
+    assert context.is_authenticated is True
+    assert context.roles == ("operator",)
+    assert context.authorized_run_ids == ()
