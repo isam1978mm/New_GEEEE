@@ -23,6 +23,8 @@ D1 real frozen-reference collection remains outside Git and is documented in [do
 
 Operator auth UI planning and the pre-implementation checklist are documented at [docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md](docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md). This is documentation only; no login/logout UI or token storage is implemented yet.
 
+The operator auth login/logout UX wireframe and state model are documented at [docs/UI_AUTH_1_LOGIN_LOGOUT_UX_STATE_MODEL.md](docs/UI_AUTH_1_LOGIN_LOGOUT_UX_STATE_MODEL.md). This is documentation only; no provider callback, token acquisition, token storage, or UI implementation is started yet.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
