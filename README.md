@@ -21,6 +21,8 @@ The full local auth regression closeout is documented at [docs/LOCAL_3_FULL_AUTH
 
 D1 real frozen-reference collection remains outside Git and is documented in [docs/D1_REAL_REFERENCE_COLLECTION_OUTSIDE_GIT.md](docs/D1_REAL_REFERENCE_COLLECTION_OUTSIDE_GIT.md). Real references are operator-owned outside Git only; notebook-value parity remains unverified until the real Phase E/E3/E4 verifiers pass.
 
+Operator auth UI planning and the pre-implementation checklist are documented at [docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md](docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md). This is documentation only; no login/logout UI or token storage is implemented yet.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
@@ -78,14 +80,3 @@ Rules:
 - Inputs must come from a completed core run.
 - Outputs write only under `./data/runs/<run_id>/experimental/`.
 - Every experimental artifact is `FILESYSTEM_ONLY`.
-- No experimental output is listed, previewed, tiled, or downloadable through HTTP.
-
-## Tests
-
-```bash
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/notebook_parity/
-```
-
-The notebook parity suite covers only the defensible core stages. The experimental classifier has contract tests outside `tests/notebook_parity/`.
