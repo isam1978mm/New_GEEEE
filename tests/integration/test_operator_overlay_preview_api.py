@@ -30,6 +30,7 @@ def _settings(
     *,
     enabled: bool,
     trusted_proxy_enabled: bool | None = None,
+    operator_run_authorizations: dict[str, list[str]] | None = None,
 ) -> Settings:
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -38,6 +39,7 @@ def _settings(
         database_path=data_dir / "gee_screening.db",
         operator_private_overlay_preview_enabled=enabled,
         operator_auth_trusted_proxy_enabled=enabled if trusted_proxy_enabled is None else trusted_proxy_enabled,
+        operator_run_authorizations=operator_run_authorizations or {},
     )
 
 
@@ -125,9 +127,13 @@ def test_non_operator_actor_denied() -> None:
     assert response.status_code == 403
 
 
-def test_unauthorized_run_denied() -> None:
+def test_backend_config_controls_authorization() -> None:
     with TemporaryDirectory() as temp_dir:
-        settings = _settings(Path(temp_dir), enabled=True)
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            operator_run_authorizations={"operator_1": [_RUN_ID]},
+        )
         _upgrade_database(settings)
         _write_artifacts(settings)
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -136,7 +142,9 @@ def test_unauthorized_run_denied() -> None:
                 params={"artifact_family": PHASE_D1_GEOJSON_FAMILY_ID},
                 headers=_operator_headers(authorized_runs="other_run"),
             )
-    assert response.status_code == 403
+    assert response.status_code == 200
+    body = response.json()
+    assert body["outcome"] == "allowed"
 
 
 def test_unsupported_artifact_family_denied() -> None:
@@ -190,7 +198,11 @@ def test_trusted_proxy_disabled_denies_even_with_operator_headers() -> None:
 
 def test_valid_operator_preview_allowed_for_each_family() -> None:
     with TemporaryDirectory() as temp_dir:
-        settings = _settings(Path(temp_dir), enabled=True)
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            operator_run_authorizations={"operator_1": [_RUN_ID]},
+        )
         _upgrade_database(settings)
         _write_artifacts(settings)
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -215,7 +227,11 @@ def test_valid_operator_preview_allowed_for_each_family() -> None:
 
 def test_authorized_missing_artifact_returns_not_available() -> None:
     with TemporaryDirectory() as temp_dir:
-        settings = _settings(Path(temp_dir), enabled=True)
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            operator_run_authorizations={"operator_1": [_RUN_ID]},
+        )
         _upgrade_database(settings)
         # no artifacts written
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -232,7 +248,11 @@ def test_authorized_missing_artifact_returns_not_available() -> None:
 
 def test_responses_pass_global_redaction_and_expose_no_public_surface() -> None:
     with TemporaryDirectory() as temp_dir:
-        settings = _settings(Path(temp_dir), enabled=True)
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            operator_run_authorizations={"operator_1": [_RUN_ID]},
+        )
         _upgrade_database(settings)
         _write_artifacts(settings)
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:

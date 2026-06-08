@@ -1,8 +1,8 @@
 # Auth-3 — Per-Run Authorization Source/Store Plan
 
 Date: 2026-06-08
-Status: Step 3 complete — config-backed run authorization resolver added
-Implementation status: Resolver added; authorization_result wiring not started
+Status: Step 4 complete — resolver wired into authorization_result
+Implementation status: Resolver wiring complete; post-wiring focused tests not started
 
 ## Purpose
 
@@ -41,6 +41,9 @@ authorization result (`authorization_result: bool`) independently of the header
 value, and wire that result into the existing `authorization_result` seam on
 `OverlayAccessRequest` so the foundation's gate logic uses it instead of the raw
 header tuple.
+
+Backend config-backed resolver now supplies `authorization_result`; header-supplied
+`authorized_run_ids` is no longer the final per-run gate.
 
 ## Why Auth-3 Comes After Auth-2
 
@@ -211,7 +214,7 @@ Auth-3 does not add login/logout UI.
 - [x] Step 1: choose config-backed store direction
 - [x] Step 2: add config-backed authorization setting
 - [x] Step 3: add operator run authorization resolver with direct unit tests
-- [ ] Step 4: wire resolver output into authorization_result
+- [x] Step 4: wire resolver output into authorization_result
 - [ ] Step 5: add post-wiring focused tests
 - [ ] Step 6: run focused and broad validation
 

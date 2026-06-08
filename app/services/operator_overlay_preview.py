@@ -32,6 +32,7 @@ from app.pipeline.parity.private_map_artifact_writers import (
     PRIVATE_KMZ_DEFAULT_OUTPUT_DIR,
     PRIVATE_KMZ_KML_FILENAME,
 )
+from app.services.operator_run_authorization import resolve_run_authorization
 from app.services.storage import get_run_dir
 
 
@@ -80,6 +81,12 @@ def build_operator_overlay_preview(
     builds an audit event. No public download URL or artifact-serving URL is created.
     """
 
+    run_authorization = resolve_run_authorization(
+        settings=settings,
+        actor_id=actor_id,
+        run_id=run_id,
+    )
+
     request = OverlayAccessRequest(
         actor_id=actor_id,
         is_authenticated=is_authenticated,
@@ -90,6 +97,7 @@ def build_operator_overlay_preview(
         operator_overlay_preview_enabled=bool(settings.operator_private_overlay_preview_enabled),
         request_id=request_id,
         authorized_run_ids=tuple(authorized_run_ids) if authorized_run_ids is not None else None,
+        authorization_result=run_authorization.allowed,
     )
     decision = evaluate_overlay_access(request)
     audit_event = build_audit_event(decision, actor_id=actor_id)
