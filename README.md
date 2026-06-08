@@ -21,9 +21,11 @@ The full local auth regression closeout is documented at [docs/LOCAL_3_FULL_AUTH
 
 D1 real frozen-reference collection remains outside Git and is documented in [docs/D1_REAL_REFERENCE_COLLECTION_OUTSIDE_GIT.md](docs/D1_REAL_REFERENCE_COLLECTION_OUTSIDE_GIT.md). Real references are operator-owned outside Git only; notebook-value parity remains unverified until the real Phase E/E3/E4 verifiers pass.
 
-Operator auth UI planning and the pre-implementation checklist are documented at [docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md](docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md). This is documentation only; no login/logout UI or token storage is implemented yet.
+Operator auth UI planning and the pre-implementation checklist are documented at [docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md](docs/UI_AUTH_OPERATOR_LOGIN_PLAN_AND_CHECKLIST.md).
 
-The operator auth login/logout UX wireframe and state model are documented at [docs/UI_AUTH_1_LOGIN_LOGOUT_UX_STATE_MODEL.md](docs/UI_AUTH_1_LOGIN_LOGOUT_UX_STATE_MODEL.md). This is documentation only; no provider callback, token acquisition, token storage, or UI implementation is started yet.
+The operator auth login/logout UX wireframe and state model are documented at [docs/UI_AUTH_1_LOGIN_LOGOUT_UX_STATE_MODEL.md](docs/UI_AUTH_1_LOGIN_LOGOUT_UX_STATE_MODEL.md).
+
+A local operator session shell is implemented for development use only. It keeps the operator session in page memory, forwards it through the existing private-preview handoff path, and adds no real provider, provider SDK, persistence, Supabase, or VPS deployment.
 
 ## Safety constants
 
@@ -36,7 +38,7 @@ The operator auth login/logout UX wireframe and state model are documented at [d
 - No public API response may expose coordinates, geometry, bounds, filesystem paths, hashes, or CRS transforms.
 - Experimental outputs are always `FILESYSTEM_ONLY` and are never listed or served over HTTP.
 
-See [docs/SAFETY_CONSTANTS.md](docs/SAFETY_CONSTANTS.md), [docs/PIPELINE.md](docs/PIPELINE.md), and [docs/EXPERIMENTAL_MODULE.md](docs/EXPERIMENTAL_MODULE.md).
+See [docs/SAFETY_CONSTANTS.md](docs/SAFETY_CONSTANTS.md), [docs/PIPELINE.md](docs/PIPELINE.md), and [docs/EXPERIMENTAL_MODULE.md).
 
 ## Local setup
 
