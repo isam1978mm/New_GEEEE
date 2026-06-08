@@ -1,8 +1,8 @@
 # Auth-1 — Operator Auth Context Adapter Plan
 
 Date: 2026-06-07
-Status: Step 3 complete — focused unit tests added
-Implementation status: Step 3 unit tests complete; existing API behavior confirmation not started
+Status: Auth-1 complete — existing API behavior confirmed
+Implementation status: Auth-1 complete; real auth provider integration not started
 
 ## Purpose
 
@@ -151,15 +151,17 @@ Status: Complete. This checkpoint was completed as a docs-only commit. Auth-1 im
 
 ### Step 4 — Existing API behavior tests
 
-- [ ] Confirm disabled-by-default still denies.
-- [ ] Confirm unauthenticated actor still denies.
-- [ ] Confirm non-operator actor still denies.
-- [ ] Confirm unauthorized run still denies.
-- [ ] Confirm unsupported artifact family still denies.
-- [ ] Confirm public modes still deny.
-- [ ] Confirm valid operator still receives coordinate-free preview.
-- [ ] Confirm missing artifact still returns `not_available` for authorized operator.
-- [ ] Confirm no public surface appears in allowed or denied responses.
+- [x] Confirm disabled-by-default still denies.
+- [x] Confirm unauthenticated actor still denies.
+- [x] Confirm non-operator actor still denies.
+- [x] Confirm unauthorized run still denies.
+- [x] Confirm unsupported artifact family still denies.
+- [x] Confirm public modes still deny.
+- [x] Confirm valid operator still receives coordinate-free preview.
+- [x] Confirm missing artifact still returns `not_available` for authorized operator.
+- [x] Confirm no public surface appears in allowed or denied responses.
+
+Step 4 confirmed by `uv run python -m pytest tests/integration/test_operator_overlay_preview_api.py -v`.
 
 ## Validation commands for Auth-1 implementation
 
@@ -176,16 +178,16 @@ git diff --stat
 Auth-1 is accepted only if all are true:
 
 - [x] Step 0 planning document exists and is committed.
-- [ ] Operator header parsing is centralized in `app/services/operator_auth_context.py`.
-- [ ] `app/api/operator_overlays.py` no longer parses roles/runs/request ID inline.
-- [ ] Existing API behavior is unchanged.
-- [ ] Denied responses remain redacted.
-- [ ] Allowed previews remain coordinate-free.
-- [ ] No public/private artifact policy change is introduced.
-- [ ] No frontend files changed.
-- [ ] No Supabase/OIDC/JWT/provider dependency added.
-- [ ] No H3/H4/SAR/GRID/notebook parity/screening math changed.
-- [ ] Focused tests pass.
+- [x] Operator header parsing is centralized in `app/services/operator_auth_context.py`.
+- [x] `app/api/operator_overlays.py` no longer parses roles/runs/request ID inline.
+- [x] Existing API behavior is unchanged.
+- [x] Denied responses remain redacted.
+- [x] Allowed previews remain coordinate-free.
+- [x] No public/private artifact policy change is introduced.
+- [x] No frontend files changed.
+- [x] No Supabase/OIDC/JWT/provider dependency added.
+- [x] No H3/H4/SAR/GRID/notebook parity/screening math changed.
+- [x] Focused tests pass.
 - [ ] Broad unit/integration tests pass or unrelated failure is clearly identified with evidence.
 
 ## Process rule for next implementation step
