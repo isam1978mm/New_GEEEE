@@ -1,8 +1,8 @@
 # Auth-3 — Per-Run Authorization Source/Store Plan
 
 Date: 2026-06-08
-Status: Step 1 complete — config-backed store direction selected
-Implementation status: Store direction selected; implementation not started
+Status: Step 2 complete — config-backed authorization setting added
+Implementation status: Config-backed authorization setting added; resolver not started
 
 ## Purpose
 
@@ -209,7 +209,7 @@ Auth-3 does not add login/logout UI.
 ## Progress Checklist
 
 - [x] Step 1: choose config-backed store direction
-- [ ] Step 2: add config-backed authorization setting
+- [x] Step 2: add config-backed authorization setting
 - [ ] Step 3: add operator run authorization resolver
 - [ ] Step 4: wire resolver output into authorization_result
 - [ ] Step 5: add focused unit tests
@@ -237,9 +237,9 @@ Auth-3 does not add login/logout UI.
    - Keep passing `authorized_run_ids` for audit use if needed, or omit it once
      `authorization_result` is always set.
 
-4. If config-backed: add a new `Settings` field (e.g.
-   `operator_authorized_run_ids: list[str] = Field(default_factory=list)`) and use
-   it inside the resolver to check membership.
+4. If config-backed: add a new `Settings` field:
+   `operator_run_authorizations: dict[str, list[str]] = Field(default_factory=dict)`
+   and use it inside the resolver to check membership.
 
 5. If SQLite-backed: add one Alembic migration creating a small authorization
    table (`operator_run_authorizations`) with at minimum `actor_id TEXT`,
