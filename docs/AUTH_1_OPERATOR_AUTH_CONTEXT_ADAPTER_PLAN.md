@@ -1,8 +1,8 @@
 # Auth-1 — Operator Auth Context Adapter Plan
 
 Date: 2026-06-07
-Status: Step 1 complete — adapter added
-Implementation status: Step 1 adapter added; route refactor not started
+Status: Step 2 complete — route refactor added
+Implementation status: Step 2 route refactor complete; unit tests not started
 
 ## Purpose
 
@@ -129,13 +129,13 @@ Status: Complete. This checkpoint was completed as a docs-only commit. Auth-1 im
 
 ### Step 2 — Route refactor
 
-- [ ] Update `app/api/operator_overlays.py` to import the adapter.
-- [ ] Keep the same route path.
-- [ ] Keep the same query parameters.
-- [ ] Keep the same header names.
-- [ ] Remove inline parsing from the route.
-- [ ] Pass adapter fields to `build_operator_overlay_preview(...)`.
-- [ ] Keep response shape unchanged.
+- [x] Update `app/api/operator_overlays.py` to import the adapter.
+- [x] Keep the same route path.
+- [x] Keep the same query parameters.
+- [x] Keep the same header names.
+- [x] Remove inline parsing from the route.
+- [x] Pass adapter fields to `build_operator_overlay_preview(...)`.
+- [x] Keep response shape unchanged.
 
 ### Step 3 — Unit tests
 
