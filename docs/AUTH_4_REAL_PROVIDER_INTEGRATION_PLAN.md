@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Step 3 complete — Generic OIDC token verifier service added
-Implementation status: Generic OIDC config settings added; token verifier service added and unit-tested
+Status: Step 4 complete — token verifier wired into auth context adapter
+Implementation status: Token verifier wired into auth context adapter; focused post-wiring tests not complete
 
 ## Purpose
 
@@ -109,7 +109,14 @@ SDK, and no login/logout UI has been added.
   - All fail-closed gates exercised: oidc_disabled, missing_token, missing_issuer,
     missing_client_id, missing_jwks_uri, missing_subject, invalid_token, expired token.
   - No token verifier wiring into auth context yet.
-- [ ] Step 4: wire verifier into auth context adapter
+- [x] Step 4: wire verifier into auth context adapter
+  - Extended `resolve_operator_auth_context` with `settings` and `authorization` params (backward compatible).
+  - When OIDC enabled: bearer token extracted (case-insensitive), `verify_operator_token` called,
+    verified identity populates context from token claims; raw X-Operator-* identity headers cannot override.
+  - When OIDC enabled and verification fails: fail-closed; request_id generated, never trusted from header.
+  - When OIDC disabled: existing trusted-proxy behavior preserved exactly.
+  - Route forwards `Authorization` header; no inline token logic in route.
+  - 6 new adapter unit tests added; all 64 focused tests pass.
 - [ ] Step 5: add focused token/auth-context tests
 - [ ] Step 6: add frontend Authorization header path only if required
 - [ ] Step 7: run focused and broad validation / closeout

@@ -23,6 +23,7 @@ async def get_operator_private_overlay_preview(
     x_operator_roles: str | None = Header(default=None),
     x_operator_authorized_runs: str | None = Header(default=None),
     x_request_id: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
 ) -> JSONResponse:
     """Default-off, operator-only private overlay preview.
 
@@ -40,6 +41,8 @@ async def get_operator_private_overlay_preview(
         x_operator_roles=x_operator_roles,
         x_operator_authorized_runs=x_operator_authorized_runs,
         x_request_id=x_request_id,
+        settings=settings,
+        authorization=authorization,
     )
 
     result = build_operator_overlay_preview(
