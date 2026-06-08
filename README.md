@@ -19,6 +19,8 @@ The local operator UI token handoff contract is documented at [docs/LOCAL_2_OPER
 
 The full local auth regression closeout is documented at [docs/LOCAL_3_FULL_AUTH_REGRESSION_CLOSEOUT.md](docs/LOCAL_3_FULL_AUTH_REGRESSION_CLOSEOUT.md). The local Generic OIDC readiness track is complete; VPS deployment remains separate and not started.
 
+D1 real frozen-reference collection remains outside Git and is documented in [docs/D1_REAL_REFERENCE_COLLECTION_OUTSIDE_GIT.md](docs/D1_REAL_REFERENCE_COLLECTION_OUTSIDE_GIT.md). Real references are operator-owned outside Git only; notebook-value parity remains unverified until the real Phase E/E3/E4 verifiers pass.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.

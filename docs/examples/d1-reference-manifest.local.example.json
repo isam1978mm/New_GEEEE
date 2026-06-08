@@ -1,0 +1,13 @@
+{
+  "bundle_id": "example_bundle_local_only",
+  "notebook_name": "example_notebook",
+  "notebook_version": "example-version",
+  "collected_at": "2026-01-01T00:00:00Z",
+  "operator": "example_operator",
+  "source_run_id": "example_run_id",
+  "artifact_families": ["example_artifact_family"],
+  "local_artifact_paths": [
+    "data/private_references/notebook_frozen/example_bundle_local_only/artifacts/example_file.ext"
+  ],
+  "notes": "LOCAL-ONLY placeholder manifest. Contains no real paths, coordinates, geometry, or hashes. Replace values on the operator machine; never commit a real manifest or any reference artifacts."
+}
