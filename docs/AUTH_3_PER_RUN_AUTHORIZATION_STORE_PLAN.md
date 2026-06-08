@@ -1,8 +1,8 @@
 # Auth-3 — Per-Run Authorization Source/Store Plan
 
 Date: 2026-06-08
-Status: Step 2 complete — config-backed authorization setting added
-Implementation status: Config-backed authorization setting added; resolver not started
+Status: Step 3 complete — config-backed run authorization resolver added
+Implementation status: Resolver added; authorization_result wiring not started
 
 ## Purpose
 
@@ -210,9 +210,9 @@ Auth-3 does not add login/logout UI.
 
 - [x] Step 1: choose config-backed store direction
 - [x] Step 2: add config-backed authorization setting
-- [ ] Step 3: add operator run authorization resolver
+- [x] Step 3: add operator run authorization resolver with direct unit tests
 - [ ] Step 4: wire resolver output into authorization_result
-- [ ] Step 5: add focused unit tests
+- [ ] Step 5: add post-wiring focused tests
 - [ ] Step 6: run focused and broad validation
 
 ## Proposed Implementation Steps
