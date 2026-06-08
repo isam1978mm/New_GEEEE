@@ -147,6 +147,30 @@ def test_backend_config_controls_authorization() -> None:
     assert body["outcome"] == "allowed"
 
 
+def test_backend_config_denies_even_when_header_authorizes_run() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(
+            Path(temp_dir),
+            enabled=True,
+            operator_run_authorizations={},
+        )
+        _upgrade_database(settings)
+        _write_artifacts(settings)
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.get(
+                _PATH,
+                params={"artifact_family": PHASE_D1_GEOJSON_FAMILY_ID},
+                headers=_operator_headers(authorized_runs=_RUN_ID),
+            )
+    assert response.status_code == 403
+    body = response.json()
+    assert body["outcome"] == "denied"
+    assert "preview_payload" not in body
+    assert "run_id" not in body
+    assert "artifact_family" not in body
+    _assert_no_public_surface(response.text, settings)
+
+
 def test_unsupported_artifact_family_denied() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir), enabled=True)

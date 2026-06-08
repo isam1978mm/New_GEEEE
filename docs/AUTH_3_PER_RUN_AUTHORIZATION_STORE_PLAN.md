@@ -1,8 +1,8 @@
 # Auth-3 — Per-Run Authorization Source/Store Plan
 
 Date: 2026-06-08
-Status: Step 4 complete — resolver wired into authorization_result
-Implementation status: Resolver wiring complete; post-wiring focused tests not started
+Status: Step 5 complete — post-wiring focused tests added
+Implementation status: Post-wiring tests added; broad validation/closeout not started
 
 ## Purpose
 
@@ -215,7 +215,16 @@ Auth-3 does not add login/logout UI.
 - [x] Step 2: add config-backed authorization setting
 - [x] Step 3: add operator run authorization resolver with direct unit tests
 - [x] Step 4: wire resolver output into authorization_result
-- [ ] Step 5: add post-wiring focused tests
+- [x] Step 5: add post-wiring focused tests
+  - Integration: `test_backend_config_denies_even_when_header_authorizes_run` proves
+    the backend config is the final deny gate even when the header-supplied
+    `authorized_runs` includes the requested run.
+  - Combined with `test_backend_config_controls_authorization`, post-wiring tests
+    prove both directions:
+    - backend config can allow even when header run list disagrees (allow gate)
+    - backend config can deny even when header run list claims authorization (deny gate)
+  - Unit: `test_actor_with_empty_run_list_returns_denied` proves an actor entry with
+    an explicitly empty run list is denied fail-closed.
 - [ ] Step 6: run focused and broad validation
 
 ## Proposed Implementation Steps

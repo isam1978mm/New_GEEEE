@@ -93,6 +93,18 @@ def test_actor_id_and_run_id_are_stripped_before_lookup() -> None:
     assert result == OperatorRunAuthorizationResult(allowed=True, reason="authorized")
 
 
+def test_actor_with_empty_run_list_returns_denied() -> None:
+    settings = _make_settings({"operator_1": []})
+    result = resolve_run_authorization(
+        settings=settings,
+        actor_id="operator_1",
+        run_id="run_a",
+    )
+    assert result == OperatorRunAuthorizationResult(
+        allowed=False, reason="run_not_authorized"
+    )
+
+
 def test_default_empty_settings_fail_closed() -> None:
     settings = Settings()
     result = resolve_run_authorization(
