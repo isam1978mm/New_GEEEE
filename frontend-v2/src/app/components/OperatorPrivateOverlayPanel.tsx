@@ -4,6 +4,7 @@ import {
   type OperatorPrivateOverlayArtifactFamily,
   type OperatorPrivateOverlayPreview,
 } from "../api/operatorOverlays";
+import { useOperatorAccessToken } from "./OperatorSessionContext";
 
 interface OperatorPrivateOverlayPanelProps {
   runId: string;
@@ -17,6 +18,8 @@ const ARTIFACT_FAMILIES: { key: OperatorPrivateOverlayArtifactFamily; label: str
 ];
 
 export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: OperatorPrivateOverlayPanelProps) {
+  const contextOperatorAccessToken = useOperatorAccessToken();
+  const resolvedOperatorAccessToken = operatorAccessToken ?? contextOperatorAccessToken;
   const [activeFamily, setActiveFamily] = useState<OperatorPrivateOverlayArtifactFamily>("phase_d1_private_geojson");
   const [preview, setPreview] = useState<OperatorPrivateOverlayPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +28,7 @@ export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: Oper
     let cancelled = false;
     async function loadPreview() {
       setLoading(true);
-      const nextPreview = await getOperatorPrivateOverlayPreview(runId, activeFamily, { accessToken: operatorAccessToken });
+      const nextPreview = await getOperatorPrivateOverlayPreview(runId, activeFamily, { accessToken: resolvedOperatorAccessToken });
       if (!cancelled) {
         setPreview(nextPreview);
         setLoading(false);
@@ -35,7 +38,7 @@ export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: Oper
     return () => {
       cancelled = true;
     };
-  }, [runId, activeFamily, operatorAccessToken]);
+  }, [runId, activeFamily, resolvedOperatorAccessToken]);
 
   return (
     <section
