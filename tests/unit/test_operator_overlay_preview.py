@@ -44,13 +44,20 @@ _SENSITIVE_KEYS = (
 )
 
 
-def _settings(root: Path, *, enabled: bool) -> Settings:
+def _settings(
+    root: Path,
+    *,
+    enabled: bool,
+    operator_run_authorizations: dict[str, list[str]] | None = None,
+) -> Settings:
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
+    authorizations = operator_run_authorizations if operator_run_authorizations is not None else {"operator_1": [_RUN_ID]}
     return Settings(
         data_dir=data_dir,
         database_path=data_dir / "db.sqlite",
         operator_private_overlay_preview_enabled=enabled,
+        operator_run_authorizations=authorizations,
     )
 
 
@@ -135,9 +142,9 @@ def test_non_operator_actor_denied() -> None:
 
 def test_unauthorized_run_denied() -> None:
     with TemporaryDirectory() as temp_dir:
-        settings = _settings(Path(temp_dir), enabled=True)
+        settings = _settings(Path(temp_dir), enabled=True, operator_run_authorizations={})
         _write_artifacts(settings)
-        result = _call(settings, authorized_run_ids=("other_run",))
+        result = _call(settings)
     assert result.allowed is False
     assert result.decision_status == "denied_run_not_authorized"
 
@@ -219,9 +226,9 @@ def test_every_decision_builds_audit_event() -> None:
 # ---------------------------------------------------------------------------
 def test_denial_response_does_not_reveal_artifact_existence_or_sensitive_fields() -> None:
     with TemporaryDirectory() as temp_dir:
-        settings = _settings(Path(temp_dir), enabled=True)
+        settings = _settings(Path(temp_dir), enabled=True, operator_run_authorizations={})
         _write_artifacts(settings)
-        result = _call(settings, authorized_run_ids=("other_run",))
+        result = _call(settings)
     body = result.body
     assert set(body) == {
         "outcome",

@@ -1,8 +1,8 @@
 # Auth-3 — Per-Run Authorization Source/Store Plan
 
 Date: 2026-06-08
-Status: Step 5 complete — post-wiring focused tests added
-Implementation status: Post-wiring tests added; broad validation/closeout not started
+Status: Auth-3 complete — config-backed per-run authorization validated
+Implementation status: Auth-3 complete; real auth provider integration not started
 
 ## Purpose
 
@@ -225,7 +225,7 @@ Auth-3 does not add login/logout UI.
     - backend config can deny even when header run list claims authorization (deny gate)
   - Unit: `test_actor_with_empty_run_list_returns_denied` proves an actor entry with
     an explicitly empty run list is denied fail-closed.
-- [ ] Step 6: run focused and broad validation
+- [x] Step 6: run focused and broad validation
 
 ## Proposed Implementation Steps
 
@@ -306,26 +306,69 @@ git diff --stat
 git diff -- docs/AUTH_3_PER_RUN_AUTHORIZATION_STORE_PLAN.md
 ```
 
+## Step 6 Validation Results
+
+Validation run on 2026-06-08:
+
+Focused Auth-3/Auth-2/Auth-1 suite:
+
+```bash
+uv run python -m pytest tests/unit/test_operator_run_authorization.py tests/unit/test_config_auth_settings.py tests/unit/test_operator_auth_context.py tests/integration/test_operator_overlay_preview_api.py -v
+```
+
+Result: **39 passed** in 2.18s.
+
+Broad regression suite:
+
+```bash
+uv run python -m pytest tests/unit/ tests/integration/ -v
+```
+
+Result: **435 passed** in 82.99s — no regressions.
+
+Note: `tests/unit/test_operator_overlay_preview.py` had 8 pre-Auth-3 unit tests that needed
+updating. Those tests were written against the old header-based authorization behavior and
+relied on `authorized_run_ids` being the per-run gate. After Auth-3 wired the config-backed
+resolver, those tests failed because an empty config caused `denied_run_not_authorized`
+before the gates they were testing. The fix updated the `_settings` helper to default to
+authorizing `operator_1` for `_RUN_ID`, and updated two intentional-denial tests to
+explicitly pass an empty config. No app logic was changed.
+
+Post-validation behavior confirmed:
+- Backend config-backed resolver is the final per-run gate.
+- Header-supplied `authorized_run_ids` is no longer the final per-run gate.
+- Trusted-proxy gate (Auth-2) remains in place.
+- Auth-context adapter (Auth-1) remains in place.
+- Operator overlay response shape unchanged.
+- Redaction behavior unchanged.
+- No public overlay, public download, or artifact-serving policy changes.
+- No frontend changes.
+- No real auth provider integration.
+- `app/config.py`, `app/services/operator_run_authorization.py`,
+  `app/services/operator_overlay_preview.py`, `app/services/operator_auth_context.py`,
+  `app/api/operator_overlays.py`, and
+  `app/pipeline/parity/operator_overlay_access_foundation.py` unchanged.
+
 ## Acceptance Criteria
 
 Auth-3 should be accepted only if all are true:
 
-- A backend-controlled per-run authorization resolver exists in
+- [x] A backend-controlled per-run authorization resolver exists in
   `app/services/operator_run_authorization.py`.
-- The resolver output is passed as `authorization_result=` to
+- [x] The resolver output is passed as `authorization_result=` to
   `OverlayAccessRequest`, not derived from the header-supplied `authorized_run_ids`
   alone.
-- The resolver fails closed when no record exists for `(actor_id, run_id)`.
-- The trusted-proxy gate from Auth-2 remains in place.
-- The auth-context adapter from Auth-1 remains in place.
-- Existing operator overlay response shape is unchanged.
-- Existing redaction behavior is unchanged.
-- No public overlay or artifact-serving behavior changes are introduced.
-- No frontend changes are required.
-- No Supabase/OIDC/JWT/provider dependency is added.
-- No H3/H4/SAR/GRID/notebook parity/screening math behavior changes are introduced.
-- Focused unit tests for the resolver pass.
-- Broad unit and integration tests pass without regressions.
+- [x] The resolver fails closed when no record exists for `(actor_id, run_id)`.
+- [x] The trusted-proxy gate from Auth-2 remains in place.
+- [x] The auth-context adapter from Auth-1 remains in place.
+- [x] Existing operator overlay response shape is unchanged.
+- [x] Existing redaction behavior is unchanged.
+- [x] No public overlay or artifact-serving behavior changes are introduced.
+- [x] No frontend changes are required.
+- [x] No Supabase/OIDC/JWT/provider dependency is added.
+- [x] No H3/H4/SAR/GRID/notebook parity/screening math behavior changes are introduced.
+- [x] Focused unit tests for the resolver pass.
+- [x] Broad unit and integration tests pass without regressions.
 
 ## Rollback Plan
 
