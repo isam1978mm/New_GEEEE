@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Step 2 complete — Generic OIDC config settings added
-Implementation status: Generic OIDC config settings added; token verifier not started
+Status: Step 3 complete — Generic OIDC token verifier service added
+Implementation status: Generic OIDC config settings added; token verifier service added and unit-tested
 
 ## Purpose
 
@@ -101,7 +101,14 @@ SDK, and no login/logout UI has been added.
   - All fields default to `False` / `None`.
   - Env parsing tested for all four fields.
   - No runtime authentication behavior changed.
-- [ ] Step 3: add token verifier service
+- [x] Step 3: add token verifier service
+  - Added `app/services/operator_token_verifier.py` with `TokenVerificationResult` dataclass
+    and `verify_operator_token` function.
+  - Added `tests/unit/test_operator_token_verifier.py` — 16 tests, all pass; no network calls.
+  - Added `PyJWT[crypto]>=2.8.0` to `pyproject.toml`.
+  - All fail-closed gates exercised: oidc_disabled, missing_token, missing_issuer,
+    missing_client_id, missing_jwks_uri, missing_subject, invalid_token, expired token.
+  - No token verifier wiring into auth context yet.
 - [ ] Step 4: wire verifier into auth context adapter
 - [ ] Step 5: add focused token/auth-context tests
 - [ ] Step 6: add frontend Authorization header path only if required
