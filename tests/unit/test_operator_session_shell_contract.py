@@ -24,6 +24,12 @@ def test_operator_session_shell_exists_and_is_local_only() -> None:
     assert "useState" in text
 
 
+def test_operator_session_shell_masks_bearer_input() -> None:
+    text = _read(_SESSION_SHELL)
+    assert 'type="password"' in text
+    assert "autoComplete=\"off\"" in text
+
+
 def test_operator_session_shell_has_no_browser_persistence() -> None:
     text = _read(_SESSION_SHELL)
     for term in ("localStorage", "sessionStorage", "document.cookie"):
