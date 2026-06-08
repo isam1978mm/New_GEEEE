@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Step 1 complete — Generic OIDC provider selected
-Implementation status: Provider selected; implementation not started
+Status: Step 2 complete — Generic OIDC config settings added
+Implementation status: Generic OIDC config settings added; token verifier not started
 
 ## Purpose
 
@@ -95,7 +95,12 @@ SDK, and no login/logout UI has been added.
 ## Progress Checklist
 
 - [x] Step 1: choose Generic OIDC provider path
-- [ ] Step 2: add Generic OIDC config settings
+- [x] Step 2: add Generic OIDC config settings
+  - Added `operator_auth_oidc_enabled`, `operator_auth_oidc_issuer_url`,
+    `operator_auth_oidc_client_id`, `operator_auth_oidc_jwks_uri` to `Settings`.
+  - All fields default to `False` / `None`.
+  - Env parsing tested for all four fields.
+  - No runtime authentication behavior changed.
 - [ ] Step 3: add token verifier service
 - [ ] Step 4: wire verifier into auth context adapter
 - [ ] Step 5: add focused token/auth-context tests

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     operator_private_overlay_preview_enabled: bool = Field(default=False)
     operator_auth_trusted_proxy_enabled: bool = Field(default=False)
     operator_run_authorizations: dict[str, list[str]] = Field(default_factory=dict)
+    operator_auth_oidc_enabled: bool = Field(default=False)
+    operator_auth_oidc_issuer_url: str | None = Field(default=None)
+    operator_auth_oidc_client_id: str | None = Field(default=None)
+    operator_auth_oidc_jwks_uri: str | None = Field(default=None)
 
     @property
     def database_url(self) -> str:

@@ -45,3 +45,40 @@ def test_operator_run_authorizations_parses_env_json(monkeypatch: pytest.MonkeyP
     settings = Settings()
 
     assert settings.operator_run_authorizations == payload
+
+
+def test_oidc_settings_default_to_disabled_and_none() -> None:
+    settings = Settings()
+
+    assert settings.operator_auth_oidc_enabled is False
+    assert settings.operator_auth_oidc_issuer_url is None
+    assert settings.operator_auth_oidc_client_id is None
+    assert settings.operator_auth_oidc_jwks_uri is None
+
+
+def test_oidc_settings_accept_explicit_constructor_values() -> None:
+    settings = Settings(
+        operator_auth_oidc_enabled=True,
+        operator_auth_oidc_issuer_url="https://issuer.example.test",
+        operator_auth_oidc_client_id="gee-operator-ui",
+        operator_auth_oidc_jwks_uri="https://issuer.example.test/.well-known/jwks.json",
+    )
+
+    assert settings.operator_auth_oidc_enabled is True
+    assert settings.operator_auth_oidc_issuer_url == "https://issuer.example.test"
+    assert settings.operator_auth_oidc_client_id == "gee-operator-ui"
+    assert settings.operator_auth_oidc_jwks_uri == "https://issuer.example.test/.well-known/jwks.json"
+
+
+def test_oidc_settings_parse_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPERATOR_AUTH_OIDC_ENABLED", "true")
+    monkeypatch.setenv("OPERATOR_AUTH_OIDC_ISSUER_URL", "https://issuer.example.test")
+    monkeypatch.setenv("OPERATOR_AUTH_OIDC_CLIENT_ID", "gee-operator-ui")
+    monkeypatch.setenv("OPERATOR_AUTH_OIDC_JWKS_URI", "https://issuer.example.test/.well-known/jwks.json")
+
+    settings = Settings()
+
+    assert settings.operator_auth_oidc_enabled is True
+    assert settings.operator_auth_oidc_issuer_url == "https://issuer.example.test"
+    assert settings.operator_auth_oidc_client_id == "gee-operator-ui"
+    assert settings.operator_auth_oidc_jwks_uri == "https://issuer.example.test/.well-known/jwks.json"
