@@ -1,24 +1,35 @@
-# UI-MAP-1 — Real Map Point Picker
+# UI-MAP-1 — Large Navigable Real Map Point Picker
 
 Date: 2026-06-08
-Status: Implemented target — replace fake picker with real tile-based point picker
+Status: Implemented target — replace fake picker with large navigable tile map
 
 ## Problem
 
 The old Define Target point picker was a blank local grid. It could change latitude and longitude, but it did not show a real map, imagery, roads, terrain, or location context. That made the picker misleading and not useful for selecting a real target.
 
+A small tile preview is also not enough. The operator needs a real map workspace large enough to inspect the area, navigate around, and place a pin by clicking.
+
 ## Goal
 
-Replace the fake grid with a real map-style point picker that lets the operator click a visible tile map to set the target pin.
+Replace the fake grid with a large map picker that supports:
+
+- Real XYZ map tiles when external map tiles are enabled.
+- Large visible map area.
+- Pan controls.
+- Zoom controls.
+- Click-to-place target pin.
+- Latitude/longitude fields updated from the clicked pin.
+- Manual latitude/longitude entry still supported.
 
 ## Expected User Flow
 
 ```text
 Open Define Target
-→ see manual Latitude / Longitude inputs
-→ see a real map when external map tiles are enabled
+→ enable external map tiles in Settings if needed
+→ see a large real map
+→ pan and zoom to the target area
 → click the map
-→ red target pin recenters on the clicked location
+→ red target pin appears at the selected point
 → Latitude / Longitude update
 → queue/preview uses that point
 ```
@@ -50,19 +61,22 @@ When external tiles are enabled, the browser may request tiles from the configur
 
 - Removes the fake local grid picker.
 - Uses the existing `externalTilesEnabled` and `tileUrlTemplate` settings.
-- Renders a 3x3 XYZ tile grid around the current target center.
+- Renders a larger XYZ tile grid around the current map center.
+- Adds pan buttons and zoom buttons.
 - Computes click position using Web Mercator pixel math.
 - Updates latitude and longitude from the clicked map point.
-- Keeps the red target marker centered on the selected point.
-- Keeps manual latitude/longitude input working.
+- Shows the red target pin at the selected point.
+- Keeps manual latitude/longitude input working and recenters the map when the manual target changes.
 - Keeps ROI/Grid preview and Earth Engine dry-run planning unchanged.
 
 ## Acceptance Checklist
 
 - [x] Fake blank point grid removed.
-- [x] Real map picker shown when external tiles are enabled and tile template is valid.
+- [x] Large real map picker shown when external tiles are enabled and tile template is valid.
+- [x] Map can be panned.
+- [x] Map can be zoomed.
 - [x] Click on map updates latitude and longitude.
-- [x] Marker recenters after click.
+- [x] Red pin appears at selected target.
 - [x] Manual lat/lon input still works.
 - [x] External tiles remain disabled by default.
 - [x] Disabled state explains how to enable map tiles.
