@@ -188,7 +188,9 @@ Auth-1 is accepted only if all are true:
 - [x] No Supabase/OIDC/JWT/provider dependency added.
 - [x] No H3/H4/SAR/GRID/notebook parity/screening math changed.
 - [x] Focused tests pass.
-- [ ] Broad unit/integration tests pass or unrelated failure is clearly identified with evidence.
+- [x] Broad unit/integration tests pass or unrelated failure is clearly identified with evidence.
+
+Step 4 broad validation confirmed by `uv run python -m pytest tests/unit/ tests/integration/ -v` with `417 passed, 3 warnings`.
 
 ## Process rule for next implementation step
 
