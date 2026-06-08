@@ -55,6 +55,9 @@ Until then, future goals must stay local-first and must not instruct the operato
   correct current path for testing the OIDC valid-token flow locally.
 - The local-only operator UI token handoff contract validation at
   `docs/LOCAL_2_OPERATOR_UI_TOKEN_HANDOFF.md`.
+- The local full auth regression closeout at
+  `docs/LOCAL_3_FULL_AUTH_REGRESSION_CLOSEOUT.md` — confirms the local auth track
+  is closed. Deploy-1 remains prepared reference only, not executed.
 - Repo documentation and tests.
 - Frontend build checks.
 - No VPS assumptions.

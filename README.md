@@ -17,6 +17,8 @@ A local-only Generic OIDC development harness is available at [docs/LOCAL_1_OIDC
 
 The local operator UI token handoff contract is documented at [docs/LOCAL_2_OPERATOR_UI_TOKEN_HANDOFF.md](docs/LOCAL_2_OPERATOR_UI_TOKEN_HANDOFF.md). It remains local-only and adds no login UI and no token storage.
 
+The full local auth regression closeout is documented at [docs/LOCAL_3_FULL_AUTH_REGRESSION_CLOSEOUT.md](docs/LOCAL_3_FULL_AUTH_REGRESSION_CLOSEOUT.md). The local Generic OIDC readiness track is complete; VPS deployment remains separate and not started.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
