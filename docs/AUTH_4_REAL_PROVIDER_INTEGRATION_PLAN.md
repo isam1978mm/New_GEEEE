@@ -1,8 +1,8 @@
 # Auth-4 — Real Provider Integration Plan
 
 Date: 2026-06-08
-Status: Step 6 complete — frontend Authorization header path added
-Implementation status: Frontend Authorization header path added; Auth-4 validation/closeout not started
+Status: Auth-4 complete — Generic OIDC provider integration validated
+Implementation status: Auth-4 complete; Supabase not selected; login/logout UI not added
 
 ## Purpose
 
@@ -131,7 +131,9 @@ SDK, and no login/logout UI has been added.
   - Updated explanatory text to reflect that a provider-supplied token may be forwarded.
   - No token storage, no localStorage/sessionStorage reads, no login/logout UI, no provider SDK.
   - Frontend build passes. Token acquisition remains outside this step.
-- [ ] Step 7: run focused and broad validation / closeout
+- [x] Step 7: run focused and broad validation / closeout
+  - All acceptance criteria verified and checked below.
+  - Validation results recorded in Step 7 Validation Results section.
 
 ## Provider Decision Required Before Implementation
 
@@ -469,22 +471,97 @@ git diff --stat
 
 ## Acceptance Criteria
 
-Auth-4 should be accepted only if all are true:
+- [x] Provider decision is recorded in this document.
+- [x] A token verifier service exists and is unit-tested.
+- [x] Token verification is wired into `resolve_operator_auth_context(...)`.
+- [x] Invalid or missing tokens fail closed identically to the Auth-2 disabled state.
+- [x] The Auth-1 adapter boundary remains intact.
+- [x] The Auth-2 trusted-proxy gate remains in place.
+- [x] The Auth-3 per-run config resolver remains in place.
+- [x] Operator overlay response shape is unchanged.
+- [x] Redaction behavior is unchanged.
+- [x] No public overlay or artifact-serving behavior changes are introduced.
+- [x] No H3/H4/SAR/GRID/notebook parity/screening math behavior changes.
+- [x] Focused unit tests for the token verifier pass.
+- [x] Broad unit and integration tests pass without regressions.
+- [x] Frontend build passes if frontend changes are made.
 
-- Provider decision is recorded in this document.
-- A token verifier service exists and is unit-tested.
-- Token verification is wired into `resolve_operator_auth_context(...)`.
-- Invalid or missing tokens fail closed identically to the Auth-2 disabled state.
-- The Auth-1 adapter boundary remains intact.
-- The Auth-2 trusted-proxy gate remains in place.
-- The Auth-3 per-run config resolver remains in place.
-- Operator overlay response shape is unchanged.
-- Redaction behavior is unchanged.
-- No public overlay or artifact-serving behavior changes are introduced.
-- No H3/H4/SAR/GRID/notebook parity/screening math behavior changes.
-- Focused unit tests for the token verifier pass.
-- Broad unit and integration tests pass without regressions.
-- Frontend build passes if frontend changes are made.
+## Step 7 Validation Results
+
+Date: 2026-06-08
+
+### Focused backend validation
+
+```
+uv run python -m pytest tests/unit/test_operator_token_verifier.py tests/unit/test_operator_auth_context.py tests/unit/test_config_auth_settings.py tests/unit/test_operator_run_authorization.py tests/integration/test_operator_overlay_preview_api.py -v
+```
+
+Result: **68 passed**, 2 warnings — no failures.
+
+### Broad backend regression suite
+
+```
+uv run python -m pytest tests/unit/ tests/integration/ -v
+```
+
+Result: **464 passed**, 3 warnings — no failures.
+
+### Frontend build
+
+```
+cd frontend-v2 && npm run build
+```
+
+Result: `✓ built in 1.19s` — passed clean. `dist/` artifacts unchanged from Step 6 commit
+(`index-hgCPcklO.js`, `index-B0waqBRO.css`, `index.html` — all already-tracked build outputs).
+
+### Repository state
+
+```
+git status --short
+```
+
+Result: clean — only `gee_screening_app.egg-info/` and `uv.lock` untracked (neither committed).
+`git diff --stat` produced no output.
+
+`git ls-files frontend-v2/dist` confirmed the three dist files are already-tracked build outputs:
+```
+frontend-v2/dist/assets/index-B0waqBRO.css
+frontend-v2/dist/assets/index-hgCPcklO.js
+frontend-v2/dist/index.html
+```
+
+## Auth-4 Closeout Note
+
+Auth-4 is complete. The following is true as of this closeout:
+
+- **Generic OIDC is selected** (Option B; provider-neutral, portable, no vendor lock-in).
+- **OIDC config settings exist**: `operator_auth_oidc_enabled`, `operator_auth_oidc_issuer_url`,
+  `operator_auth_oidc_client_id`, `operator_auth_oidc_jwks_uri` — all default to `False`/`None`.
+- **Token verifier service exists and is unit-tested**: `app/services/operator_token_verifier.py`
+  with `TokenVerificationResult` dataclass and `verify_operator_token`; 16 unit tests, no network calls.
+- **Verifier is wired into the auth context adapter**: `resolve_operator_auth_context` calls
+  `verify_operator_token` when `settings.operator_auth_oidc_enabled` is True; backward-compatible
+  new parameters with `None` defaults.
+- **Invalid/missing tokens fail closed**: every error path (oidc_disabled, missing config fields,
+  missing subject, expired token, decode failure) returns `verified=False`; route returns 403.
+- **Verified token identity cannot bypass Auth-3 per-run authorization**: backend config
+  `operator_run_authorizations` remains the final per-run gate regardless of token contents.
+- **Frontend can forward an already-obtained bearer token**: `getOperatorPrivateOverlayPreview`
+  accepts `options.accessToken`; sends `Authorization: Bearer` header only when non-empty.
+- **No token storage was added**: no localStorage, sessionStorage, or cookie token reads.
+- **No login/logout UI was added**.
+- **No Supabase or provider SDK was added**: only `PyJWT[crypto]` added as dependency.
+- **Auth-1 adapter boundary remains intact**: `resolve_operator_auth_context` signature is
+  backward-compatible; all pre-Auth-4 tests pass unchanged.
+- **Auth-2 trusted-proxy behavior preserved when OIDC is disabled**: OIDC path only activates
+  when `settings.operator_auth_oidc_enabled` is True; otherwise existing proxy gate applies.
+- **Auth-3 per-run resolver remains final run gate**: integration tests prove verified OIDC
+  token cannot access a run unless backend config grants it.
+- **Operator overlay response shape unchanged**: no route response fields added or removed.
+- **Redaction unchanged**: all responses continue to pass the `verify_redacted` middleware.
+- **No public overlay/download/artifact-serving changes**.
+- **No SAR/GRID/H3/H4/notebook parity/screening math changes**.
 
 ## Rollback Plan
 
