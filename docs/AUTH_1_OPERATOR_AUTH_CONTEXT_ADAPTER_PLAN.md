@@ -1,8 +1,8 @@
 # Auth-1 — Operator Auth Context Adapter Plan
 
 Date: 2026-06-07
-Status: Step 0 complete — planning document committed
-Implementation status: Not started
+Status: Step 1 complete — adapter added
+Implementation status: Step 1 adapter added; route refactor not started
 
 ## Purpose
 
@@ -120,12 +120,12 @@ Status: Complete. This checkpoint was completed as a docs-only commit. Auth-1 im
 
 ### Step 1 — Adapter implementation
 
-- [ ] Add `app/services/operator_auth_context.py`.
-- [ ] Define `OperatorAuthContext` as frozen dataclass.
-- [ ] Define `resolve_operator_auth_context(...)`.
-- [ ] Preserve current parsing behavior exactly.
-- [ ] Preserve generated request ID fallback.
-- [ ] Export public symbols using `__all__`.
+- [x] Add `app/services/operator_auth_context.py`.
+- [x] Define `OperatorAuthContext` as frozen dataclass.
+- [x] Define `resolve_operator_auth_context(...)`.
+- [x] Preserve current parsing behavior exactly.
+- [x] Preserve generated request ID fallback.
+- [x] Export public symbols using `__all__`.
 
 ### Step 2 — Route refactor
 
