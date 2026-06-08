@@ -11,6 +11,8 @@ v1 includes:
 
 The default app surface is local-only. FastAPI binds to `127.0.0.1` by default, `/docs`, `/redoc`, and `/openapi.json` are disabled, and artifact downloads go only through the guarded artifact route.
 
+VPS deployment is a separate future milestone and is not assumed by the local-first track.
+
 ## Safety constants
 
 - Earth Engine auth is service-account only.
