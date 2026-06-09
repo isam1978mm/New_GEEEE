@@ -21,6 +21,11 @@ NOTEBOOK_DEM_FILENAMES = {
     "TPI": "tpi_100m_640.tif",
 }
 NOTEBOOK_HILLSHADE_NAME = "hillshade_0to1_640.tif"
+NOTEBOOK_CURVATURE_NAMES = {
+    "curv_laplacian": "curv_laplacian_640.tif",
+    "curv_plan": "curv_plan_640.tif",
+    "curv_profile": "curv_profile_640.tif",
+}
 
 
 def _integral_image(array: np.ndarray) -> np.ndarray:
@@ -79,7 +84,23 @@ def compute_dem_derivatives(dem: np.ndarray, *, nodata: float, scale_m: float) -
 
     d2z_dxx = np.gradient(dz_dx, scale_m, axis=1)
     d2z_dyy = np.gradient(dz_dy, scale_m, axis=0)
+    d2z_dxy = np.gradient(dz_dx, scale_m, axis=0)
     curvature = (d2z_dxx + d2z_dyy).astype(np.float32)
+
+    # Notebook curvature variants (authoritative formulas from notebooks/new.ipynb)
+    p = dz_dx
+    q = dz_dy
+    r = d2z_dxx
+    s = d2z_dxy
+    t = d2z_dyy
+    den = p * p + q * q + 1.0
+    den_sqrt = np.sqrt(den)
+    den_3_2 = den * den_sqrt
+    curv_laplacian = curvature
+    curv_profile = -(r * p * p + 2.0 * s * p * q + t * q * q) / (den_3_2 + 1e-12)
+    curv_plan = (r * q * q - 2.0 * s * p * q + t * p * p) / ((p * p + q * q + 1e-12) * (den_sqrt + 1e-12))
+    curv_profile = curv_profile.astype(np.float32)
+    curv_plan = curv_plan.astype(np.float32)
 
     radius_px = max(1, int(round(WINDOW_RADIUS_METERS / scale_m)))
     mean_100 = box_mean_nanaware(dem_float, radius_px)
@@ -94,6 +115,9 @@ def compute_dem_derivatives(dem: np.ndarray, *, nodata: float, scale_m: float) -
         "slope": slope,
         "aspect": aspect,
         "curvature": curvature,
+        "curv_laplacian": curv_laplacian,
+        "curv_plan": curv_plan,
+        "curv_profile": curv_profile,
         "TPI": tpi,
         "TRI": tri,
         "roughness": roughness,
@@ -161,6 +185,9 @@ def write_notebook_dem_outputs(
             nodata=grid_spec.nodata,
             scale_m=float(grid_spec.manifest.scale_m),
         ),
+        NOTEBOOK_CURVATURE_NAMES["curv_laplacian"]: outputs["curv_laplacian"],
+        NOTEBOOK_CURVATURE_NAMES["curv_plan"]: outputs["curv_plan"],
+        NOTEBOOK_CURVATURE_NAMES["curv_profile"]: outputs["curv_profile"],
     }
     written_paths: list[Path] = []
     for filename, array in notebook_outputs.items():
@@ -177,12 +204,15 @@ def write_notebook_dem_outputs(
     return written_paths
 
 
+_ALL_SUMMARY_NAMES = OUTPUT_NAMES + tuple(NOTEBOOK_CURVATURE_NAMES.keys())
+
+
 def write_dem_derivatives_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float) -> Path:
     qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "dem_derivatives_summary.json"
     band_summaries = {}
-    for name in OUTPUT_NAMES:
+    for name in _ALL_SUMMARY_NAMES:
         array = outputs[name]
         valid = array != nodata
         values = array[valid]
@@ -196,8 +226,8 @@ def write_dem_derivatives_summary(run_dir: Path, outputs: dict[str, np.ndarray],
         json.dumps(
             {
                 "stage": "dem_derivatives",
-                "band_count": len(OUTPUT_NAMES),
-                "bands": list(OUTPUT_NAMES),
+                "band_count": len(_ALL_SUMMARY_NAMES),
+                "bands": list(_ALL_SUMMARY_NAMES),
                 "band_summaries": band_summaries,
             },
             indent=2,
@@ -262,7 +292,7 @@ class DemDerivativesStage(Stage):
         return StageResult(
             artifacts=artifacts,
             metadata={
-                "band_names": list(OUTPUT_NAMES),
+                "band_names": list(_ALL_SUMMARY_NAMES),
                 "shape": [self.grid_spec.size, self.grid_spec.size],
                 "scale_m": self.grid_spec.manifest.scale_m,
             },

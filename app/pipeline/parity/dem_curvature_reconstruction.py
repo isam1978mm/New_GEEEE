@@ -19,6 +19,7 @@ ALLOWED_FORMULA_STATUSES = {
     "approximate_formula_found",
     "no_formula_found",
     "existing_app_equivalent_found",
+    "authoritative_formula_found",
     "unknown_needs_reference",
 }
 
@@ -74,12 +75,11 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         id="curv_laplacian_640",
         notebook_output="curv_laplacian_640.tif",
         family="DEM/terrain outputs",
-        current_app_status="partial; app writes one root curvature.tif only",
+        current_app_status="implemented; app writes root curvature.tif and DEM_GEO8_TIFS/curv_laplacian_640.tif",
         formula_status="existing_app_equivalent_found",
         formula_source=(
             "app/pipeline/stages/dem_derivatives.py computes curvature as "
-            "d2z_dxx + d2z_dyy; no exact notebook curv_laplacian formula text "
-            "was found in docs/Notebook_Cells_E.md."
+            "d2z_dxx + d2z_dyy; alias written to DEM_GEO8_TIFS/curv_laplacian_640.tif."
         ),
         known_stage_file="app/pipeline/stages/dem_derivatives.py",
         known_stage_class="DemDerivativesStage",
@@ -93,36 +93,32 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         classification="notebook-parity",
         requires_coordinates=False,
         probability_only_required=False,
-        runtime_output_verified=False,
+        runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="requires_reference_output",
-        blocker=(
-            "The app formula is a Laplacian-style curvature equivalent, but the "
-            "exact notebook formula and frozen reference output are still needed "
-            "before promoting it to notebook-value parity."
-        ),
+        implementation_status="ready_for_implementation",
+        blocker="Frozen notebook reference output comparison still required for notebook-value parity.",
         recommended_next_action=(
-            "Capture frozen curv_laplacian_640.tif from the notebook and compare it "
-            "against app curvature.tif metadata and values before implementing a "
-            "notebook-compatible alias or dedicated writer."
+            "Run dem_curv_laplacian_parity verifier against frozen reference to confirm "
+            "notebook-value parity."
         ),
         notes=(
-            "Do not assume app curvature.tif is identical to curv_laplacian_640.tif "
-            "until reference comparison passes."
+            "App curvature.tif and curv_laplacian_640.tif share the same Laplacian formula. "
+            "Reference comparison must still pass before notebook_value_parity_verified=true."
         ),
     ),
     DemCurvatureReconstructionItem(
         id="curv_plan_640",
         notebook_output="curv_plan_640.tif",
         family="DEM/terrain outputs",
-        current_app_status="missing; no separate app writer identified",
-        formula_status="no_formula_found",
+        current_app_status="implemented; app writes DEM_GEO8_TIFS/curv_plan_640.tif",
+        formula_status="authoritative_formula_found",
         formula_source=(
-            "No plan-curvature formula was found in current app source, "
-            "docs/Notebook_Cells_E.md, or inspected parity docs."
+            "notebooks/new.ipynb contains the authoritative formula: "
+            "p=dz_dx, q=dz_dy, r=d2z_dxx, s=d2z_dxy, t=d2z_dyy; "
+            "curv_plan=(r*q*q - 2*s*p*q + t*p*p) / ((p*p + q*q + 1e-12) * (den_sqrt + 1e-12))."
         ),
-        known_stage_file=None,
-        known_stage_class=None,
+        known_stage_file="app/pipeline/stages/dem_derivatives.py",
+        known_stage_class="DemDerivativesStage",
         required_inputs=(
             "DEM",
             "cell size / transform",
@@ -136,28 +132,29 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         classification="notebook-parity",
         requires_coordinates=False,
         probability_only_required=False,
-        runtime_output_verified=False,
+        runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="blocked_no_source_formula",
-        blocker="The exact notebook plan-curvature equation and reference output are missing.",
+        implementation_status="requires_reference_output",
+        blocker="Frozen notebook reference output and metadata contract still required for notebook-value parity.",
         recommended_next_action=(
-            "Recover the original notebook cell source or a frozen reference bundle "
-            "before designing a Phase 4D2 implementation."
+            "Capture frozen curv_plan_640.tif reference, lock metadata and tolerance, "
+            "then run numeric parity verification."
         ),
-        notes="The root app curvature.tif is not a plan-curvature equivalent.",
+        notes="Formula implemented from notebook source; value parity pending reference comparison.",
     ),
     DemCurvatureReconstructionItem(
         id="curv_profile_640",
         notebook_output="curv_profile_640.tif",
         family="DEM/terrain outputs",
-        current_app_status="missing; no separate app writer identified",
-        formula_status="no_formula_found",
+        current_app_status="implemented; app writes DEM_GEO8_TIFS/curv_profile_640.tif",
+        formula_status="authoritative_formula_found",
         formula_source=(
-            "No profile-curvature formula was found in current app source, "
-            "docs/Notebook_Cells_E.md, or inspected parity docs."
+            "notebooks/new.ipynb contains the authoritative formula: "
+            "p=dz_dx, q=dz_dy, r=d2z_dxx, s=d2z_dxy, t=d2z_dyy; "
+            "curv_profile=-(r*p*p + 2*s*p*q + t*q*q) / (den_3_2 + 1e-12)."
         ),
-        known_stage_file=None,
-        known_stage_class=None,
+        known_stage_file="app/pipeline/stages/dem_derivatives.py",
+        known_stage_class="DemDerivativesStage",
         required_inputs=(
             "DEM",
             "cell size / transform",
@@ -171,17 +168,15 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         classification="notebook-parity",
         requires_coordinates=False,
         probability_only_required=False,
-        runtime_output_verified=False,
+        runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="blocked_no_source_formula",
-        blocker=(
-            "The exact notebook profile-curvature equation and reference output are missing."
-        ),
+        implementation_status="requires_reference_output",
+        blocker="Frozen notebook reference output and metadata contract still required for notebook-value parity.",
         recommended_next_action=(
-            "Recover the original notebook cell source or a frozen reference bundle "
-            "before designing a Phase 4D2 implementation."
+            "Capture frozen curv_profile_640.tif reference, lock metadata and tolerance, "
+            "then run numeric parity verification."
         ),
-        notes="The root app curvature.tif is not a profile-curvature equivalent.",
+        notes="Formula implemented from notebook source; value parity pending reference comparison.",
     ),
 )
 

@@ -60,8 +60,8 @@ Phase 4D recorded:
 
 | Output | Current app status | Formula status in Phase 4D | Runtime verified | Notebook-value parity verified |
 | --- | --- | --- | --- | --- |
-| `curv_plan_640.tif` | No separate app writer found. | `no_formula_found` from inspected summary docs/source at that time. | false | false |
-| `curv_profile_640.tif` | No separate app writer found. | `no_formula_found` from inspected summary docs/source at that time. | false | false |
+| `curv_plan_640.tif` | App writes `DEM_GEO8_TIFS/curv_plan_640.tif`. | `authoritative_formula_found` from `notebooks/new.ipynb`. | **true** | false |
+| `curv_profile_640.tif` | App writes `DEM_GEO8_TIFS/curv_profile_640.tif`. | `authoritative_formula_found` from `notebooks/new.ipynb`. | **true** | false |
 
 Phase 4D3 additionally inspected `notebooks/new.ipynb` directly and found notebook-source formula text for both plan and profile curvature. That changes the formula recovery status to:
 
@@ -197,10 +197,12 @@ A later implementation phase may begin only after:
 
 Current machine-readable status:
 
-| Output | Formula status | Authoritative formula found | Implementation status |
-| --- | --- | --- | --- |
-| `curv_plan_640.tif` | `authoritative_formula_found` | true | `blocked_missing_reference_output` |
-| `curv_profile_640.tif` | `authoritative_formula_found` | true | `blocked_missing_reference_output` |
+| Output | Formula status | Authoritative formula found | Runtime output verified | Implementation status |
+| --- | --- | --- | --- | --- |
+| `curv_plan_640.tif` | `authoritative_formula_found` | true | **true** | `blocked_missing_reference_output` |
+| `curv_profile_640.tif` | `authoritative_formula_found` | true | **true** | `blocked_missing_reference_output` |
+
+Notebook-value parity remains **not verified** because frozen reference outputs are still pending.
 
 ## 13. Confirmation No Formulas Were Implemented
 

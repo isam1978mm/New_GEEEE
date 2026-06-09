@@ -116,9 +116,9 @@ File existence is not parity proof. The app's `curvature.tif` is not automatical
 
 | Output | Family | Current app status | Formula status | Implementation status | Runtime verified | Notebook-value parity verified |
 | --- | --- | --- | --- | --- | --- | --- |
-| `curv_laplacian_640.tif` | DEM/terrain outputs | App has root `curvature.tif` only. | `existing_app_equivalent_found` | `requires_reference_output` | false | false |
-| `curv_plan_640.tif` | DEM/terrain outputs | No separate writer found. | `no_formula_found` | `blocked_no_source_formula` | false | false |
-| `curv_profile_640.tif` | DEM/terrain outputs | No separate writer found. | `no_formula_found` | `blocked_no_source_formula` | false | false |
+| `curv_laplacian_640.tif` | DEM/terrain outputs | App writes root `curvature.tif` and `DEM_GEO8_TIFS/curv_laplacian_640.tif`. | `existing_app_equivalent_found` | `ready_for_implementation` | **true** | false |
+| `curv_plan_640.tif` | DEM/terrain outputs | App writes `DEM_GEO8_TIFS/curv_plan_640.tif`. | `authoritative_formula_found` | `requires_reference_output` | **true** | false |
+| `curv_profile_640.tif` | DEM/terrain outputs | App writes `DEM_GEO8_TIFS/curv_profile_640.tif`. | `authoritative_formula_found` | `requires_reference_output` | **true** | false |
 
 ## 7. Formula Status For Each Output
 
@@ -136,20 +136,22 @@ unknown_needs_reference
 
 - Formula status: `existing_app_equivalent_found`
 - Source: `app/pipeline/stages/dem_derivatives.py`
-- Rationale: app `curvature.tif` computes `d2z_dxx + d2z_dyy`, which is Laplacian-style curvature.
+- Rationale: app `curvature.tif` computes `d2z_dxx + d2z_dyy`, which is Laplacian-style curvature. Runtime output is now written as `DEM_GEO8_TIFS/curv_laplacian_640.tif`.
 - Caveat: exact notebook formula text was not found, so notebook-value parity still requires frozen reference comparison.
 
 `curv_plan_640.tif`:
 
-- Formula status: `no_formula_found`
-- Source: no app or inspected notebook source formula found.
-- Rationale: no source-equivalent plan-curvature equation is available in the current repo.
+- Formula status: `authoritative_formula_found`
+- Source: `notebooks/new.ipynb` — formula text recovered in Phase 4D3.
+- Rationale: `curv_plan = (r*q*q - 2*s*p*q + t*p*p) / ((p*p + q*q + 1e-12) * (den_sqrt + 1e-12))`. Runtime output is now written as `DEM_GEO8_TIFS/curv_plan_640.tif`.
+- Caveat: notebook-value parity still requires frozen reference comparison.
 
 `curv_profile_640.tif`:
 
-- Formula status: `no_formula_found`
-- Source: no app or inspected notebook source formula found.
-- Rationale: no source-equivalent profile-curvature equation is available in the current repo.
+- Formula status: `authoritative_formula_found`
+- Source: `notebooks/new.ipynb` — formula text recovered in Phase 4D3.
+- Rationale: `curv_profile = -(r*p*p + 2*s*p*q + t*q*q) / (den_3_2 + 1e-12)`. Runtime output is now written as `DEM_GEO8_TIFS/curv_profile_640.tif`.
+- Caveat: notebook-value parity still requires frozen reference comparison.
 
 ## 8. Required Inputs
 

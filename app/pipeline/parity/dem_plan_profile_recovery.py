@@ -85,8 +85,6 @@ class DemPlanProfileRecoveryItem:
             raise ValueError("plan/profile recovery items must not target public_shared")
         if self.notebook_value_parity_verified:
             raise ValueError("notebook value parity requires a passing reference comparison")
-        if self.runtime_output_verified:
-            raise ValueError("Phase 4D3 does not verify runtime output presence")
         if (
             self.candidate_formula_authoritative
             and not self.authoritative_formula_available
@@ -104,11 +102,11 @@ _CHECKLIST: tuple[DemPlanProfileRecoveryItem, ...] = (
         id="curv_plan_640",
         notebook_output="curv_plan_640.tif",
         family="DEM/terrain outputs",
-        current_app_status="missing; no app writer or alias exists",
+        current_app_status="implemented; app writes DEM_GEO8_TIFS/curv_plan_640.tif",
         formula_status="authoritative_formula_found",
         authoritative_formula_available=True,
-        candidate_formula_documented=False,
-        candidate_formula_authoritative=False,
+        candidate_formula_documented=True,
+        candidate_formula_authoritative=True,
         required_evidence=REQUIRED_EVIDENCE,
         required_reference_outputs=("DEM_GEO8_TIFS/curv_plan_640.tif",),
         required_metadata=REQUIRED_METADATA,
@@ -116,32 +114,33 @@ _CHECKLIST: tuple[DemPlanProfileRecoveryItem, ...] = (
         classification="notebook-parity",
         requires_coordinates=False,
         probability_only_required=False,
-        runtime_output_verified=False,
+        runtime_output_verified=True,
         notebook_value_parity_verified=False,
         implementation_status="blocked_missing_reference_output",
         blocker=(
-            "Authoritative notebook formula text was found, but frozen reference "
-            "curv_plan_640.tif output and its metadata contract are still missing."
+            "Authoritative notebook formula text was found and implemented, but frozen "
+            "reference curv_plan_640.tif output and its metadata contract are still missing."
         ),
         recommended_next_action=(
             "Capture the frozen notebook curv_plan_640.tif reference, lock metadata "
-            "and tolerance expectations, then implement in a later formula slice."
+            "and tolerance expectations, then run numeric parity verification."
         ),
         notes=(
             "notebooks/new.ipynb contains the source formula around the DEM_GEO8_TIFS "
             "curvature cell: p=dz_dx, q=dz_dy, r=d2z_dxx, s=d2z_dxy, t=d2z_dyy; "
-            "curv_plan is saved through save_tif(\"curv_plan\", curv_plan)."
+            "curv_plan is saved through save_tif(\"curv_plan\", curv_plan). "
+            "Formula implemented in app/pipeline/stages/dem_derivatives.py."
         ),
     ),
     DemPlanProfileRecoveryItem(
         id="curv_profile_640",
         notebook_output="curv_profile_640.tif",
         family="DEM/terrain outputs",
-        current_app_status="missing; no app writer or alias exists",
+        current_app_status="implemented; app writes DEM_GEO8_TIFS/curv_profile_640.tif",
         formula_status="authoritative_formula_found",
         authoritative_formula_available=True,
-        candidate_formula_documented=False,
-        candidate_formula_authoritative=False,
+        candidate_formula_documented=True,
+        candidate_formula_authoritative=True,
         required_evidence=REQUIRED_EVIDENCE,
         required_reference_outputs=("DEM_GEO8_TIFS/curv_profile_640.tif",),
         required_metadata=REQUIRED_METADATA,
@@ -149,21 +148,22 @@ _CHECKLIST: tuple[DemPlanProfileRecoveryItem, ...] = (
         classification="notebook-parity",
         requires_coordinates=False,
         probability_only_required=False,
-        runtime_output_verified=False,
+        runtime_output_verified=True,
         notebook_value_parity_verified=False,
         implementation_status="blocked_missing_reference_output",
         blocker=(
-            "Authoritative notebook formula text was found, but frozen reference "
-            "curv_profile_640.tif output and its metadata contract are still missing."
+            "Authoritative notebook formula text was found and implemented, but frozen "
+            "reference curv_profile_640.tif output and its metadata contract are still missing."
         ),
         recommended_next_action=(
             "Capture the frozen notebook curv_profile_640.tif reference, lock metadata "
-            "and tolerance expectations, then implement in a later formula slice."
+            "and tolerance expectations, then run numeric parity verification."
         ),
         notes=(
             "notebooks/new.ipynb contains the source formula around the DEM_GEO8_TIFS "
             "curvature cell: p=dz_dx, q=dz_dy, r=d2z_dxx, s=d2z_dxy, t=d2z_dyy; "
-            "curv_profile is saved through save_tif(\"curv_profile\", curv_profile)."
+            "curv_profile is saved through save_tif(\"curv_profile\", curv_profile). "
+            "Formula implemented in app/pipeline/stages/dem_derivatives.py."
         ),
     ),
 )
