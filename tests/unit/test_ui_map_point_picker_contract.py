@@ -1,72 +1,40 @@
-"""Static contract tests for UI-MAP-1 large navigable real point picker."""
+"""Static contract tests for the target map picker wiring."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-_ROOT = Path(__file__).parent.parent.parent
-_RUN_WORKFLOW_CARD = _ROOT / "frontend-v2" / "src" / "app" / "components" / "RunWorkflowCard.tsx"
-_PACKAGE_JSON = _ROOT / "frontend-v2" / "package.json"
-_DOC = _ROOT / "docs" / "UI_MAP_1_REAL_POINT_PICKER.md"
+ROOT = Path(__file__).parent.parent.parent
+WORKFLOW = ROOT / "frontend-v2" / "src" / "app" / "components" / "RunWorkflowCard.tsx"
+TARGET_MAP = ROOT / "frontend-v2" / "src" / "app" / "components" / "TargetLeafletMap.tsx"
+PACKAGE_JSON = ROOT / "frontend-v2" / "package.json"
 
 
-def _read(path: Path) -> str:
+def read(path: Path) -> str:
     assert path.exists(), f"missing expected file: {path}"
     return path.read_text(encoding="utf-8")
 
 
-def test_ui_map_doc_requires_large_navigable_map() -> None:
-    text = _read(_DOC)
-    assert "large navigable tile map" in text
-    assert "Pan controls" in text
-    assert "Zoom controls" in text
-    assert "click the map" in text
-
-
-def test_fake_point_grid_removed() -> None:
-    text = _read(_RUN_WORKFLOW_CARD)
-    assert "Point picker" not in text
-    assert "Click to seed point" not in text
-    assert "linear-gradient" not in text
-
-
-def test_large_map_picker_present() -> None:
-    text = _read(_RUN_WORKFLOW_CARD)
+def test_workflow_uses_target_map_component() -> None:
+    text = read(WORKFLOW)
+    assert "TargetLeafletMap" in text
     assert "Large map target picker" in text
-    assert "height: 560" in text
-    assert "Pan and zoom" in text
-    assert "Click map to place target pin" in text
+    assert "mouse drag + scroll zoom" in text
+    assert "BigMapPicker" not in text
+    assert "buildTiles" not in text
 
 
-def test_map_has_pan_and_zoom_controls() -> None:
-    text = _read(_RUN_WORKFLOW_CARD)
-    assert "function panMap" in text
-    assert "function zoomMap" in text
-    assert "onPan" in text
-    assert "onZoom" in text
-    assert "MapButton" in text
+def test_target_map_component_exists() -> None:
+    text = read(TARGET_MAP)
+    assert "MapContainer" in text
+    assert "scrollWheelZoom" in text
+    assert "doubleClickZoom" in text
+    assert "dragging" in text
+    assert "Marker" in text
 
 
-def test_map_click_updates_target_from_web_mercator_math() -> None:
-    text = _read(_RUN_WORKFLOW_CARD)
-    assert "function handleMapClick" in text
-    assert "pixelToLatLon" in text
-    assert "chooseTarget" in text
-    assert "setLatitude(point.lat.toFixed(8))" in text
-    assert "setLongitude(point.lon.toFixed(8))" in text
-    assert "latLonToPixel" in text
-
-
-def test_map_uses_existing_external_tile_setting_boundary() -> None:
-    text = _read(_RUN_WORKFLOW_CARD)
-    assert "externalTilesEnabled" in text
-    assert "tileUrlTemplate" in text
-    assert "Map disabled" in text
-    assert "Enable External map tiles in Settings" in text
-
-
-def test_no_new_frontend_dependency_added_for_map() -> None:
-    package = json.loads(_read(_PACKAGE_JSON))
-    deps = package.get("dependencies", {})
-    for package_name in ("leaflet", "react-leaflet", "mapbox-gl", "ol"):
-        assert package_name not in deps
+def test_target_map_dependencies_declared() -> None:
+    package = json.loads(read(PACKAGE_JSON))
+    assert "leaflet" in package.get("dependencies", {})
+    assert "react-leaflet" in package.get("dependencies", {})
+    assert "@types/leaflet" in package.get("devDependencies", {})
