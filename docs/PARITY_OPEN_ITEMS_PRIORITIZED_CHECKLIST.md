@@ -22,7 +22,7 @@ These items are unblocked and can be picked up immediately.
 - [x] Verify run-name sanitization rejects coordinate-like patterns. (A4 harness + integration tests)
 - [x] Verify FastAPI validation errors do not echo request bodies. (A4 integration: `tests/integration/test_public_api_safety.py`)
 - [x] Verify no coordinate-bearing CSV columns in public responses. (A4 harness DTO field tests)
-- [ ] Stale run cleanup: mark `running` runs as `stale_failed` on startup.
+- [x] Stale run cleanup: mark `running` runs as `stale_failed` on startup. (Verified: `app/services/run_state.py` + `app/main.py` lifespan; `tests/unit/test_run_state.py`, `tests/integration/test_startup_stale_run_cleanup.py`)
 - [ ] Disk-usage scan: update `disk_usage_bytes` and `output_file_count` on run completion.
 
 ## Group B — Blocked on Frozen Notebook Reference / EE Source
