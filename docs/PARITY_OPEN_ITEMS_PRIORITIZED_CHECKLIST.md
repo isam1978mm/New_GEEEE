@@ -17,11 +17,11 @@ These items are unblocked and can be picked up immediately.
 - [x] Phase 1 — Safe Run File Inspector (`app/services/run_file_inspector.py` + CLI).
 - [x] Phase 7 — Run Diagnostics CLI (`app/cli/run_diagnostics.py`).
 - [ ] Add cross-links between `docs/SAFE_NOTEBOOK_CAPABILITY_PHASES.md`, `docs/PARITY_OPEN_ITEMS_PRIORITIZED_CHECKLIST.md`, and `docs/V6_PACKAGE_GENERATION_SCOPE.md`.
-- [ ] Verify all public DTOs pass `verify_redacted()`.
-- [ ] Verify no API route directly streams files outside `serve_artifact_response()`.
-- [ ] Verify run-name sanitization rejects coordinate-like patterns.
-- [ ] Verify FastAPI validation errors do not echo request bodies.
-- [ ] Verify no coordinate-bearing CSV columns in public responses.
+- [x] Verify all public DTOs pass `verify_redacted()`. (A4 harness: `tests/unit/test_public_safety_harness.py`)
+- [x] Verify no API route directly streams files outside `serve_artifact_response()`. (A4 static/AST + integration tests)
+- [x] Verify run-name sanitization rejects coordinate-like patterns. (A4 harness + integration tests)
+- [x] Verify FastAPI validation errors do not echo request bodies. (A4 integration: `tests/integration/test_public_api_safety.py`)
+- [x] Verify no coordinate-bearing CSV columns in public responses. (A4 harness DTO field tests)
 - [ ] Stale run cleanup: mark `running` runs as `stale_failed` on startup.
 - [ ] Disk-usage scan: update `disk_usage_bytes` and `output_file_count` on run completion.
 
