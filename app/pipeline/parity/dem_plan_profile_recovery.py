@@ -26,6 +26,7 @@ ALLOWED_IMPLEMENTATION_STATUSES = {
     "blocked_missing_reference_output",
     "blocked_missing_metadata_contract",
     "ready_for_formula_implementation_after_evidence",
+    "runtime_implemented_reference_pending",
     "deferred",
 }
 
@@ -116,7 +117,7 @@ _CHECKLIST: tuple[DemPlanProfileRecoveryItem, ...] = (
         probability_only_required=False,
         runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="blocked_missing_reference_output",
+        implementation_status="runtime_implemented_reference_pending",
         blocker=(
             "Authoritative notebook formula text was found and implemented, but frozen "
             "reference curv_plan_640.tif output and its metadata contract are still missing."
@@ -150,7 +151,7 @@ _CHECKLIST: tuple[DemPlanProfileRecoveryItem, ...] = (
         probability_only_required=False,
         runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="blocked_missing_reference_output",
+        implementation_status="runtime_implemented_reference_pending",
         blocker=(
             "Authoritative notebook formula text was found and implemented, but frozen "
             "reference curv_profile_640.tif output and its metadata contract are still missing."

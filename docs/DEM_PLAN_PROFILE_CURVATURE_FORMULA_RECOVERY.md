@@ -199,8 +199,8 @@ Current machine-readable status:
 
 | Output | Formula status | Authoritative formula found | Runtime output verified | Implementation status |
 | --- | --- | --- | --- | --- |
-| `curv_plan_640.tif` | `authoritative_formula_found` | true | **true** | `blocked_missing_reference_output` |
-| `curv_profile_640.tif` | `authoritative_formula_found` | true | **true** | `blocked_missing_reference_output` |
+| `curv_plan_640.tif` | `authoritative_formula_found` | true | **true** | `runtime_implemented_reference_pending` |
+| `curv_profile_640.tif` | `authoritative_formula_found` | true | **true** | `runtime_implemented_reference_pending` |
 
 Notebook-value parity remains **not verified** because frozen reference outputs are still pending.
 

@@ -25,6 +25,7 @@ ALLOWED_FORMULA_STATUSES = {
 
 ALLOWED_IMPLEMENTATION_STATUSES = {
     "ready_for_implementation",
+    "runtime_implemented_reference_pending",
     "requires_reference_output",
     "requires_formula_reconstruction",
     "blocked_no_source_formula",
@@ -95,7 +96,7 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         probability_only_required=False,
         runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="ready_for_implementation",
+        implementation_status="runtime_implemented_reference_pending",
         blocker="Frozen notebook reference output comparison still required for notebook-value parity.",
         recommended_next_action=(
             "Run dem_curv_laplacian_parity verifier against frozen reference to confirm "
@@ -134,7 +135,7 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         probability_only_required=False,
         runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="requires_reference_output",
+        implementation_status="runtime_implemented_reference_pending",
         blocker="Frozen notebook reference output and metadata contract still required for notebook-value parity.",
         recommended_next_action=(
             "Capture frozen curv_plan_640.tif reference, lock metadata and tolerance, "
@@ -170,7 +171,7 @@ _REGISTRY: tuple[DemCurvatureReconstructionItem, ...] = (
         probability_only_required=False,
         runtime_output_verified=True,
         notebook_value_parity_verified=False,
-        implementation_status="requires_reference_output",
+        implementation_status="runtime_implemented_reference_pending",
         blocker="Frozen notebook reference output and metadata contract still required for notebook-value parity.",
         recommended_next_action=(
             "Capture frozen curv_profile_640.tif reference, lock metadata and tolerance, "

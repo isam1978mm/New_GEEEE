@@ -116,9 +116,11 @@ File existence is not parity proof. The app's `curvature.tif` is not automatical
 
 | Output | Family | Current app status | Formula status | Implementation status | Runtime verified | Notebook-value parity verified |
 | --- | --- | --- | --- | --- | --- | --- |
-| `curv_laplacian_640.tif` | DEM/terrain outputs | App writes root `curvature.tif` and `DEM_GEO8_TIFS/curv_laplacian_640.tif`. | `existing_app_equivalent_found` | `ready_for_implementation` | **true** | false |
-| `curv_plan_640.tif` | DEM/terrain outputs | App writes `DEM_GEO8_TIFS/curv_plan_640.tif`. | `authoritative_formula_found` | `requires_reference_output` | **true** | false |
-| `curv_profile_640.tif` | DEM/terrain outputs | App writes `DEM_GEO8_TIFS/curv_profile_640.tif`. | `authoritative_formula_found` | `requires_reference_output` | **true** | false |
+| `curv_laplacian_640.tif` | DEM/terrain outputs | App writes root `curvature.tif` and `DEM_GEO8_TIFS/curv_laplacian_640.tif`. | `existing_app_equivalent_found` | `runtime_implemented_reference_pending` | **true** | false |
+| `curv_plan_640.tif` | DEM/terrain outputs | App writes `DEM_GEO8_TIFS/curv_plan_640.tif`. | `authoritative_formula_found` | `runtime_implemented_reference_pending` | **true** | false |
+| `curv_profile_640.tif` | DEM/terrain outputs | App writes `DEM_GEO8_TIFS/curv_profile_640.tif`. | `authoritative_formula_found` | `runtime_implemented_reference_pending` | **true** | false |
+
+Status meaning: runtime implemented; frozen reference comparison pending. Notebook-value parity is not verified.
 
 ## 7. Formula Status For Each Output
 
