@@ -45,21 +45,35 @@ export function TargetLeafletMap({ externalTilesEnabled, tileUrlTemplate, target
   }
 
   return (
-    <div className="rounded overflow-hidden" style={{ height: "620px", border: "1px solid rgba(28,43,94,0.16)" }}>
-      <MapContainer
-        center={center}
-        zoom={DEFAULT_ZOOM}
-        scrollWheelZoom
-        doubleClickZoom
-        dragging
-        zoomControl
-        style={{ height: "100%", width: "100%" }}
+    <div className="rounded overflow-hidden" style={{ border: "1px solid rgba(28,43,94,0.16)" }}>
+      <div style={{ height: "620px" }}>
+        <MapContainer
+          center={center}
+          zoom={DEFAULT_ZOOM}
+          scrollWheelZoom
+          doubleClickZoom
+          dragging
+          zoomControl
+          attributionControl={false}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <TileLayer url={tileUrlTemplate} />
+          <MapClickHandler onTargetChange={onTargetChange} />
+          <MapTargetSync target={target} />
+          {target && <Marker position={[target.lat, target.lon]} icon={markerIcon} />}
+        </MapContainer>
+      </div>
+      <div
+        style={{
+          borderTop: "1px solid rgba(28,43,94,0.12)",
+          backgroundColor: "rgba(255,255,255,0.82)",
+          color: "var(--gs-slate)",
+          fontSize: "10px",
+          padding: "4px 8px",
+        }}
       >
-        <TileLayer url={tileUrlTemplate} attribution="Map tiles configured by operator" />
-        <MapClickHandler onTargetChange={onTargetChange} />
-        <MapTargetSync target={target} />
-        {target && <Marker position={[target.lat, target.lon]} icon={markerIcon} />}
-      </MapContainer>
+        Map tiles use the URL template configured in Settings.
+      </div>
     </div>
   );
 }
