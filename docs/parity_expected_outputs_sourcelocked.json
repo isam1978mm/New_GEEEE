@@ -1,0 +1,255 @@
+{
+  "schema": "parity_expected_outputs_sourcelocked_v1",
+  "generated_at": "2026-06-10T15:56:26.007688+00:00",
+  "generated_from": "docs/parity_expected_outputs.json",
+  "notebook_source": "notebooks/new.ipynb",
+  "dem_source_locked": true,
+  "dem_source_lock_note": "DEM names locked from new.ipynb save_tif evidence: nine DEM_GEO8_TIFS/{name}_640.tif rasters. aspect_deg (not aspect); no tri/twi.",
+  "scope_tiers": [
+    "required_new_ipynb",
+    "parked_v6",
+    "accepted_non_reproducible",
+    "tier2_source_recovery",
+    "optional"
+  ],
+  "tier_path_totals": {
+    "required_new_ipynb": 36,
+    "parked_v6": 11,
+    "accepted_non_reproducible": 6,
+    "tier2_source_recovery": 15,
+    "optional": 10
+  },
+  "entries": [
+    {
+      "id": "v6_candidate_package_outputs",
+      "family": "v6 candidate package outputs",
+      "scope_tier": "parked_v6",
+      "paths": [
+        "paid_archive_request_candidate_package_FINAL_v6_ZONES_QUOTES.zip",
+        "paid_archive_request_summary.txt",
+        "visual_inspection_map.html"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "candidate_ranking_csv_geojson",
+      "family": "candidate/ranking CSV + GeoJSON outputs",
+      "scope_tier": "parked_v6",
+      "paths": [
+        "lawful_gee_candidate_scout_top_25_<timestamp>.csv",
+        "top25_enhanced_v6.csv",
+        "stable_candidate_priority_list_v6.csv",
+        "quality_diagnostics_all_cells_v6.csv"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "request_zone_outputs",
+      "family": "request-zone outputs",
+      "scope_tier": "parked_v6",
+      "paths": [
+        "request_zones_v6.csv"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "quote_template_comparison_outputs",
+      "family": "quote-template/comparison outputs",
+      "scope_tier": "parked_v6",
+      "paths": [
+        "paid_imagery_quote_template_v6.csv",
+        "paid_imagery_quote_comparison_v6.csv"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "dem_source_locked",
+      "family": "DEM/terrain outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "DEM_GEO8_TIFS/DEM_640.tif",
+        "DEM_GEO8_TIFS/slope_deg_640.tif",
+        "DEM_GEO8_TIFS/aspect_deg_640.tif",
+        "DEM_GEO8_TIFS/hillshade_0to1_640.tif",
+        "DEM_GEO8_TIFS/roughness_100m_640.tif",
+        "DEM_GEO8_TIFS/tpi_100m_640.tif",
+        "DEM_GEO8_TIFS/curv_laplacian_640.tif",
+        "DEM_GEO8_TIFS/curv_plan_640.tif",
+        "DEM_GEO8_TIFS/curv_profile_640.tif"
+      ],
+      "notebook_verified": true,
+      "evidence": "save_tif(name, arr) -> DEM_GEO8_TIFS/{name}_640.tif"
+    },
+    {
+      "id": "sar_radar_core_outputs",
+      "family": "SAR/radar outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_*.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_*.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_*.tif",
+        "GEOTIFF_RADAR_BANDS/RADAR_angle_640_*.tif",
+        "NPY_RADAR_BANDS/RADAR_VV_dB_640_*.npy",
+        "NPY_RADAR_BANDS/RADAR_VH_dB_640_*.npy",
+        "NPY_RADAR_BANDS/RADAR_logRatio_dB_640_*.npy",
+        "NPY_RADAR_BANDS/RADAR_angle_640_*.npy"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "sar_asc_desc_filtered_outputs",
+      "family": "SAR/radar outputs",
+      "scope_tier": "tier2_source_recovery",
+      "paths": [
+        "S1_ASC_VV_Filtered_640.tif",
+        "S1_ASC_VH_Filtered_640.tif",
+        "S1_DESC_VV_Filtered_640.tif",
+        "S1_DESC_VH_Filtered_640.tif",
+        "S1_ASC_VV_Filtered_640.npy",
+        "S1_ASC_VH_Filtered_640.npy",
+        "S1_DESC_VV_Filtered_640.npy",
+        "S1_DESC_VH_Filtered_640.npy"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "pre_rtc_sar_intermediates",
+      "family": "pre-RTC SAR intermediates",
+      "scope_tier": "accepted_non_reproducible",
+      "paths": [
+        "QA/sar/intermediates/per_image_products_db/*",
+        "QA/sar/intermediates/pair_median/*",
+        "QA/sar/intermediates/final_median_pre_rtc/*",
+        "QA/sar/intermediates/post_sample_pre_rtc/*",
+        "QA/sar/intermediates/post_rtc/*",
+        "QA/sar/intermediates/sar_intermediate_manifest.json"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "panchromatic_optical_outputs",
+      "family": "panchromatic/optical outputs",
+      "scope_tier": "tier2_source_recovery",
+      "paths": [
+        "PAN_LS_Panchromatic_640.tif",
+        "PAN_S2_Panchromatic_10m_640.tif",
+        "PAN_LS_Panchromatic_640.npy",
+        "PAN_S2_Panchromatic_10m_640.npy",
+        "PAN_LAYERS_STACK_640.npy",
+        "OPT/PAN_TIFS_640/*",
+        "OPT/PAN_NPY_640/*"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "hypercube_tensor_outputs",
+      "family": "hypercube/tensor outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE.npy",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_PATCHED_14B.tif",
+        "NPY_STACKS/RADAR_STACK_HWC_640_*.npy"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "hypercube_resampled_filtered_missing",
+      "family": "hypercube/tensor outputs",
+      "scope_tier": "optional",
+      "paths": [
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy",
+        "NPY_STACKS/S1_FILTERED_LAYERS_STACK_640.npy"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "report_640_outputs",
+      "family": "REPORT_640 outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "REPORT_640_Pottery_Report.tif",
+        "REPORT_640_Mass_Report.tif",
+        "REPORT_640_FINAL_Zero_Point_Targets.tif"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "ai_ready_secret_outputs",
+      "family": "AI_BEH / AI_READY outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "AI_READY_640_Secret_Gold_Halo.tif",
+        "AI_READY_640_Secret_Silver_Oxide.tif",
+        "AI_READY_640_Secret_Tunnel_Ceiling.tif",
+        "AI_READY_640_Secret_Thermal_Inertia.tif",
+        "AI_READY_640_Secret_Chemical_Protector.tif",
+        "AI_READY_640_Secret_Hidden_Doors.tif"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "visual_inspection_map_html",
+      "family": "coordinate/map/KMZ/GeoJSON outputs",
+      "scope_tier": "parked_v6",
+      "paths": [
+        "visual_inspection_map.html"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "qa_grid_run_manifest_outputs",
+      "family": "QA/provenance outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "QA/QA_GRID_dx_m_640.tif",
+        "QA/QA_GRID_dy_m_640.tif",
+        "QA/QA_GRID_validmask_640.tif",
+        "QA/RUN_MANIFEST.json"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "qa_sar_provenance_outputs",
+      "family": "QA/provenance outputs",
+      "scope_tier": "optional",
+      "paths": [
+        "QA_RADAR_CELL25_PAIR_IDS_*.json",
+        "QA_S1_MASTER_UNITS.json",
+        "QA_RADAR_META_*.json",
+        "SUMMARY_RADAR_*.csv"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "qa_alignment_zero_pca_stack_outputs",
+      "family": "QA/provenance outputs",
+      "scope_tier": "optional",
+      "paths": [
+        "stage_*.manifest.json"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "object_extraction_outputs",
+      "family": "candidate/ranking CSV + GeoJSON outputs",
+      "scope_tier": "required_new_ipynb",
+      "paths": [
+        "objects_index.csv",
+        "clusters_summary.csv"
+      ],
+      "notebook_verified": false
+    },
+    {
+      "id": "focus_mask_outputs",
+      "family": "coordinate/map/KMZ/GeoJSON outputs",
+      "scope_tier": "optional",
+      "paths": [
+        "QA/FOCUS_MASK_17m_inside_640.tif",
+        "QA/FOCUS_MASK_17m_inside_640.json"
+      ],
+      "notebook_verified": false
+    }
+  ]
+}
