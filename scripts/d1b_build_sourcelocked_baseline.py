@@ -21,6 +21,9 @@ from app.pipeline.parity.reference_scope_audit import (
     ALL_TIERS,
     DEM_FAMILY,
     DEM_SOURCE_LOCKED_OUTPUTS,
+    OBJECT_TABLE_ENTRY_ID,
+    OBJECT_TABLE_FAMILY,
+    OBJECT_TABLE_SOURCE_LOCKED_OUTPUTS,
     PARITY_DOC_RELATIVE,
     SOURCELOCKED_DOC_RELATIVE,
     TIER_BY_ENTRY_ID,
@@ -56,6 +59,31 @@ def build() -> dict:
                 "evidence": "save_tif(name, arr) -> DEM_GEO8_TIFS/{name}_640.tif",
             }
             dem_done = True
+            continue
+        if entry_id == OBJECT_TABLE_ENTRY_ID:
+            # D1D: object tables source-locked to AI_OBJECT_TABLES paths and
+            # reclassified to source-recovery (real new.ipynb outputs, but never
+            # produced in the D1C export and not regenerable same-run without
+            # crossing notebook versions).
+            by_id[entry_id] = {
+                "id": entry_id,
+                "family": OBJECT_TABLE_FAMILY,
+                "scope_tier": TIER_BY_ENTRY_ID.get(entry_id, "optional"),
+                "paths": list(OBJECT_TABLE_SOURCE_LOCKED_OUTPUTS),
+                "notebook_verified": True,
+                "evidence": (
+                    "cell 68 writes AI_OBJECT_TABLES/objects_index.csv; cell 69 "
+                    "writes AI_OBJECT_TABLES/clusters_summary.csv from it."
+                ),
+                "source_recovery_note": (
+                    "Never produced in the D1C export: AI_OBJECT_TABLES, the PCA "
+                    "candidate-label NPYs (CIL_PCA_*), and the GLOBAL_SAR_ARCHAEO "
+                    "hypercube are all absent, and the export's radar inputs use "
+                    "RADAR_*_v5 naming while the object pipeline reads RADM_* / "
+                    "RAD_S0_*. Recover via a corrected same-run re-export; do not "
+                    "regenerate by crossing notebook versions or running EE."
+                ),
+            }
             continue
         tier = TIER_BY_ENTRY_ID.get(entry_id, "optional")
         paths = [e.path for e in derived if e.family == family and e.scope_tier == tier

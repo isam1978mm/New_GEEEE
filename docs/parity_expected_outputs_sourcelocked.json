@@ -1,6 +1,6 @@
 {
   "schema": "parity_expected_outputs_sourcelocked_v1",
-  "generated_at": "2026-06-10T15:56:26.007688+00:00",
+  "generated_at": "2026-06-10T21:23:47.376758+00:00",
   "generated_from": "docs/parity_expected_outputs.json",
   "notebook_source": "notebooks/new.ipynb",
   "dem_source_locked": true,
@@ -13,10 +13,10 @@
     "optional"
   ],
   "tier_path_totals": {
-    "required_new_ipynb": 36,
+    "required_new_ipynb": 34,
     "parked_v6": 11,
     "accepted_non_reproducible": 6,
-    "tier2_source_recovery": 15,
+    "tier2_source_recovery": 17,
     "optional": 10
   },
   "entries": [
@@ -233,13 +233,15 @@
     },
     {
       "id": "object_extraction_outputs",
-      "family": "candidate/ranking CSV + GeoJSON outputs",
-      "scope_tier": "required_new_ipynb",
+      "family": "AI object tables",
+      "scope_tier": "tier2_source_recovery",
       "paths": [
-        "objects_index.csv",
-        "clusters_summary.csv"
+        "AI_OBJECT_TABLES/objects_index.csv",
+        "AI_OBJECT_TABLES/clusters_summary.csv"
       ],
-      "notebook_verified": false
+      "notebook_verified": true,
+      "evidence": "cell 68 writes AI_OBJECT_TABLES/objects_index.csv; cell 69 writes AI_OBJECT_TABLES/clusters_summary.csv from it.",
+      "source_recovery_note": "Never produced in the D1C export: AI_OBJECT_TABLES, the PCA candidate-label NPYs (CIL_PCA_*), and the GLOBAL_SAR_ARCHAEO hypercube are all absent, and the export's radar inputs use RADAR_*_v5 naming while the object pipeline reads RADM_* / RAD_S0_*. Recover via a corrected same-run re-export; do not regenerate by crossing notebook versions or running EE."
     },
     {
       "id": "focus_mask_outputs",

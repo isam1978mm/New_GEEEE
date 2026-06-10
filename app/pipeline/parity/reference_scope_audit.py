@@ -73,6 +73,18 @@ DEM_SOURCE_LOCKED_OUTPUTS: tuple[str, ...] = (
     "DEM_GEO8_TIFS/curv_profile_640.tif",
 )
 
+# Object-table outputs, source-locked from notebooks/new.ipynb evidence (D1D).
+# Cell 68 writes AI_OBJECT_TABLES/objects_index.csv from PCA candidate labels;
+# cell 69 writes AI_OBJECT_TABLES/clusters_summary.csv from that same
+# objects_index.csv. Both are real new.ipynb outputs (corrects the earlier bare
+# names objects_index.csv / clusters_summary.csv to their AI_OBJECT_TABLES path).
+OBJECT_TABLE_FAMILY = "AI object tables"
+OBJECT_TABLE_ENTRY_ID = "object_extraction_outputs"
+OBJECT_TABLE_SOURCE_LOCKED_OUTPUTS: tuple[str, ...] = (
+    "AI_OBJECT_TABLES/objects_index.csv",
+    "AI_OBJECT_TABLES/clusters_summary.csv",
+)
+
 # Reconciliation: scope_tier per parity-doc entry id. Justified by static
 # notebooks/new.ipynb evidence collected during D1B.
 TIER_BY_ENTRY_ID: dict[str, str] = {
@@ -85,7 +97,12 @@ TIER_BY_ENTRY_ID: dict[str, str] = {
     "sar_radar_core_outputs": TIER_REQUIRED,
     "s2_optical_index_outputs": TIER_REQUIRED,
     "qa_grid_run_manifest_outputs": TIER_REQUIRED,
-    "object_extraction_outputs": TIER_REQUIRED,
+    # D1D: object tables are real new.ipynb outputs (cells 68/69) but were never
+    # produced in the D1C export and cannot be regenerated same-run without
+    # crossing notebook versions (export uses RADAR_*_v5 / FINAL_TESLA_V7_2; the
+    # object pipeline reads RADM_* / GLOBAL_SAR_ARCHAEO + PCA NPYs, all absent).
+    # Deferred to source recovery via a corrected same-run re-export.
+    "object_extraction_outputs": TIER_TIER2_RECOVERY,
     # V6 paid-archive package family — NOT written by new.ipynb (names absent).
     "v6_candidate_package_outputs": TIER_PARKED_V6,
     "request_zone_outputs": TIER_PARKED_V6,
@@ -222,9 +239,10 @@ def expected_entries_from_sourcelocked(doc: Mapping[str, Any]) -> list[ExpectedE
 def expected_entries_from_parity_doc(doc: Mapping[str, Any]) -> list[ExpectedEntry]:
     """Derive tiered entries from the raw (untrusted) parity doc.
 
-    DEM is source-locked to :data:`DEM_SOURCE_LOCKED_OUTPUTS`; the doc's DEM
-    tokens are ignored in favour of notebook evidence. Each entry's tier comes
-    from :data:`TIER_BY_ENTRY_ID`.
+    DEM is source-locked to :data:`DEM_SOURCE_LOCKED_OUTPUTS` and the object
+    tables to :data:`OBJECT_TABLE_SOURCE_LOCKED_OUTPUTS`; the doc's tokens for
+    those families are ignored in favour of notebook evidence. Each entry's tier
+    comes from :data:`TIER_BY_ENTRY_ID`.
     """
 
     entries: list[ExpectedEntry] = []
@@ -244,6 +262,14 @@ def expected_entries_from_parity_doc(doc: Mapping[str, Any]) -> list[ExpectedEnt
                         ExpectedEntry(path=path, family=DEM_FAMILY, scope_tier=TIER_REQUIRED)
                     )
                 seen_dem = True
+            continue
+
+        if str(entry_id) == OBJECT_TABLE_ENTRY_ID:
+            # Source-lock object-table names to their AI_OBJECT_TABLES paths.
+            for path in OBJECT_TABLE_SOURCE_LOCKED_OUTPUTS:
+                entries.append(
+                    ExpectedEntry(path=path, family=OBJECT_TABLE_FAMILY, scope_tier=tier)
+                )
             continue
 
         tokens = raw.get("notebook_paths_or_patterns")
