@@ -111,6 +111,9 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "notebook_roughness_100m_640": ArtifactClass.LOCAL_SENSITIVE,
             "notebook_tpi_100m_640": ArtifactClass.LOCAL_SENSITIVE,
             "notebook_hillshade_0to1_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_curv_laplacian_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_curv_plan_640": ArtifactClass.LOCAL_SENSITIVE,
+            "notebook_curv_profile_640": ArtifactClass.LOCAL_SENSITIVE,
             "dem_derivatives_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(thermal_result) == {
@@ -257,6 +260,9 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "DEM_GEO8_TIFS/roughness_100m_640.tif",
             "DEM_GEO8_TIFS/tpi_100m_640.tif",
             "DEM_GEO8_TIFS/hillshade_0to1_640.tif",
+            "DEM_GEO8_TIFS/curv_laplacian_640.tif",
+            "DEM_GEO8_TIFS/curv_plan_640.tif",
+            "DEM_GEO8_TIFS/curv_profile_640.tif",
             "GEOTIFF_RADAR_BANDS/RADAR_VV_dB_640_app.tif",
             "GEOTIFF_RADAR_BANDS/RADAR_VH_dB_640_app.tif",
             "GEOTIFF_RADAR_BANDS/RADAR_logRatio_dB_640_app.tif",

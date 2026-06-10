@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import importlib
 import sys
 from unittest.mock import MagicMock
 
 import numpy as np
 
-# Mock rasterio and ee before importing dem_derivatives
+# Save original state of mocked dependencies
+_original_rasterio = sys.modules.get("rasterio")
+_original_rasterio_transform = sys.modules.get("rasterio.transform")
+_original_ee = sys.modules.get("ee")
+
+# Mock rasterio and ee so dem_derivatives (and its import of dem) can load safely
 sys.modules["rasterio"] = MagicMock()
 sys.modules["rasterio.transform"] = MagicMock()
 sys.modules["ee"] = MagicMock()
@@ -16,6 +22,28 @@ from app.pipeline.stages.dem_derivatives import (
     compute_dem_derivatives,
     compute_hillshade,
 )
+
+# Restore original modules
+if _original_rasterio is not None:
+    sys.modules["rasterio"] = _original_rasterio
+else:
+    sys.modules.pop("rasterio", None)
+
+if _original_rasterio_transform is not None:
+    sys.modules["rasterio.transform"] = _original_rasterio_transform
+else:
+    sys.modules.pop("rasterio.transform", None)
+
+if _original_ee is not None:
+    sys.modules["ee"] = _original_ee
+else:
+    sys.modules.pop("ee", None)
+
+# Reload affected modules so downstream tests see real rasterio in dem/dem_derivatives
+for _key in ("app.pipeline.stages.dem", "app.pipeline.stages.dem_derivatives"):
+    _mod = sys.modules.get(_key)
+    if _mod is not None:
+        importlib.reload(_mod)
 
 
 def test_curvature_variants_match_notebook_formulas() -> None:
