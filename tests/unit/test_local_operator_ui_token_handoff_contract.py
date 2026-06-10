@@ -121,17 +121,17 @@ def test_panel_props_include_operator_access_token() -> None:
 def test_panel_passes_access_token_to_api_helper() -> None:
     text = _norm(_read(_PANEL_FILE))
     assert re.search(
-        r"getOperatorPrivateOverlayPreview\([^)]*\{\s*accessToken\s*:\s*operatorAccessToken\s*\}",
+        r"getOperatorPrivateOverlayPreview\([^)]*\{\s*accessToken\s*:\s*resolvedOperatorAccessToken\s*\}",
         text,
-    ), "expected panel to call helper with { accessToken: operatorAccessToken }"
+    ), "expected panel to call helper with { accessToken: resolvedOperatorAccessToken }"
 
 
 def test_panel_includes_access_token_in_effect_dependencies() -> None:
     text = _norm(_read(_PANEL_FILE))
-    # The useEffect dependency array must list operatorAccessToken.
+    # The useEffect dependency array must list resolvedOperatorAccessToken.
     dep_arrays = re.findall(r"\}\s*,\s*\[([^\]]*)\]\s*\)", text)
-    assert any("operatorAccessToken" in dep for dep in dep_arrays), \
-        "expected operatorAccessToken in the effect dependency list"
+    assert any("resolvedOperatorAccessToken" in dep for dep in dep_arrays), \
+        "expected resolvedOperatorAccessToken in the effect dependency list"
 
 
 def test_panel_has_no_storage_or_provider_or_login() -> None:
