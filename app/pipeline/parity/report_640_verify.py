@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -120,6 +121,7 @@ def _verify_one_output(
     reference_exists = reference_path.is_file()
     base["app_exists"] = app_exists
     base["reference_exists"] = reference_exists
+    _populate_size_and_hash(base, app_path, reference_path, app_exists, reference_exists)
 
     if not app_exists:
         return _finish_output(
@@ -153,6 +155,40 @@ def _verify_one_output(
         )
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _populate_size_and_hash(
+    item: dict[str, Any],
+    app_path: Path,
+    reference_path: Path,
+    app_exists: bool,
+    reference_exists: bool,
+) -> None:
+    """Record byte size + SHA256 for each side (informational only).
+
+    These are reported alongside the rasterio metadata/value comparison, which
+    remains the parity authority. Byte/hash equality is informative: two valid
+    GeoTIFFs with identical pixels can differ on disk (tags/compression), so a
+    SHA256 mismatch alone does not change the per-output status.
+    """
+
+    if app_exists:
+        item["app_size_bytes"] = app_path.stat().st_size
+        item["app_sha256"] = _sha256(app_path)
+    if reference_exists:
+        item["reference_size_bytes"] = reference_path.stat().st_size
+        item["reference_sha256"] = _sha256(reference_path)
+    if app_exists and reference_exists:
+        item["size_match"] = item["app_size_bytes"] == item["reference_size_bytes"]
+        item["sha256_match"] = item["app_sha256"] == item["reference_sha256"]
+
+
 def _base_output_item(output_name: str, app_path: Path, reference_path: Path) -> dict[str, Any]:
     return {
         "output_name": output_name,
@@ -160,6 +196,12 @@ def _base_output_item(output_name: str, app_path: Path, reference_path: Path) ->
         "reference_path": str(reference_path),
         "app_exists": False,
         "reference_exists": False,
+        "app_size_bytes": None,
+        "reference_size_bytes": None,
+        "size_match": None,
+        "app_sha256": None,
+        "reference_sha256": None,
+        "sha256_match": None,
         "metadata_compared": False,
         "values_compared": False,
         "width_match": None,
