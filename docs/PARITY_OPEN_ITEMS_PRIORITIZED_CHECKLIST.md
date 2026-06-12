@@ -2,86 +2,81 @@
 
 ## Purpose
 
-This file is the current remaining-job checklist after the Phase 0-10 parity roadmap.
+This is the current operational checklist for `notebooks/new.ipynb` parity work.
 
-The full roadmap contract history remains in:
+Full roadmap history remains in:
 
 - `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`
+
+Expected output scope is maintained in:
+
+- `docs/parity_expected_outputs_sourcelocked.json`
 
 ## Scope Rule
 
-- `notebooks/new.ipynb` parity is the main app path.
-- V6 is parked as a separate external-notebook/package track.
-- Reference comparison work requires D1 first.
+- `notebooks/new.ipynb` is the in-scope notebook.
+- V6 remains parked as a separate external-notebook/package track.
+- Real value parity requires the frozen D1C reference plus D2 validation.
+- Same-source comparisons prove mapping/tooling only.
+- Real app parity requires matching app-generated output for the D1C grid.
 
-## Correct Remaining-Job Sequence
+## Closed Work
 
-### 1. Reconcile checklist docs — DONE
+- [x] Checklist docs reconciled.
+- [x] D1/D1C frozen reference created outside Git.
+- [x] D2 frozen bundle validator implemented.
+- [x] D1A bundle-wide scope audit implemented.
+- [x] D1B source-locked baseline created.
+- [x] D1D object-table outputs documented as source-recovery; D1A required missing count is zero.
+- [x] D3 DEM curvature parity accepted end-to-end.
+- [x] R1 REPORT_640 verifier/CLI tooling and same-source mapping check completed.
+- [x] AIREADY-1 verifier/CLI tooling and same-source mapping check completed.
+- [x] HYPER-1A RES_2p5M verifier/CLI tooling and same-source mapping check completed.
 
-Reconciled files:
+## Blocked Real App Parity Items
 
-- `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`
-- `docs/PARITY_OPEN_ITEMS_PRIORITIZED_CHECKLIST.md`
-- `docs/V6_PACKAGE_GENERATION_SCOPE.md`
+These are blocked, not failed. Each needs a matching app-generated output for the D1C grid.
 
-Result:
+- [ ] R1 REPORT_640 real app-vs-reference parity.
+- [ ] AIREADY real app-vs-reference parity.
+- [ ] HYPER-1A RES_2p5M real app-vs-reference parity.
 
-- `notebooks/new.ipynb` parity = main app path.
-- V6 = parked separate external track.
-- D1 reference freeze is the gate before value comparisons.
+## Current Remaining-Job Sequence
 
-### 2. D1 — Freeze `notebooks/new.ipynb` reference bundle
+### 1. HYPER-1B — Core tensor / NPY verification — NEXT
 
-This is the gate before downstream verification.
+- [ ] Source-lock expected tensor/NPY outputs from `notebooks/new.ipynb` and the source-locked baseline.
+- [ ] Reuse existing verifier/recovery code first.
+- [ ] Add D2-gated local verifier/CLI only if needed.
+- [ ] Run same-source D1C mapping check.
+- [ ] Report real app parity as blocked if no matching app output exists.
 
-- [ ] Run/freeze a known-good `notebooks/new.ipynb` output bundle outside Git.
-- [ ] Record notebook version, repo commit, run date, and notes.
-- [ ] Record output file list.
-- [ ] Record SHA256 and file sizes.
-
-Rule:
-
-- Nothing below should claim notebook-value parity until D1 exists.
-
-### 3. Tier 1 — DEM curvature reference comparison
-
-- [ ] `curv_laplacian_640.tif`
-- [ ] `curv_plan_640.tif`
-- [ ] `curv_profile_640.tif`
-
-### 4. Tier 1 — Report 640 verification
-
-- [ ] Output presence.
-- [ ] Raster/file presence.
-- [ ] Shape/name/value parity where applicable.
-
-### 5. Tier 1 — Internal raster / AI-ready verification
+### 2. Internal raster / remaining AI-ready family verification
 
 - [ ] Internal raster-family parity.
-- [ ] AI-ready fraction parity.
-- [ ] AI-ready neutral feature-family parity.
-- [ ] AI-ready neutral family parity.
+- [ ] AI-ready fraction/recovery status check.
+- [ ] Remaining source-locked AI-ready family checks.
 
-### 6. Tier 2 — SAR/S1 recover + build, then verify
+### 3. Tier 2 — SAR/S1 recover + build, then verify
 
-- [ ] Recover required S1 ASC/DESC source inputs.
+- [ ] Recover required source inputs.
 - [ ] Confirm notebook cell/source logic.
-- [ ] Build missing app writer/output path.
-- [ ] Verify against frozen D1 reference.
+- [ ] Build missing app writer/output path where required.
+- [ ] Verify against frozen D1C reference.
 
-### 7. Tier 2 — PAN recover + build, then verify
+### 4. Tier 2 — PAN/optical recover + build, then verify
 
-- [ ] Recover optical/PAN source requirement.
+- [ ] Recover source requirement.
 - [ ] Confirm notebook source logic.
-- [ ] Build missing app writer/output path.
-- [ ] Verify against frozen D1 reference.
+- [ ] Build missing app writer/output path where required.
+- [ ] Verify against frozen D1C reference.
 
-### 8. Special Track G — Preview/export decision
+### 5. Special Track G — Preview/export decision
 
 - [ ] Decide preview/export behavior.
 - [ ] Keep this separate from parity-closing work.
 
-### 9. V6 — parked separate project
+### 6. V6 — parked separate project
 
 - [ ] Later: provide external V6 notebook/export.
 - [ ] Later: freeze V6 package.
@@ -101,6 +96,7 @@ Rule:
 - `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`
 - `docs/V6_PACKAGE_GENERATION_SCOPE.md`
 - `docs/SAFE_NOTEBOOK_CAPABILITY_PHASES.md`
+- `docs/parity_expected_outputs_sourcelocked.json`
 - `AGENTS.md`
 
 (End of PARITY_OPEN_ITEMS_PRIORITIZED_CHECKLIST.md.)
