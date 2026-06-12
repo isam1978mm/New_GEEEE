@@ -1,5 +1,6 @@
 import importlib.util
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -128,6 +129,35 @@ def test_npy_matching_fixture_passes_and_hashes_are_recorded(tmp_path):
     assert item["hash_match"] is True
     assert item["notebook_value_parity_verified"] is True
     assert result.npy_outputs_passed is True
+
+
+def test_npy_reports_finite_nan_inf_counts_and_allclose_alias(tmp_path):
+    run_dir = tmp_path / "run"
+    app_dir = tmp_path / "app"
+    reference_dir = tmp_path / "reference"
+    _write_all_matching_outputs(app_dir, reference_dir)
+    values = np.arange(36, dtype=np.float32).reshape(9, 2, 2)
+    values[0, 0, 0] = np.nan
+    values[0, 0, 1] = np.inf
+    _write_npy_pair(app_dir, reference_dir, "FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy", values)
+
+    result = verify_hypercube_res25_parity(app_dir, reference_dir, run_dir, "run-npy-counts")
+    report = _load_report(result.report_path)
+    item = _output_by_name(report, "FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy")
+
+    assert item["app_present"] is True
+    assert item["reference_present"] is True
+    assert item["app_finite_count"] == 34
+    assert item["app_nan_count"] == 1
+    assert item["app_inf_count"] == 1
+    assert item["reference_finite_count"] == 34
+    assert item["reference_nan_count"] == 1
+    assert item["reference_inf_count"] == 1
+    assert item["count_compared_values"] == 34
+    assert item["compared_element_count"] == 34
+    assert item["within_tolerance"] is True
+    assert item["allclose_pass"] is True
+    assert item["sha256_match"] is True
 
 
 def test_npy_shape_mismatch_fails(tmp_path):
@@ -321,3 +351,28 @@ def test_phase_4i_module_does_not_add_generation_resampling_alias_copy_or_hyperc
     ]
 
     assert forbidden_public_functions == []
+
+
+def test_expected_outputs_are_source_locked_to_json_and_notebook():
+    sourcelocked = json.loads(
+        Path("docs/parity_expected_outputs_sourcelocked.json").read_text(encoding="utf-8")
+    )
+    entries = {entry["id"]: entry for entry in sourcelocked["entries"]}
+    resampled_paths = set(entries["hypercube_resampled_filtered_missing"]["paths"])
+    expected_paths = {
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif",
+        "NPY_STACKS/FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy",
+    }
+    assert expected_paths <= resampled_paths
+    assert tuple(path.removeprefix("NPY_STACKS/") for path in sorted(expected_paths)) == tuple(
+        sorted(HYPERCUBE_RES25_OUTPUT_NAMES)
+    )
+
+    notebook = json.loads(Path("notebooks/new.ipynb").read_text(encoding="utf-8"))
+    source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
+    assert 'STACK_DIR = PATHS_DRIVE_GLOBAL[\'stacks_dir\']' in source
+    assert 'HYPERCUBE_PATH = os.path.join(STACK_DIR, "FINAL_TESLA_V7_2_HYPERCUBE.tif")' in source
+    assert "OUTPUT_RES_M = 2.5" in source
+    assert 'OUTPUT_FILENAME_TIF = f"FINAL_TESLA_V7_2_HYPERCUBE_RES_' in source
+    assert 'OUTPUT_FILENAME_NPY = f"FINAL_TESLA_V7_2_HYPERCUBE_RES_' in source
+    assert "np.save(OUTPUT_PATH_NPY, upsampled_hypercube_data)" in source

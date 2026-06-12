@@ -131,7 +131,9 @@ def _verify_one_output(
     app_exists = app_path.is_file()
     reference_exists = reference_path.is_file()
     item["app_exists"] = app_exists
+    item["app_present"] = app_exists
     item["reference_exists"] = reference_exists
+    item["reference_present"] = reference_exists
     item["app_sha256"] = _sha256_file(app_path) if app_exists else None
     item["reference_sha256"] = _sha256_file(reference_path) if reference_exists else None
     item["hash_match"] = (
@@ -139,6 +141,7 @@ def _verify_one_output(
         if item["app_sha256"] and item["reference_sha256"]
         else None
     )
+    item["sha256_match"] = item["hash_match"]
 
     if not app_exists:
         return _finish_output(
@@ -191,11 +194,14 @@ def _base_output_item(output_name: str, app_path: Path, reference_path: Path) ->
         "app_path": str(app_path),
         "reference_path": str(reference_path),
         "app_exists": False,
+        "app_present": False,
         "reference_exists": False,
+        "reference_present": False,
         "file_type": file_type,
         "app_sha256": None,
         "reference_sha256": None,
         "hash_match": None,
+        "sha256_match": None,
         "metadata_compared": False,
         "values_compared": False,
         "width_match": None,
@@ -210,8 +216,16 @@ def _base_output_item(output_name: str, app_path: Path, reference_path: Path) ->
         "max_abs_diff": None,
         "mean_abs_diff": None,
         "count_compared_values": 0,
+        "compared_element_count": 0,
         "count_nan_or_nodata_values": 0,
+        "app_finite_count": None,
+        "app_nan_count": None,
+        "app_inf_count": None,
+        "reference_finite_count": None,
+        "reference_nan_count": None,
+        "reference_inf_count": None,
         "within_tolerance": False,
+        "allclose_pass": False,
         "runtime_output_verified": False,
         "notebook_value_parity_verified": False,
         "status": "comparison_unavailable",
@@ -252,6 +266,8 @@ def _compare_npy(
 ) -> dict[str, Any]:
     app_data = np.load(app_path, allow_pickle=False)
     reference_data = np.load(reference_path, allow_pickle=False)
+    item.update(_array_presence_counts(app_data, prefix="app"))
+    item.update(_array_presence_counts(reference_data, prefix="reference"))
 
     item["shape_match"] = app_data.shape == reference_data.shape
     item["dtype_match"] = app_data.dtype == reference_data.dtype
@@ -372,21 +388,26 @@ def _diff_stats(
             "max_abs_diff": None,
             "mean_abs_diff": None,
             "count_compared_values": 0,
+            "compared_element_count": 0,
             "count_nan_or_nodata_values": count_invalid,
             "within_tolerance": False,
+            "allclose_pass": False,
         }
 
     app_valid = app_filled[valid]
     reference_valid = reference_filled[valid]
     abs_diff = np.abs(app_valid - reference_valid)
+    allclose_pass = bool(
+        np.allclose(app_valid, reference_valid, atol=atol, rtol=rtol, equal_nan=True)
+    )
     return {
         "max_abs_diff": float(np.max(abs_diff)),
         "mean_abs_diff": float(np.mean(abs_diff)),
         "count_compared_values": count_compared,
+        "compared_element_count": count_compared,
         "count_nan_or_nodata_values": count_invalid,
-        "within_tolerance": bool(
-            np.allclose(app_valid, reference_valid, atol=atol, rtol=rtol, equal_nan=True)
-        ),
+        "within_tolerance": allclose_pass,
+        "allclose_pass": allclose_pass,
     }
 
 
@@ -394,6 +415,15 @@ def _as_float_array(data: np.ndarray | np.ma.MaskedArray) -> np.ndarray:
     if isinstance(data, np.ma.MaskedArray):
         return np.asarray(data.filled(np.nan), dtype=np.float64)
     return np.asarray(data, dtype=np.float64)
+
+
+def _array_presence_counts(data: np.ndarray | np.ma.MaskedArray, *, prefix: str) -> dict[str, int]:
+    values = _as_float_array(data)
+    return {
+        f"{prefix}_finite_count": int(np.count_nonzero(np.isfinite(values))),
+        f"{prefix}_nan_count": int(np.count_nonzero(np.isnan(values))),
+        f"{prefix}_inf_count": int(np.count_nonzero(np.isinf(values))),
+    }
 
 
 def _find_expected_file(root: Path, output_name: str) -> Path:
