@@ -37,32 +37,57 @@ Expected output scope is maintained in `docs/parity_expected_outputs_sourcelocke
 
 ## Blocked Real App Parity Items
 
-These are blocked, not failed. Each needs a matching app-generated output for the D1C grid.
+These are blocked, not failed. Same-source comparisons prove verifier mapping/tooling only; they
+are not real app parity. Real app-vs-reference parity requires app-generated output on the frozen
+D1C grid/source contract, D2-valid reference bundle validation, and then the existing verifier/CLI.
 
-- [ ] R1 REPORT_640 real app-vs-reference parity.
-- [ ] AIREADY real app-vs-reference parity.
-- [ ] HYPER-1A RES_2p5M real app-vs-reference parity.
-- [ ] HYPER-1B core tensor/NPY real app-vs-reference parity.
-- [ ] INT-1 internal raster real app-vs-reference parity.
-- [ ] S1-1 core-band real app-vs-reference parity.
+Unblock condition for every blocked item below:
+
+1. produce the matching app-generated output without fabricating or copying reference artifacts;
+2. prove the same D1C grid/source contract: same CRS, scale, width/height, transform/origin,
+   source contract, band count, shape convention, dtype, and output semantics;
+3. run the existing D2-gated verifier/CLI against the frozen D1C reference bundle.
+
+| Item | Status | Blocked reason | Existing verification path |
+| --- | --- | --- | --- |
+| R1 REPORT_640 real app-vs-reference parity | blocked | Needs matching D1C-grid app `REPORT_640_*` rasters produced by the app run. | `REPORT_640` verifier/CLI. |
+| AIREADY real app-vs-reference parity | blocked | Needs matching D1C-grid app six top-level `AI_READY_640_Secret_*` rasters. | Secret-layer verifier/CLI. |
+| HYPER-1A RES_2p5M real app-vs-reference parity | blocked | Needs matching D1C-grid app `FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.*` outputs. | RES_2p5M verifier/CLI. |
+| HYPER-1B core tensor/NPY real app-vs-reference parity | blocked | Needs matching D1C-grid app core tensor and radar-stack NPY outputs with comparable grid/source metadata. | Tensor verifier/CLI. |
+| INT-1 internal raster real app-vs-reference parity | blocked | Needs matching D1C-grid app internal raster outputs for the closed INT-1 mapping set. | Internal raster verifier/recovery tooling. |
+| S1-1 core-band real app-vs-reference parity | blocked | Needs matching D1C-grid app SAR/S1 core-band outputs with the same grid and source contract, not merely same shape/EPSG. | SAR core-band same-source support checks and existing SAR parity tooling. |
 
 ## Source-Recovery Items
 
-- [ ] AI_READY remaining support families.
-- [ ] Object-table outputs documented by D1D.
-- [ ] S1-1 support stacks, intermediate layers, and QA/provenance outputs where the app lacks matching writer paths or has renamed equivalents only.
-- [ ] PAN-1 source-locked image components and stack outputs until matching app writer/run exists.
+Source-recovery items have notebook/source evidence but are not verified runtime parity targets yet.
+Do not fabricate outputs, do not regenerate from a mismatched notebook or pipeline version, and do
+not treat renamed/app-native equivalents as notebook parity. Each item needs an explicit
+recovery/build task before parity verification.
+
+| Item | Status | Reason | Needed to unblock |
+| --- | --- | --- | --- |
+| D1D object-table outputs | source-recovery | `AI_OBJECT_TABLES/objects_index.csv` and `AI_OBJECT_TABLES/clusters_summary.csv` are source-locked, but D1C did not export the required same-run object-table family and related source tensors consistently. | Corrected same-run source recovery/export, then D2-gated comparison. |
+| AI_READY remaining support families | source-recovery | Broader `AI_READY_*` / `AI_BEH_*` support families have evidence in the semantic recovery contracts but are outside the six AIREADY-1 top-level secret-layer outputs. | Per-family recovery/build task with source evidence, output paths, metadata, and frozen references. |
+| SAR/S1 support, intermediate, and QA/provenance outputs | source-recovery | ASC/DESC filtered layers, `S1_FILTERED_LAYERS_STACK_640.npy`, pre-RTC/intermediate/QA outputs either lack matching app writer paths or have app-native/renamed equivalents only. | Recover exact notebook source contract, selected source IDs/metadata, writer paths, and references before verification. |
+| PAN/optical image components and stack | source-recovery | D1C has source-locked PAN components and `PAN_LAYERS_STACK_640.npy`; current app has no matching PAN writer and existing optical outputs are not equivalents. | Add explicit source-driven PAN writer/run, then run PAN component and stack verifiers. |
 
 ## Current Remaining-Job Sequence
 
 ### 1. FINAL-1 — Final parity status / remaining blocked-run list — NEXT
 
-- [ ] Query Graphify before direct source-file reading.
-- [ ] Produce final closed-work list.
-- [ ] Produce final blocked real app-vs-reference list.
-- [ ] Produce final source-recovery list.
-- [ ] Confirm V6 remains parked.
-- [ ] Do not modify runtime code or generated artifacts.
+- [x] Query Graphify before direct source-file reading.
+- [x] Produce final closed-work list.
+- [x] Produce final blocked real app-vs-reference list.
+- [x] Produce final source-recovery list.
+- [x] Confirm V6 remains parked.
+- [x] Do not modify runtime code or generated artifacts.
+
+FINAL-1 status: closed as a docs-only parity status update. The local Graphify CLI was invoked
+first, but `graphify-out/graph.json` was absent, so no graph traversal was available. The final
+status was reconciled from the active parity checklist, source-locked baseline, V6 scope document,
+and the relevant verifier/recovery contracts. No runtime code, formulas, writers, verifiers,
+tolerances, source-locked baseline values, notebook files, reference bundles, generated artifacts,
+frontend build files, cache files, or Graphify outputs were changed.
 
 ### 2. V6 — parked separate project
 
@@ -70,6 +95,10 @@ These are blocked, not failed. Each needs a matching app-generated output for th
 - [ ] Later: freeze V6 package.
 - [ ] Later: source-lock V6 formulas.
 - [ ] Later: decide whether app integrates V6 workflow.
+
+V6 status: parked. It is a separate external-notebook/package track and does not block
+`notebooks/new.ipynb` parity closure. V6 can restart only after the operator supplies the separate
+originating V6 notebook or a real frozen V6 package.
 
 ## Completed Foundation
 
