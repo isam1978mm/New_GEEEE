@@ -19,6 +19,7 @@ Expected output scope is maintained in:
 - Real value parity requires the frozen D1C reference plus D2 validation.
 - Same-source comparisons prove mapping/tooling only.
 - Real app parity requires matching app-generated output for the D1C grid.
+- Source-recovery items are documented notebook outputs but are not fabricated or regenerated from mismatched pipelines.
 
 ## Closed Work
 
@@ -33,6 +34,7 @@ Expected output scope is maintained in:
 - [x] AIREADY-1 verifier/CLI tooling and same-source mapping check completed.
 - [x] HYPER-1A RES_2p5M verifier/CLI tooling and same-source mapping check completed.
 - [x] HYPER-1B core tensor/NPY verifier/CLI tooling and same-source mapping check completed.
+- [x] INT-1 internal raster/AI_BEH verifier/CLI tooling and same-source mapping check completed.
 
 ## Blocked Real App Parity Items
 
@@ -42,38 +44,43 @@ These are blocked, not failed. Each needs a matching app-generated output for th
 - [ ] AIREADY real app-vs-reference parity.
 - [ ] HYPER-1A RES_2p5M real app-vs-reference parity.
 - [ ] HYPER-1B core tensor/NPY real app-vs-reference parity.
+- [ ] INT-1 AI_BEH/internal raster real app-vs-reference parity.
+
+## Source-Recovery Items
+
+These are real notebook-related families but are not currently reproducible verification targets.
+
+- [ ] AI_READY Fraction family.
+- [ ] AI_READY Magnetic/EM Anomaly family.
+- [ ] AI_READY Metal Hardness family.
+- [ ] Object-table outputs documented by D1D.
 
 ## Current Remaining-Job Sequence
 
-### 1. INT-1 — Internal raster / remaining AI-ready family verification — NEXT
+### 1. Tier 2 — SAR/S1 recover + build, then verify — NEXT
 
 - [ ] Query Graphify before direct source-file reading.
-- [ ] Source-lock remaining internal/AI-ready outputs from `notebooks/new.ipynb` and the source-locked baseline.
-- [ ] Exclude already-closed AIREADY-1 outputs.
-- [ ] Reuse existing verifier/recovery code first.
-- [ ] Classify each output as reproducible, source-recovery, blocked-needs-app-run, or out of current notebook scope.
-- [ ] Add verifier/CLI only if a reproducible remaining family exists.
-
-### 2. Tier 2 — SAR/S1 recover + build, then verify
-
 - [ ] Recover required source inputs.
 - [ ] Confirm notebook cell/source logic.
+- [ ] Classify SAR/S1 outputs as reproducible, source-recovery, blocked-needs-app-run, or out of current notebook scope.
 - [ ] Build missing app writer/output path where required.
-- [ ] Verify against frozen D1C reference.
+- [ ] Verify against frozen D1C reference when a faithful source path exists.
 
-### 3. Tier 2 — PAN/optical recover + build, then verify
+### 2. Tier 2 — PAN/optical recover + build, then verify
 
+- [ ] Query Graphify before direct source-file reading.
 - [ ] Recover source requirement.
 - [ ] Confirm notebook source logic.
+- [ ] Classify PAN/optical outputs as reproducible, source-recovery, blocked-needs-app-run, or out of current notebook scope.
 - [ ] Build missing app writer/output path where required.
-- [ ] Verify against frozen D1C reference.
+- [ ] Verify against frozen D1C reference when a faithful source path exists.
 
-### 4. Special Track G — Preview/export decision
+### 3. Special Track G — Preview/export decision
 
 - [ ] Decide preview/export behavior.
 - [ ] Keep this separate from parity-closing work.
 
-### 5. V6 — parked separate project
+### 4. V6 — parked separate project
 
 - [ ] Later: provide external V6 notebook/export.
 - [ ] Later: freeze V6 package.
