@@ -32,6 +32,7 @@ Expected output scope is maintained in:
 - [x] R1 REPORT_640 verifier/CLI tooling and same-source mapping check completed.
 - [x] AIREADY-1 verifier/CLI tooling and same-source mapping check completed.
 - [x] HYPER-1A RES_2p5M verifier/CLI tooling and same-source mapping check completed.
+- [x] HYPER-1B core tensor/NPY verifier/CLI tooling and same-source mapping check completed.
 
 ## Blocked Real App Parity Items
 
@@ -40,43 +41,39 @@ These are blocked, not failed. Each needs a matching app-generated output for th
 - [ ] R1 REPORT_640 real app-vs-reference parity.
 - [ ] AIREADY real app-vs-reference parity.
 - [ ] HYPER-1A RES_2p5M real app-vs-reference parity.
+- [ ] HYPER-1B core tensor/NPY real app-vs-reference parity.
 
 ## Current Remaining-Job Sequence
 
-### 1. HYPER-1B — Core tensor / NPY verification — NEXT
+### 1. INT-1 — Internal raster / remaining AI-ready family verification — NEXT
 
-- [ ] Source-lock expected tensor/NPY outputs from `notebooks/new.ipynb` and the source-locked baseline.
+- [ ] Query Graphify before direct source-file reading.
+- [ ] Source-lock remaining internal/AI-ready outputs from `notebooks/new.ipynb` and the source-locked baseline.
+- [ ] Exclude already-closed AIREADY-1 outputs.
 - [ ] Reuse existing verifier/recovery code first.
-- [ ] Add D2-gated local verifier/CLI only if needed.
-- [ ] Run same-source D1C mapping check.
-- [ ] Report real app parity as blocked if no matching app output exists.
+- [ ] Classify each output as reproducible, source-recovery, blocked-needs-app-run, or out of current notebook scope.
+- [ ] Add verifier/CLI only if a reproducible remaining family exists.
 
-### 2. Internal raster / remaining AI-ready family verification
-
-- [ ] Internal raster-family parity.
-- [ ] AI-ready fraction/recovery status check.
-- [ ] Remaining source-locked AI-ready family checks.
-
-### 3. Tier 2 — SAR/S1 recover + build, then verify
+### 2. Tier 2 — SAR/S1 recover + build, then verify
 
 - [ ] Recover required source inputs.
 - [ ] Confirm notebook cell/source logic.
 - [ ] Build missing app writer/output path where required.
 - [ ] Verify against frozen D1C reference.
 
-### 4. Tier 2 — PAN/optical recover + build, then verify
+### 3. Tier 2 — PAN/optical recover + build, then verify
 
 - [ ] Recover source requirement.
 - [ ] Confirm notebook source logic.
 - [ ] Build missing app writer/output path where required.
 - [ ] Verify against frozen D1C reference.
 
-### 5. Special Track G — Preview/export decision
+### 4. Special Track G — Preview/export decision
 
 - [ ] Decide preview/export behavior.
 - [ ] Keep this separate from parity-closing work.
 
-### 6. V6 — parked separate project
+### 5. V6 — parked separate project
 
 - [ ] Later: provide external V6 notebook/export.
 - [ ] Later: freeze V6 package.
