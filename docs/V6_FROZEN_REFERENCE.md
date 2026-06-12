@@ -83,3 +83,8 @@ It does not replace the D1C source-locked reference bundle.
 2. source-lockable package material,
 3. future app-integration candidate,
 4. generated artifact bundle that remains outside Git.
+
+## Intake report
+
+See `docs/V6_INTAKE_1.md` for the V6-INTAKE-1 package intake status and project-role
+classification.
