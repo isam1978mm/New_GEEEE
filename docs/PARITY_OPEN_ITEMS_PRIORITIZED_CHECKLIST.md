@@ -1,4 +1,4 @@
-# Parity Open Items — Prioritized Checklist
+﻿# Parity Open Items — Prioritized Checklist
 
 ## Purpose
 
@@ -15,6 +15,7 @@ Expected output scope is maintained in `docs/parity_expected_outputs_sourcelocke
 - Same-source comparisons prove mapping/tooling only.
 - Real app parity requires matching app-generated output for the D1C grid.
 - Source-recovery items are documented notebook outputs but are not fabricated or regenerated from mismatched pipelines.
+- Preview/export is not parity-blocking unless future work changes artifact names, filtering, safety classes, generated previews, or export packages.
 
 ## Closed Work
 
@@ -32,6 +33,7 @@ Expected output scope is maintained in `docs/parity_expected_outputs_sourcelocke
 - [x] INT-1 internal raster verifier/CLI tooling and same-source mapping check completed.
 - [x] S1-1 family classification and same-source verification completed.
 - [x] PAN-1 image-family classification and same-source verification completed.
+- [x] G-1 preview/export decision closed as not parity-blocking.
 
 ## Blocked Real App Parity Items
 
@@ -53,12 +55,14 @@ These are blocked, not failed. Each needs a matching app-generated output for th
 
 ## Current Remaining-Job Sequence
 
-### 1. Special Track G — Preview/export decision — NEXT
+### 1. FINAL-1 — Final parity status / remaining blocked-run list — NEXT
 
 - [ ] Query Graphify before direct source-file reading.
-- [ ] Identify current preview/export behavior.
-- [ ] Decide whether preview/export belongs in parity closure, a separate product task, or a parked follow-up.
-- [ ] Do not modify parity formulas, reference bundles, or generated artifacts.
+- [ ] Produce final closed-work list.
+- [ ] Produce final blocked real app-vs-reference list.
+- [ ] Produce final source-recovery list.
+- [ ] Confirm V6 remains parked.
+- [ ] Do not modify runtime code or generated artifacts.
 
 ### 2. V6 — parked separate project
 
