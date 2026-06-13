@@ -6,9 +6,11 @@ from pathlib import Path
 import zipfile
 
 from app.cli import v6_package_generate
+from app.services.v6_generator_inputs import load_v6_generation_input_json
 from app.services.v6_generator_package import (
     GENERATOR_STATUS_VERIFIED,
     generate_synthetic_v6_package,
+    generate_v6_package_from_input,
 )
 from app.services.v6_package_contract import validate_payload_file_names
 from app.services.v6_package_validator import (
@@ -28,6 +30,40 @@ def _sha256_path(path: Path) -> str:
 def _write_reference_doc(path: Path, package_sha: str) -> None:
     path.write_text(
         f"# Synthetic Generated V6 Reference\n\nZIP SHA256:\n\n```text\n{package_sha}\n```\n",
+        encoding="utf-8",
+    )
+
+
+def _write_app_input_fixture(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "run_id": "APP_FIXTURE_RUN_001",
+                "timestamp": "20260102T010203Z",
+                "candidates": [
+                    {
+                        "cell_id": "APP_CELL_A",
+                        "candidate_score": 0.42,
+                        "v6_review_priority_score": 0.73,
+                    },
+                    {
+                        "cell_id": "APP_CELL_B",
+                        "candidate_score": 0.38,
+                        "v6_review_priority_score": 0.61,
+                    },
+                ],
+                "request_zones": [
+                    {
+                        "request_zone_id": "APP_ZONE_A",
+                        "primary_cell_id": "APP_CELL_A",
+                        "quote_id": "APP_QUOTE_A",
+                        "quote_score": 0.0,
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
 
@@ -102,6 +138,31 @@ def test_generated_synthetic_package_passes_existing_validator(tmp_path: Path) -
     assert validation.issue_counts == {}
 
 
+def test_generate_v6_package_from_app_input_fixture(tmp_path: Path) -> None:
+    input_path = tmp_path / "app_input.json"
+    _write_app_input_fixture(input_path)
+    generation_input = load_v6_generation_input_json(input_path)
+
+    result = generate_v6_package_from_input(
+        output_dir=tmp_path / "generated",
+        generation_input=generation_input,
+    )
+
+    assert result.validation_status == GENERATOR_STATUS_VERIFIED
+    assert result.payload_count == 12
+    assert any(
+        name == "lawful_gee_candidate_scout_top_25_20260102T010203Z.csv"
+        for name in result.payload_file_names
+    )
+
+    with zipfile.ZipFile(result.zip_path) as archive:
+        top_csv = archive.read("lawful_gee_candidate_scout_top_25_20260102T010203Z.csv").decode("utf-8")
+        request_zones = archive.read("request_zones_v6.csv").decode("utf-8")
+
+    assert "APP_CELL_A,0.42" in top_csv
+    assert "APP_ZONE_A,APP_CELL_A" in request_zones
+
+
 def test_validation_report_is_safe_metadata_only(tmp_path: Path) -> None:
     result = generate_synthetic_v6_package(output_dir=tmp_path)
     report = json.loads(Path(result.validation_report_path).read_text(encoding="utf-8"))
@@ -135,3 +196,22 @@ def test_cli_generates_synthetic_package_and_prints_safe_counts(tmp_path: Path, 
     assert "candidate_score" not in stdout
     assert "FeatureCollection" not in stdout
     assert "SYNTH_CELL_001" not in stdout
+
+
+def test_cli_accepts_app_input_fixture_json_and_prints_safe_counts(tmp_path: Path, capsys) -> None:
+    input_path = tmp_path / "app_input.json"
+    output_dir = tmp_path / "generated"
+    _write_app_input_fixture(input_path)
+
+    exit_code = v6_package_generate.main(
+        ["--out", str(output_dir), "--input-json", str(input_path)]
+    )
+    stdout = capsys.readouterr().out
+    payload = json.loads(stdout)
+
+    assert exit_code == 0
+    assert payload["validation_status"] == GENERATOR_STATUS_VERIFIED
+    assert payload["payload_count"] == 12
+    assert Path(payload["zip_path"]).is_file()
+    assert "APP_CELL_A" not in stdout
+    assert "candidate_score" not in stdout
