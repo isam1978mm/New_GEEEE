@@ -14,9 +14,10 @@ The goal is not to depend on the external notebook as the production generator. 
 - [x] Private safe summary importer added.
 - [x] Internal provenance storage gates documented.
 - [x] Final product direction documented: app-side V6 generation, not notebook dependency.
-- [ ] App-side V6 generator implemented.
-- [ ] App-side V6 package generation CLI added.
-- [ ] App-generated V6 package validated against the source-lock contract.
+- [x] V6-GENERATOR-1 notebook-to-app stage map documented.
+- [x] V6-GENERATOR-2 synthetic app-side V6 package generator implemented.
+- [x] Synthetic app-side V6 package generation CLI added.
+- [x] Synthetic app-generated V6 package validated against the source-lock contract.
 - [ ] App-generated package compared against the frozen reference package shape.
 - [ ] Private operator review/download flow added.
 - [ ] Paid imagery quote tracking added.
@@ -24,74 +25,79 @@ The goal is not to depend on the external notebook as the production generator. 
 
 ## Non-Negotiable Direction
 
-- [ ] The V6 notebook is treated as reference/parity source only.
-- [ ] The app does not rely on Colab runtime, Google Drive runtime paths, notebook globals, or manual notebook execution to generate V6 outputs.
-- [ ] The app can generate the full V6 package independently.
-- [ ] The verifier/importer remains QA and audit support, not the primary V6 workflow.
+- [x] The V6 notebook is treated as reference/parity source only.
+- [x] The app does not rely on Colab runtime, Google Drive runtime paths, notebook globals, or manual notebook execution for synthetic V6 package generation.
+- [x] The app can now generate the full V6 package shape independently with synthetic fixtures.
+- [ ] The app can generate the full V6 package from real app pipeline outputs.
+- [x] The verifier/importer remains QA and audit support, not the primary V6 workflow.
 
 ## V6 Package Generation Scope
 
-The app-side generator must eventually produce all package roles below.
+The app-side synthetic generator now produces all package roles below. Real app-output generation remains a later step.
 
-- [ ] Timestamped top candidate CSV.
-- [ ] Timestamped top candidate GeoJSON.
-- [ ] Enhanced top candidate CSV.
-- [ ] Enhanced top candidate GeoJSON.
-- [ ] Stable candidate priority CSV.
-- [ ] Quality diagnostics CSV.
-- [ ] Request zones CSV.
-- [ ] Request zones GeoJSON.
-- [ ] Paid imagery quote template CSV.
-- [ ] Paid imagery quote comparison CSV.
-- [ ] Paid archive request summary TXT.
-- [ ] Visual inspection map HTML.
-- [ ] Inventory JSON with filenames, sizes, and SHA256 hashes.
-- [ ] Final V6 ZIP package.
-- [ ] Validation report.
+- [x] Timestamped top candidate CSV.
+- [x] Timestamped top candidate GeoJSON.
+- [x] Enhanced top candidate CSV.
+- [x] Enhanced top candidate GeoJSON.
+- [x] Stable candidate priority CSV.
+- [x] Quality diagnostics CSV.
+- [x] Request zones CSV.
+- [x] Request zones GeoJSON.
+- [x] Paid imagery quote template CSV.
+- [x] Paid imagery quote comparison CSV.
+- [x] Paid archive request summary TXT.
+- [x] Visual inspection map HTML.
+- [x] Inventory JSON with filenames, sizes, and SHA256 hashes.
+- [x] Final V6 ZIP package.
+- [x] Validation report.
 
 ## Generator Stage Checklist
 
 ### V6-GENERATOR-1: Notebook-To-App Generation Design
 
-- [ ] Map V6 notebook logic into app stages.
-- [ ] Identify app inputs required to generate V6 outputs.
-- [ ] Identify current app pipeline outputs that can feed V6 generation.
-- [ ] Define generator stage boundaries.
-- [ ] Define synthetic fixture strategy.
-- [ ] Define safety/redaction policy for generated files and logs.
-- [ ] Define validation strategy using current V6 validator and contract.
-- [ ] Document what notebook logic is in-scope and out-of-scope.
-- [ ] No code generation yet unless needed for pure constants/schema.
+- [x] Map V6 notebook logic into app stages.
+- [x] Identify app inputs required to generate V6 outputs.
+- [x] Identify current app pipeline outputs that can feed V6 generation.
+- [x] Define generator stage boundaries.
+- [x] Define synthetic fixture strategy.
+- [x] Define safety/redaction policy for generated files and logs.
+- [x] Define validation strategy using current V6 validator and contract.
+- [x] Document what notebook logic is in-scope and out-of-scope.
+- [x] No generator code added in V6-GENERATOR-1.
 
 Acceptance:
 
-- [ ] Documentation explains how the app replaces notebook generation.
-- [ ] Documentation separates package generation from paid imagery ordering.
-- [ ] Documentation lists exact output roles and stage map.
+- [x] Documentation explains how the app replaces notebook generation.
+- [x] Documentation separates package generation from paid imagery ordering.
+- [x] Documentation lists exact output roles and stage map.
 
 ### V6-GENERATOR-2: Synthetic App-Side Package Generator
 
-- [ ] Add generator service using synthetic input fixtures first.
-- [ ] Generate all required file roles from synthetic data.
-- [ ] Generate CSVs with correct headers.
-- [ ] Generate GeoJSON FeatureCollection shells with synthetic safe geometry only.
-- [ ] Generate TXT summary from synthetic metadata.
-- [ ] Generate simple private visual map output or safe placeholder HTML from synthetic data.
-- [ ] Generate inventory JSON.
-- [ ] Generate ZIP package.
-- [ ] Do not use real V6 package data.
-- [ ] Do not run Earth Engine.
-- [ ] Do not touch notebooks.
+- [x] Add generator service using synthetic input fixtures first.
+- [x] Generate all required file roles from synthetic data.
+- [x] Generate CSVs with correct headers.
+- [x] Generate GeoJSON FeatureCollection shells with synthetic safe geometry only.
+- [x] Generate TXT summary from synthetic metadata.
+- [x] Generate simple private visual map output or safe placeholder HTML from synthetic data.
+- [x] Generate inventory JSON.
+- [x] Generate ZIP package.
+- [x] Do not use real V6 package data.
+- [x] Do not run Earth Engine.
+- [x] Do not touch notebooks.
 
 Acceptance:
 
-- [ ] Unit tests prove all expected output roles are generated.
-- [ ] Unit tests prove inventory hashes and sizes match generated files.
-- [ ] Unit tests prove no real coordinates or real candidate rows are used.
+- [x] Unit tests prove all expected output roles are generated.
+- [x] Unit tests prove inventory hashes and sizes match generated files.
+- [x] Unit tests prove no real coordinates or real candidate rows are used.
+- [x] Unit tests prove generated synthetic ZIP passes the existing V6 validator with a synthetic reference document.
 
-### V6-GENERATOR-3: Private CLI For App-Side Generation
+### V6-GENERATOR-3: Connect Generator To App Input Models
 
-- [ ] Add private CLI command for synthetic or app-input generation.
+- [ ] Define app input model for V6 generation.
+- [ ] Define app pipeline output adapter for candidate/scoring inputs.
+- [ ] Keep synthetic fixture path available for tests.
+- [ ] Add private CLI mode that accepts app-input JSON or app pipeline output fixtures.
 - [ ] CLI takes operator-supplied output directory.
 - [ ] CLI does not write into Git by default.
 - [ ] CLI prints only safe status, output path, counts, and validation result.
@@ -100,18 +106,20 @@ Acceptance:
 Acceptance:
 
 - [ ] CLI can generate a package from synthetic fixtures.
+- [ ] CLI can generate a package from app-input fixture data.
 - [ ] CLI output passes safety checks.
 - [ ] CLI generated ZIP passes validator/contract checks.
 
 ### V6-GENERATOR-4: Generated Package Validation
 
-- [ ] Reuse V6 package validator against app-generated ZIP.
-- [ ] Reuse V6 source-lock contract where applicable.
-- [ ] Add generator-specific validation for generated inventory.
-- [ ] Validate CSV headers.
-- [ ] Validate GeoJSON top-level structure.
-- [ ] Validate category counts and role counts.
-- [ ] Validate ZIP member count and payload count.
+- [x] Reuse V6 package validator against synthetic app-generated ZIP.
+- [x] Reuse V6 source-lock contract for synthetic package shape.
+- [x] Add generator-specific validation for generated inventory.
+- [x] Validate CSV headers.
+- [x] Validate GeoJSON top-level structure.
+- [x] Validate category counts and role counts.
+- [x] Validate ZIP member count and payload count.
+- [ ] Extend validation to real app-output package fixtures.
 
 Acceptance:
 
@@ -153,9 +161,9 @@ Acceptance:
 
 ### V6-PAID-IMAGERY-1: Manual Quote/Request Tracking
 
-- [ ] Treat paid imagery request package generation as app-side generation.
-- [ ] Treat actual paid imagery buying/requesting as procurement workflow.
-- [ ] Add manual quote status tracking only after generator works.
+- [x] Treat paid imagery request package generation as app-side generation.
+- [x] Treat actual paid imagery buying/requesting as procurement workflow.
+- [ ] Add manual quote status tracking only after generator works with app inputs.
 - [ ] Track provider name, quote date, product type, quoted resolution, quoted cost, delivery estimate, status, and private operator notes.
 - [ ] Do not store payment credentials.
 - [ ] Do not submit provider orders automatically.
@@ -213,10 +221,10 @@ Acceptance:
 
 Run only relevant tests for touched code, but keep this baseline visible:
 
+- [ ] `python -m pytest tests/unit/test_v6_generator_package.py -q`
 - [ ] `python -m pytest tests/unit/test_v6_package_validator.py -q`
 - [ ] `python -m pytest tests/unit/test_v6_package_contract.py -q`
 - [ ] `python -m pytest tests/unit/test_v6_package_importer.py -q`
-- [ ] Generator-specific tests once added.
 - [ ] `python -m pytest tests/unit/test_notebook_safety.py -q --basetemp .pytest-v6-generator`
 
 ## Git Hygiene Checklist
@@ -236,7 +244,7 @@ Before every commit:
 The next tracked task is:
 
 ```text
-V6-GENERATOR-1: Document notebook-to-app generation design and exact stage map.
+V6-GENERATOR-3: connect the synthetic generator to app-input models and add private app-input fixture generation.
 ```
 
-This task should convert the V6 notebook reference into an app-side generator stage map. It should not implement the generator yet unless a tiny constants/helper module is clearly needed.
+This task should not run Earth Engine, add frontend/API exposure, or use real V6 artifacts.
