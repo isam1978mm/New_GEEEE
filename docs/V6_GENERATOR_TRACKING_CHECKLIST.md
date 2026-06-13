@@ -18,6 +18,7 @@ The goal is not to depend on the external notebook as the production generator. 
 - [x] V6-GENERATOR-2 synthetic app-side V6 package generator implemented.
 - [x] Synthetic app-side V6 package generation CLI added.
 - [x] Synthetic app-generated V6 package validated against the source-lock contract.
+- [x] V6-GENERATOR-3 app-input fixture models connected to generator and CLI.
 - [ ] App-generated package compared against the frozen reference package shape.
 - [ ] Private operator review/download flow added.
 - [ ] Paid imagery quote tracking added.
@@ -26,14 +27,15 @@ The goal is not to depend on the external notebook as the production generator. 
 ## Non-Negotiable Direction
 
 - [x] The V6 notebook is treated as reference/parity source only.
-- [x] The app does not rely on Colab runtime, Google Drive runtime paths, notebook globals, or manual notebook execution for synthetic V6 package generation.
+- [x] The app does not rely on Colab runtime, Google Drive runtime paths, notebook globals, or manual notebook execution for synthetic/app-input fixture V6 package generation.
 - [x] The app can now generate the full V6 package shape independently with synthetic fixtures.
+- [x] The app can now generate the full V6 package shape from safe app-input fixtures.
 - [ ] The app can generate the full V6 package from real app pipeline outputs.
 - [x] The verifier/importer remains QA and audit support, not the primary V6 workflow.
 
 ## V6 Package Generation Scope
 
-The app-side synthetic generator now produces all package roles below. Real app-output generation remains a later step.
+The app-side generator now produces all package roles below from synthetic fixtures and safe app-input fixtures. Real app-output generation remains a later step.
 
 - [x] Timestamped top candidate CSV.
 - [x] Timestamped top candidate GeoJSON.
@@ -94,23 +96,23 @@ Acceptance:
 
 ### V6-GENERATOR-3: Connect Generator To App Input Models
 
-- [ ] Define app input model for V6 generation.
-- [ ] Define app pipeline output adapter for candidate/scoring inputs.
-- [ ] Keep synthetic fixture path available for tests.
-- [ ] Add private CLI mode that accepts app-input JSON or app pipeline output fixtures.
-- [ ] CLI takes operator-supplied output directory.
-- [ ] CLI does not write into Git by default.
-- [ ] CLI prints only safe status, output path, counts, and validation result.
-- [ ] CLI does not print rows, coordinates, GeoJSON contents, HTML contents, or full sensitive paths.
+- [x] Define app input model for V6 generation.
+- [x] Define safe app-input fixture loading.
+- [x] Keep synthetic fixture path available for tests.
+- [x] Add private CLI mode that accepts app-input JSON fixture data.
+- [x] CLI takes operator-supplied output directory.
+- [x] CLI does not write into Git by default.
+- [x] CLI prints only safe status, output path, counts, and validation result.
+- [x] CLI does not print rows, coordinates, GeoJSON contents, HTML contents, or candidate IDs.
 
 Acceptance:
 
-- [ ] CLI can generate a package from synthetic fixtures.
-- [ ] CLI can generate a package from app-input fixture data.
-- [ ] CLI output passes safety checks.
-- [ ] CLI generated ZIP passes validator/contract checks.
+- [x] CLI can generate a package from synthetic fixtures.
+- [x] CLI can generate a package from app-input fixture data.
+- [x] CLI output passes safety checks.
+- [x] CLI generated ZIP passes validator/contract checks.
 
-### V6-GENERATOR-4: Generated Package Validation
+### V6-GENERATOR-4: Generated Package Validation Failure Modes
 
 - [x] Reuse V6 package validator against synthetic app-generated ZIP.
 - [x] Reuse V6 source-lock contract for synthetic package shape.
@@ -119,6 +121,10 @@ Acceptance:
 - [x] Validate GeoJSON top-level structure.
 - [x] Validate category counts and role counts.
 - [x] Validate ZIP member count and payload count.
+- [ ] Add explicit failure-mode tests for missing required payloads.
+- [ ] Add explicit failure-mode tests for bad CSV headers.
+- [ ] Add explicit failure-mode tests for invalid GeoJSON top-level structure.
+- [ ] Add explicit failure-mode tests for inventory hash/size mismatch.
 - [ ] Extend validation to real app-output package fixtures.
 
 Acceptance:
@@ -244,7 +250,7 @@ Before every commit:
 The next tracked task is:
 
 ```text
-V6-GENERATOR-3: connect the synthetic generator to app-input models and add private app-input fixture generation.
+V6-GENERATOR-4: add explicit generated-package validation failure-mode tests.
 ```
 
-This task should not run Earth Engine, add frontend/API exposure, or use real V6 artifacts.
+This task should prove the generator fails closed for missing files, bad headers, invalid top-level GeoJSON, and inventory mismatch without using real V6 artifacts.
