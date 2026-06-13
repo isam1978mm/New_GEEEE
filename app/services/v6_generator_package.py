@@ -1,9 +1,9 @@
-"""Synthetic app-side V6 package generator.
+"""App-side V6 package generator.
 
-This module is the first implementation slice for app-side V6 package generation.
-It generates a complete V6 package shape from synthetic fixtures only, writes an
-inventory and ZIP, and validates the generated package structure without using
-real V6 rows, real coordinates, Earth Engine, notebook globals, or provider APIs.
+This module implements the early V6 generator path. It can generate a complete
+V6 package shape from synthetic fixtures or app-input fixture models, write an
+inventory and ZIP, and validate generated package structure without using real
+V6 rows, real coordinates, Earth Engine, notebook globals, or provider APIs.
 """
 
 from __future__ import annotations
@@ -18,6 +18,10 @@ import re
 from typing import Any, Mapping
 import zipfile
 
+from app.services.v6_generator_inputs import (
+    V6GenerationInput,
+    build_synthetic_v6_generation_input,
+)
 from app.services.v6_package_contract import (
     CATEGORY_NAMES,
     V6CsvHeaderContract,
@@ -75,13 +79,30 @@ def generate_synthetic_v6_package(
     timestamp: str = _DEFAULT_TIMESTAMP,
     package_name: str | None = None,
 ) -> V6GeneratedPackageResult:
-    """Generate a complete synthetic V6 package shape into an operator path.
+    """Generate a complete synthetic V6 package shape into an operator path."""
 
-    The generated package is intentionally synthetic. It exists to prove app-side
-    package creation, inventory generation, ZIP packaging, and contract-shape
-    validation before any real Earth Engine or provider workflow is added.
+    return generate_v6_package_from_input(
+        output_dir=output_dir,
+        generation_input=build_synthetic_v6_generation_input(timestamp=timestamp),
+        package_name=package_name,
+    )
+
+
+def generate_v6_package_from_input(
+    *,
+    output_dir: str | Path,
+    generation_input: V6GenerationInput,
+    package_name: str | None = None,
+) -> V6GeneratedPackageResult:
+    """Generate a complete V6 package shape from a safe app-input fixture.
+
+    The current implementation still uses safe GeoJSON shells and fixture-style
+    rows. It connects the package writer to app input models while keeping Earth
+    Engine, real geometry, notebook runtime state, and provider workflow out of
+    this stage.
     """
 
+    timestamp = generation_input.timestamp
     if not _TIMESTAMP_PATTERN.fullmatch(timestamp):
         raise ValueError("timestamp must use YYYYMMDDTHHMMSSZ format")
 
@@ -90,7 +111,7 @@ def generate_synthetic_v6_package(
     root.mkdir(parents=True, exist_ok=True)
     payload_dir.mkdir(parents=True, exist_ok=True)
 
-    payloads = build_synthetic_v6_payloads(timestamp=timestamp)
+    payloads = build_v6_payloads_from_input(generation_input=generation_input)
     for name, content in payloads.items():
         (payload_dir / name).write_bytes(content)
 
@@ -111,6 +132,7 @@ def generate_synthetic_v6_package(
     inventory_payload = {
         "created_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "generator": "app-side synthetic V6 package generator",
+        "input_run_id": generation_input.run_id,
         "file_count": len(records),
         "records": records,
     }
@@ -130,6 +152,7 @@ def generate_synthetic_v6_package(
         {
             "zip_filename": zip_path.name,
             "inventory_filename": inventory_path.name,
+            "input_run_id": generation_input.run_id,
             "zip_entry_count": len(payloads) + 1,
             "package_sha256": _sha256_path(zip_path),
         }
@@ -156,43 +179,75 @@ def generate_synthetic_v6_package(
 def build_synthetic_v6_payloads(*, timestamp: str = _DEFAULT_TIMESTAMP) -> dict[str, bytes]:
     """Return all required V6 payload roles as synthetic bytes."""
 
+    return build_v6_payloads_from_input(
+        generation_input=build_synthetic_v6_generation_input(timestamp=timestamp),
+    )
+
+
+def build_v6_payloads_from_input(*, generation_input: V6GenerationInput) -> dict[str, bytes]:
+    """Return all required V6 payload roles from safe app-input fixture data."""
+
+    timestamp = generation_input.timestamp
     top25_csv = f"lawful_gee_candidate_scout_top_25_{timestamp}.csv"
     top25_geojson = f"lawful_gee_candidate_scout_top_25_{timestamp}.geojson"
 
+    top_candidate_rows = [
+        [candidate.cell_id, _format_score(candidate.candidate_score)]
+        for candidate in generation_input.candidates
+    ]
+    enhanced_rows = [
+        [
+            candidate.cell_id,
+            _format_score(candidate.candidate_score),
+            _format_score(candidate.v6_review_priority_score),
+        ]
+        for candidate in generation_input.candidates
+    ]
+    request_zone_rows = [
+        [zone.request_zone_id, zone.primary_cell_id]
+        for zone in generation_input.request_zones
+    ]
+    quote_template_rows = [
+        [zone.quote_id, zone.request_zone_id]
+        for zone in generation_input.request_zones
+    ]
+    quote_comparison_rows = [
+        [zone.quote_id, zone.request_zone_id, _format_score(zone.quote_score)]
+        for zone in generation_input.request_zones
+    ]
+
     return {
-        top25_csv: _csv_bytes(
-            ["cell_id", "candidate_score"],
-            [["SYNTH_CELL_001", "0.81"], ["SYNTH_CELL_002", "0.63"]],
-        ),
+        top25_csv: _csv_bytes(["cell_id", "candidate_score"], top_candidate_rows),
         top25_geojson: _geojson_bytes(),
         "top25_enhanced_v6.csv": _csv_bytes(
             ["cell_id", "candidate_score", "v6_review_priority_score"],
-            [["SYNTH_CELL_001", "0.81", "0.91"], ["SYNTH_CELL_002", "0.63", "0.72"]],
+            enhanced_rows,
         ),
         "top25_enhanced_v6.geojson": _geojson_bytes(),
         "quality_diagnostics_all_cells_v6.csv": _csv_bytes(
             ["cell_id", "candidate_score", "v6_review_priority_score"],
-            [["SYNTH_CELL_001", "0.81", "0.91"], ["SYNTH_CELL_002", "0.63", "0.72"]],
+            enhanced_rows,
         ),
         "stable_candidate_priority_list_v6.csv": _csv_bytes(
             ["cell_id", "candidate_score", "v6_review_priority_score"],
-            [["SYNTH_CELL_001", "0.81", "0.91"], ["SYNTH_CELL_002", "0.63", "0.72"]],
+            enhanced_rows,
         ),
         "request_zones_v6.csv": _csv_bytes(
             ["request_zone_id", "primary_cell_id"],
-            [["SYNTH_ZONE_001", "SYNTH_CELL_001"]],
+            request_zone_rows,
         ),
         "request_zones_v6.geojson": _geojson_bytes(),
         "paid_imagery_quote_template_v6.csv": _csv_bytes(
             ["quote_id", "request_zone_id"],
-            [["SYNTH_QUOTE_001", "SYNTH_ZONE_001"]],
+            quote_template_rows,
         ),
         "paid_imagery_quote_comparison_v6.csv": _csv_bytes(
             ["quote_id", "request_zone_id", "quote_score"],
-            [["SYNTH_QUOTE_001", "SYNTH_ZONE_001", "0.00"]],
+            quote_comparison_rows,
         ),
         "paid_archive_request_summary.txt": (
-            "Synthetic V6 paid-imagery request package summary.\n"
+            "Synthetic V6 request package summary.\n"
+            f"Input run: {generation_input.run_id}\n"
             "This placeholder proves package shape only and contains no real request content.\n"
         ).encode("utf-8"),
         "visual_inspection_map.html": (
@@ -289,6 +344,10 @@ def _read_csv_header_from_bytes(content: bytes) -> tuple[str, ...]:
 
 def _geojson_bytes() -> bytes:
     return b'{"type":"FeatureCollection","features":[]}\n'
+
+
+def _format_score(value: float) -> str:
+    return f"{value:.6g}"
 
 
 def _sha256_bytes(content: bytes) -> str:
