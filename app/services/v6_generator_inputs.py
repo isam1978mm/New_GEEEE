@@ -7,12 +7,13 @@ Engine execution, real geometry, notebook globals, or provider integrations.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import json
 import math
 from pathlib import Path
 import re
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 
 _SAFE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]+$")
