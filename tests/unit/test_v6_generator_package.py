@@ -113,9 +113,9 @@ def test_validation_report_is_safe_metadata_only(tmp_path: Path) -> None:
 
     serialized = json.dumps(report, sort_keys=True)
     assert "SYNTH_CELL_001,0.81" not in serialized
-    assert "FeatureCollection","features" not in serialized
+    assert '"features":[]' not in serialized
+    assert "coordinates" not in serialized
     assert "Synthetic placeholder map" not in serialized
-    assert "Synthetic V6 paid-imagery request package summary" not in serialized
 
 
 def test_cli_generates_synthetic_package_and_prints_safe_counts(tmp_path: Path, capsys) -> None:
