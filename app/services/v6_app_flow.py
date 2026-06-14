@@ -354,6 +354,7 @@ def _not_available(*, run_id: str, request_id: str) -> V6PrivatePackageFlowResul
 
 def _package_result_body(*, outcome: str, run_id: str, request_id: str, result: Any) -> dict[str, Any]:
     body = _operator_body(outcome=outcome, run_id=run_id, request_id=request_id, package_ready=result.is_verified)
+    warnings = getattr(result, "warnings", ())
     body.update(
         {
             "validation_status": result.validation_status,
@@ -361,7 +362,7 @@ def _package_result_body(*, outcome: str, run_id: str, request_id: str, result: 
             "zip_entry_count": result.zip_entry_count,
             "category_counts": dict(result.category_counts),
             "issue_count": len(result.issues),
-            "warning_count": len(result.warnings),
+            "warning_count": len(warnings),
             "zip_filename": Path(result.zip_path).name,
             "inventory_filename": Path(result.inventory_path).name,
             "validation_report_filename": Path(result.validation_report_path).name,
