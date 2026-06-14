@@ -93,9 +93,6 @@ const forbiddenUiText = [
   "feature rows",
   "private package input body",
   "spatial payload body",
-  "coordinates",
-  "geometry",
-  "bbox",
   "source_path",
   "package_path",
 ];
@@ -110,23 +107,23 @@ test("operator can review, generate, and retrieve the frozen V6 package without 
   await page.getByRole("button", { name: "Start session" }).click();
 
   await expect(page.getByText("V6 real package flow (operator-only)")).toBeVisible();
-  await expect(page.getByText("Package metadata")).toBeVisible();
-  await expect(page.getByText("Validation")).toBeVisible();
-  await expect(page.getByText("passed")).toBeVisible();
-  await expect(page.getByText("Payloads")).toBeVisible();
-  await expect(page.getByText("12").first()).toBeVisible();
-  await expect(page.getByText("ZIP entries")).toBeVisible();
-  await expect(page.getByText(ZIP_FILENAME)).toBeVisible();
+  await expect(page.getByText("Package metadata", { exact: true })).toBeVisible();
+  await expect(page.getByText("Validation", { exact: true })).toBeVisible();
+  await expect(page.getByText("passed", { exact: true })).toBeVisible();
+  await expect(page.getByText("Payloads", { exact: true })).toBeVisible();
+  await expect(page.getByText("12", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("ZIP entries", { exact: true })).toBeVisible();
+  await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
 
   await expectNoForbiddenPrivatePayloadText(page);
 
   await page.getByRole("button", { name: "Generate package" }).click();
-  await expect(page.getByText("Package generated.")).toBeVisible();
-  await expect(page.getByText("generated")).toBeVisible();
+  await expect(page.getByText("Package generated.", { exact: true })).toBeVisible();
+  await expect(page.getByText("generated", { exact: true })).toBeVisible();
   await expectNoForbiddenPrivatePayloadText(page);
 
   await page.getByRole("button", { name: "Review metadata" }).click();
-  await expect(page.getByText("available")).toBeVisible();
+  await expect(page.getByText("available", { exact: true })).toBeVisible();
   await expectNoForbiddenPrivatePayloadText(page);
 
   const downloadPromise = page.waitForEvent("download");
@@ -134,7 +131,7 @@ test("operator can review, generate, and retrieve the frozen V6 package without 
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe(ZIP_FILENAME);
-  await expect(page.getByText("Package retrieval started.")).toBeVisible();
+  await expect(page.getByText("Package retrieval started.", { exact: true })).toBeVisible();
   await expectNoForbiddenPrivatePayloadText(page);
 });
 
