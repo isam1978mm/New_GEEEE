@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
 from app.config import Settings
 from app.pipeline.parity.operator_overlay_access_foundation import (
@@ -231,7 +231,7 @@ def _deny_if_not_allowed(
     run_id: str,
     access_context: V6PrivatePackageAccessContext,
 ) -> V6PrivatePackageFlowResult | None:
-    if not settings.v6_private_package_flow_enabled:
+    if not settings.v6_package_flow_enabled:
         return _denied(access_context.request_id)
     if not access_context.is_authenticated:
         return _denied(access_context.request_id)
