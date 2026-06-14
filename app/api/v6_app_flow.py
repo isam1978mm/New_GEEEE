@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from app.config import Settings
 from app.deps import get_settings_from_request
@@ -16,7 +16,7 @@ from app.services.v6_app_flow import (
 router = APIRouter(tags=["v6-private-package"])
 
 
-@router.post("/runs/{run_id}/operator/v6/package/generate")
+@router.post("/runs/{run_id}/operator/v6/package/generate", response_model=None)
 async def generate_v6_private_package(
     run_id: str,
     settings: Settings = Depends(get_settings_from_request),
@@ -40,7 +40,7 @@ async def generate_v6_private_package(
     return JSONResponse(status_code=result.status_code, content=result.body)
 
 
-@router.get("/runs/{run_id}/operator/v6/package/review")
+@router.get("/runs/{run_id}/operator/v6/package/review", response_model=None)
 async def review_v6_private_package(
     run_id: str,
     settings: Settings = Depends(get_settings_from_request),
@@ -64,7 +64,7 @@ async def review_v6_private_package(
     return JSONResponse(status_code=result.status_code, content=result.body)
 
 
-@router.get("/runs/{run_id}/operator/v6/package/download")
+@router.get("/runs/{run_id}/operator/v6/package/download", response_model=None)
 async def download_v6_private_package(
     run_id: str,
     settings: Settings = Depends(get_settings_from_request),
@@ -74,7 +74,7 @@ async def download_v6_private_package(
     x_operator_authorized_runs: str | None = Header(default=None),
     x_request_id: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
-) -> JSONResponse | FileResponse:
+) -> Response:
     access_context = _access_context_from_headers(
         settings=settings,
         x_operator_authenticated=x_operator_authenticated,
