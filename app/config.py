@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ee_real_execution_enabled: bool = Field(default=False)
     notebook_reference_bundle_dir: Path | None = Field(default=None)
     operator_private_overlay_preview_enabled: bool = Field(default=False)
+    v6_package_flow_enabled: bool = Field(default=False)
     operator_auth_trusted_proxy_enabled: bool = Field(default=False)
     operator_run_authorizations: dict[str, list[str]] = Field(default_factory=dict)
     operator_auth_oidc_enabled: bool = Field(default=False)
@@ -42,4 +43,3 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
-
