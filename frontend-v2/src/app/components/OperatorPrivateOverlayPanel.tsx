@@ -5,6 +5,7 @@ import {
   type OperatorPrivateOverlayPreview,
 } from "../api/operatorOverlays";
 import { useOperatorAccessToken } from "./OperatorSessionContext";
+import { V6PrivatePackagePanel } from "./V6PrivatePackagePanel";
 
 interface OperatorPrivateOverlayPanelProps {
   runId: string;
@@ -41,57 +42,60 @@ export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: Oper
   }, [runId, activeFamily, resolvedOperatorAccessToken]);
 
   return (
-    <section
-      className="rounded-lg bg-card overflow-hidden mt-4"
-      style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
-    >
-      <details open>
-        <summary
-          className="px-4 py-2"
-          style={{
-            borderBottom: "1px solid var(--border)",
-            backgroundColor: "var(--accent)",
-            cursor: "pointer",
-          }}
-        >
-          <span
-            className="font-mono"
-            style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+    <>
+      <section
+        className="rounded-lg bg-card overflow-hidden mt-4"
+        style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
+      >
+        <details open>
+          <summary
+            className="px-4 py-2"
+            style={{
+              borderBottom: "1px solid var(--border)",
+              backgroundColor: "var(--accent)",
+              cursor: "pointer",
+            }}
           >
-            Operator-only private preview (coordinate-free)
-          </span>
-        </summary>
+            <span
+              className="font-mono"
+              style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+            >
+              Operator-only private preview (coordinate-free)
+            </span>
+          </summary>
 
-        <div className="px-4 py-3 flex flex-col gap-3">
-          <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-            Uses the default-off backend gate. May forward a provider-supplied bearer token when one is available. Operator identity is not set directly by this browser.
+          <div className="px-4 py-3 flex flex-col gap-3">
+            <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+              Uses the default-off backend gate. May forward a provider-supplied bearer token when one is available. Operator identity is not set directly by this browser.
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {ARTIFACT_FAMILIES.map((family) => (
+                <button
+                  key={family.key}
+                  onClick={() => setActiveFamily(family.key)}
+                  className="rounded px-2.5 py-1"
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: activeFamily === family.key ? 700 : 500,
+                    color: activeFamily === family.key ? "white" : "var(--gs-navy)",
+                    backgroundColor: activeFamily === family.key ? "var(--gs-navy)" : "transparent",
+                    border: "1px solid rgba(28,43,94,0.18)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {family.label}
+                </button>
+              ))}
+            </div>
+
+            {loading && <StatusBox tone="neutral" message="Loading private preview status..." />}
+            {!loading && preview && <PreviewBody preview={preview} />}
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {ARTIFACT_FAMILIES.map((family) => (
-              <button
-                key={family.key}
-                onClick={() => setActiveFamily(family.key)}
-                className="rounded px-2.5 py-1"
-                style={{
-                  fontSize: "11px",
-                  fontWeight: activeFamily === family.key ? 700 : 500,
-                  color: activeFamily === family.key ? "white" : "var(--gs-navy)",
-                  backgroundColor: activeFamily === family.key ? "var(--gs-navy)" : "transparent",
-                  border: "1px solid rgba(28,43,94,0.18)",
-                  cursor: "pointer",
-                }}
-              >
-                {family.label}
-              </button>
-            ))}
-          </div>
-
-          {loading && <StatusBox tone="neutral" message="Loading private preview status..." />}
-          {!loading && preview && <PreviewBody preview={preview} />}
-        </div>
-      </details>
-    </section>
+        </details>
+      </section>
+      <V6PrivatePackagePanel runId={runId} operatorAccessToken={resolvedOperatorAccessToken} />
+    </>
   );
 }
 
