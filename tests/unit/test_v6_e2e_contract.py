@@ -17,8 +17,18 @@ def test_v6_e2e_files_are_present_and_scripted() -> None:
     assert SPEC.is_file()
 
     package_json = _read(PACKAGE_JSON)
+    assert '"@playwright/test": "1.60.0"' in package_json
     assert '"e2e:v6"' in package_json
     assert "playwright test -c playwright.config.ts e2e/v6-package-flow.spec.ts" in package_json
+
+
+def test_v6_e2e_doc_includes_local_install_step() -> None:
+    content = _read(DOC)
+
+    assert "One-time Local Install" in content
+    assert "npm install" in content
+    assert "npx playwright install chromium" in content
+    assert "imports `@playwright/test`" in content
 
 
 def test_v6_e2e_spec_mocks_backend_flow_and_retrieves_zip() -> None:
