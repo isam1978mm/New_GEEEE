@@ -54,6 +54,14 @@ const privateOverlayPreviewUnavailable = {
   frontend_visible: "operator_only",
 };
 
+const packageStatusDenied = {
+  outcome: "denied",
+  run_id: RUN_ID,
+  package_ready: false,
+  message: "Operator token required.",
+  support_reference: "v6-e2e-denied-before-session",
+};
+
 const packageStatusAvailable = {
   outcome: "available",
   run_id: RUN_ID,
@@ -169,22 +177,30 @@ async function mockFrozenV6PackageFlow(page: Page): Promise<void> {
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/private-overlays.*$`), async (route) => {
-    await requireBearer(route);
+    if (!(await requireBearer(route))) {
+      return;
+    }
     await route.fulfill({ json: privateOverlayPreviewUnavailable });
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/v6/package/review$`), async (route) => {
-    await requireBearer(route);
+    if (!(await requireBearer(route))) {
+      return;
+    }
     await route.fulfill({ json: packageStatusAvailable });
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/v6/package/generate$`), async (route) => {
-    await requireBearer(route);
+    if (!(await requireBearer(route))) {
+      return;
+    }
     await route.fulfill({ json: packageStatusGenerated });
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/v6/package/download$`), async (route) => {
-    await requireBearer(route);
+    if (!(await requireBearer(route))) {
+      return;
+    }
     await route.fulfill({
       status: 200,
       headers: {
@@ -208,9 +224,13 @@ async function mockFrozenV6PackageFlow(page: Page): Promise<void> {
   });
 }
 
-async function requireBearer(route: Route): Promise<void> {
+async function requireBearer(route: Route): Promise<boolean> {
   const auth = route.request().headers()["authorization"] || "";
-  expect(auth).toBe(`Bearer ${OPERATOR_TOKEN}`);
+  if (auth !== `Bearer ${OPERATOR_TOKEN}`) {
+    await route.fulfill({ status: 403, json: packageStatusDenied });
+    return false;
+  }
+  return true;
 }
 
 async function expectNoForbiddenPrivatePayloadText(page: Page): Promise<void> {
