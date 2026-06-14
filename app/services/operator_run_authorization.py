@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from app.config import Settings
 
+_LOCAL_OPERATOR_ACTOR_ID = "local-operator"
+
 
 @dataclass(frozen=True)
 class OperatorRunAuthorizationResult:
@@ -17,10 +19,7 @@ def resolve_run_authorization(
     actor_id: str | None,
     run_id: str,
 ) -> OperatorRunAuthorizationResult:
-    """Return whether an actor is authorized for a given run.
-
-    Fail-closed: any missing or unmatched record returns denied.
-    """
+    """Return whether an actor is authorized for a given run."""
     if actor_id is None or actor_id.strip() == "":
         return OperatorRunAuthorizationResult(allowed=False, reason="missing_actor")
 
@@ -29,6 +28,10 @@ def resolve_run_authorization(
 
     normalized_actor = actor_id.strip()
     normalized_run = run_id.strip()
+
+    if _local_development_actor_is_allowed(settings=settings, actor_id=normalized_actor):
+        return OperatorRunAuthorizationResult(allowed=True, reason="local_development_allowed")
+
     authorizations = settings.operator_run_authorizations
 
     allowed_runs = authorizations.get(normalized_actor)
@@ -39,6 +42,10 @@ def resolve_run_authorization(
         return OperatorRunAuthorizationResult(allowed=True, reason="authorized")
 
     return OperatorRunAuthorizationResult(allowed=False, reason="run_not_authorized")
+
+
+def _local_development_actor_is_allowed(*, settings: Settings, actor_id: str) -> bool:
+    return actor_id == _LOCAL_OPERATOR_ACTOR_ID and not settings.operator_auth_oidc_enabled and not settings.allow_network_bind
 
 
 __all__ = (
