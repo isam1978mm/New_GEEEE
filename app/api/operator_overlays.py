@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import JSONResponse
 
+from app.api.v6_app_flow import router as v6_app_flow_router
 from app.config import Settings
 from app.deps import get_settings_from_request
 from app.pipeline.parity.operator_overlay_implementation_design import ALLOWED_ACCESS_MODE
@@ -57,3 +58,6 @@ async def get_operator_private_overlay_preview(
         request_id=auth_context.request_id,
     )
     return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+router.include_router(v6_app_flow_router)
