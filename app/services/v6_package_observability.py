@@ -46,6 +46,9 @@ def record_v6_package_flow_observation(observation: V6PackageFlowObservation) ->
     spatial payloads, file paths, bearer values, provider credentials, and coordinates.
     """
 
+    safe_event = observation_to_safe_log_dict(observation)
+    assert_safe_v6_observation_payload(safe_event)
+
     with _COUNTER_LOCK:
         _SAFE_COUNTERS[("action", observation.action, observation.outcome)] += 1
         _SAFE_COUNTERS[("status", observation.action, str(observation.status_code))] += 1
@@ -55,7 +58,7 @@ def record_v6_package_flow_observation(observation: V6PackageFlowObservation) ->
 
     _LOGGER.info(
         "v6_package_flow_event %s",
-        json.dumps(observation_to_safe_log_dict(observation), sort_keys=True, separators=(",", ":")),
+        json.dumps(safe_event, sort_keys=True, separators=(",", ":")),
     )
 
 
