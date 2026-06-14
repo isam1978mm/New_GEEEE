@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "e2e:v6": "npx playwright test -c playwright.config.ts e2e/v6-package-flow.spec.ts"
+    "e2e:v6": "playwright test -c playwright.config.ts e2e/v6-package-flow.spec.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -17,6 +17,7 @@
     "tw-animate-css": "1.3.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.60.0",
     "@tailwindcss/vite": "4.1.12",
     "@types/leaflet": "^1.9.20",
     "@vitejs/plugin-react": "4.7.0",
