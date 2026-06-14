@@ -17,6 +17,7 @@ from app.pipeline.parity.operator_overlay_access_foundation import (
 )
 from app.services.operator_run_authorization import resolve_run_authorization
 from app.services.storage import get_run_dir
+from app.services.v6_package_observability import V6PackageFlowObservation, record_v6_package_flow_observation
 from app.services.v6_real_gee_runtime import validate_v6_aoi_bounds
 from app.services.v6_real_package import V6RealPackageInputs, generate_v6_package_from_real_outputs
 from app.services.v6_real_scoring import V6ScoredCandidate
@@ -50,36 +51,61 @@ def generate_private_v6_package(
     run_id: str,
     access_context: V6PrivatePackageAccessContext,
 ) -> V6PrivatePackageFlowResult:
-    access_denial = _deny_if_not_allowed(settings=settings, run_id=run_id, access_context=access_context)
-    if access_denial is not None:
-        return access_denial
+    denial_reason = _access_denial_reason(settings=settings, run_id=run_id, access_context=access_context)
+    if denial_reason is not None:
+        return _observe_and_return(
+            action="generate",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=_denied(access_context.request_id),
+            denial_reason=denial_reason,
+        )
 
     input_path = _private_input_path(settings, run_id)
     if not input_path.is_file():
-        return _not_available(run_id=run_id, request_id=access_context.request_id)
+        return _observe_and_return(
+            action="generate",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=_not_available(run_id=run_id, request_id=access_context.request_id),
+        )
 
     try:
         package_inputs = load_v6_real_package_inputs(input_path)
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
-        return V6PrivatePackageFlowResult(
-            status_code=400,
-            body=_operator_body(
-                outcome="invalid_package_inputs",
-                run_id=run_id,
-                request_id=access_context.request_id,
-                package_ready=False,
+        return _observe_and_return(
+            action="generate",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=V6PrivatePackageFlowResult(
+                status_code=400,
+                body=_operator_body(
+                    outcome="invalid_package_inputs",
+                    run_id=run_id,
+                    request_id=access_context.request_id,
+                    package_ready=False,
+                ),
             ),
         )
 
     output_dir = _private_package_dir(settings, run_id)
     result = generate_v6_package_from_real_outputs(output_dir=output_dir, package_inputs=package_inputs)
-    return V6PrivatePackageFlowResult(
-        status_code=200,
-        body=_package_result_body(
-            outcome="generated",
-            run_id=run_id,
-            request_id=access_context.request_id,
-            result=result,
+    return _observe_and_return(
+        action="generate",
+        settings=settings,
+        run_id=run_id,
+        access_context=access_context,
+        result=V6PrivatePackageFlowResult(
+            status_code=200,
+            body=_package_result_body(
+                outcome="generated",
+                run_id=run_id,
+                request_id=access_context.request_id,
+                result=result,
+            ),
         ),
     )
 
@@ -90,25 +116,44 @@ def review_private_v6_package(
     run_id: str,
     access_context: V6PrivatePackageAccessContext,
 ) -> V6PrivatePackageFlowResult:
-    access_denial = _deny_if_not_allowed(settings=settings, run_id=run_id, access_context=access_context)
-    if access_denial is not None:
-        return access_denial
+    denial_reason = _access_denial_reason(settings=settings, run_id=run_id, access_context=access_context)
+    if denial_reason is not None:
+        return _observe_and_return(
+            action="review",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=_denied(access_context.request_id),
+            denial_reason=denial_reason,
+        )
 
     report_path = _latest_validation_report_path(settings, run_id)
     zip_path = _latest_zip_path(settings, run_id)
     if report_path is None or zip_path is None:
-        return _not_available(run_id=run_id, request_id=access_context.request_id)
+        return _observe_and_return(
+            action="review",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=_not_available(run_id=run_id, request_id=access_context.request_id),
+        )
 
     try:
         report = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return V6PrivatePackageFlowResult(
-            status_code=200,
-            body=_operator_body(
-                outcome="not_available",
-                run_id=run_id,
-                request_id=access_context.request_id,
-                package_ready=False,
+        return _observe_and_return(
+            action="review",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=V6PrivatePackageFlowResult(
+                status_code=200,
+                body=_operator_body(
+                    outcome="not_available",
+                    run_id=run_id,
+                    request_id=access_context.request_id,
+                    package_ready=False,
+                ),
             ),
         )
 
@@ -130,7 +175,13 @@ def review_private_v6_package(
             "validation_report_filename": report_path.name,
         }
     )
-    return V6PrivatePackageFlowResult(status_code=200, body=body)
+    return _observe_and_return(
+        action="review",
+        settings=settings,
+        run_id=run_id,
+        access_context=access_context,
+        result=V6PrivatePackageFlowResult(status_code=200, body=body),
+    )
 
 
 def resolve_private_v6_package_download(
@@ -139,23 +190,42 @@ def resolve_private_v6_package_download(
     run_id: str,
     access_context: V6PrivatePackageAccessContext,
 ) -> V6PrivatePackageFlowResult:
-    access_denial = _deny_if_not_allowed(settings=settings, run_id=run_id, access_context=access_context)
-    if access_denial is not None:
-        return access_denial
+    denial_reason = _access_denial_reason(settings=settings, run_id=run_id, access_context=access_context)
+    if denial_reason is not None:
+        return _observe_and_return(
+            action="retrieve",
+            settings=settings,
+            run_id=run_id,
+            access_context=access_context,
+            result=_denied(access_context.request_id),
+            denial_reason=denial_reason,
+        )
 
     zip_path = _latest_zip_path(settings, run_id)
     if zip_path is None:
-        return _not_available(run_id=run_id, request_id=access_context.request_id)
-    return V6PrivatePackageFlowResult(
-        status_code=200,
-        body=_operator_body(
-            outcome="available",
+        return _observe_and_return(
+            action="retrieve",
+            settings=settings,
             run_id=run_id,
-            request_id=access_context.request_id,
-            package_ready=True,
+            access_context=access_context,
+            result=_not_available(run_id=run_id, request_id=access_context.request_id),
+        )
+    return _observe_and_return(
+        action="retrieve",
+        settings=settings,
+        run_id=run_id,
+        access_context=access_context,
+        result=V6PrivatePackageFlowResult(
+            status_code=200,
+            body=_operator_body(
+                outcome="available",
+                run_id=run_id,
+                request_id=access_context.request_id,
+                package_ready=True,
+            ),
+            file_path=zip_path,
+            file_name=zip_path.name,
         ),
-        file_path=zip_path,
-        file_name=zip_path.name,
     )
 
 
@@ -225,21 +295,32 @@ def _zone_from_mapping(row: object) -> V6RequestZone:
     )
 
 
+def _access_denial_reason(
+    *,
+    settings: Settings,
+    run_id: str,
+    access_context: V6PrivatePackageAccessContext,
+) -> str | None:
+    if not settings.v6_package_flow_enabled:
+        return "package_flow_disabled"
+    if not access_context.is_authenticated:
+        return "operator_not_authenticated"
+    if OPERATOR_ROLE not in set(access_context.roles):
+        return "operator_role_missing"
+    run_authorization = resolve_run_authorization(settings=settings, actor_id=access_context.actor_id, run_id=run_id)
+    header_authorized = run_id in set(access_context.authorized_run_ids)
+    if not run_authorization.allowed and not header_authorized:
+        return "run_not_authorized"
+    return None
+
+
 def _deny_if_not_allowed(
     *,
     settings: Settings,
     run_id: str,
     access_context: V6PrivatePackageAccessContext,
 ) -> V6PrivatePackageFlowResult | None:
-    if not settings.v6_package_flow_enabled:
-        return _denied(access_context.request_id)
-    if not access_context.is_authenticated:
-        return _denied(access_context.request_id)
-    if OPERATOR_ROLE not in set(access_context.roles):
-        return _denied(access_context.request_id)
-    run_authorization = resolve_run_authorization(settings=settings, actor_id=access_context.actor_id, run_id=run_id)
-    header_authorized = run_id in set(access_context.authorized_run_ids)
-    if not run_authorization.allowed and not header_authorized:
+    if _access_denial_reason(settings=settings, run_id=run_id, access_context=access_context) is not None:
         return _denied(access_context.request_id)
     return None
 
@@ -280,6 +361,7 @@ def _package_result_body(*, outcome: str, run_id: str, request_id: str, result: 
             "zip_entry_count": result.zip_entry_count,
             "category_counts": dict(result.category_counts),
             "issue_count": len(result.issues),
+            "warning_count": len(result.warnings),
             "zip_filename": Path(result.zip_path).name,
             "inventory_filename": Path(result.inventory_path).name,
             "validation_report_filename": Path(result.validation_report_path).name,
@@ -298,6 +380,38 @@ def _operator_body(*, outcome: str, run_id: str, request_id: str, package_ready:
         "frontend_visible": "operator_only",
         "public_access": False,
     }
+
+
+def _observe_and_return(
+    *,
+    action: str,
+    settings: Settings,
+    run_id: str,
+    access_context: V6PrivatePackageAccessContext,
+    result: V6PrivatePackageFlowResult,
+    denial_reason: str | None = None,
+) -> V6PrivatePackageFlowResult:
+    body = result.body
+    record_v6_package_flow_observation(
+        V6PackageFlowObservation(
+            action=action,
+            outcome=_safe_str(body.get("outcome"), "unknown"),
+            status_code=result.status_code,
+            request_id=_safe_str(body.get("request_id"), access_context.request_id),
+            run_id=_safe_str(body.get("run_id"), run_id),
+            package_ready=body.get("package_ready") is True,
+            flow_enabled=bool(settings.v6_package_flow_enabled),
+            actor_authenticated=access_context.is_authenticated,
+            operator_role_present=OPERATOR_ROLE in set(access_context.roles),
+            denial_reason=denial_reason,
+            validation_status=_safe_optional_str(body.get("validation_status")),
+            payload_count=_safe_optional_int(body.get("payload_count")),
+            zip_entry_count=_safe_optional_int(body.get("zip_entry_count")),
+            issue_count=_safe_optional_int(body.get("issue_count")),
+            warning_count=_safe_optional_int(body.get("warning_count")),
+        )
+    )
+    return result
 
 
 def _private_input_path(settings: Settings, run_id: str) -> Path:
@@ -328,6 +442,18 @@ def _required_str(value: object, name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} is required")
     return value.strip()
+
+
+def _safe_str(value: object, fallback: str) -> str:
+    return value if isinstance(value, str) and value else fallback
+
+
+def _safe_optional_str(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _safe_optional_int(value: object) -> int | None:
+    return value if isinstance(value, int) else None
 
 
 __all__ = [
