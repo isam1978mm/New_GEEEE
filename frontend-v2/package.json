@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "e2e:v6": "npx playwright test -c playwright.config.ts e2e/v6-package-flow.spec.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
