@@ -59,6 +59,8 @@ or a verified operator bearer token when OIDC mode is enabled.
 Run from the repository root:
 
 ```powershell
+python -m pytest tests/unit/test_v6_final_wiring_contract.py -q
+python -m pytest tests/unit/test_v6_app_ui_contract.py -q
 python -m pytest tests/unit/test_v6_app_flow.py -q
 python -m pytest tests/unit/test_v6_real_package.py -q
 python -m pytest tests/unit/test_v6_real_zones.py -q
@@ -117,6 +119,8 @@ Pass criteria:
 ## Full Regression Checklist
 
 ```text
+[x] V6 final wiring contract tests
+[x] V6 frontend UI contract tests
 [x] V6 scaffold package writer tests
 [x] V6 runtime boundary tests
 [x] V6 feature-layer boundary tests
@@ -125,7 +129,6 @@ Pass criteria:
 [x] V6 request-zone tests
 [x] V6 real package-feed tests
 [x] V6 backend app-flow tests
-[x] V6 frontend UI contract tests
 [x] notebook safety tests
 [x] frontend production build
 [x] manual browser smoke
