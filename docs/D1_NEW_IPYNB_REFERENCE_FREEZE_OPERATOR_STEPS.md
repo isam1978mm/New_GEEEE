@@ -2,9 +2,9 @@
 
 ## Current status
 
-D1 reference freeze is **operator-ready, not complete**.
+D1 reference freeze is **local skeleton created, not complete**.
 
-The repo now has a local helper that creates the outside-Git bundle skeleton:
+The repo has a local helper that creates the outside-Git bundle skeleton:
 
 ```text
 scripts/d1_init_reference_bundle.py
@@ -12,16 +12,52 @@ scripts/d1_init_reference_bundle.py
 
 The helper writes under the Git-ignored `data/` tree by default. It does not add notebook outputs to Git.
 
+## Local validation recorded
+
+```text
+python -m pytest tests/unit/test_d1_init_reference_bundle.py tests/unit/test_d1_validate_reference_manifest.py -q
+```
+
+Result:
+
+```text
+27 passed, 1 pytest cache warning
+```
+
+The warning was a local `.pytest_cache` permission warning, not a D1 test failure.
+
+## Local skeleton recorded
+
+The local skeleton was created at:
+
+```text
+data/private_references/notebook_frozen/new_ipynb_d1_20260615_local
+```
+
+Current local manifest state:
+
+```text
+manifest.local.template.json
+finalized_manifest: False
+```
+
+This means the folder exists, but the real notebook outputs have not yet been frozen into a final `manifest.local.json`.
+
 ## Checklist item from LOCAL_PRIVATE_ROADMAP_CHECKLIST.md
 
 ```text
 6. D1 real new.ipynb reference freeze
-Status: Open / high priority
+Status: Local skeleton created / waiting for real notebook outputs
 ```
 
 ## Checklist of the item
 
 ```text
+[x] Add local bundle initializer: scripts/d1_init_reference_bundle.py.
+[x] Add operator steps: docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md.
+[x] Add unit coverage for the local bundle initializer.
+[x] Local validation: D1 initializer and manifest validator tests -> 27 passed, 1 pytest cache warning.
+[x] Local bundle skeleton created.
 [ ] Freeze the real new.ipynb outputs as the official private notebook baseline.
 [ ] Keep the frozen reference outside Git.
 [ ] Use this as the baseline for later parity checks.
@@ -29,7 +65,9 @@ Status: Open / high priority
 
 ## Step 1 — create the local bundle skeleton
 
-Run from repo root:
+Done.
+
+Command used:
 
 ```powershell
 cd C:\Dev\New_GEE
@@ -40,14 +78,13 @@ python scripts/d1_init_reference_bundle.py `
   --operator Maher
 ```
 
-Expected local output:
+Output:
 
 ```text
-data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/
-  artifacts/
-  logs/
-  manifest.local.template.json
-  README.local.txt
+OK: D1 local reference bundle skeleton created
+bundle_root: data/private_references/notebook_frozen/new_ipynb_d1_20260615_local
+manifest_path: data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/manifest.local.template.json
+finalized_manifest: False
 ```
 
 ## Step 2 — place real notebook outputs locally
@@ -129,17 +166,14 @@ D1 freeze is done only when:
 
 ## Next step
 
-After D1 freeze is done, move to:
-
-```text
-3. Frozen new.ipynb reference bundle outside Git
-```
+Move real `new.ipynb` outputs into the local bundle artifacts folder.
 
 Next-step checklist:
 
 ```text
-[ ] Confirm the final local bundle is complete.
-[ ] Keep the bundle outside Git.
-[ ] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
-[ ] Use the bundle as the truth copy for later app-vs-reference parity.
+[ ] Identify the real output files from the completed new.ipynb run.
+[ ] Copy them into the matching artifacts/ family folders.
+[ ] Do not paste or commit private artifact contents.
+[ ] Re-run the initializer with --artifact-path entries to create manifest.local.json.
+[ ] Validate manifest.local.json with --strict.
 ```
