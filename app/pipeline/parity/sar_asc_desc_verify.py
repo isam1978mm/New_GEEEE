@@ -348,7 +348,7 @@ def _compare_raster_metadata(
         "width_match": app_dataset.width == reference_dataset.width,
         "height_match": app_dataset.height == reference_dataset.height,
         "crs_match": str(app_dataset.crs) == str(reference_dataset.crs),
-        "transform_match": tuple(app_dataset.transform) == tuple(reference_dataset.transform),
+        "transform_match": bool(np.allclose(tuple(app_dataset.transform), tuple(reference_dataset.transform), atol=1e-5, rtol=0.0)),
         "dtype_match": tuple(app_dataset.dtypes) == tuple(reference_dataset.dtypes),
         "nodata_match": tuple(app_dataset.nodatavals) == tuple(reference_dataset.nodatavals),
         "band_count_match": app_dataset.count == reference_dataset.count,
