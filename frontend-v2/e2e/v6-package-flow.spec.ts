@@ -3,7 +3,20 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const RUN_ID = "e2e-v6-package-flow";
 const CREATED_AT = "2026-06-14T12:00:00Z";
 const OPERATOR_TOKEN = "local-e2e-operator-token";
+const WRONG_ROLE_TOKEN = "local-e2e-wrong-role-token";
+const UNAUTHORIZED_RUN_TOKEN = "local-e2e-unauthorized-run-token";
 const ZIP_FILENAME = "V6_REAL_GENERATED.zip";
+
+type MockDownloadMode = "success" | "failure" | "json-not-available";
+
+interface MockFrozenV6PackageFlowOptions {
+  acceptedToken?: string;
+  deniedStatus?: Record<string, unknown>;
+  forcedDeniedStatus?: Record<string, unknown>;
+  reviewStatus?: Record<string, unknown>;
+  generateStatus?: Record<string, unknown>;
+  downloadMode?: MockDownloadMode;
+}
 
 const runSummary = {
   id: RUN_ID,
@@ -58,8 +71,37 @@ const packageStatusDenied = {
   outcome: "denied",
   run_id: RUN_ID,
   package_ready: false,
-  message: "Operator token required.",
+  message: "Access to requested resource not available.",
   support_reference: "v6-e2e-denied-before-session",
+};
+
+const packageStatusDisabledDenied = {
+  ...packageStatusDenied,
+  support_reference: "v6-e2e-disabled-rollback",
+};
+
+const packageStatusWrongRoleDenied = {
+  ...packageStatusDenied,
+  support_reference: "v6-e2e-wrong-role",
+};
+
+const packageStatusRunUnauthorizedDenied = {
+  ...packageStatusDenied,
+  support_reference: "v6-e2e-run-not-authorized",
+};
+
+const packageStatusUnavailable = {
+  outcome: "not_available",
+  run_id: RUN_ID,
+  request_id: "v6-e2e-unavailable",
+  package_ready: false,
+};
+
+const packageStatusInvalidInputs = {
+  outcome: "invalid_package_inputs",
+  run_id: RUN_ID,
+  request_id: "v6-e2e-invalid-input",
+  package_ready: false,
 };
 
 const packageStatusAvailable = {
@@ -95,18 +137,18 @@ const forbiddenUiText = [
   "spatial payload body",
   "source_path",
   "package_path",
+  "coordinates",
+  "bounds",
+  "west",
+  "south",
+  "east",
+  "north",
 ];
 
 test("operator can review, generate, and retrieve the frozen V6 package without exposing private rows", async ({ page }) => {
   await mockFrozenV6PackageFlow(page);
-  await enablePrivateOperatorUi(page);
+  await openFrozenRun(page, OPERATOR_TOKEN);
 
-  await page.goto("/");
-
-  await page.getByPlaceholder("Paste local bearer value").fill(OPERATOR_TOKEN);
-  await page.getByRole("button", { name: "Start session" }).click();
-
-  await expect(page.getByText("V6 real package flow (operator-only)")).toBeVisible();
   await expect(page.getByText("Package metadata", { exact: true })).toBeVisible();
   await expect(page.getByText("Validation", { exact: true })).toBeVisible();
   await expect(page.getByText("passed", { exact: true })).toBeVisible();
@@ -135,6 +177,111 @@ test("operator can review, generate, and retrieve the frozen V6 package without 
   await expectNoForbiddenPrivatePayloadText(page);
 });
 
+test.describe("expanded V6 package flow states", () => {
+  test("shows disabled rollback denial safely", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, { forcedDeniedStatus: packageStatusDisabledDenied });
+    await openFrozenRun(page, OPERATOR_TOKEN);
+
+    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Support reference: v6-e2e-disabled-rollback", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("shows unauthenticated denial safely before an operator session", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page);
+    await openFrozenRun(page, null);
+
+    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Support reference: v6-e2e-denied-before-session", { exact: true })).toBeVisible();
+    await expect(page.getByPlaceholder("Paste local bearer value")).toBeVisible();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("shows wrong-role denial safely", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, { deniedStatus: packageStatusWrongRoleDenied });
+    await openFrozenRun(page, WRONG_ROLE_TOKEN);
+
+    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Support reference: v6-e2e-wrong-role", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("shows run-not-authorized denial safely", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, { deniedStatus: packageStatusRunUnauthorizedDenied });
+    await openFrozenRun(page, UNAUTHORIZED_RUN_TOKEN);
+
+    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Support reference: v6-e2e-run-not-authorized", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("shows unavailable package state safely", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, {
+      reviewStatus: packageStatusUnavailable,
+      generateStatus: packageStatusUnavailable,
+      downloadMode: "json-not-available",
+    });
+    await openFrozenRun(page, OPERATOR_TOKEN);
+
+    await expect(page.getByText("No V6 package is available for this run yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await page.getByRole("button", { name: "Generate package" }).click();
+    await expect(page.getByText("Package generation did not complete.", { exact: true })).toBeVisible();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("shows invalid package input state without leaking input content", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, {
+      reviewStatus: packageStatusUnavailable,
+      generateStatus: packageStatusInvalidInputs,
+    });
+    await openFrozenRun(page, OPERATOR_TOKEN);
+
+    await page.getByRole("button", { name: "Generate package" }).click();
+    await expect(page.getByText("The run-local V6 package inputs are invalid.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("shows retrieval failure after metadata review", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, { downloadMode: "failure" });
+    await openFrozenRun(page, OPERATOR_TOKEN);
+
+    await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Retrieve ZIP" }).click();
+    await expect(page.getByText("V6 package is temporarily unavailable.", { exact: true })).toBeVisible();
+    await expect(page.getByText("error", { exact: true })).toBeVisible();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+
+  test("keeps expanded mock assertions metadata-only", async ({ page }) => {
+    await mockFrozenV6PackageFlow(page, { reviewStatus: packageStatusGenerated });
+    await openFrozenRun(page, OPERATOR_TOKEN);
+
+    await expect(page.getByText("Package metadata", { exact: true })).toBeVisible();
+    await expect(page.getByText("Categories: csv 6 · geojson 3 · report 2 · html 1", { exact: true })).toBeVisible();
+    await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
+    await expectNoForbiddenPrivatePayloadText(page);
+  });
+});
+
+async function openFrozenRun(page: Page, operatorToken: string | null): Promise<void> {
+  await enablePrivateOperatorUi(page);
+  await page.goto("/");
+  if (operatorToken) {
+    await startOperatorSession(page, operatorToken);
+  }
+  await expect(page.getByText("V6 real package flow (operator-only)")).toBeVisible();
+}
+
+async function startOperatorSession(page: Page, operatorToken: string): Promise<void> {
+  await page.getByPlaceholder("Paste local bearer value").fill(operatorToken);
+  await page.getByRole("button", { name: "Start session" }).click();
+}
+
 async function enablePrivateOperatorUi(page: Page): Promise<void> {
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -149,7 +296,7 @@ async function enablePrivateOperatorUi(page: Page): Promise<void> {
   });
 }
 
-async function mockFrozenV6PackageFlow(page: Page): Promise<void> {
+async function mockFrozenV6PackageFlow(page: Page, options: MockFrozenV6PackageFlowOptions = {}): Promise<void> {
   await page.route(/\/runs\/deletion-audit$/, async (route) => {
     await route.fulfill({ json: { total_freed_bytes: 0, records: [] } });
   });
@@ -174,28 +321,47 @@ async function mockFrozenV6PackageFlow(page: Page): Promise<void> {
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/private-overlays.*$`), async (route) => {
-    if (!(await requireBearer(route))) {
+    if (!(await requireBearer(route, options))) {
       return;
     }
     await route.fulfill({ json: privateOverlayPreviewUnavailable });
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/v6/package/review$`), async (route) => {
-    if (!(await requireBearer(route))) {
+    if (await fulfillForcedDenied(route, options)) {
       return;
     }
-    await route.fulfill({ json: packageStatusAvailable });
+    if (!(await requireBearer(route, options))) {
+      return;
+    }
+    await route.fulfill({ json: options.reviewStatus ?? packageStatusAvailable });
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/v6/package/generate$`), async (route) => {
-    if (!(await requireBearer(route))) {
+    if (await fulfillForcedDenied(route, options)) {
       return;
     }
-    await route.fulfill({ json: packageStatusGenerated });
+    if (!(await requireBearer(route, options))) {
+      return;
+    }
+    const status = options.generateStatus ?? packageStatusGenerated;
+    const outcome = typeof status.outcome === "string" ? status.outcome : "";
+    await route.fulfill({ status: outcome === "invalid_package_inputs" ? 400 : 200, json: status });
   });
 
   await page.route(new RegExp(`/runs/${RUN_ID}/operator/v6/package/download$`), async (route) => {
-    if (!(await requireBearer(route))) {
+    if (await fulfillForcedDenied(route, options)) {
+      return;
+    }
+    if (!(await requireBearer(route, options))) {
+      return;
+    }
+    if (options.downloadMode === "failure") {
+      await route.fulfill({ status: 500, body: "safe mocked retrieval failure" });
+      return;
+    }
+    if (options.downloadMode === "json-not-available") {
+      await route.fulfill({ json: packageStatusUnavailable });
       return;
     }
     await route.fulfill({
@@ -221,10 +387,19 @@ async function mockFrozenV6PackageFlow(page: Page): Promise<void> {
   });
 }
 
-async function requireBearer(route: Route): Promise<boolean> {
+async function fulfillForcedDenied(route: Route, options: MockFrozenV6PackageFlowOptions): Promise<boolean> {
+  if (!options.forcedDeniedStatus) {
+    return false;
+  }
+  await route.fulfill({ status: 403, json: options.forcedDeniedStatus });
+  return true;
+}
+
+async function requireBearer(route: Route, options: MockFrozenV6PackageFlowOptions = {}): Promise<boolean> {
   const auth = route.request().headers()["authorization"] || "";
-  if (auth !== `Bearer ${OPERATOR_TOKEN}`) {
-    await route.fulfill({ status: 403, json: packageStatusDenied });
+  const acceptedToken = options.acceptedToken ?? OPERATOR_TOKEN;
+  if (auth !== `Bearer ${acceptedToken}`) {
+    await route.fulfill({ status: 403, json: options.deniedStatus ?? packageStatusDenied });
     return false;
   }
   return true;
