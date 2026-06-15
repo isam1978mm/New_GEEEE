@@ -23,7 +23,21 @@ Implemented now:
 - metadata-only package status panel;
 - backend denial and unavailable states;
 - panel mounted in the existing operator private section;
-- frontend contract tests.
+- frontend contract tests;
+- browser end-to-end smoke test.
+
+## Local Validation
+
+```text
+cd C:\Dev\New_GEE\frontend-v2
+npm run e2e:v6
+```
+
+Result:
+
+```text
+9 passed
+```
 
 ## Added Files
 
@@ -37,6 +51,9 @@ tests/unit/test_v6_app_ui_contract.py
 
 ```text
 frontend-v2/src/app/components/OperatorPrivateOverlayPanel.tsx
+frontend-v2/e2e/v6-package-flow.spec.ts
+docs/LOCAL_PRIVATE_ROADMAP_CHECKLIST.md
+docs/V6_APP_UI_1.md
 ```
 
 ## UI Behavior
@@ -67,7 +84,7 @@ The panel displays metadata only: outcome, readiness, validation status, payload
 ## Next Step
 
 ```text
-V6-FINAL-WIRING-1: add final backend-to-frontend smoke documentation and full regression checklist.
+D1 real new.ipynb reference freeze: freeze the real notebook outputs as the official private baseline outside Git.
 ```
 
 ## Checklist
@@ -82,5 +99,6 @@ V6-FINAL-WIRING-1: add final backend-to-frontend smoke documentation and full re
 - [x] Mount panel in operator private section.
 - [x] Add frontend contract tests.
 - [x] Add browser end-to-end smoke test.
+- [x] Record local E2E validation: 9 passed.
 - [ ] Add operator enablement runbook.
 - [ ] Add full regression checklist.
