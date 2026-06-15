@@ -138,15 +138,19 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** Inventory bridge ready / local run required
+- [ ] **Status:** Inventory bridge passed / value parity not proven
 - [x] Start only after the frozen `new.ipynb` reference exists.
 - [x] Add safe inventory comparator: `scripts/d1_compare_app_reference_inventory.py`.
 - [x] Add unit coverage for the inventory comparator.
 - [x] Add operator steps: `docs/REAL_APP_VS_REFERENCE_PARITY_OPERATOR_STEPS.md`.
-- [ ] Run local inventory comparison against the frozen D1 manifest.
+- [x] Local inventory comparator tests: 3 passed, 1 pytest cache warning.
+- [x] Local inventory comparison against the frozen D1 manifest passed.
+- [x] Inventory summary: 109 reference artifacts, 449 app files, 109 matched reference names, 0 missing reference names.
+- [x] Inventory report written locally under `data/private_references/` only.
+- [x] `git status --short` did not show `data/private_references/` files.
 - [ ] Then prove the app-generated outputs match the notebook reference with tests/verifiers.
 
-Plain meaning: D1 freeze is done and an inventory bridge exists. This is not final parity; verifier-backed comparisons still need to pass.
+Plain meaning: D1 freeze is done and the inventory bridge passed. This is not final parity; verifier-backed value comparisons still need to pass.
 
 ## 11. SAR/S1 recovery/build
 
