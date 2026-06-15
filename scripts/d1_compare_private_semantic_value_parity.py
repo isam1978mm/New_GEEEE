@@ -10,9 +10,7 @@ from typing import Any, Callable
 
 import numpy as np
 
-from app.pipeline.parity.ai_ready_anomaly_verify import AI_READY_ANOMALY_OUTPUT_NAMES
-from app.pipeline.parity.ai_ready_fraction_verify import AI_READY_FRACTION_OUTPUT_NAMES
-from app.pipeline.parity.ai_ready_metal_hardness_verify import AI_READY_METAL_HARDNESS_OUTPUT_NAME
+from app.pipeline.parity.secret_layers_verify import SECRET_LAYERS_OUTPUT_NAMES
 
 STATUS_PASSED = "passed"
 STATUS_FAILED = "failed"
@@ -29,7 +27,7 @@ ART_UNAVAILABLE = "comparison_unavailable"
 DEFAULT_ATOL = 1e-6
 DEFAULT_RTOL = 1e-6
 
-EXPECTED_OUTPUTS = tuple(AI_READY_ANOMALY_OUTPUT_NAMES) + tuple(AI_READY_FRACTION_OUTPUT_NAMES) + (AI_READY_METAL_HARDNESS_OUTPUT_NAME,)
+EXPECTED_OUTPUTS = tuple(SECRET_LAYERS_OUTPUT_NAMES)
 
 
 class D1PrivateSemanticParityError(ValueError):
@@ -175,6 +173,7 @@ def compare_d1_private_semantic_value_parity(*, app_output_dir: str | Path, refe
         status = STATUS_FAILED
     return {
         "schema_version": "d1_private_semantic_value_parity_v1",
+        "semantic_contract": "secret_layers",
         "created_at": datetime.now(UTC).isoformat(),
         "status": status,
         "expected_count": len(EXPECTED_OUTPUTS),
@@ -184,7 +183,7 @@ def compare_d1_private_semantic_value_parity(*, app_output_dir: str | Path, refe
         "comparison_unavailable_count": sum(item["status"] == ART_UNAVAILABLE for item in outputs),
         "outputs": outputs,
         "tolerance": {"atol": atol, "rtol": rtol},
-        "notes": "Private semantic value parity reads local semantic rasters and reports safe metrics only.",
+        "notes": "Private semantic value parity uses the D1 secret-layer semantic contract and reports safe metrics only.",
     }
 
 
@@ -213,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"ok": result["status"] == STATUS_PASSED, **result}, indent=2, sort_keys=True))
     else:
         print(f"status: {result['status']}")
+        print(f"semantic_contract: {result['semantic_contract']}")
         print(f"expected_count: {result['expected_count']}")
         print(f"pass_count: {result['pass_count']}")
         print(f"fail_count: {result['fail_count']}")
