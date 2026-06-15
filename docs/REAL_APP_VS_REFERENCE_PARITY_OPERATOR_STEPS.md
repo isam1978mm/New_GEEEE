@@ -2,15 +2,21 @@
 
 ## Current status
 
-Real app-vs-reference parity is **inventory bridge passed, value parity not proven**.
+Real app-vs-reference parity is **inventory bridge passed; DEM value parity ready for local run**.
 
-D1 local reference freeze is complete outside Git. The safe inventory bridge confirms the frozen D1 manifest can be compared against the current app output folder without reading artifact contents.
+D1 local reference freeze is complete outside Git. The safe inventory bridge passed against the current app output folder.
+
+The first value slice is DEM value parity:
+
+```text
+scripts/d1_compare_dem_value_parity.py
+```
 
 ## Checklist item from LOCAL_PRIVATE_ROADMAP_CHECKLIST.md
 
 ```text
 10. Real app-vs-reference parity
-Status: Inventory bridge passed / value parity not proven
+Status: Inventory bridge passed / DEM value parity ready for local run
 ```
 
 ## Checklist of the item
@@ -20,53 +26,29 @@ Status: Inventory bridge passed / value parity not proven
 [x] Add safe D1 inventory comparator: scripts/d1_compare_app_reference_inventory.py.
 [x] Add unit coverage for the D1 inventory comparator.
 [x] Run inventory comparison locally.
+[x] Add DEM value parity wrapper: scripts/d1_compare_dem_value_parity.py.
+[x] Add unit coverage for the DEM value parity wrapper.
+[ ] Run DEM value parity locally.
 [ ] Build/verify the app output manifest against the frozen notebook reference manifest.
-[ ] Run value parity verifiers for implemented families.
+[ ] Run remaining value parity verifiers for implemented families.
 [ ] Keep SAR/S1 and PAN recovery separate until exact contracts are clear.
 ```
 
 ## Important boundary
 
-The inventory comparator:
+The inventory comparator checks file-name presence only. It does not prove notebook-value parity.
 
-```text
-- reads manifest.local.json;
-- scans app output file names;
-- writes only a local report if requested;
-- does not read artifact file contents;
-- does not expose or commit private reference files;
-- does not prove notebook-value parity.
-```
+The DEM value comparator reads DEM raster values locally and reports safe metrics only. It proves DEM value parity only, not full notebook parity.
 
-## Step 1 — unit tests
+## Completed inventory step
 
-Command:
-
-```powershell
-cd C:\Dev\New_GEE
-python -m pytest tests/unit/test_d1_compare_app_reference_inventory.py -q
-```
-
-Result:
+Unit test result:
 
 ```text
 3 passed, 1 pytest cache warning
 ```
 
-The warning was local `.pytest_cache` permission noise, not a comparator failure.
-
-## Step 2 — safe local inventory comparison
-
-Command:
-
-```powershell
-python scripts/d1_compare_app_reference_inventory.py `
-  --reference-manifest data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/manifest.local.json `
-  --app-output-dir data/runs/a11309bf-ed47-4bf5-bbf4-f755b904065c `
-  --report data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/parity_inventory.local.json
-```
-
-Safe result:
+Inventory result:
 
 ```text
 status: passed
@@ -77,9 +59,40 @@ missing_reference_name_count: 0
 note: inventory-only; not notebook-value parity
 ```
 
+## Step 1 — DEM value parity unit tests
+
+```powershell
+cd C:\Dev\New_GEE
+python -m pytest tests/unit/test_d1_compare_dem_value_parity.py -q
+```
+
+## Step 2 — DEM value parity local run
+
+```powershell
+python scripts/d1_compare_dem_value_parity.py `
+  --app-output-dir data/runs/a11309bf-ed47-4bf5-bbf4-f755b904065c `
+  --reference-dem-root data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/artifacts/dem `
+  --report data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/dem_value_parity.local.json
+```
+
+Expected safe output shape:
+
+```text
+status: passed OR failed OR incomplete OR comparison_unavailable
+pass_count: <local count>
+fail_count: <local count>
+missing_count: <local count>
+dem_matches: True OR False
+note: DEM value parity only; not full notebook parity
+```
+
 ## Step 3 — Git safety
 
-`git status --short` did not show `data/private_references/` files.
+```powershell
+git status --short
+```
+
+Expected: no files under `data/private_references/` appear.
 
 Existing unrelated local Git noise should stay separate and should not be mixed into parity work:
 
@@ -90,23 +103,23 @@ graphify-out/
 .pytest-tmp-* folders
 ```
 
-## Done condition for this slice
+## Done condition for DEM value slice
 
 ```text
-[x] D1 inventory comparator tests pass locally.
-[x] Inventory comparator runs locally against the frozen D1 manifest.
-[x] Local inventory report is written only under data/private_references/.
-[x] git status does not show data/private_references/ files.
+[ ] DEM value comparator tests pass locally.
+[ ] DEM value comparator runs locally against the frozen D1 DEM root.
+[ ] Local DEM report is written only under data/private_references/.
+[ ] git status does not show data/private_references/ files.
+[ ] DEM value parity status is recorded.
 ```
 
-## Next step after inventory bridge
+## Next step after DEM value parity
 
-Move from inventory-only to verifier-backed parity:
+Move to the next implemented family only after DEM is recorded:
 
 ```text
-[ ] Choose the first implemented family to verify by value.
-[ ] Prefer DEM/report/private semantic first.
+[ ] Choose report or private semantic next.
 [ ] Keep SAR/S1 source recovery separate.
 [ ] Keep PAN recovery/build separate.
-[ ] Do not claim final notebook-value parity until value comparators pass.
+[ ] Do not claim final notebook-value parity until all required value comparators pass.
 ```
