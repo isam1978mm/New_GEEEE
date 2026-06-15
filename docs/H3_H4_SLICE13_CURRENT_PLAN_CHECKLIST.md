@@ -46,22 +46,18 @@ D1 does not create supervised training truth.
 Before any Slice 13/H3/H4 work resumes:
 
 ```text
-[ ] Stash the in-progress OperatorPrivateOverlayPanel client edit.
-[ ] Confirm the stash entry exists.
-[ ] Confirm `git status --short` is clean.
-[ ] Do not commit, finish, push, or discard the panel work unless separately requested.
+[x] Stash/check the in-progress OperatorPrivateOverlayPanel client edit.
+[x] Confirm `git status --short` is clean.
+[x] Do not commit, finish, push, or discard the panel work unless separately requested.
 ```
 
-Suggested local command:
+Observed local result:
 
-```powershell
-git stash push -m "WIP OperatorPrivateOverlayPanel client (parked)" -- frontend-v2/src/app/api/client.ts
-
-git status --short
-git stash list
+```text
+No local changes to save.
+Working tree clean.
+Existing unrelated older stashes remain untouched.
 ```
-
-If other panel-related files still appear, stash only those exact files. Do not use broad cleanup.
 
 ## H3/H4 readiness principle
 
@@ -113,141 +109,72 @@ Current Slice 13 sub-slice order:
 [x] 13A — Private candidate register scaffold
 [x] 13B — First private source review through the six gates
 [x] 13C — DAFA-LS sensitivity/misuse decision record
-[ ] 13D — Second known-lead review: arXiv:2602.19608
-[ ] 13E — Slice 13 closeout
+[x] 13D — Second known-lead review: arXiv:2602.19608
+[x] 13E — Slice 13 closeout for current known-lead set
 ```
 
 Do not change this order without explicit user approval.
 
-## 13D checklist — second known-lead review
+## 13D result — second known-lead review
 
-13D is source-review only.
+13D was source-review only.
 
-Hard boundaries:
-
-```text
-[ ] Do not download dataset payloads.
-[ ] Do not download coordinate files, masks, labels, chips, imagery, or site lists.
-[ ] Do not create labels.
-[ ] Do not assemble an I2 pack.
-[ ] Do not train.
-[ ] Do not run inference.
-[ ] Do not call Earth Engine.
-[ ] Do not add ML dependencies.
-[ ] Do not expose overlays, coordinates, or location-bearing downloads.
-```
-
-Review arXiv:2602.19608 through the six existing Slice 13 gates:
-
-### Gate 1 — Sensitivity / misuse
+Hard boundaries held:
 
 ```text
-[ ] Does the source expose sensitive locations?
-[ ] Does it include preserved, undefended, vulnerable, or location-bearing records?
-[ ] Could misuse enable harm, looting, targeting, or unauthorized access?
-[ ] Are coordinates, masks, footprints, site IDs, or map tiles coordinate proxies?
-[ ] Would redaction be insufficient?
-[ ] Decision recorded: sensitivity_pass / sensitivity_reject / sensitivity_needs_human_review.
+[x] No dataset payloads downloaded.
+[x] No coordinate files, masks, labels, chips, imagery, or site lists downloaded.
+[x] No labels created.
+[x] No I2 pack assembled.
+[x] No training started.
+[x] No inference started.
+[x] No Earth Engine calls added.
+[x] No ML dependencies added.
+[x] No overlays, coordinates, or location-bearing downloads exposed.
 ```
 
-### Gate 2 — Independent evidence
+Review result for arXiv:2602.19608:
 
 ```text
-[ ] Identify how labels were produced.
-[ ] Identify which sensor/source produced labels.
-[ ] Determine whether evidence is independent of the app heuristic.
-[ ] Determine whether evidence is independent of the same Sentinel/Landsat/S1-SAR/DEM/Phase-C-style stack.
-[ ] Determine whether labels are merely imagery interpretation of similar signals.
-[ ] Determine whether field validation, authoritative records, expert adjudication, or independently produced reference labels exist.
-[ ] If labels are not independent, mark rejected or weak-signal-only.
+final_decision: rejected
+sensitivity_misuse: reject
+independent_evidence: weak_signal_only
+provenance_labeling_method: insufficient_information
+license_access_terms: insufficient_information
+storage_redaction: needs_human_review
+i2_validator_compatibility: insufficient_information
 ```
 
-### Gate 3 — Provenance / labeling method
+`conditionally_approved_for_I2` was not granted.
 
-```text
-[ ] Read methods, not only abstract.
-[ ] Record who produced labels.
-[ ] Record how labels were produced.
-[ ] Record whether labeling rules are reproducible.
-[ ] Record whether expert review or adjudication exists.
-[ ] Record disagreement handling if available.
-[ ] Record label dates and source versions if available.
-[ ] If unclear, mark rejected or under_review.
-```
+## 13E result — Slice 13 closeout
 
-### Gate 4 — License / access terms
-
-```text
-[ ] Record source license.
-[ ] Record access terms.
-[ ] Record allowed use and forbidden use.
-[ ] Record redistribution limits.
-[ ] Record citation requirements.
-[ ] Record version or release tag.
-[ ] Do not record content hashes until a later approved download/assembly phase.
-[ ] If unclear or unacceptable, mark rejected.
-```
-
-### Gate 5 — Storage / redaction
-
-```text
-[ ] Confirm candidate can be stored outside Git.
-[ ] Confirm artifact_class can be LOCAL_SENSITIVE or FILESYSTEM_ONLY.
-[ ] Confirm filesystem_only=true.
-[ ] Confirm http_servable=false.
-[ ] Confirm frontend_visible=false by default.
-[ ] Confirm downloadable_via_api=false by default.
-[ ] Confirm coordinate proxies can be redacted from public summaries.
-[ ] Confirm no public DTO will include coordinates, bounds, local paths, private hashes, labels tied to locations, or raw site records.
-[ ] If storage/redaction cannot satisfy these rules, mark rejected.
-```
-
-### Gate 6 — I2 validator compatibility
-
-```text
-[ ] Can the candidate be represented in an I1/I2 dataset manifest later?
-[ ] Can it produce training examples later, outside Git?
-[ ] Can every reviewed-tier label have label_evidence_source?
-[ ] Can each record include required I1/I2 fields expected by the existing validator?
-[ ] Can split leakage rules be satisfied?
-[ ] Can temporal holdout be defined?
-[ ] Can negative/background and hard-negative counts be defined?
-[ ] Can baseline margin and primary metric be preregistered later?
-[ ] If not, mark rejected or not_ready_for_I2.
-```
-
-13D end states:
-
-```text
-[ ] rejected
-[ ] conditionally_approved_for_I2
-[ ] deferred / needs human review
-```
-
-`conditionally_approved_for_I2` is not training approval. It only means a separate, later I2 assembly task may be opened.
-
-## 13E checklist — Slice 13 closeout
-
-13E happens after 13D.
+13E closed the current known-lead set.
 
 Closeout decision:
 
 ```text
-[ ] If one source passed all six gates:
-    [ ] mark source conditionally_approved_for_I2
-    [ ] open a separate later user-approved I2 assembly goal
-    [ ] assemble dataset files outside Git only in that later phase
-    [ ] run the existing dataset-pack readiness validator in that later phase
-    [ ] require ready_for_private_training_later before H3
-
-[ ] If no source passed all six gates:
-    [ ] record all known leads rejected/deferred
-    [ ] record H3 remains blocked
-    [ ] record H4 remains blocked
-    [ ] continue discovery or request operator-provided independent evidence
+[x] Path B — no current known lead passed all six gates.
 ```
 
-13E must not route anything to I2 unless all six gates pass.
+13E result:
+
+```text
+[x] DAFA-LS / arXiv:2409.09432 rejected by Gate 1 sensitivity/misuse.
+[x] arXiv:2602.19608 rejected by Gate 1 sensitivity/misuse and other non-passing gates.
+[x] No current known lead is conditionally_approved_for_I2.
+[x] No I2 assembly is authorized from current known leads.
+[x] H3 remains blocked.
+[x] H4 remains blocked.
+```
+
+13E references:
+
+```text
+docs/FUTURE_SLICE_13C_DAFA_LS_SENSITIVITY_DECISION.md
+docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md
+docs/FUTURE_SLICE_13E_CLOSEOUT.md
+```
 
 ## Stop conditions
 
