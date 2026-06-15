@@ -192,7 +192,7 @@ test.describe("expanded V6 package flow states", () => {
     await mockFrozenV6PackageFlow(page);
     await openFrozenRun(page, null);
 
-    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Access to requested resource not available.", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Support reference: v6-e2e-denied-before-session", { exact: true })).toBeVisible();
     await expect(page.getByPlaceholder("Paste local bearer value")).toBeVisible();
     await expectNoForbiddenPrivatePayloadText(page);
@@ -202,7 +202,7 @@ test.describe("expanded V6 package flow states", () => {
     await mockFrozenV6PackageFlow(page, { deniedStatus: packageStatusWrongRoleDenied });
     await openFrozenRun(page, WRONG_ROLE_TOKEN);
 
-    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Access to requested resource not available.", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Support reference: v6-e2e-wrong-role", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
     await expectNoForbiddenPrivatePayloadText(page);
@@ -212,7 +212,7 @@ test.describe("expanded V6 package flow states", () => {
     await mockFrozenV6PackageFlow(page, { deniedStatus: packageStatusRunUnauthorizedDenied });
     await openFrozenRun(page, UNAUTHORIZED_RUN_TOKEN);
 
-    await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Access to requested resource not available.", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Support reference: v6-e2e-run-not-authorized", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
     await expectNoForbiddenPrivatePayloadText(page);
@@ -252,7 +252,7 @@ test.describe("expanded V6 package flow states", () => {
 
     await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Retrieve ZIP" }).click();
-    await expect(page.getByText("V6 package is temporarily unavailable.", { exact: true })).toBeVisible();
+    await expect(page.getByText("V6 package is temporarily unavailable.", { exact: true }).first()).toBeVisible();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
