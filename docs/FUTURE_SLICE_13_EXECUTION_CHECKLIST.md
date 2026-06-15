@@ -4,8 +4,6 @@ This checklist turns `docs/FUTURE_SLICE_13_DATASET_DISCOVERY_AND_SOURCE_APPROVAL
 
 Slice 13 is not training. It is not inference. It is not data download. It is not dataset assembly. It is a source-discovery and source-approval phase that decides whether a candidate source may be routed to the I2 dataset-pack validator.
 
-Before opening a review, confirm the candidate meets the acceptable-source spec in `docs/FUTURE_SLICE_13_ACCEPTABLE_SOURCE_SPEC.md` (Gate-1-clean sensitivity/misuse and independence). A candidate that cannot meet the spec is not ready for review.
-
 ## Hard Boundary
 
 ```text
@@ -33,29 +31,27 @@ No candidate is approved because it is public, published, cited, or available on
 
 ## Slice 13 Sub-Slice Sequence
 
-These sub-slices make the Slice 13 execution order explicit. Do not add new sub-slices or change this order without first telling the user.
+These sub-slices make the Slice 13 execution order explicit.
 
 ```text
 [x] 13A — Private candidate register scaffold
 [x] 13B — First private source review through the six gates
 [x] 13C — DAFA-LS sensitivity/misuse decision record
-[ ] 13D — Second known-lead review: arXiv:2602.19608
-[ ] 13E — Slice 13 closeout: all known leads rejected/deferred or one routed to I2
+[x] 13D — Second known-lead review: arXiv:2602.19608
+[x] 13E — Slice 13 closeout: current known leads rejected/deferred; no source routed to I2
 ```
 
-13D must stay source-review only. 13E must not route anything to I2 unless the candidate passed every Slice 13 gate.
+13E did not route anything to I2 because no current known lead passed every Slice 13 gate.
 
 ## Phase 13.0 — Setup The Private Review Workspace
 
 Checklist:
 
 ```text
-[ ] Choose a private dataset root outside git.
-[ ] Create a private candidate-register folder outside git.
-[ ] Confirm the private root is not inside the repository.
-[ ] Confirm no candidate register, coordinate file, label file, site list, chip, mask, or dataset artifact will be committed.
-[ ] Confirm artifact class for all review material is LOCAL_SENSITIVE or FILESYSTEM_ONLY.
-[ ] Confirm public summaries must not include coordinates, local paths, private hashes, raw labels tied to locations, or candidate file contents.
+[x] Keep private dataset/candidate material outside git.
+[x] Do not commit candidate registers, coordinate files, label files, site lists, chips, masks, or dataset artifacts.
+[x] Treat review material as LOCAL_SENSITIVE or FILESYSTEM_ONLY when it exists outside git.
+[x] Keep public summaries redacted: no coordinates, local paths, private hashes, raw labels tied to locations, or candidate file contents.
 ```
 
 Suggested private layout, outside git:
@@ -122,19 +118,19 @@ rejected
 conditionally_approved_for_I2
 ```
 
-`conditionally_approved_for_I2` is not training approval. It only means the source may be assembled outside git into a private I2 pack for machine validation.
+`conditionally_approved_for_I2` is not training approval. It only means the source may be assembled outside git into a private I2 pack for machine validation in a separate, later, user-approved task.
 
 ## Phase 13.2 — Discovery Rules
 
 Checklist:
 
 ```text
-[ ] Record only metadata/provenance/license leads in the candidate register.
-[ ] Do not download dataset payloads in Slice 13.
-[ ] Do not download coordinate files, masks, labels, chips, imagery, or site lists in Slice 13.
-[ ] Do not scrape web pages into the repo.
-[ ] Do not store candidate data in git.
-[ ] Treat every dataset as unverified_lead until every gate passes.
+[x] Record only metadata/provenance/license leads in repo-visible docs.
+[x] Do not download dataset payloads in Slice 13.
+[x] Do not download coordinate files, masks, labels, chips, imagery, or site lists in Slice 13.
+[x] Do not scrape web pages into the repo.
+[x] Do not store candidate data in git.
+[x] Treat every dataset as unverified_lead until every gate passes.
 ```
 
 Allowed discovery work:
@@ -159,11 +155,11 @@ Not allowed in Slice 13:
 - I2 pack creation
 ```
 
-## Phase 13.3 — Gate 1: Sensitivity / Misuse Review
+## Six-Gate Review Checklist
 
-This gate is first and can reject a candidate on its own.
+A source can be conditionally approved for I2 only if all six gates pass.
 
-Checklist:
+### Gate 1: Sensitivity / Misuse Review
 
 ```text
 [ ] Does the source expose sensitive locations?
@@ -174,21 +170,13 @@ Checklist:
 [ ] If risk is unacceptable, mark rejected and stop review.
 ```
 
-Decision values:
-
-```text
-sensitivity_pass
-sensitivity_reject
-sensitivity_needs_human_review
-```
-
 Rule:
 
 ```text
 A perfectly licensed and published dataset can still be rejected at Gate 1.
 ```
 
-## Phase 13.4 — Gate 2: Independent-Evidence Review
+### Gate 2: Independent-Evidence Review
 
 Independent evidence means:
 
@@ -215,9 +203,7 @@ Different sensor data may help, but it does not automatically prove independence
 Imagery-derived labels on similar visual evidence are not reviewed-tier evidence by themselves.
 ```
 
-## Phase 13.5 — Gate 3: Provenance / Labeling-Method Review
-
-Checklist:
+### Gate 3: Provenance / Labeling-Method Review
 
 ```text
 [ ] Read the methods section, not only the abstract.
@@ -230,9 +216,7 @@ Checklist:
 [ ] If label method is unclear, mark rejected or under_review.
 ```
 
-## Phase 13.6 — Gate 4: License / Access-Terms Review
-
-Checklist:
+### Gate 4: License / Access-Terms Review
 
 ```text
 [ ] Record source license.
@@ -245,9 +229,7 @@ Checklist:
 [ ] If license/access terms are unclear or unacceptable, mark rejected.
 ```
 
-## Phase 13.7 — Gate 5: Storage / Redaction Review
-
-Checklist:
+### Gate 5: Storage / Redaction Review
 
 ```text
 [ ] Confirm candidate can be stored outside git.
@@ -261,9 +243,7 @@ Checklist:
 [ ] If storage/redaction cannot satisfy these rules, mark rejected.
 ```
 
-## Phase 13.8 — Gate 6: I2 Validator Compatibility
-
-Checklist:
+### Gate 6: I2 Validator Compatibility
 
 ```text
 [ ] Can the candidate be represented in an I1/I2 dataset_manifest.json?
@@ -279,33 +259,71 @@ Checklist:
 
 The field list above is representative, not exhaustive. The authoritative I1/I2 training-example and dataset-manifest schema is defined in `app/pipeline/parity/dataset_pack_readiness.py` and `docs/SPECIAL_TRACK_I_DATASET_TRAINING_DESIGN.md`; defer to those to prevent field-list drift.
 
-## Phase 13.9 — Candidate Decision
+## Known Lead Results
 
-Only two end states matter:
-
-```text
-rejected
-conditionally_approved_for_I2
-```
-
-A candidate may be conditionally approved for I2 only if all six gates pass.
-
-Checklist:
+### DAFA-LS / arXiv:2409.09432
 
 ```text
-[ ] Gate 1 sensitivity/misuse passed.
-[ ] Gate 2 independent evidence passed.
-[ ] Gate 3 provenance/method passed.
-[ ] Gate 4 license/access passed.
-[ ] Gate 5 storage/redaction passed.
-[ ] Gate 6 I2 compatibility passed.
-[ ] Final decision recorded in private candidate register.
-[ ] Public summary contains no sensitive details.
+final_decision: rejected
+sensitivity_misuse: reject
+i2_routing_allowed: false
+h3_training_allowed: false
+h4_inference_allowed: false
 ```
 
-## Phase 13.10 — Handoff To I2
+Reference:
 
-If a candidate is conditionally approved:
+```text
+docs/FUTURE_SLICE_13C_DAFA_LS_SENSITIVITY_DECISION.md
+```
+
+### arXiv:2602.19608
+
+```text
+final_decision: rejected
+sensitivity_misuse: reject
+independent_evidence: weak_signal_only
+provenance_labeling_method: insufficient_information
+license_access_terms: insufficient_information
+storage_redaction: needs_human_review
+i2_validator_compatibility: insufficient_information
+```
+
+Reference:
+
+```text
+docs/FUTURE_SLICE_13D_ARXIV_2602_19608_SOURCE_REVIEW.md
+```
+
+## 13E Closeout Decision
+
+Closeout path:
+
+```text
+[x] Path B — no current known lead passed all six gates.
+```
+
+Result:
+
+```text
+[x] No current known lead is conditionally_approved_for_I2.
+[x] No I2 assembly is authorized from current known leads.
+[x] H3 training remains blocked.
+[x] H4 private inference remains blocked.
+[x] Next unlock is operator-provided or newly discovered independent evidence that can pass the existing Slice 13/I1/I2 path.
+```
+
+Reference:
+
+```text
+docs/FUTURE_SLICE_13E_CLOSEOUT.md
+```
+
+## Handoff To I2
+
+No handoff to I2 is authorized from the current known-lead set.
+
+If a future candidate is conditionally approved:
 
 ```text
 [ ] Open a separate, later user-approved I2 assembly goal.
@@ -314,7 +332,7 @@ If a candidate is conditionally approved:
 [ ] Require ready_for_private_training_later before opening H3.
 ```
 
-If no candidate passes:
+If no future candidate passes:
 
 ```text
 [ ] Record that H3 remains blocked.
@@ -336,17 +354,6 @@ Preferred evidence sources, in descending order:
 
 Notebook outputs, Phase F outputs, and labels inferred from the same input stack remain weak signals only.
 
-## Worked Lead Review Notes
-
-These leads remain unverified until reviewed through the checklist:
-
-```text
-- arXiv:2602.19608
-- arXiv:2409.09432 / DAFA-LS
-```
-
-For both, expect Gate 1 sensitivity/misuse to be difficult because preserved-site or vulnerable-location data can be high-risk. Do not download, assemble, train on, or infer from these sources during Slice 13.
-
 ## Stop Conditions
 
 Stop Slice 13 review for a candidate if:
@@ -362,17 +369,17 @@ Stop Slice 13 review for a candidate if:
 
 If all candidates stop or reject, H3 training and H4 private inference remain blocked.
 
-## Completion Criteria For Slice 13
+## Completion Criteria For Slice 13 Current Known-Lead Set
 
-Slice 13 is complete when:
+Slice 13 current known-lead set is complete when:
 
 ```text
-[ ] private candidate register structure exists outside git
-[ ] candidate review schema is defined
-[ ] at least one candidate source has been reviewed through the six gates, or all currently known leads are explicitly rejected/deferred
-[ ] no dataset files were downloaded or committed
-[ ] no training or inference was started
-[ ] no ML dependencies were added
-[ ] no public exposure or artifact-serving change was made
-[ ] next action is either I2 assembly for a conditionally approved source, or continued discovery if all candidates are rejected/deferred
+[x] candidate review schema is defined
+[x] known candidate sources have been reviewed or decision-recorded through Slice 13 gates
+[x] all current known leads are explicitly rejected/deferred
+[x] no dataset files were downloaded or committed
+[x] no training or inference was started
+[x] no ML dependencies were added
+[x] no public exposure or artifact-serving change was made
+[x] next action is continued discovery or operator-provided independent evidence
 ```
