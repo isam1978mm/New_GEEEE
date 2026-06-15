@@ -52,7 +52,7 @@ Plain meaning: this is mainly deployment setup. Local private operator mode is a
 
 ## 3. Frozen new.ipynb reference bundle outside Git
 
-- [ ] **Status:** Open / high priority after V6 names correction
+- [ ] **Status:** Open / high priority after D1 freeze
 - [ ] Collect real `new.ipynb` output files privately.
 - [ ] Keep the bundle outside Git.
 - [ ] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
@@ -78,10 +78,15 @@ Plain meaning: no approved real dataset means no honest real ML training or priv
 
 ## 6. D1 real new.ipynb reference freeze
 
-- [ ] **Status:** Open / high priority
+- [ ] **Status:** Operator-ready / waiting for real local outputs
+- [x] Add local bundle initializer: `scripts/d1_init_reference_bundle.py`.
+- [x] Add operator steps: `docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md`.
+- [x] Add unit coverage for the local bundle initializer.
 - [ ] Freeze the real `new.ipynb` outputs as the official private notebook baseline.
 - [ ] Keep the frozen reference outside Git.
 - [ ] Use this as the baseline for later parity checks.
+
+Current status: repo-side helper and instructions are ready. The actual private freeze still requires placing real notebook outputs locally under the outside-Git bundle.
 
 Plain meaning: decide which exact private notebook outputs are the official reference.
 
