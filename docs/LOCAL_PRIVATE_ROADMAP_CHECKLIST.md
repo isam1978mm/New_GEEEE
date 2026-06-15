@@ -101,7 +101,7 @@ Plain meaning: the exact private notebook outputs are now the official local ref
 
 ## 7. DEM/report/private semantic/SAR/PAN parity verification
 
-- [ ] **Status:** DEM value parity passed / remaining families open
+- [ ] **Status:** Report value parity ready for local run / DEM passed
 - [x] Do not claim final parity until verifier tests pass.
 - [x] Compare app outputs against frozen notebook outputs.
 - [x] Add DEM value parity wrapper: `scripts/d1_compare_dem_value_parity.py`.
@@ -110,14 +110,13 @@ Plain meaning: the exact private notebook outputs are now the official local ref
 - [x] Run DEM value parity locally.
 - [x] DEM value parity status: passed.
 - [x] DEM summary: pass_count 4, fail_count 0, missing_count 0, dem_matches True.
-- [x] DEM diagnostic: DEM and curvature match end-to-end; DEM curvature parity accepted.
-- [x] DEM report written locally under `data/private_references/` only.
-- [x] `git status --short` did not show `data/private_references/` files.
-- [ ] Verify report outputs.
+- [x] Add report value parity wrapper: `scripts/d1_compare_report_value_parity.py`.
+- [x] Add unit coverage for report value parity wrapper.
+- [ ] Run report value parity locally.
 - [ ] Verify private semantic outputs.
 - [ ] Verify SAR/PAN outputs only after their expected contracts are clear.
 
-Plain meaning: DEM value parity is proven for the frozen local D1 baseline. Full notebook parity is still not proven.
+Plain meaning: DEM value parity is proven for the frozen local D1 baseline. Report value parity is ready to run. Full notebook parity is still not proven.
 
 ---
 
@@ -146,7 +145,7 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** DEM value parity passed / remaining families open
+- [ ] **Status:** DEM value parity passed / report value parity ready for local run
 - [x] Start only after the frozen `new.ipynb` reference exists.
 - [x] Add safe inventory comparator: `scripts/d1_compare_app_reference_inventory.py`.
 - [x] Add unit coverage for the inventory comparator.
@@ -154,14 +153,14 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 - [x] Local inventory comparator tests: 3 passed, 1 pytest cache warning.
 - [x] Local inventory comparison against the frozen D1 manifest passed.
 - [x] Inventory summary: 109 reference artifacts, 449 app files, 109 matched reference names, 0 missing reference names.
-- [x] Inventory report written locally under `data/private_references/` only.
-- [x] `git status --short` did not show `data/private_references/` files.
 - [x] Add DEM value parity wrapper and tests.
 - [x] Run DEM value parity locally.
 - [x] DEM value parity passed: 4 passed artifacts, 0 failed, 0 missing, DEM matched.
+- [x] Add report value parity wrapper and tests.
+- [ ] Run report value parity locally.
 - [ ] Then prove remaining app-generated outputs match the notebook reference with tests/verifiers.
 
-Plain meaning: inventory bridge and DEM value parity passed. This is not final parity; remaining verifier-backed value comparisons still need to pass.
+Plain meaning: inventory bridge and DEM value parity passed. Report value parity is ready to run. This is not final parity; remaining verifier-backed value comparisons still need to pass.
 
 ## 11. SAR/S1 recovery/build
 
