@@ -2,15 +2,15 @@
 
 ## Current status
 
-Real app-vs-reference parity is **started, not proven**.
+Real app-vs-reference parity is **inventory bridge passed, value parity not proven**.
 
-D1 local reference freeze is complete outside Git. The next safe step is an inventory bridge that confirms the frozen D1 manifest can be compared against an app output folder without reading artifact contents.
+D1 local reference freeze is complete outside Git. The safe inventory bridge confirms the frozen D1 manifest can be compared against the current app output folder without reading artifact contents.
 
 ## Checklist item from LOCAL_PRIVATE_ROADMAP_CHECKLIST.md
 
 ```text
 10. Real app-vs-reference parity
-Status: Unblocked by D1 freeze / next major work
+Status: Inventory bridge passed / value parity not proven
 ```
 
 ## Checklist of the item
@@ -19,7 +19,7 @@ Status: Unblocked by D1 freeze / next major work
 [x] D1 frozen local reference exists outside Git.
 [x] Add safe D1 inventory comparator: scripts/d1_compare_app_reference_inventory.py.
 [x] Add unit coverage for the D1 inventory comparator.
-[ ] Run inventory comparison locally.
+[x] Run inventory comparison locally.
 [ ] Build/verify the app output manifest against the frozen notebook reference manifest.
 [ ] Run value parity verifiers for implemented families.
 [ ] Keep SAR/S1 and PAN recovery separate until exact contracts are clear.
@@ -38,16 +38,26 @@ The inventory comparator:
 - does not prove notebook-value parity.
 ```
 
-## Step 1 — run unit tests
+## Step 1 — unit tests
+
+Command:
 
 ```powershell
 cd C:\Dev\New_GEE
 python -m pytest tests/unit/test_d1_compare_app_reference_inventory.py -q
 ```
 
-## Step 2 — run the safe local inventory comparison
+Result:
 
-Use the frozen D1 manifest and the app run folder that produced the current candidate outputs:
+```text
+3 passed, 1 pytest cache warning
+```
+
+The warning was local `.pytest_cache` permission noise, not a comparator failure.
+
+## Step 2 — safe local inventory comparison
+
+Command:
 
 ```powershell
 python scripts/d1_compare_app_reference_inventory.py `
@@ -56,34 +66,37 @@ python scripts/d1_compare_app_reference_inventory.py `
   --report data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/parity_inventory.local.json
 ```
 
-Expected safe output shape:
+Safe result:
 
 ```text
-status: passed OR incomplete
+status: passed
 reference_artifact_count: 109
-app_file_count: <local count>
-matched_reference_name_count: <local count>
-missing_reference_name_count: <local count>
+app_file_count: 449
+matched_reference_name_count: 109
+missing_reference_name_count: 0
 note: inventory-only; not notebook-value parity
 ```
 
-## Step 3 — validate Git safety
+## Step 3 — Git safety
 
-```powershell
-git status --short
+`git status --short` did not show `data/private_references/` files.
+
+Existing unrelated local Git noise should stay separate and should not be mixed into parity work:
+
+```text
+frontend-v2/dist changes
+frontend-v2/test-results/
+graphify-out/
+.pytest-tmp-* folders
 ```
-
-Expected: no files under `data/private_references/` appear.
-
-Existing unrelated local Git noise should stay separate and should not be mixed into parity work.
 
 ## Done condition for this slice
 
 ```text
-[ ] D1 inventory comparator tests pass locally.
-[ ] Inventory comparator runs locally against the frozen D1 manifest.
-[ ] Local inventory report is written only under data/private_references/.
-[ ] git status does not show data/private_references/ files.
+[x] D1 inventory comparator tests pass locally.
+[x] Inventory comparator runs locally against the frozen D1 manifest.
+[x] Local inventory report is written only under data/private_references/.
+[x] git status does not show data/private_references/ files.
 ```
 
 ## Next step after inventory bridge
