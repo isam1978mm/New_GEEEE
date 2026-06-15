@@ -4,13 +4,22 @@
 
 V6-APP-UI-1 adds the frontend generate/review/retrieve UI wired to the backend V6 package flow.
 
+Current user-facing name:
+
+```text
+Paid Imagery Request Package
+```
+
+Implementation note: `V6` remains an internal compatibility label for routes, filenames, paths, and tests where needed. Do not rename internal V6 compatibility names just because the visible UI wording changed.
+
 Implemented now:
 
 - frontend V6 package API client;
 - operator token forwarding;
-- generate package action;
-- review metadata action;
-- retrieve ZIP action;
+- user-facing `Paid Imagery Request Package` panel title;
+- `Generate request package` action;
+- `Review package metadata` action;
+- `Retrieve package ZIP` action;
 - metadata-only package status panel;
 - backend denial and unavailable states;
 - panel mounted in the existing operator private section;
@@ -32,13 +41,13 @@ frontend-v2/src/app/components/OperatorPrivateOverlayPanel.tsx
 
 ## UI Behavior
 
-The V6 panel appears in the operator private section and uses the same operator access token context as the private overlay preview.
+The Paid Imagery Request Package panel appears in the operator private section and uses the same operator access token context as the private overlay preview.
 
 The panel has three actions:
 
-- Generate package;
-- Review metadata;
-- Retrieve ZIP.
+- Generate request package;
+- Review package metadata;
+- Retrieve package ZIP.
 
 The panel displays metadata only: outcome, readiness, validation status, payload count, ZIP entry count, issue count, warning count, package filename, and category counts.
 
@@ -52,7 +61,6 @@ The panel displays metadata only: outcome, readiness, validation status, payload
 
 ## Still Not Done
 
-- browser end-to-end test through a running app server;
 - production UX polish;
 - operator docs for enabling the package flow flag.
 
@@ -65,13 +73,14 @@ V6-FINAL-WIRING-1: add final backend-to-frontend smoke documentation and full re
 ## Checklist
 
 - [x] Add V6 package frontend API client.
-- [x] Add generate action.
-- [x] Add review action.
-- [x] Add retrieve action.
+- [x] Add user-facing Paid Imagery Request Package panel title.
+- [x] Add Generate request package action.
+- [x] Add Review package metadata action.
+- [x] Add Retrieve package ZIP action.
 - [x] Forward operator token.
 - [x] Add metadata-only status panel.
 - [x] Mount panel in operator private section.
 - [x] Add frontend contract tests.
-- [ ] Add browser end-to-end smoke test.
+- [x] Add browser end-to-end smoke test.
 - [ ] Add operator enablement runbook.
 - [ ] Add full regression checklist.
