@@ -16,7 +16,8 @@ User-facing V6 wording should use the meaningful name `Paid Imagery Request Pack
 [x] Required D1 value-parity families passed: DEM, report, private semantic, SAR/S1, PAN.
 [x] SAR/S1 recovery/build is complete for the D1 parity scope.
 [x] PAN recovery/build is complete for the D1 parity scope.
-[ ] H3/H4 dataset readiness remains blocked until an independent-evidence source passes the existing Slice 13/I1/I2 path.
+[x] Slice 13 current known-lead set is closed out.
+[ ] H3/H4 dataset readiness remains blocked until a new independent-evidence source passes the existing Slice 13/I1/I2 path.
 ```
 
 ## Counting note
@@ -88,14 +89,15 @@ Plain meaning: because the app is private and only for Maher/operator, public ex
 - [x] Reuse the existing I1/I2 readiness contract and existing `dataset_pack_readiness` validator.
 - [x] Do not create a duplicate H3/H4 contract.
 - [x] Do not create a duplicate readiness validator.
-- [ ] Do not start real H3 training yet.
-- [ ] Do not start real H4 private inference yet.
-- [ ] First obtain or define an independent-evidence source that can pass the existing Slice 13 gates.
+- [x] Complete the current known-lead Slice 13 source-review closeout.
+- [x] Do not start real H3 training yet.
+- [x] Do not start real H4 private inference yet.
+- [ ] First obtain or define a new independent-evidence source that can pass the existing Slice 13 gates.
 - [ ] Shape approved labels into the existing I1/I2 training-example schema outside Git only.
 - [ ] Run the existing dataset-pack readiness validator.
 - [ ] Require `ready_for_private_training_later` before opening H3 training.
 
-Plain meaning: D1 proves app output reproduction. H3/H4 still need approved independent evidence; app candidates or D1 layers alone are not training truth.
+Plain meaning: D1 proves app output reproduction. Current known leads did not pass Slice 13. H3/H4 still need approved independent evidence; app candidates or D1 layers alone are not training truth.
 
 ## 6. D1 real new.ipynb reference freeze
 
@@ -220,10 +222,11 @@ Plain meaning: the app reproduced the notebook-compatible PAN outputs needed for
 - [ ] **Status:** Same blocker as point #5, not a new unique point
 - [x] Treat as the same issue as `H3 training / H4 private inference`.
 - [x] Reuse the existing I1/I2 contract and dataset-pack readiness validator.
-- [ ] Complete the existing Slice 13 source-review path.
-- [ ] Review the second known lead through the six gates.
-- [ ] Close out Slice 13 by either routing one passing source to later I2 assembly or recording that all known leads are rejected/deferred.
-- [ ] Do not start training or inference until the existing validator allows it.
+- [x] Complete the existing Slice 13 source-review path for current known leads.
+- [x] Review the second known lead through the six gates.
+- [x] Close out Slice 13 by recording that all current known leads are rejected/deferred.
+- [x] Do not start training or inference until the existing validator allows it.
+- [ ] Find or provide a new independent-evidence source that can pass Slice 13.
 
 Plain meaning: this is the same real ML blocker. No approved independent-evidence source means no real training and no private inference.
 
