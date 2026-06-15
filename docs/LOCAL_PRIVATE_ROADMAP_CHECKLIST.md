@@ -22,7 +22,7 @@ It is the same underlying issue, so it is counted once as unique point #5.
 
 ## 1. V6 names correction
 
-- [x] **Status:** Done
+- [x] **Status:** Done / locally E2E tested
 - [x] Rename user-facing wording from `V6 package` to `Paid Imagery Request Package`.
 - [x] Use user-facing label: `Paid Imagery Request Package`.
 - [x] Use button/action wording: `Generate request package`.
@@ -32,8 +32,9 @@ It is the same underlying issue, so it is counted once as unique point #5.
 - [x] Do not rename `private/v6/`.
 - [x] Do not rename backend/API compatibility names yet.
 - [x] Do not rename generated file schema just for the UI wording change.
+- [x] Local E2E validation: `npm run e2e:v6` -> 9 passed.
 
-Current status: visible UI naming is corrected, while internal V6 compatibility names remain unchanged.
+Current status: visible UI naming is corrected, local E2E passed, and internal V6 compatibility names remain unchanged.
 
 Plain meaning: make the visible name understandable, while keeping existing internal V6 files and paths stable.
 
