@@ -95,13 +95,13 @@ Plain meaning: no approved real dataset means no honest real ML training or priv
 - [x] Strict manifest validation passed with `Summary: OK`.
 - [x] `git status --short` did not show ignored private reference files.
 
-Current status: D1 local private baseline is frozen outside Git. Parity is still not fully proven; DEM and report are now proven and remaining families still need verifier-backed checks or recovery mapping.
+Current status: D1 local private baseline is frozen outside Git. Parity is still not fully proven for SAR/PAN, but DEM, report, and private semantic secret layers are now proven.
 
 Plain meaning: the exact private notebook outputs are now the official local reference bundle.
 
 ## 7. DEM/report/private semantic/SAR/PAN parity verification
 
-- [ ] **Status:** DEM and report value parity passed / private semantic blocked by missing expected names
+- [ ] **Status:** DEM, report, and private semantic value parity passed / SAR-PAN remain separate
 - [x] Do not claim final parity until verifier tests pass.
 - [x] Compare app outputs against frozen notebook outputs.
 - [x] Add DEM value parity wrapper: `scripts/d1_compare_dem_value_parity.py`.
@@ -117,10 +117,14 @@ Plain meaning: the exact private notebook outputs are now the official local ref
 - [x] Run report value parity locally.
 - [x] Report value parity status: passed.
 - [x] Report summary: pass_count 3, fail_count 0, missing_count 0.
-- [ ] Private semantic expected names are missing on both app and reference sides; needs contract/recovery mapping.
+- [x] Add private semantic value parity wrapper.
+- [x] Align private semantic expected outputs to secret-layer contract.
+- [x] Run private semantic value parity locally.
+- [x] Private semantic value parity status: passed.
+- [x] Private semantic summary: expected_count 6, pass_count 6, fail_count 0, missing_count 0.
 - [ ] Verify SAR/PAN outputs only after their expected contracts are clear.
 
-Plain meaning: DEM and report value parity are proven for the frozen local D1 baseline. Private semantic is not a value mismatch; its expected filenames are missing and need mapping/recovery.
+Plain meaning: DEM, report, and private semantic secret-layer value parity are proven for the frozen local D1 baseline. SAR and PAN are still separate recovery/build tracks.
 
 ---
 
@@ -149,7 +153,7 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** DEM and report value parity passed / private semantic mapping needed
+- [ ] **Status:** DEM/report/private semantic passed / SAR-PAN remain separate
 - [x] Start only after the frozen `new.ipynb` reference exists.
 - [x] Add safe inventory comparator: `scripts/d1_compare_app_reference_inventory.py`.
 - [x] Add unit coverage for the inventory comparator.
@@ -164,10 +168,12 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 - [x] Run report value parity locally.
 - [x] Report value parity passed: 3 passed outputs, 0 failed, 0 missing.
 - [x] Add private semantic value parity wrapper.
-- [ ] Private semantic value parity incomplete: expected names missing on both sides.
+- [x] Align private semantic wrapper to secret-layer contract.
+- [x] Run private semantic value parity locally.
+- [x] Private semantic value parity passed: 6 passed outputs, 0 failed, 0 missing.
 - [ ] Then prove remaining app-generated outputs match the notebook reference with tests/verifiers.
 
-Plain meaning: inventory bridge, DEM value parity, and report value parity passed. Private semantic is blocked by contract mapping, not by a value mismatch.
+Plain meaning: inventory bridge plus DEM, report, and private semantic value parity passed. SAR and PAN are still separate recovery/build tracks.
 
 ## 11. SAR/S1 recovery/build
 
