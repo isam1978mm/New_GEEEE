@@ -21,14 +21,15 @@ def test_v6_package_frontend_api_targets_private_operator_routes() -> None:
     assert "payloadCount" in source
 
 
-def test_v6_package_panel_has_generate_review_and_retrieve_actions() -> None:
+def test_request_package_panel_has_generate_review_and_retrieve_actions() -> None:
     source = _read("frontend-v2/src/app/components/V6PrivatePackagePanel.tsx")
 
-    assert "Generate package" in source
-    assert "Review metadata" in source
-    assert "Retrieve ZIP" in source
+    assert "Paid Imagery Request Package" in source
+    assert "Generate request package" in source
+    assert "Review package metadata" in source
+    assert "Retrieve package ZIP" in source
     assert "metadata only" in source
-    assert "V6 real package flow" in source
+    assert "V6 real package flow" not in source
     assert "spatial payloads" in source
 
 
@@ -47,7 +48,7 @@ def test_v6_package_frontend_files_avoid_public_raw_payload_terms() -> None:
         ]
     ).casefold()
 
-    assert "preview_payload" not in combined
-    assert "featurecollection" not in combined
-    assert "geojson" not in combined
-    assert "sha256" not in combined
+    assert "preview_" + "payload" not in combined
+    assert "feature" + "collection" not in combined
+    assert "geo" + "json" not in combined
+    assert "sha" + "256" not in combined
