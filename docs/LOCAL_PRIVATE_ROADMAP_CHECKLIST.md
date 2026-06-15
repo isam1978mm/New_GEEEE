@@ -5,7 +5,7 @@ Status document for the current private/local app workflow.
 This app is currently private and local operator-only.
 There is no SaaS mode, no public user workflow, and no VPS deployment planned soon.
 
-User-facing V6 wording should be corrected to a meaningful name, but internal `v6` paths, filenames, and API compatibility should stay unchanged for now.
+User-facing V6 wording should use the meaningful name `Paid Imagery Request Package`, but internal `v6` paths, filenames, and API compatibility should stay unchanged for now.
 
 ## Counting note
 
@@ -16,22 +16,24 @@ This checklist has 13 unique points.
 - Not done / still open #4
 - Blocked #4
 
-It is the same underlying issue, so it is counted once as a unique point.
+It is the same underlying issue, so it is counted once as unique point #5.
 
 ---
 
 ## 1. V6 names correction
 
-- [ ] **Status:** Do now
-- [ ] Rename user-facing wording from `V6 package` to `Paid Imagery Request Package`.
-- [ ] Use user-facing label: `Paid Imagery Request Package`.
-- [ ] Use button/action wording: `Generate request package`.
-- [ ] Use button/action wording: `Review package metadata`.
-- [ ] Use button/action wording: `Retrieve package ZIP`.
-- [ ] Keep internal compatibility names unchanged.
-- [ ] Do not rename `private/v6/`.
-- [ ] Do not rename backend/API compatibility names yet.
-- [ ] Do not rename generated file schema just for the UI wording change.
+- [x] **Status:** Done
+- [x] Rename user-facing wording from `V6 package` to `Paid Imagery Request Package`.
+- [x] Use user-facing label: `Paid Imagery Request Package`.
+- [x] Use button/action wording: `Generate request package`.
+- [x] Use button/action wording: `Review package metadata`.
+- [x] Use button/action wording: `Retrieve package ZIP`.
+- [x] Keep internal compatibility names unchanged.
+- [x] Do not rename `private/v6/`.
+- [x] Do not rename backend/API compatibility names yet.
+- [x] Do not rename generated file schema just for the UI wording change.
+
+Current status: visible UI naming is corrected, while internal V6 compatibility names remain unchanged.
 
 Plain meaning: make the visible name understandable, while keeping existing internal V6 files and paths stable.
 
@@ -52,7 +54,7 @@ Plain meaning: this is mainly deployment setup. Local private operator mode is a
 - [ ] **Status:** Open / high priority after V6 names correction
 - [ ] Collect real `new.ipynb` output files privately.
 - [ ] Keep the bundle outside Git.
-- [ ] Do not commit real reference files, private coordinates, generated artifacts, ZIP contents, or private payloads.
+- [ ] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
 
 Plain meaning: these private notebook outputs become the truth copy that the app must match.
 
@@ -144,19 +146,19 @@ Plain meaning: the app must reproduce the notebook radar outputs, but only after
 
 Plain meaning: the app still needs to reproduce the notebook PAN/optical outputs. This is one of the larger technical gaps.
 
-## 13. H3/H4
+## Blocked #4. H3/H4
 
-- [ ] **Status:** Same blocker as Not done / still open #5
-- [ ] Treat as the same unique issue, not a second separate task.
+- [ ] **Status:** Same blocker as point #5, not a new unique point
+- [ ] Treat as the same issue as `H3 training / H4 private inference`.
 - [ ] Solve dataset readiness first.
 
 Plain meaning: this is the same real ML blocker. No approved real dataset means no real training and no private inference.
 
-## Public coordinate-bearing downloads
+## 13. Public location-bearing downloads
 
 - [ ] **Status:** Not needed now for private local app / blocked only for public or shared mode
 - [ ] Private operator files are okay when kept private.
-- [ ] Do not expose coordinate-bearing downloads publicly.
+- [ ] Do not expose sensitive downloads publicly.
 - [ ] Revisit only if the app becomes shared/public later.
 
 Plain meaning: this is not a current blocker for Maher-only private local use. It matters only for public/shared exposure.
@@ -165,7 +167,7 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 
 # Immediate order
 
-- [ ] 1. V6 names correction.
+- [x] 1. V6 names correction.
 - [ ] 2. D1 real `new.ipynb` reference freeze.
 - [ ] 3. Frozen `new.ipynb` reference bundle outside Git.
 - [ ] 4. Real app-vs-reference parity.
@@ -175,7 +177,7 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 - [ ] 8. H3/H4 dataset readiness.
 - [ ] 9. VPS/private operator auth activation later.
 - [ ] 10. Public overlay exposure review future-only.
-- [ ] 11. Public coordinate-bearing downloads future-only for public/shared mode.
+- [ ] 11. Public location-bearing downloads future-only for public/shared mode.
 - [ ] 12. D1/D2/D3 private preview artifacts remain parked.
 - [ ] 13. External V6 notebook/source-lock/package track remains parked.
 
@@ -186,8 +188,8 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 - Do not prioritize VPS deployment.
 - Do not build SaaS/public auth.
 - Do not prioritize public overlay exposure review.
-- Do not expose coordinate-bearing downloads publicly.
+- Do not expose sensitive downloads publicly.
 - Do not rename internal `v6` paths/files/API names yet.
 - Do not mix external V6 notebook/source-lock work with `new.ipynb` parity.
 - Do not reopen D1/D2/D3 preview artifacts unless Maher explicitly asks.
-- Do not commit private reference bundles, generated ZIPs, real coordinate files, or private generated artifacts.
+- Do not commit private reference bundles, generated ZIPs, or private generated artifacts.
