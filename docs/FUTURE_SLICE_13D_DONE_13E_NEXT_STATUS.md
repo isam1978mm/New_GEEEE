@@ -58,6 +58,13 @@ Why it does not move to I2:
 
 This is not `conditionally_approved_for_I2`.
 
+## Local validation
+
+```text
+[x] pytest tests/parity/test_dataset_source_review.py -q
+[x] 16 passed, 1 warning
+```
+
 ## H3/H4 status after 13D
 
 ```text
