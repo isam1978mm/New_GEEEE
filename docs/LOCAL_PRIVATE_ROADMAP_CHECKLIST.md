@@ -7,13 +7,25 @@ There is no SaaS mode, no public user workflow, and no VPS deployment planned so
 
 User-facing V6 wording should use the meaningful name `Paid Imagery Request Package`, but internal `v6` paths, filenames, and API compatibility should stay unchanged for now.
 
+## Current milestone status
+
+```text
+[x] D1 real new.ipynb reference freeze is complete.
+[x] Frozen reference bundle remains local/private and outside Git.
+[x] Real app-vs-reference inventory coverage passed: 126/126 reference names matched.
+[x] Required D1 value-parity families passed: DEM, report, private semantic, SAR/S1, PAN.
+[x] SAR/S1 recovery/build is complete for the D1 parity scope.
+[x] PAN recovery/build is complete for the D1 parity scope.
+[ ] H3/H4 dataset readiness remains blocked until an independent-evidence source passes the existing Slice 13/I1/I2 path.
+```
+
 ## Counting note
 
 This checklist has 13 unique points.
 
 `H3 training / H4 private inference` appears in both:
 
-- Not done / still open #4
+- Not done / still open #5
 - Blocked #4
 
 It is the same underlying issue, so it is counted once as unique point #5.
@@ -56,9 +68,9 @@ Plain meaning: this is mainly deployment setup. Local private operator mode is a
 - [x] Collect real `new.ipynb` output files privately.
 - [x] Keep the bundle outside Git.
 - [x] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
-- [x] Local frozen bundle finalized with 112 artifacts across 4 families.
+- [x] Local frozen bundle finalized with 126 artifacts across 5 families.
 - [x] Local manifest validation passed with `Summary: OK`.
-- [x] `git status --short` did not show ignored private reference files.
+- [x] `git status --short` did not show private reference files.
 
 Plain meaning: these private notebook outputs are now the local truth copy that the app must match.
 
@@ -72,12 +84,18 @@ Plain meaning: because the app is private and only for Maher/operator, public ex
 
 ## 5. H3 training / H4 private inference
 
-- [ ] **Status:** Blocked / biggest issue
-- [ ] Do not start real training yet.
-- [ ] Do not start real private inference yet.
-- [ ] First define or obtain an approved real dataset.
+- [ ] **Status:** Blocked / biggest remaining issue
+- [x] Reuse the existing I1/I2 readiness contract and existing `dataset_pack_readiness` validator.
+- [x] Do not create a duplicate H3/H4 contract.
+- [x] Do not create a duplicate readiness validator.
+- [ ] Do not start real H3 training yet.
+- [ ] Do not start real H4 private inference yet.
+- [ ] First obtain or define an independent-evidence source that can pass the existing Slice 13 gates.
+- [ ] Shape approved labels into the existing I1/I2 training-example schema outside Git only.
+- [ ] Run the existing dataset-pack readiness validator.
+- [ ] Require `ready_for_private_training_later` before opening H3 training.
 
-Plain meaning: no approved real dataset means no honest real ML training or private inference.
+Plain meaning: D1 proves app output reproduction. H3/H4 still need approved independent evidence; app candidates or D1 layers alone are not training truth.
 
 ## 6. D1 real new.ipynb reference freeze
 
@@ -91,40 +109,42 @@ Plain meaning: no approved real dataset means no honest real ML training or priv
 - [x] Freeze the real `new.ipynb` outputs as the official private notebook baseline.
 - [x] Keep the frozen reference outside Git.
 - [x] Use this as the baseline for later parity checks.
-- [x] Finalized local manifest with 112 artifact paths across 4 families.
+- [x] Finalized local manifest with 126 artifact paths across 5 families.
 - [x] Strict manifest validation passed with `Summary: OK`.
-- [x] `git status --short` did not show ignored private reference files.
+- [x] `git status --short` did not show private reference files.
 
-Current status: D1 local private baseline is frozen outside Git. Parity is still not fully proven for SAR/PAN, but DEM, report, and private semantic secret layers are now proven.
+Current status: D1 local private baseline is frozen outside Git and the required app parity families have passed against it.
 
 Plain meaning: the exact private notebook outputs are now the official local reference bundle.
 
 ## 7. DEM/report/private semantic/SAR/PAN parity verification
 
-- [ ] **Status:** DEM, report, and private semantic value parity passed / SAR-PAN remain separate
-- [x] Do not claim final parity until verifier tests pass.
+- [x] **Status:** Done for the required D1 value-parity families
+- [x] Do not claim byte-for-byte parity for every manifest artifact.
 - [x] Compare app outputs against frozen notebook outputs.
 - [x] Add DEM value parity wrapper: `scripts/d1_compare_dem_value_parity.py`.
 - [x] Add unit coverage for DEM value parity wrapper.
-- [x] Local DEM value comparator tests: 4 passed, 1 pytest cache warning.
+- [x] Local DEM value comparator tests passed.
 - [x] Run DEM value parity locally.
 - [x] DEM value parity status: passed.
-- [x] DEM summary: pass_count 4, fail_count 0, missing_count 0, dem_matches True.
 - [x] Add report value parity wrapper: `scripts/d1_compare_report_value_parity.py`.
 - [x] Add unit coverage for report value parity wrapper.
-- [x] Local report value comparator tests: 4 passed, 1 pytest cache warning.
-- [x] Re-finalized D1 after adding report outputs: 112 artifacts, 4 families.
 - [x] Run report value parity locally.
 - [x] Report value parity status: passed.
-- [x] Report summary: pass_count 3, fail_count 0, missing_count 0.
 - [x] Add private semantic value parity wrapper.
-- [x] Align private semantic expected outputs to secret-layer contract.
+- [x] Align private semantic expected outputs to the secret-layer contract.
 - [x] Run private semantic value parity locally.
 - [x] Private semantic value parity status: passed.
-- [x] Private semantic summary: expected_count 6, pass_count 6, fail_count 0, missing_count 0.
-- [ ] Verify SAR/PAN outputs only after their expected contracts are clear.
+- [x] Recover and capture SAR/S1 expected outputs privately.
+- [x] Export matching app-side SAR/S1 notebook-compatible outputs.
+- [x] Run SAR/S1 parity locally.
+- [x] SAR/S1 value parity status: passed.
+- [x] Recover and capture PAN expected outputs privately.
+- [x] Export matching app-side PAN notebook-compatible outputs.
+- [x] Run PAN parity locally.
+- [x] PAN value parity status: passed.
 
-Plain meaning: DEM, report, and private semantic secret-layer value parity are proven for the frozen local D1 baseline. SAR and PAN are still separate recovery/build tracks.
+Plain meaning: DEM, report, private semantic secret layers, SAR/S1, and PAN are proven for the frozen local D1 baseline. This does not assert byte-for-byte parity for every one of the 126 manifest artifacts.
 
 ---
 
@@ -149,56 +169,63 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ---
 
-# Blocked
+# Completed after D1 parity closeout
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** DEM/report/private semantic passed / SAR-PAN remain separate
+- [x] **Status:** Done for the D1 accepted scope
 - [x] Start only after the frozen `new.ipynb` reference exists.
 - [x] Add safe inventory comparator: `scripts/d1_compare_app_reference_inventory.py`.
 - [x] Add unit coverage for the inventory comparator.
 - [x] Add operator steps: `docs/REAL_APP_VS_REFERENCE_PARITY_OPERATOR_STEPS.md`.
-- [x] Local inventory comparator tests: 3 passed, 1 pytest cache warning.
+- [x] Local inventory comparator tests passed.
 - [x] Local inventory comparison against the frozen D1 manifest passed.
-- [x] Inventory summary: 109 reference artifacts before report recovery, then 112 after report recovery.
-- [x] Add DEM value parity wrapper and tests.
-- [x] Run DEM value parity locally.
-- [x] DEM value parity passed: 4 passed artifacts, 0 failed, 0 missing, DEM matched.
-- [x] Add report value parity wrapper and tests.
-- [x] Run report value parity locally.
-- [x] Report value parity passed: 3 passed outputs, 0 failed, 0 missing.
-- [x] Add private semantic value parity wrapper.
-- [x] Align private semantic wrapper to secret-layer contract.
-- [x] Run private semantic value parity locally.
-- [x] Private semantic value parity passed: 6 passed outputs, 0 failed, 0 missing.
-- [ ] Then prove remaining app-generated outputs match the notebook reference with tests/verifiers.
+- [x] Inventory summary: 126 reference artifacts, 126 matched reference names, 0 missing reference names.
+- [x] Required value parity passed for DEM, report, private semantic, SAR/S1, and PAN.
 
-Plain meaning: inventory bridge plus DEM, report, and private semantic value parity passed. SAR and PAN are still separate recovery/build tracks.
+Plain meaning: the app run contains all 126 reference filenames, and the required D1 value-parity families passed. This is not a claim of byte-for-byte parity for every artifact.
 
 ## 11. SAR/S1 recovery/build
 
-- [ ] **Status:** Blocked until exact radar source recovery
-- [ ] Do not guess SAR/S1 outputs.
-- [ ] Recover exact Sentinel-1 inputs, dates, bands, filters, grid, metadata, writer paths, and expected output files first.
+- [x] **Status:** Done for the D1 parity scope
+- [x] Do not guess SAR/S1 outputs.
+- [x] Recover exact Sentinel-1 expected output contract before building.
+- [x] Capture expected SAR/S1 reference outputs privately.
+- [x] Export matching app-side SAR/S1 notebook-compatible outputs.
+- [x] Run SAR/S1 contract readiness check.
+- [x] Run SAR/S1 value parity.
+- [x] SAR/S1 value parity passed.
 
-Plain meaning: the app must reproduce the notebook radar outputs, but only after the exact source/output contract is known.
+Plain meaning: the app reproduced the notebook-compatible SAR/S1 outputs needed for D1 parity without changing production SAR math.
 
 ## 12. PAN recovery/build
 
-- [ ] **Status:** Blocked / big issue
-- [ ] Recover exact PAN/optical notebook output expectations.
-- [ ] Build the matching app writer/recovery path only after the expected output is clear.
-- [ ] Verify against frozen references later.
+- [x] **Status:** Done for the D1 parity scope
+- [x] Recover exact PAN/optical notebook output expectations.
+- [x] Capture expected PAN reference outputs privately.
+- [x] Build the matching app writer/recovery path only after the expected output is clear.
+- [x] Export matching app-side PAN notebook-compatible outputs.
+- [x] Run PAN component parity.
+- [x] Run PAN stack parity.
+- [x] PAN value parity passed.
 
-Plain meaning: the app still needs to reproduce the notebook PAN/optical outputs. This is one of the larger technical gaps.
+Plain meaning: the app reproduced the notebook-compatible PAN outputs needed for D1 parity without aliasing unrelated optical outputs.
+
+---
+
+# Blocked
 
 ## Blocked #4. H3/H4
 
 - [ ] **Status:** Same blocker as point #5, not a new unique point
-- [ ] Treat as the same issue as `H3 training / H4 private inference`.
-- [ ] Solve dataset readiness first.
+- [x] Treat as the same issue as `H3 training / H4 private inference`.
+- [x] Reuse the existing I1/I2 contract and dataset-pack readiness validator.
+- [ ] Complete the existing Slice 13 source-review path.
+- [ ] Review the second known lead through the six gates.
+- [ ] Close out Slice 13 by either routing one passing source to later I2 assembly or recording that all known leads are rejected/deferred.
+- [ ] Do not start training or inference until the existing validator allows it.
 
-Plain meaning: this is the same real ML blocker. No approved real dataset means no real training and no private inference.
+Plain meaning: this is the same real ML blocker. No approved independent-evidence source means no real training and no private inference.
 
 ## 13. Public location-bearing downloads
 
@@ -216,10 +243,10 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 - [x] 1. V6 names correction.
 - [x] 2. D1 real `new.ipynb` reference freeze.
 - [x] 3. Frozen `new.ipynb` reference bundle outside Git.
-- [ ] 4. Real app-vs-reference parity.
-- [ ] 5. DEM/report/private semantic/SAR/PAN parity verification.
-- [ ] 6. PAN recovery/build.
-- [ ] 7. SAR/S1 recovery/build.
+- [x] 4. Real app-vs-reference parity for the D1 accepted scope.
+- [x] 5. DEM/report/private semantic/SAR/PAN parity verification.
+- [x] 6. PAN recovery/build.
+- [x] 7. SAR/S1 recovery/build.
 - [ ] 8. H3/H4 dataset readiness.
 - [ ] 9. VPS/private operator auth activation later.
 - [ ] 10. Public overlay exposure review future-only.
@@ -239,3 +266,6 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 - Do not mix external V6 notebook/source-lock work with `new.ipynb` parity.
 - Do not reopen D1/D2/D3 private preview artifacts unless Maher explicitly asks.
 - Do not commit private reference bundles, generated ZIPs, or private generated artifacts.
+- Do not create a duplicate H3/H4 dataset-readiness contract.
+- Do not create a duplicate H3/H4 readiness validator.
+- Do not start H3 training or H4 private inference until the existing readiness validator allows it.
