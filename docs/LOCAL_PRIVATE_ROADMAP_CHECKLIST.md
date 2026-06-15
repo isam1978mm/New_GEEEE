@@ -52,12 +52,15 @@ Plain meaning: this is mainly deployment setup. Local private operator mode is a
 
 ## 3. Frozen new.ipynb reference bundle outside Git
 
-- [ ] **Status:** Open / high priority after D1 freeze
-- [ ] Collect real `new.ipynb` output files privately.
-- [ ] Keep the bundle outside Git.
-- [ ] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
+- [x] **Status:** Done as part of D1 local freeze
+- [x] Collect real `new.ipynb` output files privately.
+- [x] Keep the bundle outside Git.
+- [x] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
+- [x] Local frozen bundle finalized with 109 artifacts across 4 families.
+- [x] Local manifest validation passed with `Summary: OK`.
+- [x] `git status --short` did not show `data/private_references/` files.
 
-Plain meaning: these private notebook outputs become the truth copy that the app must match.
+Plain meaning: these private notebook outputs are now the local truth copy that the app must match.
 
 ## 4. Public overlay exposure review
 
@@ -78,32 +81,35 @@ Plain meaning: no approved real dataset means no honest real ML training or priv
 
 ## 6. D1 real new.ipynb reference freeze
 
-- [ ] **Status:** Local skeleton + finalizer ready / waiting for real notebook outputs
+- [x] **Status:** Done / local private reference frozen outside Git
 - [x] Add local bundle initializer: `scripts/d1_init_reference_bundle.py`.
 - [x] Add local bundle finalizer: `scripts/d1_finalize_reference_bundle.py`.
 - [x] Add operator steps: `docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md`.
 - [x] Add unit coverage for the local bundle initializer/finalizer.
-- [x] Local validation: D1 initializer and manifest validator tests -> 27 passed, 1 pytest cache warning.
+- [x] Local validation: D1 initializer/finalizer/manifest tests -> 30 passed, 1 pytest cache warning.
 - [x] Local bundle skeleton created at `data/private_references/notebook_frozen/new_ipynb_d1_20260615_local`.
-- [ ] Freeze the real `new.ipynb` outputs as the official private notebook baseline.
-- [ ] Keep the frozen reference outside Git.
-- [ ] Use this as the baseline for later parity checks.
+- [x] Freeze the real `new.ipynb` outputs as the official private notebook baseline.
+- [x] Keep the frozen reference outside Git.
+- [x] Use this as the baseline for later parity checks.
+- [x] Finalized `manifest.local.json` with 109 artifact paths across 4 families.
+- [x] Strict manifest validation passed with `Summary: OK`.
+- [x] `git status --short` did not show `data/private_references/` files.
 
-Current status: repo-side helper, finalizer, and local skeleton are ready. The actual private freeze still requires placing real notebook outputs locally under the outside-Git bundle and creating `manifest.local.json`.
+Current status: D1 local private baseline is frozen outside Git. Parity is still not proven; the next work is app-vs-reference parity against this frozen baseline.
 
-Plain meaning: decide which exact private notebook outputs are the official reference.
+Plain meaning: the exact private notebook outputs are now the official local reference bundle.
 
 ## 7. DEM/report/private semantic/SAR/PAN parity verification
 
-- [ ] **Status:** Blocked until D1 freeze
-- [ ] Do not attempt final parity verification before D1 freeze exists.
-- [ ] After D1 freeze, compare app outputs against frozen notebook outputs.
+- [ ] **Status:** Unblocked by D1 freeze / next after app-vs-reference setup
+- [ ] Do not claim final parity until verifier tests pass.
+- [ ] Compare app outputs against frozen notebook outputs.
 - [ ] Verify DEM outputs.
 - [ ] Verify report outputs.
 - [ ] Verify private semantic outputs.
 - [ ] Verify SAR/PAN outputs only after their expected contracts are clear.
 
-Plain meaning: the app cannot prove it matches the notebook until the frozen notebook reference exists.
+Plain meaning: the app can now start proving it matches the notebook, but the proof still has to be implemented and pass.
 
 ---
 
@@ -132,15 +138,15 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** Blocked until D1 freeze
+- [ ] **Status:** Unblocked by D1 freeze / next major work
 - [ ] Start only after the frozen `new.ipynb` reference exists.
 - [ ] Then prove the app-generated outputs match the notebook reference with tests/verifiers.
 
-Plain meaning: D1 freeze unlocks this work, but tests still need to prove the match.
+Plain meaning: D1 freeze is done, so this is now the next major work, but tests still need to prove the match.
 
 ## 11. SAR/S1 recovery/build
 
-- [ ] **Status:** Blocked until D1 freeze + exact radar source recovery
+- [ ] **Status:** Blocked until exact radar source recovery
 - [ ] Do not guess SAR/S1 outputs.
 - [ ] Recover exact Sentinel-1 inputs, dates, bands, filters, grid, metadata, writer paths, and expected output files first.
 
@@ -177,8 +183,8 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 # Immediate order
 
 - [x] 1. V6 names correction.
-- [ ] 2. D1 real `new.ipynb` reference freeze.
-- [ ] 3. Frozen `new.ipynb` reference bundle outside Git.
+- [x] 2. D1 real `new.ipynb` reference freeze.
+- [x] 3. Frozen `new.ipynb` reference bundle outside Git.
 - [ ] 4. Real app-vs-reference parity.
 - [ ] 5. DEM/report/private semantic/SAR/PAN parity verification.
 - [ ] 6. PAN recovery/build.
@@ -200,5 +206,5 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 - Do not expose sensitive downloads publicly.
 - Do not rename internal `v6` paths/files/API names yet.
 - Do not mix external V6 notebook/source-lock work with `new.ipynb` parity.
-- Do not reopen D1/D2/D3 preview artifacts unless Maher explicitly asks.
+- Do not reopen D1/D2/D3 private preview artifacts unless Maher explicitly asks.
 - Do not commit private reference bundles, generated ZIPs, or private generated artifacts.
