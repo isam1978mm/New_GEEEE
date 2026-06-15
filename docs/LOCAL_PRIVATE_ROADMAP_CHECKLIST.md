@@ -138,11 +138,15 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** Unblocked by D1 freeze / next major work
-- [ ] Start only after the frozen `new.ipynb` reference exists.
+- [ ] **Status:** Inventory bridge ready / local run required
+- [x] Start only after the frozen `new.ipynb` reference exists.
+- [x] Add safe inventory comparator: `scripts/d1_compare_app_reference_inventory.py`.
+- [x] Add unit coverage for the inventory comparator.
+- [x] Add operator steps: `docs/REAL_APP_VS_REFERENCE_PARITY_OPERATOR_STEPS.md`.
+- [ ] Run local inventory comparison against the frozen D1 manifest.
 - [ ] Then prove the app-generated outputs match the notebook reference with tests/verifiers.
 
-Plain meaning: D1 freeze is done, so this is now the next major work, but tests still need to prove the match.
+Plain meaning: D1 freeze is done and an inventory bridge exists. This is not final parity; verifier-backed comparisons still need to pass.
 
 ## 11. SAR/S1 recovery/build
 
