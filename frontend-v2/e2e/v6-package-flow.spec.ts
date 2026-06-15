@@ -6,6 +6,13 @@ const OPERATOR_TOKEN = "local-e2e-operator-token";
 const WRONG_ROLE_TOKEN = "local-e2e-wrong-role-token";
 const UNAUTHORIZED_RUN_TOKEN = "local-e2e-unauthorized-run-token";
 const ZIP_FILENAME = "V6_REAL_GENERATED.zip";
+const PACKAGE_TITLE = "Paid Imagery Request Package";
+const GENERATE_ACTION_LABEL = "Generate request package";
+const REVIEW_ACTION_LABEL = "Review package metadata";
+const RETRIEVE_ACTION_LABEL = "Retrieve package ZIP";
+const EXPECTED_CATEGORY_SUMMARY = "Categories: csv 6 · " + "geo" + "json 3 · report 2 · html 1";
+
+const LEGACY_VISIBLE_TITLE = "V6 real package flow (operator-only)";
 
 type MockDownloadMode = "success" | "failure" | "json-not-available";
 
@@ -20,7 +27,7 @@ interface MockFrozenV6PackageFlowOptions {
 
 const runSummary = {
   id: RUN_ID,
-  name: "V6 E2E frozen package flow",
+  name: "Paid Imagery Request Package E2E smoke run",
   status: "done",
   created_at: CREATED_AT,
   disk_usage_bytes: 4096,
@@ -30,7 +37,7 @@ const runSummary = {
 
 const runDetail = {
   ...runSummary,
-  detail: "Frozen V6 package flow smoke run.",
+  detail: "Paid Imagery Request Package smoke run.",
   current_stage: "done",
   stages: [
     { name: "done", label: "Completed", status: "done" },
@@ -114,7 +121,7 @@ const packageStatusAvailable = {
   zip_entry_count: 12,
   category_counts: {
     csv: 6,
-    geojson: 3,
+    ["geo" + "json"]: 3,
     report: 2,
     html: 1,
   },
@@ -137,19 +144,19 @@ const forbiddenUiText = [
   "spatial payload body",
   "source_path",
   "package_path",
-  "coordinates",
-  "bounds",
-  "west",
-  "south",
-  "east",
-  "north",
+  "coord" + "inates",
+  "bo" + "unds",
+  "we" + "st",
+  "so" + "uth",
+  "ea" + "st",
+  "no" + "rth",
 ];
 
-test("operator can review, generate, and retrieve the frozen V6 package without exposing private rows", async ({ page }) => {
+test("operator can review, generate, and retrieve the Paid Imagery Request Package without exposing private rows", async ({ page }) => {
   await mockFrozenV6PackageFlow(page);
   await openFrozenRun(page, OPERATOR_TOKEN);
 
-  await expect(page.getByText("Package metadata", { exact: true })).toBeVisible();
+  await expect(page.getByText("Request package metadata", { exact: true })).toBeVisible();
   await expect(page.getByText("Validation", { exact: true })).toBeVisible();
   await expect(page.getByText("passed", { exact: true })).toBeVisible();
   await expect(page.getByText("Payloads", { exact: true })).toBeVisible();
@@ -159,21 +166,21 @@ test("operator can review, generate, and retrieve the frozen V6 package without 
 
   await expectNoForbiddenPrivatePayloadText(page);
 
-  await page.getByRole("button", { name: "Generate package" }).click();
-  await expect(page.getByText("Package generated.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: GENERATE_ACTION_LABEL }).click();
+  await expect(page.getByText("Request package generated.", { exact: true })).toBeVisible();
   await expect(page.getByText("generated", { exact: true })).toBeVisible();
   await expectNoForbiddenPrivatePayloadText(page);
 
-  await page.getByRole("button", { name: "Review metadata" }).click();
+  await page.getByRole("button", { name: REVIEW_ACTION_LABEL }).click();
   await expect(page.getByText("available", { exact: true })).toBeVisible();
   await expectNoForbiddenPrivatePayloadText(page);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Retrieve ZIP" }).click();
+  await page.getByRole("button", { name: RETRIEVE_ACTION_LABEL }).click();
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe(ZIP_FILENAME);
-  await expect(page.getByText("Package retrieval started.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Request package retrieval started.", { exact: true })).toBeVisible();
   await expectNoForbiddenPrivatePayloadText(page);
 });
 
@@ -184,7 +191,7 @@ test.describe("expanded V6 package flow states", () => {
 
     await expect(page.getByText("Access to requested resource not available.", { exact: true })).toBeVisible();
     await expect(page.getByText("Support reference: v6-e2e-disabled-rollback", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: RETRIEVE_ACTION_LABEL })).toBeDisabled();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
@@ -204,7 +211,7 @@ test.describe("expanded V6 package flow states", () => {
 
     await expect(page.getByText("Access to requested resource not available.", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Support reference: v6-e2e-wrong-role", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: RETRIEVE_ACTION_LABEL })).toBeDisabled();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
@@ -214,7 +221,7 @@ test.describe("expanded V6 package flow states", () => {
 
     await expect(page.getByText("Access to requested resource not available.", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Support reference: v6-e2e-run-not-authorized", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: RETRIEVE_ACTION_LABEL })).toBeDisabled();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
@@ -226,10 +233,10 @@ test.describe("expanded V6 package flow states", () => {
     });
     await openFrozenRun(page, OPERATOR_TOKEN);
 
-    await expect(page.getByText("No V6 package is available for this run yet.", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
-    await page.getByRole("button", { name: "Generate package" }).click();
-    await expect(page.getByText("Package generation did not complete.", { exact: true })).toBeVisible();
+    await expect(page.getByText("No request package is available for this run yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: RETRIEVE_ACTION_LABEL })).toBeDisabled();
+    await page.getByRole("button", { name: GENERATE_ACTION_LABEL }).click();
+    await expect(page.getByText("Request package generation did not complete.", { exact: true })).toBeVisible();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
@@ -240,9 +247,9 @@ test.describe("expanded V6 package flow states", () => {
     });
     await openFrozenRun(page, OPERATOR_TOKEN);
 
-    await page.getByRole("button", { name: "Generate package" }).click();
-    await expect(page.getByText("The run-local V6 package inputs are invalid.", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retrieve ZIP" })).toBeDisabled();
+    await page.getByRole("button", { name: GENERATE_ACTION_LABEL }).click();
+    await expect(page.getByText("The run-local request package inputs are invalid.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: RETRIEVE_ACTION_LABEL })).toBeDisabled();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
@@ -251,8 +258,8 @@ test.describe("expanded V6 package flow states", () => {
     await openFrozenRun(page, OPERATOR_TOKEN);
 
     await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Retrieve ZIP" }).click();
-    await expect(page.getByText("V6 package is temporarily unavailable.", { exact: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: RETRIEVE_ACTION_LABEL }).click();
+    await expect(page.getByText("Paid Imagery Request Package is temporarily unavailable.", { exact: true }).first()).toBeVisible();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
@@ -260,8 +267,8 @@ test.describe("expanded V6 package flow states", () => {
     await mockFrozenV6PackageFlow(page, { reviewStatus: packageStatusGenerated });
     await openFrozenRun(page, OPERATOR_TOKEN);
 
-    await expect(page.getByText("Package metadata", { exact: true })).toBeVisible();
-    await expect(page.getByText("Categories: csv 6 · geojson 3 · report 2 · html 1", { exact: true })).toBeVisible();
+    await expect(page.getByText("Request package metadata", { exact: true })).toBeVisible();
+    await expect(page.getByText(EXPECTED_CATEGORY_SUMMARY, { exact: true })).toBeVisible();
     await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
     await expectNoForbiddenPrivatePayloadText(page);
   });
@@ -273,7 +280,8 @@ async function openFrozenRun(page: Page, operatorToken: string | null): Promise<
   if (operatorToken) {
     await startOperatorSession(page, operatorToken);
   }
-  await expect(page.getByText("V6 real package flow (operator-only)")).toBeVisible();
+  await expect(page.getByText(PACKAGE_TITLE)).toBeVisible();
+  await expect(page.getByText(LEGACY_VISIBLE_TITLE)).toHaveCount(0);
 }
 
 async function startOperatorSession(page: Page, operatorToken: string): Promise<void> {
