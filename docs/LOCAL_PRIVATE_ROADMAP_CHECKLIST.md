@@ -56,9 +56,9 @@ Plain meaning: this is mainly deployment setup. Local private operator mode is a
 - [x] Collect real `new.ipynb` output files privately.
 - [x] Keep the bundle outside Git.
 - [x] Do not commit real reference files, generated artifacts, ZIP contents, or private payloads.
-- [x] Local frozen bundle finalized with 109 artifacts across 4 families.
+- [x] Local frozen bundle finalized with 112 artifacts across 4 families.
 - [x] Local manifest validation passed with `Summary: OK`.
-- [x] `git status --short` did not show `data/private_references/` files.
+- [x] `git status --short` did not show ignored private reference files.
 
 Plain meaning: these private notebook outputs are now the local truth copy that the app must match.
 
@@ -87,21 +87,21 @@ Plain meaning: no approved real dataset means no honest real ML training or priv
 - [x] Add operator steps: `docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md`.
 - [x] Add unit coverage for the local bundle initializer/finalizer.
 - [x] Local validation: D1 initializer/finalizer/manifest tests -> 30 passed, 1 pytest cache warning.
-- [x] Local bundle skeleton created at `data/private_references/notebook_frozen/new_ipynb_d1_20260615_local`.
+- [x] Local bundle skeleton created.
 - [x] Freeze the real `new.ipynb` outputs as the official private notebook baseline.
 - [x] Keep the frozen reference outside Git.
 - [x] Use this as the baseline for later parity checks.
-- [x] Finalized `manifest.local.json` with 109 artifact paths across 4 families.
+- [x] Finalized local manifest with 112 artifact paths across 4 families.
 - [x] Strict manifest validation passed with `Summary: OK`.
-- [x] `git status --short` did not show `data/private_references/` files.
+- [x] `git status --short` did not show ignored private reference files.
 
-Current status: D1 local private baseline is frozen outside Git. Parity is still not fully proven; DEM is now proven and remaining families still need verifier-backed checks.
+Current status: D1 local private baseline is frozen outside Git. Parity is still not fully proven; DEM and report are now proven and remaining families still need verifier-backed checks or recovery mapping.
 
 Plain meaning: the exact private notebook outputs are now the official local reference bundle.
 
 ## 7. DEM/report/private semantic/SAR/PAN parity verification
 
-- [ ] **Status:** Report value parity ready for local run / DEM passed
+- [ ] **Status:** DEM and report value parity passed / private semantic blocked by missing expected names
 - [x] Do not claim final parity until verifier tests pass.
 - [x] Compare app outputs against frozen notebook outputs.
 - [x] Add DEM value parity wrapper: `scripts/d1_compare_dem_value_parity.py`.
@@ -112,11 +112,15 @@ Plain meaning: the exact private notebook outputs are now the official local ref
 - [x] DEM summary: pass_count 4, fail_count 0, missing_count 0, dem_matches True.
 - [x] Add report value parity wrapper: `scripts/d1_compare_report_value_parity.py`.
 - [x] Add unit coverage for report value parity wrapper.
-- [ ] Run report value parity locally.
-- [ ] Verify private semantic outputs.
+- [x] Local report value comparator tests: 4 passed, 1 pytest cache warning.
+- [x] Re-finalized D1 after adding report outputs: 112 artifacts, 4 families.
+- [x] Run report value parity locally.
+- [x] Report value parity status: passed.
+- [x] Report summary: pass_count 3, fail_count 0, missing_count 0.
+- [ ] Private semantic expected names are missing on both app and reference sides; needs contract/recovery mapping.
 - [ ] Verify SAR/PAN outputs only after their expected contracts are clear.
 
-Plain meaning: DEM value parity is proven for the frozen local D1 baseline. Report value parity is ready to run. Full notebook parity is still not proven.
+Plain meaning: DEM and report value parity are proven for the frozen local D1 baseline. Private semantic is not a value mismatch; its expected filenames are missing and need mapping/recovery.
 
 ---
 
@@ -145,22 +149,25 @@ Plain meaning: V6 app package flow is working, but external V6 notebook/source-l
 
 ## 10. Real app-vs-reference parity
 
-- [ ] **Status:** DEM value parity passed / report value parity ready for local run
+- [ ] **Status:** DEM and report value parity passed / private semantic mapping needed
 - [x] Start only after the frozen `new.ipynb` reference exists.
 - [x] Add safe inventory comparator: `scripts/d1_compare_app_reference_inventory.py`.
 - [x] Add unit coverage for the inventory comparator.
 - [x] Add operator steps: `docs/REAL_APP_VS_REFERENCE_PARITY_OPERATOR_STEPS.md`.
 - [x] Local inventory comparator tests: 3 passed, 1 pytest cache warning.
 - [x] Local inventory comparison against the frozen D1 manifest passed.
-- [x] Inventory summary: 109 reference artifacts, 449 app files, 109 matched reference names, 0 missing reference names.
+- [x] Inventory summary: 109 reference artifacts before report recovery, then 112 after report recovery.
 - [x] Add DEM value parity wrapper and tests.
 - [x] Run DEM value parity locally.
 - [x] DEM value parity passed: 4 passed artifacts, 0 failed, 0 missing, DEM matched.
 - [x] Add report value parity wrapper and tests.
-- [ ] Run report value parity locally.
+- [x] Run report value parity locally.
+- [x] Report value parity passed: 3 passed outputs, 0 failed, 0 missing.
+- [x] Add private semantic value parity wrapper.
+- [ ] Private semantic value parity incomplete: expected names missing on both sides.
 - [ ] Then prove remaining app-generated outputs match the notebook reference with tests/verifiers.
 
-Plain meaning: inventory bridge and DEM value parity passed. Report value parity is ready to run. This is not final parity; remaining verifier-backed value comparisons still need to pass.
+Plain meaning: inventory bridge, DEM value parity, and report value parity passed. Private semantic is blocked by contract mapping, not by a value mismatch.
 
 ## 11. SAR/S1 recovery/build
 
