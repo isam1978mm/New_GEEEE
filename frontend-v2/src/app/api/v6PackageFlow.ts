@@ -89,6 +89,10 @@ async function requestV6PackageStatus(url: string, fallbackRunId: string, init?:
       return mapV6PackageStatus(payload, fallbackRunId, "denied");
     }
     if (!response.ok) {
+      const mapped = mapV6PackageStatus(payload, fallbackRunId);
+      if (mapped.outcome === "invalid_package_inputs") {
+        return mapped;
+      }
       return errorStatus(fallbackRunId, "V6 package status is temporarily unavailable.");
     }
     return mapV6PackageStatus(payload, fallbackRunId);
