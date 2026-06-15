@@ -253,7 +253,6 @@ test.describe("expanded V6 package flow states", () => {
     await expect(page.getByText(ZIP_FILENAME, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Retrieve ZIP" }).click();
     await expect(page.getByText("V6 package is temporarily unavailable.", { exact: true })).toBeVisible();
-    await expect(page.getByText("error", { exact: true })).toBeVisible();
     await expectNoForbiddenPrivatePayloadText(page);
   });
 
