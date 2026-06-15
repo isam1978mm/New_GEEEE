@@ -78,15 +78,17 @@ Plain meaning: no approved real dataset means no honest real ML training or priv
 
 ## 6. D1 real new.ipynb reference freeze
 
-- [ ] **Status:** Operator-ready / waiting for real local outputs
+- [ ] **Status:** Local skeleton created / waiting for real notebook outputs
 - [x] Add local bundle initializer: `scripts/d1_init_reference_bundle.py`.
 - [x] Add operator steps: `docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md`.
 - [x] Add unit coverage for the local bundle initializer.
+- [x] Local validation: D1 initializer and manifest validator tests -> 27 passed, 1 pytest cache warning.
+- [x] Local bundle skeleton created at `data/private_references/notebook_frozen/new_ipynb_d1_20260615_local`.
 - [ ] Freeze the real `new.ipynb` outputs as the official private notebook baseline.
 - [ ] Keep the frozen reference outside Git.
 - [ ] Use this as the baseline for later parity checks.
 
-Current status: repo-side helper and instructions are ready. The actual private freeze still requires placing real notebook outputs locally under the outside-Git bundle.
+Current status: repo-side helper and local skeleton are ready. The actual private freeze still requires placing real notebook outputs locally under the outside-Git bundle and creating `manifest.local.json`.
 
 Plain meaning: decide which exact private notebook outputs are the official reference.
 
