@@ -59,6 +59,39 @@ Allowed values should be plain text summaries only.
 
 Do not include raw records or source payload content.
 
+## Completed metadata-only answer
+
+This answer is completed only at source-family metadata level. It does not approve C01 for I2.
+
+```text
+candidate_id: unosat_unitar_ch_damage_assessments
+source_collection_or_item: UNITAR-UNOSAT / UNESCO cultural-heritage monitoring and damage-assessment source family; exact item/subset not selected yet.
+source_reference_or_doi: UNITAR UNOSAT official page and UNITAR news page for UNOSAT/UNESCO cultural heritage monitoring in Ukraine; no DOI identified for the exact reviewed subset.
+source_owner_or_authority: UNITAR-UNOSAT / UNESCO collaboration; Ukrainian heritage professionals and authorities appear as stakeholders for the Ukraine training/monitoring context.
+access_status: public_metadata_only
+permission_or_dua_status: unknown
+license_or_terms_summary: source-family public pages are readable, but source-specific data license, reuse terms, derivative-output rights, and ML training permission are not established. Do not assume HDX or public page terms apply to a future item-level source subset.
+evidence_type: authoritative_external / expert_adjudicated_independent candidate, but not yet proven at item level.
+who_created_assessment: unknown for the exact future I2 subset. Public metadata supports UNOSAT/UNESCO involvement in cultural-heritage monitoring and damage-assessment training, but does not identify a specific reviewed label set for I2.
+how_assessment_was_created: source-family metadata says satellite imagery and geospatial technologies are used for heritage documentation, damage assessment, and environmental monitoring. Exact item-level assessment workflow is unknown.
+expert_review_or_adjudication: unknown at item level.
+evidence_independence_summary: promising but not sufficient. UNOSAT is external to this project and provides satellite analysis for UN agencies and Member States, but item-level independence from the project feature stack and label process still must be proven.
+sensitivity_risk_summary: medium-high. Cultural-heritage monitoring/damage assessment can become location-bearing and must be handled as sensitive unless a safe redacted subset is explicitly approved.
+redaction_plan_summary: not yet approved. Later review must define a safe subset, neutral labels, private-only storage, and public summaries that omit sensitive location-bearing details.
+intended_neutral_label_mapping: TODO after exact source subset is selected; use neutral class names only.
+allowed_private_training_use: unknown
+allowed_derivative_outputs: unknown
+notes: Metadata supports keeping C01 as the strongest positive-candidate family, but it does not satisfy the six gates. C01 must be re-reviewed after exact source subset, terms, method, redaction, and neutral label mapping are known.
+```
+
+Public metadata basis:
+
+```text
+- UNITAR describes UNOSAT as providing satellite analysis, training, and capacity development to UN funds, programmes, specialized agencies, and Member States.
+- UNITAR describes UNOSAT's mission as evidence-based decision making for peace, security, and resilience using geospatial information technologies.
+- UNITAR reports that UNOSAT and UNESCO conducted cultural and natural heritage monitoring training in Ukraine with sessions on heritage documentation, damage assessment, environmental monitoring, mapping archaeological sites, physical-damage assessment, flood/fire detection, and ground reporting.
+```
+
 ## Gate 1 — Sensitivity / misuse information needed
 
 C01 cannot pass Gate 1 until the operator confirms:
@@ -153,36 +186,9 @@ C01 cannot pass Gate 6 until the operator confirms:
 [ ] the existing dataset_pack_readiness validator can be run later on the private pack
 ```
 
-## Operator answer template
-
-Use this template when responding:
-
-```text
-C01 operator/source-specific answer
-
-candidate_id: unosat_unitar_ch_damage_assessments
-source_collection_or_item:
-source_reference_or_doi:
-source_owner_or_authority:
-access_status: public_metadata_only | public_payload_allowed | restricted_access | operator_owned | unknown
-permission_or_dua_status: not_needed | needed_not_obtained | obtained | unknown
-license_or_terms_summary:
-evidence_type: field_validation | authoritative_external | expert_adjudicated_independent | independently_produced_reference | weak_signal_only | unknown
-who_created_assessment:
-how_assessment_was_created:
-expert_review_or_adjudication: yes | no | unknown
-evidence_independence_summary:
-sensitivity_risk_summary:
-redaction_plan_summary:
-intended_neutral_label_mapping:
-allowed_private_training_use: yes | no | unknown
-allowed_derivative_outputs:
-notes:
-```
-
 ## Decision rule after operator response
 
-After the operator provides the metadata-only answers:
+After the operator provides the missing source-specific answers:
 
 ```text
 [ ] re-review C01 through all six gates
@@ -196,6 +202,8 @@ After the operator provides the metadata-only answers:
 
 ```text
 C01: under_review
+C01 request: completed at source-family metadata level only
+C01 conditionally_approved_for_I2: false
 I2 assembly: not authorized
 H3 training: blocked
 H4 inference: blocked
