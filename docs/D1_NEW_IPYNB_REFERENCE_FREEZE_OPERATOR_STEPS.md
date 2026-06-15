@@ -2,7 +2,7 @@
 
 ## Current status
 
-D1 reference freeze is **local skeleton created, not complete**.
+D1 reference freeze is **complete locally and outside Git**.
 
 The repo has local helpers for the outside-Git D1 bundle:
 
@@ -17,39 +17,47 @@ The helpers write under the Git-ignored `data/` tree by default. They do not add
 ## Local validation recorded
 
 ```text
-python -m pytest tests/unit/test_d1_init_reference_bundle.py tests/unit/test_d1_validate_reference_manifest.py -q
+python -m pytest tests/unit/test_d1_finalize_reference_bundle.py tests/unit/test_d1_init_reference_bundle.py tests/unit/test_d1_validate_reference_manifest.py -q
 ```
 
 Result:
 
 ```text
-27 passed, 1 pytest cache warning
+30 passed, 1 pytest cache warning
 ```
 
 The warning was a local `.pytest_cache` permission warning, not a D1 test failure.
 
-## Local skeleton recorded
+## Local frozen baseline recorded
 
-The local skeleton was created at:
+The local frozen bundle exists at:
 
 ```text
 data/private_references/notebook_frozen/new_ipynb_d1_20260615_local
 ```
 
-Current local manifest state:
+Final local manifest:
 
 ```text
-manifest.local.template.json
-finalized_manifest: False
+data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/manifest.local.json
 ```
 
-This means the folder exists, but the real notebook outputs have not yet been frozen into a final `manifest.local.json`.
+Safe summary:
+
+```text
+artifact_count: 109
+family_count: 4
+strict manifest validation: Summary: OK
+git status: no data/private_references/ files shown
+```
+
+No real artifacts, artifact contents, private payloads, or final local manifest are committed.
 
 ## Checklist item from LOCAL_PRIVATE_ROADMAP_CHECKLIST.md
 
 ```text
 6. D1 real new.ipynb reference freeze
-Status: Local skeleton created / waiting for real notebook outputs
+Status: Done / local private reference frozen outside Git
 ```
 
 ## Checklist of the item
@@ -59,14 +67,19 @@ Status: Local skeleton created / waiting for real notebook outputs
 [x] Add local bundle finalizer: scripts/d1_finalize_reference_bundle.py.
 [x] Add operator steps: docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md.
 [x] Add unit coverage for the local bundle initializer/finalizer.
-[x] Local validation: D1 initializer and manifest validator tests -> 27 passed, 1 pytest cache warning.
+[x] Local validation: D1 initializer/finalizer/manifest tests -> 30 passed, 1 pytest cache warning.
 [x] Local bundle skeleton created.
-[ ] Freeze the real new.ipynb outputs as the official private notebook baseline.
-[ ] Keep the frozen reference outside Git.
-[ ] Use this as the baseline for later parity checks.
+[x] Freeze the real new.ipynb outputs as the official private notebook baseline.
+[x] Keep the frozen reference outside Git.
+[x] Use this as the baseline for later parity checks.
+[x] Finalized manifest.local.json with 109 artifact paths across 4 families.
+[x] Strict manifest validation passed with Summary: OK.
+[x] git status --short did not show data/private_references/ files.
 ```
 
-## Step 1 — create the local bundle skeleton
+## Completed steps
+
+### Step 1 — create the local bundle skeleton
 
 Done.
 
@@ -81,56 +94,43 @@ python scripts/d1_init_reference_bundle.py `
   --operator Maher
 ```
 
-Output:
+### Step 2 — place real notebook outputs locally
 
-```text
-OK: D1 local reference bundle skeleton created
-bundle_root: data/private_references/notebook_frozen/new_ipynb_d1_20260615_local
-manifest_path: data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/manifest.local.template.json
-finalized_manifest: False
-```
+Done.
 
-## Step 2 — place real notebook outputs locally
-
-Place real `new.ipynb` outputs under:
+The real notebook output files were copied under:
 
 ```text
 data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/artifacts/
 ```
 
-Suggested family folders:
+### Step 3 — create the final local manifest automatically
 
-```text
-artifacts/dem/
-artifacts/report/
-artifacts/private_semantic/
-artifacts/sar/
-artifacts/pan/
-```
+Done.
 
-Do not commit anything under `data/private_references/`.
-
-## Step 3 — create the final local manifest automatically
-
-After placing outputs under `artifacts/`, run:
+Command used:
 
 ```powershell
 python scripts/d1_finalize_reference_bundle.py `
   --bundle-root data/private_references/notebook_frozen/new_ipynb_d1_20260615_local `
   --notebook-version local-new-ipynb-version `
-  --source-run-id local-source-run `
+  --source-run-id a11309bf-ed47-4bf5-bbf4-f755b904065c `
   --operator Maher
 ```
 
-This scans file names under `artifacts/` and writes:
+Safe result:
 
 ```text
-data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/manifest.local.json
+OK: D1 local reference manifest finalized
+artifact_count: 109
+family_count: 4
 ```
 
-It does not read artifact file contents.
+### Step 4 — validate the local manifest
 
-## Step 4 — validate the local manifest
+Done.
+
+Command used:
 
 ```powershell
 python scripts/d1_validate_reference_manifest.py `
@@ -138,41 +138,50 @@ python scripts/d1_validate_reference_manifest.py `
   --strict
 ```
 
-Expected result:
+Result:
 
 ```text
 Summary: OK
 ```
 
-## Step 5 — confirm nothing private is staged
+### Step 5 — confirm nothing private is staged
 
-```powershell
-git status --short
+Done.
+
+`git status --short` did not show `data/private_references/` files.
+
+There is unrelated local Git noise that should be handled separately before any future commit:
+
+```text
+frontend-v2/dist changes
+test-results/
+graphify-out/
+.pytest-tmp-* folders
 ```
-
-Expected result: no files under `data/private_references/` appear.
 
 ## Done condition for D1 freeze
 
-D1 freeze is done only when:
-
 ```text
-[ ] Real new.ipynb outputs are placed under the local bundle artifacts folder.
-[ ] manifest.local.json exists locally.
-[ ] Local manifest validation passes in strict mode.
-[ ] git status shows no private reference files staged.
+[x] Real new.ipynb outputs are placed under the local bundle artifacts folder.
+[x] manifest.local.json exists locally.
+[x] Local manifest validation passes in strict mode.
+[x] git status shows no private reference files staged.
 ```
 
 ## Next step
 
-Move real `new.ipynb` outputs into the local bundle artifacts folder.
+Move to:
+
+```text
+10. Real app-vs-reference parity
+```
 
 Next-step checklist:
 
 ```text
-[ ] Identify the real output files from the completed new.ipynb run.
-[ ] Copy them into the matching artifacts/ family folders.
-[ ] Do not paste or commit private artifact contents.
-[ ] Run scripts/d1_finalize_reference_bundle.py to create manifest.local.json.
-[ ] Validate manifest.local.json with --strict.
+[ ] Use the frozen D1 local reference as the baseline.
+[ ] Do not expose or commit private reference files.
+[ ] Build/verify the app output manifest against the frozen notebook reference manifest.
+[ ] Run parity verifiers for families that already have implemented app outputs.
+[ ] Keep SAR/S1 and PAN recovery separate until their exact contracts are clear.
 ```
