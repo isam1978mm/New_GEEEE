@@ -4,13 +4,15 @@
 
 D1 reference freeze is **local skeleton created, not complete**.
 
-The repo has a local helper that creates the outside-Git bundle skeleton:
+The repo has local helpers for the outside-Git D1 bundle:
 
 ```text
 scripts/d1_init_reference_bundle.py
+scripts/d1_finalize_reference_bundle.py
+scripts/d1_validate_reference_manifest.py
 ```
 
-The helper writes under the Git-ignored `data/` tree by default. It does not add notebook outputs to Git.
+The helpers write under the Git-ignored `data/` tree by default. They do not add notebook outputs to Git.
 
 ## Local validation recorded
 
@@ -54,8 +56,9 @@ Status: Local skeleton created / waiting for real notebook outputs
 
 ```text
 [x] Add local bundle initializer: scripts/d1_init_reference_bundle.py.
+[x] Add local bundle finalizer: scripts/d1_finalize_reference_bundle.py.
 [x] Add operator steps: docs/D1_NEW_IPYNB_REFERENCE_FREEZE_OPERATOR_STEPS.md.
-[x] Add unit coverage for the local bundle initializer.
+[x] Add unit coverage for the local bundle initializer/finalizer.
 [x] Local validation: D1 initializer and manifest validator tests -> 27 passed, 1 pytest cache warning.
 [x] Local bundle skeleton created.
 [ ] Freeze the real new.ipynb outputs as the official private notebook baseline.
@@ -107,29 +110,25 @@ artifacts/pan/
 
 Do not commit anything under `data/private_references/`.
 
-## Step 3 — create the final local manifest
+## Step 3 — create the final local manifest automatically
 
-After placing outputs, rerun the helper with artifact paths that are relative under `artifacts/`.
-
-Example shape:
+After placing outputs under `artifacts/`, run:
 
 ```powershell
-python scripts/d1_init_reference_bundle.py `
-  --bundle-id new_ipynb_d1_20260615_local `
+python scripts/d1_finalize_reference_bundle.py `
+  --bundle-root data/private_references/notebook_frozen/new_ipynb_d1_20260615_local `
   --notebook-version local-new-ipynb-version `
   --source-run-id local-source-run `
-  --operator Maher `
-  --artifact-family dem `
-  --artifact-family report `
-  --artifact-path dem/reference_dem.tif `
-  --artifact-path report/reference_report.json
+  --operator Maher
 ```
 
-This writes:
+This scans file names under `artifacts/` and writes:
 
 ```text
 data/private_references/notebook_frozen/new_ipynb_d1_20260615_local/manifest.local.json
 ```
+
+It does not read artifact file contents.
 
 ## Step 4 — validate the local manifest
 
@@ -174,6 +173,6 @@ Next-step checklist:
 [ ] Identify the real output files from the completed new.ipynb run.
 [ ] Copy them into the matching artifacts/ family folders.
 [ ] Do not paste or commit private artifact contents.
-[ ] Re-run the initializer with --artifact-path entries to create manifest.local.json.
+[ ] Run scripts/d1_finalize_reference_bundle.py to create manifest.local.json.
 [ ] Validate manifest.local.json with --strict.
 ```
