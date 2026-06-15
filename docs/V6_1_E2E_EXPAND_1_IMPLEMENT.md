@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented; pending local validation.
+Done and tested.
 
 ## Scope
 
@@ -33,12 +33,24 @@ The V6 package API client now preserves backend `invalid_package_inputs` JSON re
 - Does not commit real V6 artifacts.
 - Does not render private rows, package input bodies, raw coordinate fields, or spatial payload bodies.
 - Does not alter backend V6 generation/scoring/request-zone logic.
+- Keeps D1/D2/D3 operator-only private preview parked separately as issue #2.
 
 ## Validation
 
 ```powershell
+cd C:\Dev\New_GEE
+python -m pytest tests/unit/test_v6_1_e2e_expand_plan_contract.py -q
+
 cd C:\Dev\New_GEE\frontend-v2
 npm run e2e:v6
 ```
 
-Expected result: all V6 Playwright tests pass.
+Observed local result:
+
+- `python -m pytest tests/unit/test_v6_1_e2e_expand_plan_contract.py -q` -> 5 passed, 1 `.pytest_cache` access warning.
+- `npm run e2e:v6` -> 9 passed.
+
+## Final commits
+
+- Implementation: `899aa61`
+- Strict-mode assertion fix: `0b09baa`
