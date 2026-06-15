@@ -17,7 +17,16 @@ User-facing V6 wording should use the meaningful name `Paid Imagery Request Pack
 [x] SAR/S1 recovery/build is complete for the D1 parity scope.
 [x] PAN recovery/build is complete for the D1 parity scope.
 [x] Slice 13 current known-lead set is closed out.
-[ ] H3/H4 dataset readiness remains blocked until a new independent-evidence source passes the existing Slice 13/I1/I2 path.
+[x] Continued Slice 13 discovery scouting is recorded.
+[x] C05/C06/C07 are conditionally approved for later I2 negative/background or hard-negative roles only.
+[ ] C01 remains under_review and needs source-specific operator/source information.
+[ ] H3/H4 dataset readiness remains blocked until a positive independent-evidence source passes the existing Slice 13/I1/I2 path.
+```
+
+Current next step:
+
+```text
+Complete docs/FUTURE_SLICE_13_C01_OPERATOR_INFO_REQUEST.md with source-specific C01 metadata, or provide another positive independent-evidence source for six-gate review.
 ```
 
 ## Counting note
@@ -85,19 +94,26 @@ Plain meaning: because the app is private and only for Maher/operator, public ex
 
 ## 5. H3 training / H4 private inference
 
-- [ ] **Status:** Blocked / biggest remaining issue
+- [ ] **Status:** Blocked on positive independent evidence
 - [x] Reuse the existing I1/I2 readiness contract and existing `dataset_pack_readiness` validator.
 - [x] Do not create a duplicate H3/H4 contract.
 - [x] Do not create a duplicate readiness validator.
 - [x] Complete the current known-lead Slice 13 source-review closeout.
+- [x] Complete continued discovery scouting.
+- [x] Complete C05 six-gate review: conditionally approved for later I2 negative/background role only.
+- [x] Complete C06 six-gate review: conditionally approved for later I2 hard-negative role only.
+- [x] Complete C07 six-gate review: conditionally approved for later I2 hard-negative role only.
+- [x] Complete C01 six-gate metadata review: still under_review, source-specific information required.
+- [x] Add C01 operator/source-specific information request.
 - [x] Do not start real H3 training yet.
 - [x] Do not start real H4 private inference yet.
-- [ ] First obtain or define a new independent-evidence source that can pass the existing Slice 13 gates.
+- [ ] Complete C01 operator/source-specific answer, or provide another positive independent-evidence source.
+- [ ] Re-review C01 or the new positive source through all six gates.
 - [ ] Shape approved labels into the existing I1/I2 training-example schema outside Git only.
 - [ ] Run the existing dataset-pack readiness validator.
 - [ ] Require `ready_for_private_training_later` before opening H3 training.
 
-Plain meaning: D1 proves app output reproduction. Current known leads did not pass Slice 13. H3/H4 still need approved independent evidence; app candidates or D1 layers alone are not training truth.
+Plain meaning: D1 proves app output reproduction. C05/C06/C07 can help later negative/background or hard-negative roles only. C01 is the current positive-candidate lead, but it still needs source-specific operator/source information. H3/H4 remain blocked.
 
 ## 6. D1 real new.ipynb reference freeze
 
@@ -226,9 +242,11 @@ Plain meaning: the app reproduced the notebook-compatible PAN outputs needed for
 - [x] Review the second known lead through the six gates.
 - [x] Close out Slice 13 by recording that all current known leads are rejected/deferred.
 - [x] Do not start training or inference until the existing validator allows it.
-- [ ] Find or provide a new independent-evidence source that can pass Slice 13.
+- [x] Review C05/C06/C07 for negative/background and hard-negative roles.
+- [x] Review C01 as the current positive-candidate family.
+- [ ] Complete C01 operator/source-specific information request or provide another positive independent-evidence source.
 
-Plain meaning: this is the same real ML blocker. No approved independent-evidence source means no real training and no private inference.
+Plain meaning: this is the same real ML blocker. No approved positive independent-evidence source means no real training and no private inference.
 
 ## 13. Public location-bearing downloads
 
@@ -250,7 +268,7 @@ Plain meaning: this is not a current blocker for Maher-only private local use. I
 - [x] 5. DEM/report/private semantic/SAR/PAN parity verification.
 - [x] 6. PAN recovery/build.
 - [x] 7. SAR/S1 recovery/build.
-- [ ] 8. H3/H4 dataset readiness.
+- [ ] 8. H3/H4 dataset readiness: blocked on positive independent evidence.
 - [ ] 9. VPS/private operator auth activation later.
 - [ ] 10. Public overlay exposure review future-only.
 - [ ] 11. Public location-bearing downloads future-only for public/shared mode.
