@@ -38,29 +38,39 @@ Current permission state:
 
 The next step is not to build a dataset.
 
-The next step is to write the future I2 assembly plan so that, when the operator is ready and has the POS-01 source available, the team knows exactly what to check first and where to stop.
+The next step is to finish the planning checklists so that, when the operator is ready and has the POS-01 source available, the team knows exactly what to check first and where to stop.
 
 ## Next steps checklist
 
 ### Step 1 — Define the future source inventory checklist
 
+Status: done.
+
+Document:
+
+```text
+docs/FUTURE_I2_SOURCE_INVENTORY_CHECKLIST.md
+```
+
 Goal: decide what must be recorded about each source before any data is used.
 
 Checklist:
 
-- [ ] source id
-- [ ] source role: positive, negative, or hard-negative
-- [ ] owner or authority
-- [ ] license or permission status
-- [ ] allowed private training use
-- [ ] sensitivity handling decision
-- [ ] redaction requirement
-- [ ] expected schema or fields
-- [ ] do-not-use conditions
+- [x] source id
+- [x] source role: positive, negative, or hard-negative
+- [x] owner or authority
+- [x] license or permission status
+- [x] allowed private training use
+- [x] sensitivity handling decision
+- [x] redaction requirement
+- [x] expected schema or fields
+- [x] do-not-use conditions
 
 No source files are opened in this step.
 
 ### Step 2 — Define the actual dataset review checklist
+
+Status: next.
 
 Goal: prepare the review questions for later, when POS-01 is available.
 
@@ -158,7 +168,7 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Create the future source inventory checklist.
+Create the actual dataset review checklist.
 
 This is documentation only.
 
