@@ -1,6 +1,6 @@
 # Future I2 planning — current status and next steps
 
-Status: planning only
+Status: planning complete; actual POS-01 review kickoff opened
 
 This document explains the next steps after POS-01 passed metadata-level candidate review.
 
@@ -21,7 +21,6 @@ Approved source candidates for later planning:
 
 Not started:
 
-- actual dataset review
 - source payload inspection
 - I1 row creation
 - I2 dataset pack assembly
@@ -36,11 +35,17 @@ Current permission state:
 
 ## Plain English next step
 
-The next step is not to build a dataset.
+The future I2 planning checklist sequence is complete.
 
-The future I2 planning checklist sequence is now complete. When the operator is ready and has the POS-01 source available, the next separate phase would be actual POS-01 dataset review.
+The actual POS-01 dataset review kickoff is opened here:
 
-That later phase requires explicit approval before any source payload is opened or inspected.
+```text
+docs/POS01_ACTUAL_DATASET_REVIEW_KICKOFF.md
+```
+
+The actual review cannot proceed until the operator has the POS-01 source package available in an operator-private folder outside Git.
+
+The first allowed action after that is private file inventory only.
 
 ## Next steps checklist
 
@@ -189,13 +194,35 @@ Checklist:
 - [x] minimum redaction rules
 - [x] minimum readiness-validator outcome
 
+## Actual POS-01 review kickoff
+
+Status: opened, not started.
+
+Document:
+
+```text
+docs/POS01_ACTUAL_DATASET_REVIEW_KICKOFF.md
+```
+
+Required operator action before review starts:
+
+```text
+Acquire POS-01 and store it outside Git in an operator-private folder.
+```
+
+First allowed review action after that:
+
+```text
+private file inventory only
+```
+
 ## Stop conditions
 
 Stop immediately if any step requires:
 
-- downloading a source payload
-- inspecting source records
-- collecting coordinates
+- downloading a source payload into the repo
+- inspecting source records before operator approval
+- collecting coordinates into repo-visible docs
 - creating labels
 - creating chips or masks
 - creating I1 rows
@@ -208,17 +235,15 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Future I2 planning checklist sequence is complete.
+Operator must place POS-01 in private storage outside Git.
 
-The next possible phase is actual POS-01 dataset review, but only after explicit approval and only when the operator has the source available.
-
-No dataset, validator, training, or inference work is started by this planning closeout.
+After that, run private file inventory only.
 
 ## Current final status
 
 Future I2 planning checklist sequence is complete.
 
-Actual POS-01 dataset review is not started.
+Actual POS-01 dataset review kickoff is opened but not started.
 
 Actual I2 assembly is not started.
 
