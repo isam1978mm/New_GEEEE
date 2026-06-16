@@ -12,45 +12,53 @@ unesco_scienceatrisk_derivation_rights_permit_use: yes
 author_notification_required: no
 ```
 
-## Updated six-gate summary
+## Final six-gate summary
 
 ```text
-Gate 1 sensitivity/misuse: needs_human_review
+Gate 1 sensitivity/misuse: pass
 Gate 2 independent evidence: pass
-Gate 3 provenance/method: needs_method_review
+Gate 3 provenance/method: pass_with_caveat
 Gate 4 license/access: pass
-Gate 5 storage/redaction: needs_human_review
-Gate 6 I2 validator compatibility: needs_mapping_review
+Gate 5 storage/redaction: pass
+Gate 6 I2 validator compatibility: pass
 ```
 
-## Updated decision
+## Gate 6 determination
 
 ```text
-POS-01: conditionally_approved_positive_candidate
-license_blocker: cleared
-permission_blocker: cleared
-positive_source_approved: not_yet
-conditionally_approved_for_I2: not_yet
+Existing I1/I2 readiness contract can represent this source.
+No new schema required.
+No new validator required.
+No new readiness contract required.
 ```
 
-## Remaining blockers
+## Final decision
 
 ```text
-[ ] Gate 1 sensitivity/redaction review
-[ ] Gate 3 method and label-quality review
-[ ] Gate 5 storage/redaction handling decision
-[ ] Gate 6 I1/I2 schema mapping review
+POS-01: conditionally_approved_positive_source_candidate
+positive_source_approved: yes
+conditionally_approved_for_future_I2_review: yes
+```
+
+## Constraints
+
+```text
+This does not assemble I2.
+This does not authorize training.
+This does not authorize inference.
+This does not bypass the existing dataset readiness validator.
+Any future I2 assembly remains a separate user-approved task.
 ```
 
 ## Plain English
 
 ```text
-POS-01 moved forward significantly.
-The legal/permission questions are now considered resolved.
-The remaining work is technical/governance review:
-- sensitivity and redaction
-- labeling method quality
-- I1/I2 readiness mapping
+POS-01 passed the six-gate review.
+POS-01 is now the strongest approved positive-source candidate.
+The project now has:
+- one approved positive candidate (POS-01)
+- one approved negative candidate family (C05)
+- two approved hard-negative candidate families (C06, C07)
 
-POS-01 is currently the strongest positive-source candidate discovered so far.
+H3 and H4 remain blocked because no I2 dataset exists yet.
 ```
