@@ -1,6 +1,6 @@
 # H3/H4 Current Status And Next Step
 
-This is a repo-visible status note after continued Slice 13 discovery and the C01/C05/C06/C07 metadata-only reviews.
+This is a repo-visible status note after continued Slice 13 discovery and the POS-01/C01/C05/C06/C07 metadata-only reviews.
 
 This note is documentation only.
 It does not create data, assemble I2, start training, start inference, add dependencies, or change app behavior.
@@ -12,10 +12,12 @@ D1 freeze: done
 D1 accepted parity scope: done
 Slice 13 known-lead closeout: done
 Continued discovery scouting: done
+Codex positive-source scouting: done
 C05 ESA WorldCover: conditionally_approved_for_I2, negative/background only
 C06 Dynamic World: conditionally_approved_for_I2, hard-negative only
 C07 Maus mining polygons: conditionally_approved_for_I2, hard-negative only
 C01 UNOSAT / UNESCO: under_review, source-specific operator information required
+POS-01 Linked4Resilience / Zenodo: under_review, license/private-training/sensitivity/method questions unresolved
 I2 assembly: not authorized now
 H3 training: blocked
 H4 private inference: blocked
@@ -31,9 +33,8 @@ They do not authorize I2 assembly now.
 ```
 
 ```text
-C01 is the strongest open positive-candidate family.
-C01 did not pass six gates from metadata-only review.
-C01 needs source-specific operator/source information before it can be re-reviewed.
+C01 remains an important positive-candidate family, but still needs exact source/subset and permission/method/redaction details.
+POS-01 is a good package-like positive lead, but it did not pass six gates because license, private-training permission, sensitivity/redaction, method, and target-fit details remain unresolved.
 ```
 
 ## Current approved-for-later-I2 candidates
@@ -63,7 +64,18 @@ Later I2 constraints still apply:
 [ ] No positive/target independent-evidence source is approved yet.
 ```
 
-C01 remains the current positive-candidate lead, but it needs:
+POS-01 needs:
+
+```text
+[ ] resolve CC-BY-NC-4.0 vs CC-BY-4.0 license conflict
+[ ] confirm private ML training / validation permission
+[ ] confirm source derivation rights from UNESCO / ScienceAtRisk families
+[ ] define safe redacted subset
+[ ] review paper/method notes at metadata level
+[ ] confirm target-fit for H3/H4 positive labels
+```
+
+C01 needs:
 
 ```text
 [ ] exact source collection or safe source subset
@@ -80,43 +92,26 @@ C01 remains the current positive-candidate lead, but it needs:
 
 The next step is not code.
 
-The next step is to complete the C01 operator/source-specific answer using:
+The next best step is to resolve POS-01 permission/license and private-training use first, because POS-01 is now the clearest package-like positive lead.
+
+Ask/verify:
 
 ```text
-docs/FUTURE_SLICE_13_C01_OPERATOR_INFO_REQUEST.md
+For Zenodo record 10.5281/zenodo.14569340, which license controls the dataset for reuse: CC-BY-NC-4.0 or CC-BY-4.0?
+Is private ML training / validation use allowed?
+Are derivative outputs allowed?
+Do UNESCO / ScienceAtRisk source derivation rights permit this use?
+Should authors be notified or asked for permission before private use?
 ```
 
-Required answer format:
+## Decision after POS-01 answer
+
+After POS-01 permission/method/sensitivity answers exist:
 
 ```text
-candidate_id: unosat_unitar_ch_damage_assessments
-source_collection_or_item:
-source_reference_or_doi:
-source_owner_or_authority:
-access_status:
-permission_or_dua_status:
-license_or_terms_summary:
-evidence_type:
-who_created_assessment:
-how_assessment_was_created:
-expert_review_or_adjudication:
-evidence_independence_summary:
-sensitivity_risk_summary:
-redaction_plan_summary:
-intended_neutral_label_mapping:
-allowed_private_training_use:
-allowed_derivative_outputs:
-notes:
-```
-
-## Decision after C01 answer
-
-After the operator/source-specific C01 answer exists:
-
-```text
-[ ] re-review C01 through all six Slice 13 gates
-[ ] if all six gates pass, mark C01 conditionally_approved_for_I2
-[ ] if any gate remains blocked, keep C01 under_review or reject
+[ ] re-review POS-01 through all six Slice 13 gates
+[ ] if all six gates pass, mark POS-01 conditionally_approved_for_I2
+[ ] if any gate remains blocked, keep POS-01 under_review or reject
 [ ] do not assemble I2 until a separate user-approved I2 assembly task exists
 [ ] do not start H3/H4 until the existing readiness validator allows it
 ```
@@ -127,5 +122,5 @@ After the operator/source-specific C01 answer exists:
 H3 training: blocked
 H4 private inference: blocked
 I2 assembly: not authorized
-Next unlock: C01 source-specific operator information, or another positive independent-evidence source that passes Slice 13.
+Next unlock: POS-01 license/private-training/sensitivity/method clarification, C01 source-specific operator information, or another positive independent-evidence source that passes Slice 13.
 ```
