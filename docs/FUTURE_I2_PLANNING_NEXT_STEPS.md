@@ -120,24 +120,32 @@ No I1 rows are created in this planning step.
 
 ### Step 4 — Define the I2 assembly checklist
 
-Status: next.
+Status: done.
+
+Document:
+
+```text
+docs/FUTURE_I2_ASSEMBLY_CHECKLIST.md
+```
 
 Goal: describe what a future I2 pack would need after actual dataset review passes.
 
 Checklist:
 
-- [ ] positive pool source
-- [ ] negative pool source
-- [ ] hard-negative pool sources
-- [ ] manifest rules
-- [ ] split rules
-- [ ] privacy rules
-- [ ] validator command
-- [ ] pass/fail decision rule
+- [x] positive pool source
+- [x] negative pool source
+- [x] hard-negative pool sources
+- [x] manifest rules
+- [x] split rules
+- [x] privacy rules
+- [x] validator command
+- [x] pass/fail decision rule
 
 No I2 pack is assembled in this planning step.
 
 ### Step 5 — Review the existing validator
+
+Status: next.
 
 Goal: understand the existing readiness validator before building anything.
 
@@ -184,11 +192,11 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Create the I2 assembly checklist.
+Review the existing dataset_pack_readiness validator.
 
 This is documentation only.
 
-No I2 pack will be assembled.
+No validator changes will be made unless explicitly approved later.
 
 ## Current final status
 
