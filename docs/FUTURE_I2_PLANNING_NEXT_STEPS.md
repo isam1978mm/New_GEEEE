@@ -95,24 +95,32 @@ No dataset is inspected in this planning step.
 
 ### Step 3 — Define the I1 mapping checklist
 
-Status: next.
+Status: done.
+
+Document:
+
+```text
+docs/FUTURE_I2_I1_MAPPING_CHECKLIST.md
+```
 
 Goal: decide how approved records would later become I1 training-example rows.
 
 Checklist:
 
-- [ ] required I1 fields
-- [ ] allowed neutral labels
-- [ ] source evidence field
-- [ ] confidence or review status field
-- [ ] do-not-train flag
-- [ ] split group field
-- [ ] privacy flags
-- [ ] source lineage fields
+- [x] required I1 fields
+- [x] allowed neutral labels
+- [x] source evidence field
+- [x] confidence or review status field
+- [x] do-not-train flag
+- [x] split group field
+- [x] privacy flags
+- [x] source lineage fields
 
 No I1 rows are created in this planning step.
 
 ### Step 4 — Define the I2 assembly checklist
+
+Status: next.
 
 Goal: describe what a future I2 pack would need after actual dataset review passes.
 
@@ -176,11 +184,11 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Create the I1 mapping checklist.
+Create the I2 assembly checklist.
 
 This is documentation only.
 
-No I1 rows will be created.
+No I2 pack will be assembled.
 
 ## Current final status
 
