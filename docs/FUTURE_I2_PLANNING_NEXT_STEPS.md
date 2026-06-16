@@ -70,24 +70,32 @@ No source files are opened in this step.
 
 ### Step 2 — Define the actual dataset review checklist
 
-Status: next.
+Status: done.
+
+Document:
+
+```text
+docs/FUTURE_I2_ACTUAL_DATASET_REVIEW_CHECKLIST.md
+```
 
 Goal: prepare the review questions for later, when POS-01 is available.
 
 Checklist:
 
-- [ ] what files are present
-- [ ] what fields exist
-- [ ] what counts as a positive example
-- [ ] whether any sensitive fields exist
-- [ ] whether records match the source metadata
-- [ ] whether labels match the H3/H4 target definition
-- [ ] whether records can be mapped to neutral labels
-- [ ] whether any records must be excluded
+- [x] what files are present
+- [x] what fields exist
+- [x] what counts as a positive example
+- [x] whether any sensitive fields exist
+- [x] whether records match the source metadata
+- [x] whether labels match the H3/H4 target definition
+- [x] whether records can be mapped to neutral labels
+- [x] whether any records must be excluded
 
 No dataset is inspected in this planning step.
 
 ### Step 3 — Define the I1 mapping checklist
+
+Status: next.
 
 Goal: decide how approved records would later become I1 training-example rows.
 
@@ -168,11 +176,11 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Create the actual dataset review checklist.
+Create the I1 mapping checklist.
 
 This is documentation only.
 
-No data will be downloaded or inspected.
+No I1 rows will be created.
 
 ## Current final status
 
