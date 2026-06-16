@@ -38,7 +38,9 @@ Current permission state:
 
 The next step is not to build a dataset.
 
-The next step is to finish the planning checklists so that, when the operator is ready and has the POS-01 source available, the team knows exactly what to check first and where to stop.
+The future I2 planning checklist sequence is now complete. When the operator is ready and has the POS-01 source available, the next separate phase would be actual POS-01 dataset review.
+
+That later phase requires explicit approval before any source payload is opened or inspected.
 
 ## Next steps checklist
 
@@ -167,19 +169,25 @@ No validator changes are made unless explicitly approved later.
 
 ### Step 6 — Tighten acceptance criteria
 
-Status: next.
+Status: done.
+
+Document:
+
+```text
+docs/FUTURE_I2_ACCEPTANCE_CRITERIA.md
+```
 
 Goal: make later rejection/approval faster and safer.
 
 Checklist:
 
-- [ ] minimum positive-source rules
-- [ ] minimum negative-source rules
-- [ ] minimum hard-negative-source rules
-- [ ] minimum label-quality rules
-- [ ] minimum permission rules
-- [ ] minimum redaction rules
-- [ ] minimum readiness-validator outcome
+- [x] minimum positive-source rules
+- [x] minimum negative-source rules
+- [x] minimum hard-negative-source rules
+- [x] minimum label-quality rules
+- [x] minimum permission rules
+- [x] minimum redaction rules
+- [x] minimum readiness-validator outcome
 
 ## Stop conditions
 
@@ -200,15 +208,17 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Tighten acceptance criteria.
+Future I2 planning checklist sequence is complete.
 
-This is documentation only.
+The next possible phase is actual POS-01 dataset review, but only after explicit approval and only when the operator has the source available.
 
-No dataset, validator, training, or inference work will be started.
+No dataset, validator, training, or inference work is started by this planning closeout.
 
 ## Current final status
 
-Future I2 planning may continue.
+Future I2 planning checklist sequence is complete.
+
+Actual POS-01 dataset review is not started.
 
 Actual I2 assembly is not started.
 
