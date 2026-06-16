@@ -145,21 +145,29 @@ No I2 pack is assembled in this planning step.
 
 ### Step 5 — Review the existing validator
 
-Status: next.
+Status: done.
+
+Document:
+
+```text
+docs/FUTURE_I2_DATASET_PACK_READINESS_VALIDATOR_REVIEW.md
+```
 
 Goal: understand the existing readiness validator before building anything.
 
 Checklist:
 
-- [ ] identify required inputs
-- [ ] identify required statuses
-- [ ] identify blocker names
-- [ ] identify success status
-- [ ] document what output is needed before H3 can start
+- [x] identify required inputs
+- [x] identify required statuses
+- [x] identify blocker names
+- [x] identify success status
+- [x] document what output is needed before H3 can start
 
 No validator changes are made unless explicitly approved later.
 
 ### Step 6 — Tighten acceptance criteria
+
+Status: next.
 
 Goal: make later rejection/approval faster and safer.
 
@@ -192,11 +200,11 @@ Those actions require a separate explicit user approval.
 
 ## Next concrete task
 
-Review the existing dataset_pack_readiness validator.
+Tighten acceptance criteria.
 
 This is documentation only.
 
-No validator changes will be made unless explicitly approved later.
+No dataset, validator, training, or inference work will be started.
 
 ## Current final status
 
