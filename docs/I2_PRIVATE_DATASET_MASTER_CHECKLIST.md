@@ -59,15 +59,10 @@ Checklist:
 [x] Phase B sampling policy
 [x] Phase C writer design
 [x] private sample manifest generator
-[ ] private sample manifest write       ← NEXT
-[ ] private I1 writer
-[ ] private I1 rows written outside Git
-```
-
-Dry-run status:
-
-```text
 [x] C07 sample manifest generator dry-run passed
+[x] private sample manifest write
+[ ] private I1 writer       ← NEXT
+[ ] private I1 rows written outside Git
 ```
 
 ## Finish line options
@@ -110,26 +105,23 @@ This path finishes after C07 is ready and the validator passes.
 ## Active next step
 
 ```text
-C07 private sample manifest write
+Create C07 private I1 writer
 ```
 
-The C07 private sample manifest generator dry-run passed.
+The C07 private sample manifest has been written outside Git.
 
-The next approved action is `--write` to create the private sample manifest outside Git.
+The next step is to create the C07 private I1 writer script.
 
-This will not create C07 I1 rows.
-
-This will not assemble I2.
+The writer must default to dry-run and write no private rows unless `--write` is explicitly provided.
 
 ## What is coming next
 
 ### C07 path
 
-1. Write C07 private sample manifest outside Git.
-2. Create C07 private I1 writer.
-3. Run C07 private I1 writer dry-run.
-4. Write C07 private I1 rows outside Git.
-5. Then return to private split policy and I2 assembly.
+1. Create C07 private I1 writer.
+2. Run C07 private I1 writer dry-run.
+3. Write C07 private I1 rows outside Git.
+4. Then return to private split policy and I2 assembly.
 
 ### After C07 is ready
 
@@ -211,14 +203,14 @@ Result:
 | Phase C writer design | done |
 | private sample manifest generator | done |
 | private sample manifest generator dry-run | done |
-| private sample manifest write | next |
-| private I1 writer | not started |
+| private sample manifest write | done |
+| private I1 writer | next |
 | private I1 rows written outside Git | not started |
 
 Current blocker:
 
 ```text
-C07 private sample manifest has not been written yet.
+C07 private I1 writer is not created yet.
 ```
 
 ### 5. I2 assembly
@@ -274,8 +266,8 @@ Those require separate explicit approval.
 POS-01 positive rows: done
 C05 background rows: done
 C06 hard-negative rows: done
-C07 sample generator dry-run: done
-C07 sample manifest write: next
+C07 sample manifest write: done
+C07 private I1 writer: next
 I2: not started
 H3/H4: blocked
 ```
