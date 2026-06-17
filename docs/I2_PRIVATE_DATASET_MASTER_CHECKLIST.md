@@ -64,6 +64,12 @@ Checklist:
 [ ] private I1 rows written outside Git
 ```
 
+Dry-run status:
+
+```text
+[x] C07 sample manifest generator dry-run passed
+```
+
 ## Finish line options
 
 There are two possible finish levels.
@@ -107,22 +113,23 @@ This path finishes after C07 is ready and the validator passes.
 C07 private sample manifest write
 ```
 
-The C07 private sample manifest generator script has been created.
+The C07 private sample manifest generator dry-run passed.
 
-Next, the operator must provide a local Maus mining/disturbance polygon source outside Git and run the generator dry-run.
+The next approved action is `--write` to create the private sample manifest outside Git.
 
-If dry-run selects 217 hard-negative samples, the next approved action is `--write` to create the private sample manifest outside Git.
+This will not create C07 I1 rows.
+
+This will not assemble I2.
 
 ## What is coming next
 
 ### C07 path
 
-1. Run C07 sample generator dry-run with a local Maus mining/disturbance source.
-2. If dry-run passes, write C07 private sample manifest outside Git.
-3. Create C07 private I1 writer.
-4. Run C07 private I1 writer dry-run.
-5. Write C07 private I1 rows outside Git.
-6. Then return to private split policy and I2 assembly.
+1. Write C07 private sample manifest outside Git.
+2. Create C07 private I1 writer.
+3. Run C07 private I1 writer dry-run.
+4. Write C07 private I1 rows outside Git.
+5. Then return to private split policy and I2 assembly.
 
 ### After C07 is ready
 
@@ -203,6 +210,7 @@ Result:
 | Phase B sampling policy | done |
 | Phase C writer design | done |
 | private sample manifest generator | done |
+| private sample manifest generator dry-run | done |
 | private sample manifest write | next |
 | private I1 writer | not started |
 | private I1 rows written outside Git | not started |
@@ -210,7 +218,7 @@ Result:
 Current blocker:
 
 ```text
-C07 local Maus mining/disturbance source file has not been provided yet.
+C07 private sample manifest has not been written yet.
 ```
 
 ### 5. I2 assembly
@@ -266,11 +274,8 @@ Those require separate explicit approval.
 POS-01 positive rows: done
 C05 background rows: done
 C06 hard-negative rows: done
-C07 Phase A: done
-C07 Phase B: done
-C07 Phase C: done
-C07 sample manifest generator: done
-C07 sample manifest write: next, needs local mining/disturbance source
+C07 sample generator dry-run: done
+C07 sample manifest write: next
 I2: not started
 H3/H4: blocked
 ```
