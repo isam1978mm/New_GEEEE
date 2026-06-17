@@ -58,8 +58,8 @@ Checklist:
 [x] Phase A source/version confirmation
 [x] Phase B sampling policy
 [x] Phase C writer design
-[ ] private sample manifest generator       ← NEXT
-[ ] private sample manifest write
+[x] private sample manifest generator
+[ ] private sample manifest write       ← NEXT
 [ ] private I1 writer
 [ ] private I1 rows written outside Git
 ```
@@ -104,21 +104,21 @@ This path finishes after C07 is ready and the validator passes.
 ## Active next step
 
 ```text
-Create C07 private sample manifest generator
+C07 private sample manifest write
 ```
 
-C07 Phase C private row writer design is complete.
+The C07 private sample manifest generator script has been created.
 
-The next script should create or validate a private C07 sample manifest outside Git.
+Next, the operator must provide a local Maus mining/disturbance polygon source outside Git and run the generator dry-run.
 
-It must default to dry-run and write nothing unless `--write` is provided.
+If dry-run selects 217 hard-negative samples, the next approved action is `--write` to create the private sample manifest outside Git.
 
 ## What is coming next
 
 ### C07 path
 
-1. Create C07 private sample manifest generator.
-2. Write C07 private sample manifest outside Git.
+1. Run C07 sample generator dry-run with a local Maus mining/disturbance source.
+2. If dry-run passes, write C07 private sample manifest outside Git.
 3. Create C07 private I1 writer.
 4. Run C07 private I1 writer dry-run.
 5. Write C07 private I1 rows outside Git.
@@ -202,15 +202,15 @@ Result:
 | Phase A source/version confirmation | done |
 | Phase B sampling policy | done |
 | Phase C writer design | done |
-| private sample manifest generator | next |
-| private sample manifest write | not started |
+| private sample manifest generator | done |
+| private sample manifest write | next |
 | private I1 writer | not started |
 | private I1 rows written outside Git | not started |
 
 Current blocker:
 
 ```text
-C07 private sample manifest generator is not created yet.
+C07 local Maus mining/disturbance source file has not been provided yet.
 ```
 
 ### 5. I2 assembly
@@ -269,7 +269,8 @@ C06 hard-negative rows: done
 C07 Phase A: done
 C07 Phase B: done
 C07 Phase C: done
-C07 sample manifest generator: next
+C07 sample manifest generator: done
+C07 sample manifest write: next, needs local mining/disturbance source
 I2: not started
 H3/H4: blocked
 ```
