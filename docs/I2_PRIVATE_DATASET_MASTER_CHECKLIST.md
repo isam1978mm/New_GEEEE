@@ -26,7 +26,7 @@ No training or inference is started by this document.
 | D1 parity | complete |
 | POS-01 positive I1 rows | complete outside Git |
 | C05 negative/background I1 rows | complete outside Git |
-| C06 hard-negative I1 rows | not started |
+| C06 hard-negative I1 rows | complete outside Git |
 | C07 hard-negative I1 rows | not started |
 | I2 assembly | not started |
 | Dataset readiness validator on real data | not run |
@@ -39,7 +39,7 @@ No training or inference is started by this document.
 | --- | --- | ---: | --- |
 | POS-01 | positive | 217 | created outside Git |
 | C05 | negative/background | 217 | created outside Git |
-| C06 | hard-negative | 0 | not created |
+| C06 | hard-negative | 217 | created outside Git |
 | C07 | hard-negative | 0 | not created |
 
 ## Current item checklist
@@ -60,14 +60,10 @@ Checklist:
 [x] private sample manifest generator
 [x] private sample manifest write
 [x] private I1 writer
-[ ] private I1 rows written outside Git       ← NEXT
+[x] private I1 rows written outside Git
 ```
 
-Dry-run status:
-
-```text
-[x] C06 private I1 writer dry-run passed
-```
+C06 is complete.
 
 ## Finish line options
 
@@ -81,13 +77,13 @@ Required:
 
 - [x] POS-01 positive private I1 rows exist
 - [x] C05 negative/background private I1 rows exist
-- [ ] at least one hard-negative private I1 source exists, C06 or C07
+- [x] at least one hard-negative private I1 source exists, C06
 - [ ] private split policy exists
 - [ ] private I2 pack is assembled outside Git
 - [ ] dataset readiness validator runs on the private I2 pack
 - [ ] validator returns `ready_for_private_training_later`
 
-This path can finish after either C06 or C07 is ready, if the validator requirements are satisfied.
+This path can now proceed to minimum I2 readiness planning if approved.
 
 ### Stronger I2-readiness path
 
@@ -97,42 +93,39 @@ Required:
 
 - [x] POS-01 positive private I1 rows exist
 - [x] C05 negative/background private I1 rows exist
-- [ ] C06 hard-negative private I1 rows exist
+- [x] C06 hard-negative private I1 rows exist
 - [ ] C07 hard-negative private I1 rows exist
 - [ ] private split policy exists
 - [ ] private I2 pack is assembled outside Git
 - [ ] dataset readiness validator runs on the private I2 pack
 - [ ] validator returns `ready_for_private_training_later`
 
-This path finishes after both C06 and C07 are ready and the validator passes.
+This path finishes after C07 is ready and the validator passes.
 
 ## Active next step
 
 ```text
-Write C06 private I1 rows outside Git
+Decision point: minimum I2 path or stronger C07 path
 ```
 
-The C06 private I1 writer dry-run passed with 217 eligible rows.
+Available options:
 
-The next approved action is `--write` to create private C06 hard-negative I1 rows outside Git.
+```text
+Option 1: attempt minimum I2 assembly path with POS-01 + C05 + C06
+Option 2: continue to C07 for stronger hard-negatives before I2 assembly
+```
 
-This will not assemble I2.
-
-This will not run the validator.
+No I2 assembly starts without separate explicit approval.
 
 ## What is coming next
 
-### Immediate next steps
+### If choosing minimum I2 path
 
-1. Write C06 private I1 rows outside Git.
-2. Decide minimum I2 path or stronger path with C07.
-
-After C06 is complete, decide:
-
-```text
-Option 1: continue to C07 for stronger hard-negatives
-Option 2: attempt minimum I2 assembly with POS-01 + C05 + C06
-```
+1. Create private split policy.
+2. Create private I2 assembly plan.
+3. Assemble private I2 pack outside Git.
+4. Run dataset readiness validator on private I2 pack.
+5. If validator passes, I2 readiness phase is complete.
 
 ### If continuing to C07
 
@@ -142,16 +135,12 @@ Option 2: attempt minimum I2 assembly with POS-01 + C05 + C06
 4. C07 private sample manifest or sampler script.
 5. C07 private I1 writer dry-run.
 6. C07 private I1 rows written outside Git.
+7. Then return to private split policy and I2 assembly.
 
-### After hard-negatives are ready
+### After I2 readiness
 
-1. Create private split policy.
-2. Create private I2 assembly plan.
-3. Assemble private I2 pack outside Git.
-4. Run dataset readiness validator on private I2 pack.
-5. If validator passes, I2 readiness phase is complete.
-6. H3 remains a separate explicit decision after I2 readiness.
-7. H4 remains blocked until after a later approved H3 model and private inference gate.
+1. H3 remains a separate explicit decision after I2 readiness.
+2. H4 remains blocked until after a later approved H3 model and private inference gate.
 
 ## Detailed checklist
 
@@ -204,12 +193,12 @@ Result:
 | private sample manifest write | done |
 | private I1 writer | done |
 | private I1 writer dry-run | done |
-| private I1 rows written outside Git | next |
+| private I1 rows written outside Git | done |
 
-Current blocker:
+Result:
 
 ```text
-C06 private I1 rows have not been written yet.
+217 private hard-negative I1 rows created outside Git
 ```
 
 ### 4. C07 hard-negative source
@@ -229,7 +218,7 @@ C06 private I1 rows have not been written yet.
 
 | Step | Status |
 | --- | --- |
-| decide minimum vs stronger hard-negative path | not started |
+| decide minimum vs stronger hard-negative path | next |
 | create private split policy | not started |
 | combine private I1 rows | not started |
 | create private I2 manifest | not started |
@@ -239,8 +228,7 @@ C06 private I1 rows have not been written yet.
 Current blocker:
 
 ```text
-At least one hard-negative private I1 source is required before minimum I2 assembly can start.
-C06 is the active hard-negative source.
+Operator must choose minimum I2 path or stronger C07 path.
 ```
 
 ### 6. H3 and H4
@@ -264,7 +252,7 @@ Stop immediately if work requires:
 committing private I1 files
 committing source rasters
 publishing private sample rows
-assembling I2 before at least one hard-negative source is ready
+assembling I2 without explicit approval
 running validator on real data before I2 exists
 training
 inference
@@ -278,15 +266,9 @@ Those require separate explicit approval.
 ```text
 POS-01 positive rows: done
 C05 background rows: done
-C06 Phase A: done
-C06 Phase B: done
-C06 Phase C: done
-C06 sample generator dry-run: done
-C06 sample manifest write: done
-C06 private I1 writer: done
-C06 private I1 writer dry-run: done
-C06 private I1 row write: next
-C07 hard-negative rows: optional stronger path after C06
+C06 hard-negative rows: done
+Minimum I2 path is now possible, pending operator decision
+C07 hard-negative rows: optional stronger path before I2
 I2: not started
 H3/H4: blocked
 ```
