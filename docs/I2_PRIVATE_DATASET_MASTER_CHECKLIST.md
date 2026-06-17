@@ -63,6 +63,12 @@ Checklist:
 [ ] private I1 rows written outside Git       ← NEXT
 ```
 
+Dry-run status:
+
+```text
+[x] C06 private I1 writer dry-run passed
+```
+
 ## Finish line options
 
 There are two possible finish levels.
@@ -103,20 +109,23 @@ This path finishes after both C06 and C07 are ready and the validator passes.
 ## Active next step
 
 ```text
-Run C06 private I1 writer dry-run, then write C06 private I1 rows outside Git if dry-run passes
+Write C06 private I1 rows outside Git
 ```
 
-The C06 private I1 writer script has been created.
+The C06 private I1 writer dry-run passed with 217 eligible rows.
 
-The writer defaults to dry-run and writes no private rows unless `--write` is explicitly provided.
+The next approved action is `--write` to create private C06 hard-negative I1 rows outside Git.
+
+This will not assemble I2.
+
+This will not run the validator.
 
 ## What is coming next
 
 ### Immediate next steps
 
-1. Run C06 private I1 writer dry-run.
-2. If dry-run passes, write C06 private I1 rows outside Git.
-3. Decide minimum I2 path or stronger path with C07.
+1. Write C06 private I1 rows outside Git.
+2. Decide minimum I2 path or stronger path with C07.
 
 After C06 is complete, decide:
 
@@ -194,12 +203,13 @@ Result:
 | private sample manifest generator | done |
 | private sample manifest write | done |
 | private I1 writer | done |
+| private I1 writer dry-run | done |
 | private I1 rows written outside Git | next |
 
 Current blocker:
 
 ```text
-C06 private I1 writer dry-run has not been run yet.
+C06 private I1 rows have not been written yet.
 ```
 
 ### 4. C07 hard-negative source
@@ -274,7 +284,8 @@ C06 Phase C: done
 C06 sample generator dry-run: done
 C06 sample manifest write: done
 C06 private I1 writer: done
-C06 private I1 writer dry-run / row write: next
+C06 private I1 writer dry-run: done
+C06 private I1 row write: next
 C07 hard-negative rows: optional stronger path after C06
 I2: not started
 H3/H4: blocked
