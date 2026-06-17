@@ -106,21 +106,22 @@ This path finishes after both C06 and C07 are ready and the validator passes.
 C06 private sample manifest write
 ```
 
-The C06 private sample manifest generator script has been created.
+The C06 private sample manifest generator dry-run passed.
 
-Next, the operator must provide a local Dynamic World label/class raster outside Git and run the generator dry-run.
+The next approved action is `--write` to create the private sample manifest outside Git.
 
-If dry-run selects 217 hard-negative samples, the next approved action is `--write` to create the private sample manifest outside Git.
+This will not create C06 I1 rows.
+
+This will not assemble I2.
 
 ## What is coming next
 
 ### Immediate next steps
 
-1. Run C06 sample generator dry-run with a local Dynamic World raster.
-2. If dry-run passes, write C06 private sample manifest outside Git.
-3. Create C06 private I1 writer.
-4. Run C06 private I1 writer dry-run.
-5. Write C06 private I1 rows outside Git.
+1. Write C06 private sample manifest outside Git.
+2. Create C06 private I1 writer.
+3. Run C06 private I1 writer dry-run.
+4. Write C06 private I1 rows outside Git.
 
 After C06 is complete, decide:
 
@@ -203,7 +204,7 @@ Result:
 Current blocker:
 
 ```text
-C06 local Dynamic World label/class raster has not been provided yet.
+C06 private sample manifest has not been written yet.
 ```
 
 ### 4. C07 hard-negative source
@@ -275,8 +276,8 @@ C05 background rows: done
 C06 Phase A: done
 C06 Phase B: done
 C06 Phase C: done
-C06 sample generator: done
-C06 sample manifest write: next, needs local Dynamic World raster
+C06 sample generator dry-run: done
+C06 sample manifest write: next
 C07 hard-negative rows: optional stronger path after C06
 I2: not started
 H3/H4: blocked
