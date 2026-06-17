@@ -141,9 +141,9 @@ def main() -> int:
             )
             for row in selected_rows
         ]
-        _write_private_outputs(output_dir=output_dir, rows=i1_rows, summary=summary)
         summary["real_i1_rows_created"] = len(i1_rows)
         summary["status"] = "private_i1_rows_written"
+        _write_private_outputs(output_dir=output_dir, rows=i1_rows, summary=summary)
 
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
