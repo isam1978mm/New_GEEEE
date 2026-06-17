@@ -42,6 +42,27 @@ No training or inference is started by this document.
 | C06 | hard-negative | 0 | not created |
 | C07 | hard-negative | 0 | not created |
 
+## Current item checklist
+
+Current item:
+
+```text
+C06 hard-negative source path
+```
+
+Checklist:
+
+```text
+[x] kickoff
+[x] Phase A source/version confirmation
+[ ] Phase B sampling policy       ← NEXT
+[ ] Phase C writer design
+[ ] private sample manifest generator
+[ ] private sample manifest write
+[ ] private I1 writer
+[ ] private I1 rows written outside Git
+```
+
 ## Finish line options
 
 There are two possible finish levels.
