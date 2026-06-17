@@ -55,8 +55,8 @@ Checklist:
 ```text
 [x] kickoff
 [x] Phase A source/version confirmation
-[ ] Phase B sampling policy       ← NEXT
-[ ] Phase C writer design
+[x] Phase B sampling policy
+[ ] Phase C writer design       ← NEXT
 [ ] private sample manifest generator
 [ ] private sample manifest write
 [ ] private I1 writer
@@ -103,28 +103,28 @@ This path finishes after both C06 and C07 are ready and the validator passes.
 ## Active next step
 
 ```text
-C06 Phase B — sampling-policy design
+C06 Phase C — private row writer design
 ```
 
-C06 Phase A source/version confirmation is complete.
+C06 Phase B sampling-policy design is complete.
 
-C06 Phase B must define:
+C06 Phase C must define:
 
 ```text
-hard-negative class families
-row count target
-deterministic seed use
-grouping rule
-split rule
-exclusion rule summaries
-private output behavior
+script name
+dry-run behavior
+write behavior
+private output folder
+expected 217 hard-negative rows
+summary-only reporting
+stop conditions
 ```
 
 ## What is coming next
 
 ### Immediate next steps
 
-1. C06 sampling policy design.
+1. C06 private row writer design.
 2. C06 private sample manifest or sampler script.
 3. C06 private I1 writer dry-run.
 4. C06 private I1 rows written outside Git.
@@ -200,8 +200,8 @@ Result:
 | --- | --- |
 | kickoff | done |
 | Phase A source/version confirmation | done |
-| Phase B sampling policy | next |
-| Phase C writer design | not started |
+| Phase B sampling policy | done |
+| Phase C writer design | next |
 | private sample manifest generator | not started |
 | private sample manifest write | not started |
 | private I1 writer | not started |
@@ -210,7 +210,7 @@ Result:
 Current blocker:
 
 ```text
-C06 Phase B sampling policy is not defined yet.
+C06 Phase C writer design is not defined yet.
 ```
 
 ### 4. C07 hard-negative source
@@ -280,7 +280,8 @@ Those require separate explicit approval.
 POS-01 positive rows: done
 C05 background rows: done
 C06 Phase A: done
-C06 Phase B sampling policy: next
+C06 Phase B: done
+C06 Phase C writer design: next
 C07 hard-negative rows: optional stronger path after C06
 I2: not started
 H3/H4: blocked
