@@ -55,8 +55,8 @@ Checklist:
 ```text
 [x] plan
 [x] actual review kickoff
-[ ] Phase A source/version confirmation       ← NEXT
-[ ] Phase B sampling policy
+[x] Phase A source/version confirmation
+[ ] Phase B sampling policy       ← NEXT
 [ ] Phase C writer design
 [ ] private sample manifest generator
 [ ] private sample manifest write
@@ -104,42 +104,33 @@ This path finishes after C07 is ready and the validator passes.
 ## Active next step
 
 ```text
-C07 Phase A — source/version confirmation
+C07 Phase B — sampling-policy design
 ```
 
-The operator must provide:
+C07 Phase A source/version confirmation is complete.
+
+C07 Phase B must define:
 
 ```text
-C07 source/version:
-Allowed mining/disturbance hard-negative classes:
-Target hard-negative row count:
-Private folder:
-Sampling seed:
-Split/grouping policy:
-```
-
-Recommended answer:
-
-```text
-C07 source/version: Maus mining polygons, operator-selected local version
-Allowed mining/disturbance hard-negative classes: mining/disturbance non-target only
-Target hard-negative row count: 217
-Private folder: C:\Dev\New_GEE_PRIVATE\C07_RAW and C:\Dev\New_GEE_PRIVATE\I1_C07
-Sampling seed: 20260616
-Split/grouping policy: unassigned initially, group_id generated later, no split leakage
+mining/disturbance hard-negative class families
+row count target
+deterministic seed use
+grouping rule
+split rule
+exclusion rule summaries
+private output behavior
 ```
 
 ## What is coming next
 
 ### C07 path
 
-1. C07 Phase A source/version confirmation.
-2. C07 Phase B sampling policy design.
-3. C07 Phase C writer design.
-4. C07 private sample manifest or sampler script.
-5. C07 private I1 writer dry-run.
-6. C07 private I1 rows written outside Git.
-7. Then return to private split policy and I2 assembly.
+1. C07 Phase B sampling policy design.
+2. C07 Phase C writer design.
+3. C07 private sample manifest or sampler script.
+4. C07 private I1 writer dry-run.
+5. C07 private I1 rows written outside Git.
+6. Then return to private split policy and I2 assembly.
 
 ### After C07 is ready
 
@@ -216,8 +207,8 @@ Result:
 | --- | --- |
 | plan | done |
 | actual review kickoff | done |
-| Phase A source/version confirmation | next |
-| Phase B sampling policy | not started |
+| Phase A source/version confirmation | done |
+| Phase B sampling policy | next |
 | Phase C writer design | not started |
 | private sample manifest generator | not started |
 | private sample manifest write | not started |
@@ -227,7 +218,7 @@ Result:
 Current blocker:
 
 ```text
-C07 Phase A operator settings are missing.
+C07 Phase B sampling policy is not defined yet.
 ```
 
 ### 5. I2 assembly
@@ -283,7 +274,8 @@ Those require separate explicit approval.
 POS-01 positive rows: done
 C05 background rows: done
 C06 hard-negative rows: done
-C07 Phase A: next
+C07 Phase A: done
+C07 Phase B sampling policy: next
 I2: not started
 H3/H4: blocked
 ```
