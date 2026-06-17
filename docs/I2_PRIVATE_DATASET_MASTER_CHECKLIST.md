@@ -57,8 +57,8 @@ Checklist:
 [x] actual review kickoff
 [x] Phase A source/version confirmation
 [x] Phase B sampling policy
-[ ] Phase C writer design       ← NEXT
-[ ] private sample manifest generator
+[x] Phase C writer design
+[ ] private sample manifest generator       ← NEXT
 [ ] private sample manifest write
 [ ] private I1 writer
 [ ] private I1 rows written outside Git
@@ -104,32 +104,25 @@ This path finishes after C07 is ready and the validator passes.
 ## Active next step
 
 ```text
-C07 Phase C — private row writer design
+Create C07 private sample manifest generator
 ```
 
-C07 Phase B sampling-policy design is complete.
+C07 Phase C private row writer design is complete.
 
-C07 Phase C must define:
+The next script should create or validate a private C07 sample manifest outside Git.
 
-```text
-script name
-dry-run behavior
-write behavior
-private output folder
-expected 217 hard-negative rows
-summary-only reporting
-stop conditions
-```
+It must default to dry-run and write nothing unless `--write` is provided.
 
 ## What is coming next
 
 ### C07 path
 
-1. C07 Phase C writer design.
-2. C07 private sample manifest or sampler script.
-3. C07 private I1 writer dry-run.
-4. C07 private I1 rows written outside Git.
-5. Then return to private split policy and I2 assembly.
+1. Create C07 private sample manifest generator.
+2. Write C07 private sample manifest outside Git.
+3. Create C07 private I1 writer.
+4. Run C07 private I1 writer dry-run.
+5. Write C07 private I1 rows outside Git.
+6. Then return to private split policy and I2 assembly.
 
 ### After C07 is ready
 
@@ -208,8 +201,8 @@ Result:
 | actual review kickoff | done |
 | Phase A source/version confirmation | done |
 | Phase B sampling policy | done |
-| Phase C writer design | next |
-| private sample manifest generator | not started |
+| Phase C writer design | done |
+| private sample manifest generator | next |
 | private sample manifest write | not started |
 | private I1 writer | not started |
 | private I1 rows written outside Git | not started |
@@ -217,7 +210,7 @@ Result:
 Current blocker:
 
 ```text
-C07 Phase C writer design is not defined yet.
+C07 private sample manifest generator is not created yet.
 ```
 
 ### 5. I2 assembly
@@ -275,7 +268,8 @@ C05 background rows: done
 C06 hard-negative rows: done
 C07 Phase A: done
 C07 Phase B: done
-C07 Phase C writer design: next
+C07 Phase C: done
+C07 sample manifest generator: next
 I2: not started
 H3/H4: blocked
 ```
