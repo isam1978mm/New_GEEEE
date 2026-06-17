@@ -47,23 +47,22 @@ No training or inference is started by this document.
 Current item:
 
 ```text
-C06 hard-negative source path
+C07 hard-negative source path
 ```
 
 Checklist:
 
 ```text
-[x] kickoff
-[x] Phase A source/version confirmation
-[x] Phase B sampling policy
-[x] Phase C writer design
-[x] private sample manifest generator
-[x] private sample manifest write
-[x] private I1 writer
-[x] private I1 rows written outside Git
+[x] plan
+[x] actual review kickoff
+[ ] Phase A source/version confirmation       ← NEXT
+[ ] Phase B sampling policy
+[ ] Phase C writer design
+[ ] private sample manifest generator
+[ ] private sample manifest write
+[ ] private I1 writer
+[ ] private I1 rows written outside Git
 ```
-
-C06 is complete.
 
 ## Finish line options
 
@@ -71,7 +70,7 @@ There are two possible finish levels.
 
 ### Minimum I2-readiness path
 
-This is the shortest path to attempt I2 readiness validation.
+This path is possible but deferred by operator decision.
 
 Required:
 
@@ -83,11 +82,11 @@ Required:
 - [ ] dataset readiness validator runs on the private I2 pack
 - [ ] validator returns `ready_for_private_training_later`
 
-This path can now proceed to minimum I2 readiness planning if approved.
+Operator selected the stronger path before minimum I2 assembly.
 
 ### Stronger I2-readiness path
 
-This is more robust but takes longer.
+This is the active path now.
 
 Required:
 
@@ -105,42 +104,52 @@ This path finishes after C07 is ready and the validator passes.
 ## Active next step
 
 ```text
-Decision point: minimum I2 path or stronger C07 path
+C07 Phase A — source/version confirmation
 ```
 
-Available options:
+The operator must provide:
 
 ```text
-Option 1: attempt minimum I2 assembly path with POS-01 + C05 + C06
-Option 2: continue to C07 for stronger hard-negatives before I2 assembly
+C07 source/version:
+Allowed mining/disturbance hard-negative classes:
+Target hard-negative row count:
+Private folder:
+Sampling seed:
+Split/grouping policy:
 ```
 
-No I2 assembly starts without separate explicit approval.
+Recommended answer:
+
+```text
+C07 source/version: Maus mining polygons, operator-selected local version
+Allowed mining/disturbance hard-negative classes: mining/disturbance non-target only
+Target hard-negative row count: 217
+Private folder: C:\Dev\New_GEE_PRIVATE\C07_RAW and C:\Dev\New_GEE_PRIVATE\I1_C07
+Sampling seed: 20260616
+Split/grouping policy: unassigned initially, group_id generated later, no split leakage
+```
 
 ## What is coming next
 
-### If choosing minimum I2 path
+### C07 path
+
+1. C07 Phase A source/version confirmation.
+2. C07 Phase B sampling policy design.
+3. C07 Phase C writer design.
+4. C07 private sample manifest or sampler script.
+5. C07 private I1 writer dry-run.
+6. C07 private I1 rows written outside Git.
+7. Then return to private split policy and I2 assembly.
+
+### After C07 is ready
 
 1. Create private split policy.
 2. Create private I2 assembly plan.
 3. Assemble private I2 pack outside Git.
 4. Run dataset readiness validator on private I2 pack.
 5. If validator passes, I2 readiness phase is complete.
-
-### If continuing to C07
-
-1. C07 actual review kickoff.
-2. C07 Phase A source/version confirmation.
-3. C07 sampling policy design.
-4. C07 private sample manifest or sampler script.
-5. C07 private I1 writer dry-run.
-6. C07 private I1 rows written outside Git.
-7. Then return to private split policy and I2 assembly.
-
-### After I2 readiness
-
-1. H3 remains a separate explicit decision after I2 readiness.
-2. H4 remains blocked until after a later approved H3 model and private inference gate.
+6. H3 remains a separate explicit decision after I2 readiness.
+7. H4 remains blocked until after a later approved H3 model and private inference gate.
 
 ## Detailed checklist
 
@@ -206,19 +215,26 @@ Result:
 | Step | Status |
 | --- | --- |
 | plan | done |
-| actual review kickoff | not started |
-| Phase A source/version confirmation | not started |
+| actual review kickoff | done |
+| Phase A source/version confirmation | next |
 | Phase B sampling policy | not started |
 | Phase C writer design | not started |
 | private sample manifest generator | not started |
+| private sample manifest write | not started |
 | private I1 writer | not started |
 | private I1 rows written outside Git | not started |
+
+Current blocker:
+
+```text
+C07 Phase A operator settings are missing.
+```
 
 ### 5. I2 assembly
 
 | Step | Status |
 | --- | --- |
-| decide minimum vs stronger hard-negative path | next |
+| C07 stronger hard-negative path | active |
 | create private split policy | not started |
 | combine private I1 rows | not started |
 | create private I2 manifest | not started |
@@ -228,7 +244,7 @@ Result:
 Current blocker:
 
 ```text
-Operator must choose minimum I2 path or stronger C07 path.
+C07 hard-negative private I1 rows are not ready.
 ```
 
 ### 6. H3 and H4
@@ -267,8 +283,7 @@ Those require separate explicit approval.
 POS-01 positive rows: done
 C05 background rows: done
 C06 hard-negative rows: done
-Minimum I2 path is now possible, pending operator decision
-C07 hard-negative rows: optional stronger path before I2
+C07 Phase A: next
 I2: not started
 H3/H4: blocked
 ```
