@@ -59,8 +59,8 @@ Checklist:
 [x] Phase C writer design
 [x] private sample manifest generator
 [x] private sample manifest write
-[ ] private I1 writer       ← NEXT
-[ ] private I1 rows written outside Git
+[x] private I1 writer
+[ ] private I1 rows written outside Git       ← NEXT
 ```
 
 ## Finish line options
@@ -103,22 +103,20 @@ This path finishes after both C06 and C07 are ready and the validator passes.
 ## Active next step
 
 ```text
-Create C06 private I1 writer
+Run C06 private I1 writer dry-run, then write C06 private I1 rows outside Git if dry-run passes
 ```
 
-The C06 private sample manifest has been written outside Git.
+The C06 private I1 writer script has been created.
 
-The next step is to create the C06 private I1 writer script.
-
-The writer must default to dry-run and write no private rows unless `--write` is explicitly provided.
+The writer defaults to dry-run and writes no private rows unless `--write` is explicitly provided.
 
 ## What is coming next
 
 ### Immediate next steps
 
-1. Create C06 private I1 writer.
-2. Run C06 private I1 writer dry-run.
-3. Write C06 private I1 rows outside Git.
+1. Run C06 private I1 writer dry-run.
+2. If dry-run passes, write C06 private I1 rows outside Git.
+3. Decide minimum I2 path or stronger path with C07.
 
 After C06 is complete, decide:
 
@@ -195,13 +193,13 @@ Result:
 | Phase C writer design | done |
 | private sample manifest generator | done |
 | private sample manifest write | done |
-| private I1 writer | next |
-| private I1 rows written outside Git | not started |
+| private I1 writer | done |
+| private I1 rows written outside Git | next |
 
 Current blocker:
 
 ```text
-C06 private I1 writer is not created yet.
+C06 private I1 writer dry-run has not been run yet.
 ```
 
 ### 4. C07 hard-negative source
@@ -275,7 +273,8 @@ C06 Phase B: done
 C06 Phase C: done
 C06 sample generator dry-run: done
 C06 sample manifest write: done
-C06 private I1 writer: next
+C06 private I1 writer: done
+C06 private I1 writer dry-run / row write: next
 C07 hard-negative rows: optional stronger path after C06
 I2: not started
 H3/H4: blocked
