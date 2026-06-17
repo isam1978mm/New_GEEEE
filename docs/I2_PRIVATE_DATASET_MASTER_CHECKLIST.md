@@ -56,8 +56,8 @@ Checklist:
 [x] plan
 [x] actual review kickoff
 [x] Phase A source/version confirmation
-[ ] Phase B sampling policy       ← NEXT
-[ ] Phase C writer design
+[x] Phase B sampling policy
+[ ] Phase C writer design       ← NEXT
 [ ] private sample manifest generator
 [ ] private sample manifest write
 [ ] private I1 writer
@@ -104,33 +104,32 @@ This path finishes after C07 is ready and the validator passes.
 ## Active next step
 
 ```text
-C07 Phase B — sampling-policy design
+C07 Phase C — private row writer design
 ```
 
-C07 Phase A source/version confirmation is complete.
+C07 Phase B sampling-policy design is complete.
 
-C07 Phase B must define:
+C07 Phase C must define:
 
 ```text
-mining/disturbance hard-negative class families
-row count target
-deterministic seed use
-grouping rule
-split rule
-exclusion rule summaries
-private output behavior
+script name
+dry-run behavior
+write behavior
+private output folder
+expected 217 hard-negative rows
+summary-only reporting
+stop conditions
 ```
 
 ## What is coming next
 
 ### C07 path
 
-1. C07 Phase B sampling policy design.
-2. C07 Phase C writer design.
-3. C07 private sample manifest or sampler script.
-4. C07 private I1 writer dry-run.
-5. C07 private I1 rows written outside Git.
-6. Then return to private split policy and I2 assembly.
+1. C07 Phase C writer design.
+2. C07 private sample manifest or sampler script.
+3. C07 private I1 writer dry-run.
+4. C07 private I1 rows written outside Git.
+5. Then return to private split policy and I2 assembly.
 
 ### After C07 is ready
 
@@ -208,8 +207,8 @@ Result:
 | plan | done |
 | actual review kickoff | done |
 | Phase A source/version confirmation | done |
-| Phase B sampling policy | next |
-| Phase C writer design | not started |
+| Phase B sampling policy | done |
+| Phase C writer design | next |
 | private sample manifest generator | not started |
 | private sample manifest write | not started |
 | private I1 writer | not started |
@@ -218,7 +217,7 @@ Result:
 Current blocker:
 
 ```text
-C07 Phase B sampling policy is not defined yet.
+C07 Phase C writer design is not defined yet.
 ```
 
 ### 5. I2 assembly
@@ -275,7 +274,8 @@ POS-01 positive rows: done
 C05 background rows: done
 C06 hard-negative rows: done
 C07 Phase A: done
-C07 Phase B sampling policy: next
+C07 Phase B: done
+C07 Phase C writer design: next
 I2: not started
 H3/H4: blocked
 ```
