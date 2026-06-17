@@ -82,40 +82,31 @@ This path finishes after both C06 and C07 are ready and the validator passes.
 ## Active next step
 
 ```text
-C06 Phase A — source/version confirmation
+C06 Phase B — sampling-policy design
 ```
 
-The operator must provide:
+C06 Phase A source/version confirmation is complete.
+
+C06 Phase B must define:
 
 ```text
-C06 source/version:
-Allowed hard-negative classes:
-Target hard-negative row count:
-Private folder:
-Sampling seed:
-Split/grouping policy:
-```
-
-Recommended answer:
-
-```text
-C06 source/version: Dynamic World, operator-selected local version
-Allowed hard-negative classes: built/bare/confusing non-target only
-Target hard-negative row count: 217
-Private folder: C:\Dev\New_GEE_PRIVATE\C06_RAW and C:\Dev\New_GEE_PRIVATE\I1_C06
-Sampling seed: 20260616
-Split/grouping policy: unassigned initially, group_id generated later, no split leakage
+hard-negative class families
+row count target
+deterministic seed use
+grouping rule
+split rule
+exclusion rule summaries
+private output behavior
 ```
 
 ## What is coming next
 
 ### Immediate next steps
 
-1. C06 Phase A source/version confirmation.
-2. C06 sampling policy design.
-3. C06 private sample manifest or sampler script.
-4. C06 private I1 writer dry-run.
-5. C06 private I1 rows written outside Git.
+1. C06 sampling policy design.
+2. C06 private sample manifest or sampler script.
+3. C06 private I1 writer dry-run.
+4. C06 private I1 rows written outside Git.
 
 After C06 is complete, decide:
 
@@ -187,8 +178,8 @@ Result:
 | Step | Status |
 | --- | --- |
 | kickoff | done |
-| Phase A source/version confirmation | next |
-| Phase B sampling policy | not started |
+| Phase A source/version confirmation | done |
+| Phase B sampling policy | next |
 | Phase C writer design | not started |
 | private sample manifest generator | not started |
 | private sample manifest write | not started |
@@ -198,7 +189,7 @@ Result:
 Current blocker:
 
 ```text
-C06 Phase A operator settings are missing.
+C06 Phase B sampling policy is not defined yet.
 ```
 
 ### 4. C07 hard-negative source
@@ -229,7 +220,7 @@ Current blocker:
 
 ```text
 At least one hard-negative private I1 source is required before minimum I2 assembly can start.
-C06 is the active next hard-negative source.
+C06 is the active hard-negative source.
 ```
 
 ### 6. H3 and H4
@@ -267,7 +258,8 @@ Those require separate explicit approval.
 ```text
 POS-01 positive rows: done
 C05 background rows: done
-C06 hard-negative rows: active next
+C06 Phase A: done
+C06 Phase B sampling policy: next
 C07 hard-negative rows: optional stronger path after C06
 I2: not started
 H3/H4: blocked
