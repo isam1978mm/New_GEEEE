@@ -56,8 +56,8 @@ Checklist:
 [x] kickoff
 [x] Phase A source/version confirmation
 [x] Phase B sampling policy
-[ ] Phase C writer design       ← NEXT
-[ ] private sample manifest generator
+[x] Phase C writer design
+[ ] private sample manifest generator       ← NEXT
 [ ] private sample manifest write
 [ ] private I1 writer
 [ ] private I1 rows written outside Git
@@ -103,29 +103,21 @@ This path finishes after both C06 and C07 are ready and the validator passes.
 ## Active next step
 
 ```text
-C06 Phase C — private row writer design
+C06 private sample manifest generator
 ```
 
-C06 Phase B sampling-policy design is complete.
+C06 Phase C private row writer design is complete.
 
-C06 Phase C must define:
+The next script should create or validate a private C06 sample manifest outside Git.
 
-```text
-script name
-dry-run behavior
-write behavior
-private output folder
-expected 217 hard-negative rows
-summary-only reporting
-stop conditions
-```
+It must default to dry-run and write nothing unless `--write` is provided.
 
 ## What is coming next
 
 ### Immediate next steps
 
-1. C06 private row writer design.
-2. C06 private sample manifest or sampler script.
+1. C06 private sample manifest generator.
+2. C06 private sample manifest write.
 3. C06 private I1 writer dry-run.
 4. C06 private I1 rows written outside Git.
 
@@ -201,8 +193,8 @@ Result:
 | kickoff | done |
 | Phase A source/version confirmation | done |
 | Phase B sampling policy | done |
-| Phase C writer design | next |
-| private sample manifest generator | not started |
+| Phase C writer design | done |
+| private sample manifest generator | next |
 | private sample manifest write | not started |
 | private I1 writer | not started |
 | private I1 rows written outside Git | not started |
@@ -210,7 +202,7 @@ Result:
 Current blocker:
 
 ```text
-C06 Phase C writer design is not defined yet.
+C06 private sample manifest generator is not created yet.
 ```
 
 ### 4. C07 hard-negative source
@@ -281,7 +273,8 @@ POS-01 positive rows: done
 C05 background rows: done
 C06 Phase A: done
 C06 Phase B: done
-C06 Phase C writer design: next
+C06 Phase C: done
+C06 private sample manifest generator: next
 C07 hard-negative rows: optional stronger path after C06
 I2: not started
 H3/H4: blocked
