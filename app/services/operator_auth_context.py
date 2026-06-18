@@ -76,9 +76,6 @@ def resolve_operator_auth_context(
             x_request_id=x_request_id,
         )
 
-    if _local_development_operator_bypass_allowed(settings):
-        return _local_development_operator_context(x_request_id=x_request_id)
-
     if not trusted_proxy_enabled:
         return OperatorAuthContext(
             actor_id=None,
@@ -87,6 +84,9 @@ def resolve_operator_auth_context(
             authorized_run_ids=(),
             request_id=f"req_{uuid.uuid4().hex}",
         )
+
+    if _local_development_operator_bypass_allowed(settings):
+        return _local_development_operator_context(x_request_id=x_request_id)
 
     return _trusted_proxy_context(
         x_operator_authenticated=x_operator_authenticated,

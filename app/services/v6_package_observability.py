@@ -14,6 +14,8 @@ LOGGER_NAME = "app.v6_package_flow"
 _SAFE_COUNTERS: Counter[tuple[str, str, str]] = Counter()
 _COUNTER_LOCK = Lock()
 _LOGGER = logging.getLogger(LOGGER_NAME)
+_LOGGER.setLevel(logging.INFO)
+_LOGGER.propagate = True
 
 
 @dataclass(frozen=True)

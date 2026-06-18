@@ -119,6 +119,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
+def _ensure_route_path_attributes(app: FastAPI) -> None:
+    for index, route in enumerate(app.routes):
+        if not hasattr(route, "path"):
+            setattr(route, "path", f"__non_http_route_{index}")
+
+
 app = create_app()
 
 
@@ -134,10 +140,6 @@ def _is_react_ui_path(path: str) -> bool:
     return True
 
 
-def _ensure_route_path_attributes(app: FastAPI) -> None:
-    for index, route in enumerate(app.routes):
-        if not hasattr(route, "path"):
-            setattr(route, "path", f"__non_http_route_{index}")
 
 
 def _apply_database_migrations(settings: Settings) -> None:

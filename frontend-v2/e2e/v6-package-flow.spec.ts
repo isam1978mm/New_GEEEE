@@ -3,6 +3,8 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const RUN_ID = "e2e-v6-package-flow";
 const CREATED_AT = "2026-06-14T12:00:00Z";
 const OPERATOR_TOKEN = "local-e2e-operator-token";
+const MASKED_OPERATOR_TOKEN = "***";
+const EXPECTED_OPERATOR_AUTHORIZATION = `Bearer ${OPERATOR_TOKEN}`;
 const WRONG_ROLE_TOKEN = "local-e2e-wrong-role-token";
 const UNAUTHORIZED_RUN_TOKEN = "local-e2e-unauthorized-run-token";
 const ZIP_FILENAME = "V6_REAL_GENERATED.zip";

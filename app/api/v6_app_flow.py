@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
+from app.services.artifact_response import serve_private_file_response
 
 from app.config import Settings
 from app.deps import get_settings_from_request
@@ -87,7 +88,7 @@ async def download_v6_private_package(
     result = resolve_private_v6_package_download(settings=settings, run_id=run_id, access_context=access_context)
     if result.file_path is None:
         return JSONResponse(status_code=result.status_code, content=result.body)
-    return FileResponse(result.file_path, filename=result.file_name, media_type="application/zip")
+    return serve_private_file_response(file_path=result.file_path, file_name=result.file_name or result.file_path.name, media_type="application/zip")
 
 
 def _access_context_from_headers(
