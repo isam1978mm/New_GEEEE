@@ -72,8 +72,8 @@ def test_phase_6_through_phase_10_are_complete_and_the_roadmap_is_closed():
     assert "[ ] Phase 8 — Probability-only ML classifier design" not in text
     assert "[ ] Phase 9 — End-to-end parity harness" not in text
     assert "[ ] Phase 10 — Clean app vs parity app decision" not in text
-    assert "Roadmap status: closed at Phase 10." in text
-    assert "No later phase exists unless the user opens a new roadmap." in text
+    assert "Roadmap contract status: closed at Phase 10." in text
+    assert "Current remaining operational work:" in text
 
 
 def test_phase_4_checklist_marks_phase_4z_complete():
