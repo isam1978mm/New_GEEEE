@@ -253,8 +253,10 @@ def test_json_report_writes_parses_and_stays_under_run_dir(tmp_path: Path) -> No
 
 def test_config_policy_is_default_off_and_not_implemented(tmp_path: Path) -> None:
     design = get_operator_overlay_implementation_design()
-    assert design.config_policy["default_enabled"] is False
-    assert design.config_policy["requires_explicit_env_flag"] is True
+    assert design.config_policy["default_off_required"] is True
+    assert design.config_policy["proposed_default_value"] is False
+    assert design.config_policy["config_added_now"] is False
+    assert design.config_policy["implementation_allowed_now"] is False
 
 
 def test_report_writing_does_not_create_artifact_files(tmp_path: Path) -> None:
