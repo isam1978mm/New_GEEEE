@@ -123,7 +123,7 @@ def build_h5_score_band_review(
     out_of_range_score_count = sum(
         1 for score in scores if score < EXPECTED_SCORE_MIN or score > EXPECTED_SCORE_MAX
     )
-    duplicate_sample_id_count = _duplicate_count([row.get("sample_id", "") for row in rows])
+    duplicate_private_id_count = _duplicate_count([row.get("sample_id", "") for row in rows])
     score_band_counts = _score_band_counts(scores)
     rows_by_source = _count(rows, "source_id")
     rows_by_split = _count(rows, "split")
@@ -135,7 +135,7 @@ def build_h5_score_band_review(
         and len(rows) == EXPECTED_SCORE_ROWS
         and h4_score_rows == EXPECTED_SCORE_ROWS
         and h4_prediction_files_written is True
-        and duplicate_sample_id_count == 0
+        and duplicate_private_id_count == 0
         and non_finite_score_count == 0
         and out_of_range_score_count == 0
         and sum(score_band_counts.values()) == len(rows)
@@ -157,7 +157,7 @@ def build_h5_score_band_review(
         "score_band_counts_status": "available_from_private_aggregate_review" if ready else "not_ready",
         "rows_by_source": rows_by_source,
         "rows_by_split": rows_by_split,
-        "duplicate_sample_id_count": duplicate_sample_id_count,
+        "duplicate_private_id_count": duplicate_private_id_count,
         "non_finite_score_count": non_finite_score_count,
         "out_of_range_score_count": out_of_range_score_count,
         "input_errors": input_errors,
