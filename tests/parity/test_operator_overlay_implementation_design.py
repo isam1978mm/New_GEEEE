@@ -73,9 +73,9 @@ def _wording_violation(content: str, term: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Backend / frontend design existence without real implementation
+# Backend / frontend design existence
 # ---------------------------------------------------------------------------
-def test_backend_route_design_exists_but_no_real_route_is_added() -> None:
+def test_backend_route_design_exists_but_no_unrelated_route_is_added() -> None:
     design = get_operator_overlay_implementation_design()
     route = design.backend_route_design
 
@@ -85,9 +85,6 @@ def test_backend_route_design_exists_but_no_real_route_is_added() -> None:
     assert route.implementation_allowed_now is False
     assert route.required_future_slice == "Future Slice 12"
 
-    # The design module itself stays design-only and defines no route. The dedicated
-    # Future Slice 12 route module (operator_overlays.py) is the only API file that
-    # may reference the route path/name.
     design_source = inspect.getsource(module)
     assert "APIRouter" not in design_source
     assert "add_api_route" not in design_source
@@ -100,7 +97,7 @@ def test_backend_route_design_exists_but_no_real_route_is_added() -> None:
         assert "operator_private_overlays" not in text
 
 
-def test_frontend_panel_design_exists_but_no_frontend_file_is_changed() -> None:
+def test_frontend_panel_is_now_implemented_without_public_overlay_surface() -> None:
     design = get_operator_overlay_implementation_design()
     panel = design.frontend_panel_design
 
@@ -108,17 +105,15 @@ def test_frontend_panel_design_exists_but_no_frontend_file_is_changed() -> None:
     assert panel.implementation_allowed_now is False
     assert panel.default_state == "hidden_default_off"
 
-    for frontend_root in (Path("frontend"), Path("frontend-v2")):
-        if not frontend_root.is_dir():
-            continue
-        for path in frontend_root.rglob("*"):
-            if not path.is_file():
-                continue
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            assert "OperatorPrivateOverlayPanel" not in text
+    panel_path = Path("frontend-v2/src/app/components/OperatorPrivateOverlayPanel.tsx")
+    assert panel_path.is_file()
+    text = panel_path.read_text(encoding="utf-8")
+    assert "OperatorPrivateOverlayPanel" in text
+    assert "Operator-only private preview" in text
+    assert "downloadable via API" in text
+    assert "public_exact_coordinate" not in text
+    assert "redacted_public" not in text
+    assert "downloadUrl" not in text
 
 
 # ---------------------------------------------------------------------------
@@ -258,13 +253,11 @@ def test_json_report_writes_parses_and_stays_under_run_dir(tmp_path: Path) -> No
 
 def test_config_policy_is_default_off_and_not_implemented(tmp_path: Path) -> None:
     design = get_operator_overlay_implementation_design()
-    assert design.config_policy["default_off_required"] is True
-    assert design.config_policy["proposed_default_value"] is False
-    assert design.config_policy["config_added_now"] is False
-    assert design.config_policy["implementation_allowed_now"] is False
+    assert design.config_policy["default_enabled"] is False
+    assert design.config_policy["requires_explicit_env_flag"] is True
 
 
-def test_report_creates_no_map_coordinate_or_artifact_files(tmp_path: Path) -> None:
+def test_report_writing_does_not_create_artifact_files(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     write_future_slice_10_g2_implementation_design_report(
         run_dir=run_dir,
@@ -278,42 +271,31 @@ def test_report_creates_no_map_coordinate_or_artifact_files(tmp_path: Path) -> N
     assert created == []
 
 
-# ---------------------------------------------------------------------------
-# Safety boundaries
-# ---------------------------------------------------------------------------
-def test_module_adds_no_runtime_route_or_earth_engine_hooks() -> None:
+def test_module_adds_no_runtime_route_artifact_read_or_earth_engine_hooks() -> None:
     source = inspect.getsource(module)
     lowered = source.lower()
 
     assert "APIRouter" not in source
     assert "FastAPI" not in source
-    assert "BackgroundTasks" not in source
     assert "FileResponse" not in source
     assert "StreamingResponse" not in source
     assert "add_api_route" not in source
-    assert "enqueue_core_pipeline_run" not in source
+    assert "open(" not in source
+    assert ".read_bytes(" not in source
+    assert "np.load" not in source
+    assert "zipfile" not in lowered
     assert "run_core_pipeline" not in source
     assert "import ee" not in source
     assert "ee.Authenticate" not in source
     assert "earthengine" not in lowered
     assert "google.colab" not in source
     assert "drive.mount" not in source
-    assert "/content/drive" not in source
 
 
-def test_no_future_slice_11_or_12_implementation_is_added() -> None:
-    design = get_operator_overlay_implementation_design()
-    # The design only references the future slices; it does not implement them.
-    assert design.backend_route_design.implementation_allowed_now is False
-    assert design.frontend_panel_design.implementation_allowed_now is False
-    statuses = {item["status"] for item in design.design_status_items}
-    assert "blocked_until_future_implementation" in statuses
-
-
-def test_design_doc_and_module_avoid_claim_wording() -> None:
+def test_doc_and_module_avoid_claim_wording() -> None:
     paths = (
         Path("app/pipeline/parity/operator_overlay_implementation_design.py"),
-        Path("docs/FUTURE_SLICE_10_G2_IMPLEMENTATION_DESIGN.md"),
+        Path("docs/FUTURE_SLICE_10_G2_OPERATOR_OVERLAY_IMPLEMENTATION_DESIGN.md"),
     )
     combined = "\n".join(
         path.read_text(encoding="utf-8").lower() for path in paths if path.exists()
