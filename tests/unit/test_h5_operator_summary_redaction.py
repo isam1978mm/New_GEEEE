@@ -52,8 +52,14 @@ def _safe_summary() -> dict[str, object]:
         "score_mean": 0.2499092531797235,
         "rows_by_source": {"C05": 217, "C06": 217, "C07": 217, "POS-01": 217},
         "rows_by_split": {"holdout": 84, "test": 88, "train": 608, "val": 88},
-        "score_band_counts": {},
-        "score_band_counts_status": "not_available_from_aggregate_summary",
+        "score_band_counts": {
+            "score_0_00_to_0_10": 100,
+            "score_0_10_to_0_25": 200,
+            "score_0_25_to_0_50": 300,
+            "score_0_50_to_0_75": 200,
+            "score_0_75_to_1_00": 68,
+        },
+        "score_band_counts_status": "available_from_private_aggregate_review",
         "prediction_files_written": True,
         "api_frontend_changed": False,
         "overlays_created": False,
@@ -97,6 +103,59 @@ def test_service_strips_private_paths_and_row_level_fields_from_private_summary(
     assert "positive_score" not in text
 
 
+def test_service_loads_score_bands_from_aggregate_review_only() -> None:
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        summary_path = root / "h4_prediction_summary.private.json"
+        band_path = root / "h5_score_band_summary.private.json"
+        summary_path.write_text(
+            json.dumps(
+                {
+                    "status": "h4_private_offline_inference_completed",
+                    "feature_set_type": "real_i2_source_context_v1",
+                    "training_type": "h3_scientific_real_feature_baseline",
+                    "score_rows_written": 868,
+                    "feature_matrix_rows": 868,
+                    "feature_column_count": 8,
+                    "score_min": 0.00004185,
+                    "score_max": 0.97847171,
+                    "score_mean": 0.2499092531797235,
+                    "rows_by_source": {"C05": 217, "C06": 217, "C07": 217, "POS-01": 217},
+                    "rows_by_split": {"holdout": 84, "test": 88, "train": 608, "val": 88},
+                    "prediction_files_written": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+        band_path.write_text(
+            json.dumps(
+                {
+                    "score_band_counts": {
+                        "score_0_00_to_0_10": 174,
+                        "score_0_10_to_0_25": 174,
+                        "score_0_25_to_0_50": 174,
+                        "score_0_50_to_0_75": 173,
+                        "score_0_75_to_1_00": 173,
+                    },
+                    "score_band_counts_status": "available_from_private_aggregate_review",
+                    "row_level_output_included": False,
+                    "private_paths_included": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        safe = load_h5_operator_aggregate_summary(summary_path, band_path)
+
+    assert safe["score_band_counts_status"] == "available_from_private_aggregate_review"
+    assert safe["score_band_counts"]["score_0_00_to_0_10"] == 174
+    assert sum(safe["score_band_counts"].values()) == 868
+    text = json.dumps(safe, sort_keys=True)
+    assert "sample_id" not in text
+    assert "positive_score" not in text
+    assert "predictions_path" not in text
+
+
 def test_redaction_guard_rejects_forbidden_row_level_fields() -> None:
     with pytest_raises_h5_error():
         assert_h5_operator_summary_is_redacted({"summary": {"sample_id": "private_sample"}})
@@ -118,6 +177,7 @@ def test_operator_route_requires_operator_role_and_returns_only_aggregate_fields
     assert body["outcome"] == "allowed"
     assert body["access_mode"] == "operator_only_aggregate"
     assert body["summary"]["total_row_count"] == 868
+    assert body["summary"]["score_band_counts_status"] == "available_from_private_aggregate_review"
     assert body["summary"]["row_level_output_included"] is False
     assert body["downloadable_via_api"] is False
     assert body["overlays_created"] is False
