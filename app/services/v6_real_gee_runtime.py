@@ -86,9 +86,9 @@ class V6EarthEngineRuntime:
         return self._initialized
 
     def initialize(self) -> Any:
+        if self.config.allow_interactive_auth:
+            raise ValueError("interactive Earth Engine authentication is not allowed in app runtime")
         ee = self._ee_module or importlib.import_module("ee")
-        if self.config.allow_interactive_auth and hasattr(ee, "Authenticate"):
-            ee.Authenticate()
         if self.config.project_id:
             ee.Initialize(project=self.config.project_id)
         else:
