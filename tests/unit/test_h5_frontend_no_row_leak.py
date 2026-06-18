@@ -28,6 +28,8 @@ _ALLOWED_AGGREGATE_TOKENS = (
     "scoreMin",
     "scoreMax",
     "scoreMean",
+    "scoreBandCounts",
+    "scoreBandCountsStatus",
     "rowsBySource",
     "rowsBySplit",
     "rowLevelOutputIncluded",
@@ -68,6 +70,9 @@ def test_h5_frontend_panel_renders_only_aggregate_boundary() -> None:
     assert "No row-level" in content
     assert "private paths" in content
     assert "overlays" in content
+    assert "Score bands" in content
+    assert "Score band status" in content
+    assert "formatCounts(summary.scoreBandCounts)" in content
     assert "formatCounts(summary.rowsBySource)" in content
     assert "formatCounts(summary.rowsBySplit)" in content
 
