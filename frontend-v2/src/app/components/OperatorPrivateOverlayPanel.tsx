@@ -4,6 +4,7 @@ import {
   type OperatorPrivateOverlayArtifactFamily,
   type OperatorPrivateOverlayPreview,
 } from "../api/operatorOverlays";
+import { H5OperatorAggregateSummaryPanel } from "./H5OperatorAggregateSummaryPanel";
 import { useOperatorAccessToken } from "./OperatorSessionContext";
 import { V6PrivatePackagePanel } from "./V6PrivatePackagePanel";
 
@@ -43,6 +44,7 @@ export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: Oper
 
   return (
     <>
+      <H5OperatorAggregateSummaryPanel operatorAccessToken={resolvedOperatorAccessToken} />
       <section
         className="rounded-lg bg-card overflow-hidden mt-4"
         style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
