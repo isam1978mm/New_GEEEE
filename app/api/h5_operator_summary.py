@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse
 
 from app.config import Settings
 from app.deps import get_settings_from_request
-from app.pipeline.parity.operator_overlay_access_foundation import OPERATOR_ROLE
 from app.services.h5_operator_summary import (
     H5OperatorSummaryError,
     assert_h5_operator_summary_is_redacted,
@@ -13,6 +12,8 @@ from app.services.h5_operator_summary import (
 )
 from app.services.operator_auth_context import resolve_operator_auth_context
 
+
+OPERATOR_ROLE = "operator"
 
 router = APIRouter(tags=["h5-operator-summary"])
 
