@@ -58,6 +58,9 @@ def record_v6_package_flow_observation(observation: V6PackageFlowObservation) ->
         if observation.outcome == "denied":
             _SAFE_COUNTERS[("denied", observation.denial_reason or "generic", observation.action)] += 1
 
+    _LOGGER.disabled = False
+    _LOGGER.setLevel(logging.INFO)
+    _LOGGER.propagate = True
     _LOGGER.info(
         "v6_package_flow_event %s",
         json.dumps(safe_event, sort_keys=True, separators=(",", ":")),
