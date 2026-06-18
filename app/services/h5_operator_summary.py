@@ -44,7 +44,8 @@ def load_h5_operator_aggregate_summary(
     path = Path(summary_path)
     band_path = Path(score_band_summary_path)
     _validate_private_path_not_inside_repo(path, "H4 summary path")
-    _validate_private_path_not_inside_repo(band_path, "H5 score band summary path")
+    if band_path.is_file() or not _looks_like_windows_private_path(band_path):
+        _validate_private_path_not_inside_repo(band_path, "H5 score band summary path")
     if not path.is_file():
         raise FileNotFoundError(f"H4 summary does not exist: {path}")
 
@@ -140,6 +141,11 @@ def _safe_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _looks_like_windows_private_path(path: Path) -> bool:
+    text = str(path)
+    return len(text) >= 3 and text[1] == ":" and text[2] in {"\\", "/"}
 
 
 def _validate_private_path_not_inside_repo(path: Path, label: str) -> None:
