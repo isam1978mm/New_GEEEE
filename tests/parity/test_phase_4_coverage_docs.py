@@ -80,21 +80,25 @@ def test_phase_4_checklist_includes_phase_4a_through_4h11_and_4z_without_h12():
     assert "Phase 4H12" not in text
 
 
-def test_h9_h10_h11_are_marked_complete_with_current_neutral_names_and_hashes():
+def test_h9_h10_h11_are_marked_complete_with_current_names_and_hashes():
     full_text = _read(FULL_CHECKLIST)
     phase_4_text = _read(PHASE_4_CHECKLIST)
 
-    expected_lines = [
-        "[x] Phase 4H9 — remaining neutral semantic group recovery + verifier — approved — 19550c010405a5cfce56358fec040d1163b1e4a0",
+    phase_4_expected_lines = [
+        "[x] Phase 4H9 — remaining rare-material semantic rasters recovery + verifier — approved — 19550c010405a5cfce56358fec040d1163b1e4a0",
+        "[x] Phase 4H10 — remaining alloy/statue semantic rasters recovery + verifier — approved — 23308ae0ed1cf6a28cc761af949e88f208d4ab80",
+        "[x] Phase 4H11 — anchor / non-TIF semantic patterns decision — approved — 28cc36325f7443a695727ce8a14812bd7242f040",
+    ]
+    full_expected_lines = [
         "[x] Phase 4H10 — remaining neutral semantic group recovery + verifier — approved — 23308ae0ed1cf6a28cc761af949e88f208d4ab80",
         "[x] Phase 4H11 — anchor / non-TIF neutral semantic patterns decision — approved — 28cc36325f7443a695727ce8a14812bd7242f040",
     ]
 
-    for line in expected_lines:
+    for line in phase_4_expected_lines:
         assert line in phase_4_text
 
-    assert expected_lines[1] in full_text
-    assert expected_lines[2] in full_text
+    for line in full_expected_lines:
+        assert line in full_text
 
 
 def test_phase_4z_is_closed_out_in_the_phase_4_docs():
