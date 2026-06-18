@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +31,10 @@ def public_download_filename(artifact_name: str) -> str:
 
 def is_expected_download_filename(*, artifact_name: str, download_filename: str) -> bool:
     return public_download_filename(artifact_name) == download_filename
+
+
+def serve_private_file_response(*, file_path: Path, file_name: str, media_type: str) -> FileResponse:
+    return FileResponse(path=file_path, filename=file_name, media_type=media_type)
 
 
 async def serve_artifact_response(
