@@ -53,7 +53,7 @@ export function H5OperatorAggregateSummaryPanel({ operatorAccessToken }: H5Opera
 
         <div className="px-4 py-3 flex flex-col gap-3">
           <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-            Operator-only aggregate view. It shows summary counts and score ranges only. No row-level output, private paths, raw files, or overlays are exposed.
+            Operator-only aggregate view. It shows summary counts, score ranges, and score bands only. No row-level output, private paths, raw files, or overlays are exposed.
           </div>
 
           {loading && <StatusBox tone="neutral" message="Loading aggregate summary..." />}
@@ -92,6 +92,10 @@ function AggregateSummary({ summary }: { summary: H5OperatorAggregateSummary }) 
         <dd>{formatScore(summary.scoreMin)} to {formatScore(summary.scoreMax)}</dd>
         <dt style={labelStyle}>Score mean</dt>
         <dd>{formatScore(summary.scoreMean)}</dd>
+        <dt style={labelStyle}>Score bands</dt>
+        <dd>{formatCounts(summary.scoreBandCounts)}</dd>
+        <dt style={labelStyle}>Score band status</dt>
+        <dd>{summary.scoreBandCountsStatus}</dd>
         <dt style={labelStyle}>Sources</dt>
         <dd>{formatCounts(summary.rowsBySource)}</dd>
         <dt style={labelStyle}>Splits</dt>
