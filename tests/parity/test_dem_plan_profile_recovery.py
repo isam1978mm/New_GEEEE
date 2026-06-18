@@ -43,13 +43,13 @@ def test_plan_profile_items_are_private_notebook_parity():
         assert item.probability_only_required is False
 
 
-def test_runtime_and_notebook_value_parity_are_not_marked_verified():
+def test_runtime_outputs_are_present_but_notebook_value_parity_is_not_verified():
     for item in get_dem_plan_profile_recovery_checklist():
-        assert item.runtime_output_verified is False
+        assert item.runtime_output_verified is True
         assert item.notebook_value_parity_verified is False
 
 
-def test_authoritative_notebook_formula_source_is_recorded_but_not_implemented():
+def test_authoritative_notebook_formula_source_is_recorded_and_reference_is_pending():
     items = _items_by_output()
 
     for output in REQUIRED_OUTPUTS:
@@ -57,13 +57,13 @@ def test_authoritative_notebook_formula_source_is_recorded_but_not_implemented()
         assert item.formula_status == "authoritative_formula_found"
         assert item.authoritative_formula_available is True
         assert "notebooks/new.ipynb" in item.notes
-        assert item.implementation_status == "blocked_missing_reference_output"
+        assert item.implementation_status == "runtime_implemented_reference_pending"
         assert "frozen reference" in item.blocker
 
 
 def test_candidate_formula_authoritative_requires_authoritative_formula():
     for item in get_dem_plan_profile_recovery_checklist():
-        assert item.candidate_formula_authoritative is False
+        assert item.candidate_formula_authoritative is True
         assert item.authoritative_formula_available is True
 
     with pytest.raises(ValueError, match="candidate formula cannot be authoritative"):
@@ -132,6 +132,7 @@ def test_allowed_implementation_status_enum_is_enforced():
         "blocked_missing_reference_output",
         "blocked_missing_metadata_contract",
         "ready_for_formula_implementation_after_evidence",
+        "runtime_implemented_reference_pending",
         "deferred",
     }
 
@@ -173,7 +174,7 @@ def test_report_json_writes_parses_and_stays_under_run_dir(tmp_path):
     assert parsed["run_id"] == "run-plan-profile"
     assert {item["notebook_output"] for item in parsed["items"]} == REQUIRED_OUTPUTS
     assert parsed["counts_by_formula_status"]["authoritative_formula_found"] == 2
-    assert parsed["counts_by_implementation_status"]["blocked_missing_reference_output"] == 2
+    assert parsed["counts_by_implementation_status"]["runtime_implemented_reference_pending"] == 2
     assert parsed["phase_4d3_formula_changes"] is False
 
 
