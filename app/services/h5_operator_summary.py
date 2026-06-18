@@ -7,6 +7,9 @@ from typing import Any, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_H4_SUMMARY_PATH = Path(r"C:\Dev\New_GEE_PRIVATE\H4_INFERENCE\h4_prediction_summary.private.json")
+DEFAULT_H5_SCORE_BAND_SUMMARY_PATH = Path(
+    r"C:\Dev\New_GEE_PRIVATE\H5_AGGREGATE_REVIEW\h5_score_band_summary.private.json"
+)
 
 FORBIDDEN_RESPONSE_KEYS = {
     "sample_id",
@@ -29,21 +32,32 @@ class H5OperatorSummaryError(ValueError):
 
 def load_h5_operator_aggregate_summary(
     summary_path: Path | str = DEFAULT_H4_SUMMARY_PATH,
+    score_band_summary_path: Path | str = DEFAULT_H5_SCORE_BAND_SUMMARY_PATH,
 ) -> dict[str, Any]:
-    """Load a private H4 summary and return only redacted aggregate fields.
+    """Load private aggregate summaries and return only redacted aggregate fields.
 
-    This function does not read row-level output files and does not expose local
-    private paths. It is intended for a future operator-only route.
+    This function does not expose local private paths or row-level scores. Optional
+    score bands are read only from the aggregate H5 review JSON, not from the raw
+    private prediction CSV.
     """
 
     path = Path(summary_path)
+    band_path = Path(score_band_summary_path)
     _validate_private_path_not_inside_repo(path, "H4 summary path")
+    _validate_private_path_not_inside_repo(band_path, "H5 score band summary path")
     if not path.is_file():
         raise FileNotFoundError(f"H4 summary does not exist: {path}")
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise H5OperatorSummaryError("H4 summary JSON must be an object")
+
+    score_band_payload = _load_optional_score_band_summary(band_path)
+    score_band_counts = _safe_count_mapping(score_band_payload.get("score_band_counts"))
+    score_band_status = str(
+        score_band_payload.get("score_band_counts_status")
+        or "not_available_from_aggregate_summary"
+    )
 
     safe_summary = {
         "status": str(payload.get("status", "unknown")),
@@ -58,8 +72,8 @@ def load_h5_operator_aggregate_summary(
         "score_mean": _safe_float(payload.get("score_mean")),
         "rows_by_source": _safe_count_mapping(payload.get("rows_by_source")),
         "rows_by_split": _safe_count_mapping(payload.get("rows_by_split")),
-        "score_band_counts": {},
-        "score_band_counts_status": "not_available_from_aggregate_summary",
+        "score_band_counts": score_band_counts,
+        "score_band_counts_status": score_band_status,
         "prediction_files_written": bool(payload.get("prediction_files_written", False)),
         "api_frontend_changed": bool(payload.get("api_frontend_changed", False)),
         "overlays_created": bool(payload.get("overlays_created", False)),
@@ -76,6 +90,19 @@ def assert_h5_operator_summary_is_redacted(payload: Mapping[str, Any]) -> None:
     leaked = _find_forbidden_keys(payload)
     if leaked:
         raise H5OperatorSummaryError(f"unsafe H5 operator summary fields: {sorted(leaked)}")
+
+
+def _load_optional_score_band_summary(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise H5OperatorSummaryError("H5 score band summary JSON must be an object")
+    if payload.get("row_level_output_included") is not False:
+        raise H5OperatorSummaryError("H5 score band summary must not include row-level output")
+    if payload.get("private_paths_included") is not False:
+        raise H5OperatorSummaryError("H5 score band summary must not include private paths")
+    return payload
 
 
 def _find_forbidden_keys(value: Any) -> set[str]:
@@ -125,6 +152,7 @@ def _validate_private_path_not_inside_repo(path: Path, label: str) -> None:
 
 __all__ = (
     "DEFAULT_H4_SUMMARY_PATH",
+    "DEFAULT_H5_SCORE_BAND_SUMMARY_PATH",
     "H5OperatorSummaryError",
     "assert_h5_operator_summary_is_redacted",
     "load_h5_operator_aggregate_summary",
