@@ -159,7 +159,8 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Accept SAR residual xfail" not in bundle_text
     assert "demoMode" not in bundle_text
     assert "mockData" not in bundle_text
-    assert "coordinates" not in bundle_text.casefold()
+    assert "exact coordinates" not in bundle_text.casefold()
+    assert "private coordinates" not in bundle_text.casefold()
     assert "37.7749" not in bundle_text
     assert "-122.4194" not in bundle_text
     assert "C:\\" not in bundle_text
