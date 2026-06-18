@@ -44,18 +44,18 @@ def test_required_classification_and_mode_are_private_notebook_parity():
         assert item.probability_only_required is False
 
 
-def test_runtime_and_notebook_value_parity_are_not_marked_verified():
+def test_runtime_outputs_are_present_but_notebook_value_parity_is_not_verified():
     for item in get_dem_curvature_reconstruction_registry():
-        assert item.runtime_output_verified is False
+        assert item.runtime_output_verified is True
         assert item.notebook_value_parity_verified is False
 
 
-def test_formula_status_for_each_required_output_is_conservative():
+def test_formula_status_for_each_required_output_matches_recovered_state():
     items = _registry_by_output()
 
     assert items["curv_laplacian_640.tif"].formula_status == "existing_app_equivalent_found"
-    assert items["curv_plan_640.tif"].formula_status == "no_formula_found"
-    assert items["curv_profile_640.tif"].formula_status == "no_formula_found"
+    assert items["curv_plan_640.tif"].formula_status == "authoritative_formula_found"
+    assert items["curv_profile_640.tif"].formula_status == "authoritative_formula_found"
 
 
 def test_allowed_formula_status_enum_is_enforced():
@@ -64,6 +64,7 @@ def test_allowed_formula_status_enum_is_enforced():
         "approximate_formula_found",
         "no_formula_found",
         "existing_app_equivalent_found",
+        "authoritative_formula_found",
         "unknown_needs_reference",
     }
 
@@ -94,6 +95,7 @@ def test_allowed_formula_status_enum_is_enforced():
 def test_allowed_implementation_status_enum_is_enforced():
     assert ALLOWED_IMPLEMENTATION_STATUSES == {
         "ready_for_implementation",
+        "runtime_implemented_reference_pending",
         "requires_reference_output",
         "requires_formula_reconstruction",
         "blocked_no_source_formula",
@@ -135,8 +137,9 @@ def test_report_json_writes_parses_and_stays_under_run_dir(tmp_path):
     assert parsed["schema_version"] == DEM_CURVATURE_RECONSTRUCTION_SCHEMA_VERSION
     assert parsed["run_id"] == "run-curvature"
     assert {item["notebook_output"] for item in parsed["items"]} == REQUIRED_OUTPUTS
-    assert parsed["counts_by_formula_status"]["no_formula_found"] == 2
+    assert parsed["counts_by_formula_status"]["no_formula_found"] == 0
     assert parsed["counts_by_formula_status"]["existing_app_equivalent_found"] == 1
+    assert parsed["counts_by_formula_status"]["authoritative_formula_found"] == 2
 
 
 def test_report_path_traversal_is_blocked(tmp_path):
