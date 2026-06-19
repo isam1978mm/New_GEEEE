@@ -135,6 +135,7 @@ D1B source-locked baseline created
 D1D object-table outputs documented as source-recovery
 D3 DEM curvature parity accepted end-to-end
 R1 REPORT_640 real app-vs-reference parity passed
+AIREADY-S1 secret-layer real app-vs-reference parity passed
 ```
 
 R1 safe result:
@@ -153,6 +154,22 @@ R1 result doc:
 docs/R1_REPORT_640_VERIFIER_RESULT.md
 ```
 
+AIREADY-S1 safe result:
+
+```text
+overall_status: passed
+expected_count: 6
+compared_count: 6
+counts_by_status:
+  passed: 6
+```
+
+AIREADY-S1 result doc:
+
+```text
+docs/AIREADY_S1_SECRET_LAYERS_VERIFIER_RESULT.md
+```
+
 If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
 
 ## Blocked real app-vs-reference parity
@@ -160,7 +177,6 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 These are blocked, not failed:
 
 ```text
-AIREADY real app-vs-reference parity
 HYPER-1A RES_2p5M real app-vs-reference parity
 HYPER-1B core tensor/NPY real app-vs-reference parity
 INT-1 internal raster real app-vs-reference parity
@@ -233,18 +249,18 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. AIREADY real app-vs-reference parity
-   Starts the next parity item after R1 using the existing D1C/D2-gated pattern.
+A. HYPER-1A RES_2p5M real app-vs-reference parity
+   Starts the next parity item after R1 and AIREADY-S1 using the existing D1C/D2-gated pattern.
 
 B. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
 
 C. Source-recovery planning
-   Only after deciding to defer AIREADY/HYPER/INT/S1 verifier path work.
+   Only after deciding to defer HYPER/INT/S1 verifier path work.
 ```
 
 ## Current recommendation
 
 ```text
-Next: AIREADY real app-vs-reference parity plan
+Next: HYPER-1A RES_2p5M real app-vs-reference parity plan
 ```
