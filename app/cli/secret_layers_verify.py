@@ -94,6 +94,7 @@ def run_cli(
     *,
     app_output_dir: str,
     bundle_dir: str,
+    reference_output_dir: str | None = None,
     run_dir: str | None = None,
     run_id: str = "secret_layers_cli",
     atol: float = DEFAULT_ATOL,
@@ -111,10 +112,11 @@ def run_cli(
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 1
 
+    effective_reference_output_dir = reference_output_dir or bundle_dir
     effective_run_dir = Path(run_dir) if run_dir else Path(tempfile.mkdtemp(prefix="secret_layers_"))
     result = verify_secret_layers_parity(
         app_output_dir,
-        bundle_dir,
+        effective_reference_output_dir,
         effective_run_dir,
         run_id,
         atol=atol,
@@ -141,6 +143,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--app-output-dir", required=True, help="App/run output directory.")
     parser.add_argument("--bundle-dir", required=True, help="Local path to the frozen reference bundle.")
     parser.add_argument(
+        "--reference-output-dir",
+        default=None,
+        help=(
+            "Optional directory containing the reference secret-layer rasters. "
+            "Use this when the D2 bundle root contains reference_manifest.json "
+            "and the rasters are stored in a nested folder. Defaults to --bundle-dir."
+        ),
+    )
+    parser.add_argument(
         "--run-dir",
         default=None,
         help="Where the JSON verification report is written (default: a temp dir).",
@@ -162,6 +173,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     return run_cli(
         app_output_dir=args.app_output_dir,
         bundle_dir=args.bundle_dir,
+        reference_output_dir=args.reference_output_dir,
         run_dir=args.run_dir,
         run_id=args.run_id,
         atol=args.atol,
