@@ -134,6 +134,23 @@ D1A bundle-wide scope audit implemented
 D1B source-locked baseline created
 D1D object-table outputs documented as source-recovery
 D3 DEM curvature parity accepted end-to-end
+R1 REPORT_640 real app-vs-reference parity passed
+```
+
+R1 safe result:
+
+```text
+status: passed
+pass_count: 3
+fail_count: 0
+missing_count: 0
+comparison_unavailable_count: 0
+```
+
+R1 result doc:
+
+```text
+docs/R1_REPORT_640_VERIFIER_RESULT.md
 ```
 
 If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
@@ -143,7 +160,6 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 These are blocked, not failed:
 
 ```text
-R1 REPORT_640 real app-vs-reference parity
 AIREADY real app-vs-reference parity
 HYPER-1A RES_2p5M real app-vs-reference parity
 HYPER-1B core tensor/NPY real app-vs-reference parity
@@ -217,24 +233,18 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. R1 REPORT_640 real app-vs-reference parity
-   Starts the next parity item using the existing D1C/D2-gated pattern.
+A. AIREADY real app-vs-reference parity
+   Starts the next parity item after R1 using the existing D1C/D2-gated pattern.
 
 B. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
 
 C. Source-recovery planning
-   Only after deciding to defer R1.
+   Only after deciding to defer AIREADY/HYPER/INT/S1 verifier path work.
 ```
 
 ## Current recommendation
 
 ```text
-Next: R1 REPORT_640 real app-vs-reference parity
-```
-
-First R1 action:
-
-```text
-locate private D1C REPORT_640 reference root
+Next: AIREADY real app-vs-reference parity plan
 ```
