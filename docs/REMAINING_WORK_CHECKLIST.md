@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, and HYPER-1A verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, and HYPER-1B verifier pass.
 
 It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -21,6 +21,8 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] AIREADY-S1 result doc recorded
 [x] HYPER-1A RES_2p5M verifier passed
 [x] HYPER-1A result doc recorded
+[x] HYPER-1B core tensor/NPY verifier passed
+[x] HYPER-1B result doc recorded
 ```
 
 ## 1. R1 REPORT_640 real app-vs-reference parity
@@ -156,13 +158,56 @@ Safety boundary remains:
 [x] no map overlays enabled
 ```
 
-## 4. Next blocked real app-vs-reference parity items
+## 4. HYPER-1B core tensor/NPY real app-vs-reference parity
 
-These are after R1, AIREADY-S1, and HYPER-1A.
+Current state:
 
 ```text
-[ ] HYPER-1B core tensor/NPY real app-vs-reference parity          <- NEXT RECOMMENDED
-[ ] INT-1 internal raster real app-vs-reference parity
+[x] HYPER-1B plan written
+[x] D1C reference FINAL_TESLA_V7_2_HYPERCUBE.npy found
+[x] D1C reference RADAR_STACK_HWC_640_*.npy found
+[x] app FINAL_TESLA_V7_2_HYPERCUBE.npy found
+[x] app RADAR_STACK_HWC_640_app.npy found
+[x] nonmatching app candidate rejected
+[x] matching app candidate selected
+[x] run-contract transform policy patched and tested
+[x] D2-gated HYPER-1B verifier passed
+[x] HYPER-1B result recorded
+```
+
+HYPER-1B closeout result:
+
+```text
+overall_status: passed
+expected_count: 2
+compared_count: 2
+counts_by_status:
+  passed: 2
+```
+
+Required HYPER-1B outputs passed:
+
+```text
+[x] FINAL_TESLA_V7_2_HYPERCUBE.npy
+[x] RADAR_STACK_HWC_640_*.npy
+```
+
+Safety boundary remains:
+
+```text
+[x] no tensor payloads committed
+[x] no exact coordinate-bearing paths committed
+[x] no public HYPER-1B downloads enabled
+[x] no HTTP tensor serving enabled
+[x] no map overlays enabled
+```
+
+## 5. Next blocked real app-vs-reference parity items
+
+These are after R1, AIREADY-S1, HYPER-1A, and HYPER-1B.
+
+```text
+[ ] INT-1 internal raster real app-vs-reference parity          <- NEXT RECOMMENDED
 [ ] S1-1 core-band real app-vs-reference parity
 ```
 
@@ -177,7 +222,7 @@ Common sub-checklist for each:
 [ ] Record safe docs-only result
 ```
 
-## 5. Source-recovery items
+## 6. Source-recovery items
 
 These are not ready for verifier work yet.
 
@@ -190,7 +235,7 @@ These are not ready for verifier work yet.
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
 
-### 5A. D1D object-table outputs
+### 6A. D1D object-table outputs
 
 ```text
 [ ] Recover/export same-run object-table family
@@ -200,7 +245,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run D2-gated comparison
 ```
 
-### 5B. AI_READY remaining support families
+### 6B. AI_READY remaining support families
 
 ```text
 [ ] AIREADY-FR: decide whether to build Fraction output writer path
@@ -208,7 +253,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
 ```
 
-### 5C. SAR/S1 support/intermediate/QA outputs
+### 6C. SAR/S1 support/intermediate/QA outputs
 
 ```text
 [ ] Recover exact notebook source contract
@@ -220,7 +265,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Verify only after source recovery
 ```
 
-### 5D. PAN/optical image components and stack
+### 6D. PAN/optical image components and stack
 
 ```text
 [ ] Recover optical/PAN source requirement
@@ -231,7 +276,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run PAN component and stack verifiers
 ```
 
-## 6. H5 / prediction serving boundaries still blocked
+## 7. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -249,7 +294,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 7. Paid Imagery Request Package / old V6 status
+## 8. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -273,7 +318,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 8. Deployment/auth/public exposure — later only
+## 9. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -289,17 +334,16 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. HYPER-1B core tensor/NPY real app-vs-reference parity
-   [ ] write/confirm HYPER-1B plan
-   [ ] locate private D1C HYPER-1B reference files
-   [ ] locate/generate private app HYPER-1B output files
-   [ ] confirm required HYPER-1B file set
+1. INT-1 internal raster real app-vs-reference parity
+   [ ] write/confirm INT-1 plan
+   [ ] locate private D1C INT-1 reference files
+   [ ] locate/generate private app INT-1 output files
+   [ ] confirm required INT-1 file set
    [ ] run grid/source contract check
    [ ] run D2-gated verifier
-   [ ] record HYPER-1B verifier result
+   [ ] record INT-1 verifier result
 
-2. After HYPER-1B
-   [ ] INT-1 parity
+2. After INT-1
    [ ] S1-1 parity
 
 3. Heavier recovery
@@ -317,5 +361,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-HYPER-1B core tensor/NPY real app-vs-reference parity plan
+INT-1 internal raster real app-vs-reference parity plan
 ```
