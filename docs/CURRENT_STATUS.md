@@ -4,6 +4,12 @@ This document is the quick reconciliation point for the current repo state.
 
 Use it before choosing the next task. It does not replace the detailed phase docs; it explains which tracks are active, complete, parked, or blocked.
 
+For the detailed remaining checklist, see:
+
+```text
+docs/REMAINING_WORK_CHECKLIST.md
+```
+
 ## Green baseline
 
 ```text
@@ -19,6 +25,7 @@ private artifacts: outside Git
 Paid Imagery Request Package: implemented
 H4 private offline inference: complete
 H5 operator-only aggregate summary: implemented
+H5 score-band aggregate review: complete outside Git
 ```
 
 ### Paid Imagery Request Package
@@ -79,6 +86,9 @@ operator-only aggregate route
 backend redaction tests
 frontend aggregate summary panel
 frontend no-row-leak tests
+H5 score-band aggregate review script
+H5 score-band write outside Git
+H5 score-band write result doc
 full CI/build passing
 ```
 
@@ -87,6 +97,7 @@ Allowed H5 output level:
 ```text
 aggregate row count
 score min / max / mean
+score-band counts
 rows by source
 rows by split
 status flags
@@ -206,27 +217,24 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. H5 score-band aggregate review
-   Safe app improvement. Adds aggregate score bands only, still no row-level output.
-
-B. R1 REPORT_640 real app-vs-reference parity plan
+A. R1 REPORT_640 real app-vs-reference parity
    Starts the next parity item using the existing D1C/D2-gated pattern.
 
-C. Real auth provider integration plan
+B. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
+
+C. Source-recovery planning
+   Only after deciding to defer R1.
 ```
 
 ## Current recommendation
 
 ```text
-Next: H5 score-band aggregate review
-Then: R1 REPORT_640 real app-vs-reference parity plan
+Next: R1 REPORT_640 real app-vs-reference parity
 ```
 
-Reason:
+First R1 action:
 
 ```text
-H5 is already implemented at aggregate-only level.
-Score bands are safe aggregate output and improve operator usefulness without exposing rows.
-R1 then starts the next scientific/parity closure track.
+locate private D1C REPORT_640 reference root
 ```
