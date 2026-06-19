@@ -14,7 +14,6 @@ docs/REMAINING_WORK_CHECKLIST.md
 
 ```text
 full pytest: passing
-frontend build: passing
 git status expected: clean
 private artifacts: outside Git
 ```
@@ -137,6 +136,7 @@ D3 DEM curvature parity accepted end-to-end
 R1 REPORT_640 real app-vs-reference parity passed
 AIREADY-S1 secret-layer real app-vs-reference parity passed
 HYPER-1A RES_2p5M real app-vs-reference parity passed
+HYPER-1B core tensor/NPY real app-vs-reference parity passed
 ```
 
 R1 safe result:
@@ -187,6 +187,24 @@ HYPER-1A result doc:
 docs/HYPER_1A_RES_2P5M_VERIFIER_RESULT.md
 ```
 
+HYPER-1B safe result:
+
+```text
+overall_status: passed
+expected_count: 2
+compared_count: 2
+counts_by_status:
+  passed: 2
+run_contract:
+  status: comparable
+```
+
+HYPER-1B result doc:
+
+```text
+docs/HYPER_1B_CORE_TENSOR_NPY_VERIFIER_RESULT.md
+```
+
 If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
 
 ## Blocked real app-vs-reference parity
@@ -194,7 +212,6 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 These are blocked, not failed:
 
 ```text
-HYPER-1B core tensor/NPY real app-vs-reference parity
 INT-1 internal raster real app-vs-reference parity
 S1-1 core-band real app-vs-reference parity
 ```
@@ -265,18 +282,18 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. HYPER-1B core tensor/NPY real app-vs-reference parity
-   Starts the next parity item after R1, AIREADY-S1, and HYPER-1A using the existing D1C/D2-gated pattern.
+A. INT-1 internal raster real app-vs-reference parity
+   Starts the next parity item after R1, AIREADY-S1, HYPER-1A, and HYPER-1B using the existing D1C/D2-gated pattern.
 
 B. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
 
 C. Source-recovery planning
-   Only after deciding to defer HYPER/INT/S1 verifier path work.
+   Only after deciding to defer INT/S1 verifier path work.
 ```
 
 ## Current recommendation
 
 ```text
-Next: HYPER-1B core tensor/NPY real app-vs-reference parity plan
+Next: INT-1 internal raster real app-vs-reference parity plan
 ```
