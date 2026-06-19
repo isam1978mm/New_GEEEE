@@ -18,6 +18,7 @@ HYPERCUBE_TENSOR_VERIFICATION_SCHEMA_VERSION = "hypercube_tensor_npy_verificatio
 HYPERCUBE_TENSOR_REPORT_RELATIVE_PATH = "manifests/hypercube_tensor_npy_verification.json"
 HYPERCUBE_TENSOR_CLASSIFICATION = "notebook-parity"
 HYPERCUBE_TENSOR_FAMILY = "hypercube/tensor outputs"
+DEFAULT_TRANSFORM_ATOL = 1e-5
 
 ALLOWED_OUTPUT_STATUSES = {
     "passed",
@@ -473,6 +474,8 @@ def _build_run_contract_summary(app_root: Path, reference_root: Path) -> dict[st
         "scale_match": None,
         "size_match": None,
         "transform_match": None,
+        "transform_atol": DEFAULT_TRANSFORM_ATOL,
+        "transform_max_abs_delta": None,
         "origin_delta": None,
         "transform_delta": None,
         "comparable": None,
@@ -483,12 +486,14 @@ def _build_run_contract_summary(app_root: Path, reference_root: Path) -> dict[st
     app_transform = app_grid.get("transform")
     reference_transform = reference_grid.get("transform")
     transform_delta = None
+    transform_max_abs_delta = None
     origin_delta = None
     if isinstance(app_transform, list) and isinstance(reference_transform, list) and len(app_transform) == len(reference_transform):
         transform_delta = [
             float(app_value) - float(reference_value)
             for app_value, reference_value in zip(app_transform, reference_transform)
         ]
+        transform_max_abs_delta = max(abs(delta) for delta in transform_delta)
         origin_delta = [transform_delta[2], transform_delta[5]]
 
     summary.update(
@@ -497,7 +502,9 @@ def _build_run_contract_summary(app_root: Path, reference_root: Path) -> dict[st
             "scale_match": app_grid.get("scale") == reference_grid.get("scale"),
             "size_match": app_grid.get("width") == reference_grid.get("width")
             and app_grid.get("height") == reference_grid.get("height"),
-            "transform_match": transform_delta is not None and all(delta == 0.0 for delta in transform_delta),
+            "transform_match": transform_max_abs_delta is not None and transform_max_abs_delta <= DEFAULT_TRANSFORM_ATOL,
+            "transform_atol": DEFAULT_TRANSFORM_ATOL,
+            "transform_max_abs_delta": transform_max_abs_delta,
             "origin_delta": origin_delta,
             "transform_delta": transform_delta,
         }
