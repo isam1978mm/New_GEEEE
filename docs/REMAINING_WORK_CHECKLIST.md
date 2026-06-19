@@ -1,8 +1,8 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review and R1 REPORT_640 verifier pass.
 
-It separates completed work, next R1 work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
+It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
 ## 0. Current baseline
 
@@ -15,6 +15,8 @@ It separates completed work, next R1 work, blocked parity work, source-recovery 
 [x] H5 operator-only aggregate summary implemented
 [x] H5 score-band aggregate review written outside Git
 [x] H5 score-band result doc recorded
+[x] R1 REPORT_640 verifier passed
+[x] R1 REPORT_640 result doc recorded
 ```
 
 ## 1. R1 REPORT_640 real app-vs-reference parity
@@ -23,110 +25,45 @@ Current state:
 
 ```text
 [x] R1 plan written
-[ ] R1 runnable evidence not collected yet
+[x] R1 runnable evidence collected
+[x] R1 verifier passed
+[x] R1 result recorded
 ```
 
-R1 is blocked, not failed, until all required app-output, reference-output, grid/source, and verifier gates pass.
-
-### 1A. Locate frozen D1C REPORT_640 reference root
+R1 closeout result:
 
 ```text
-[ ] Find private frozen D1C reference folder outside Git
-[ ] Confirm reference root exists outside Git
-[ ] Confirm reference bundle identity is known
-[ ] Confirm D2 validator passes for the reference bundle
-[ ] Confirm required reference TIF exists: REPORT_640_Pottery_Report.tif
-[ ] Confirm required reference TIF exists: REPORT_640_Mass_Report.tif
-[ ] Confirm required reference TIF exists: REPORT_640_FINAL_Zero_Point_Targets.tif
+status: passed
+pass_count: 3
+fail_count: 0
+missing_count: 0
+comparison_unavailable_count: 0
 ```
 
-Stop condition:
+Required outputs passed:
 
 ```text
-[ ] If reference files are missing locally, stop and reconcile D1/D1C docs before continuing.
+[x] REPORT_640_Pottery_Report.tif
+[x] REPORT_640_Mass_Report.tif
+[x] REPORT_640_FINAL_Zero_Point_Targets.tif
 ```
 
-### 1B. Locate or generate private app REPORT_640 output root
+Safety boundary remains:
 
 ```text
-[ ] Locate existing app-generated REPORT_640 output root
-    OR
-[ ] Generate app REPORT_640 outputs using approved app pipeline/writer path
-
-[ ] Confirm app output root is outside Git or under a private run directory
-[ ] Confirm required app TIF exists: REPORT_640_Pottery_Report.tif
-[ ] Confirm required app TIF exists: REPORT_640_Mass_Report.tif
-[ ] Confirm required app TIF exists: REPORT_640_FINAL_Zero_Point_Targets.tif
-[ ] Confirm outputs were produced by app pipeline or approved app writer path
-[ ] Confirm outputs are not copied/renamed notebook reference files
+[x] no raster payloads committed
+[x] no exact coordinate-bearing paths committed
+[x] no public REPORT_640 downloads enabled
+[x] no HTTP raster serving enabled
+[x] no map overlays enabled
 ```
 
-### 1C. D1C grid/source contract check
+## 2. Next blocked real app-vs-reference parity items
 
-Before value parity, check:
+These are after R1.
 
 ```text
-[ ] CRS matches
-[ ] scale matches
-[ ] width / height match
-[ ] transform / origin match
-[ ] band count matches
-[ ] shape convention matches
-[ ] dtype matches
-[ ] nodata matches
-[ ] output semantics match
-```
-
-### 1D. Run D2-gated REPORT_640 verifier
-
-Verifier:
-
-```text
-scripts/d1_compare_report_value_parity.py
-```
-
-Command shape:
-
-```powershell
-python scripts/d1_compare_report_value_parity.py `
-  --app-output-dir <PRIVATE_APP_REPORT_640_ROOT> `
-  --reference-report-root <PRIVATE_D1C_REPORT_640_REFERENCE_ROOT> `
-  --report <PRIVATE_R1_REPORT_640_PARITY_REPORT_JSON> `
-  --json
-```
-
-Expected close result:
-
-```text
-[ ] status: passed
-[ ] pass_count: 3
-[ ] fail_count: 0
-[ ] missing_count: 0
-[ ] comparison_unavailable_count: 0
-```
-
-### 1E. Record R1 verifier result
-
-Only after pass:
-
-```text
-[ ] Add docs-only R1 result
-[ ] Include reference bundle identity
-[ ] Include app output source/run identity
-[ ] Include verifier command shape
-[ ] Include status/pass/fail/missing/comparison_unavailable counts
-[ ] Include tolerance
-[ ] Do not include private raster contents
-[ ] Do not include exact coordinates
-[ ] Do not include private file payloads
-```
-
-## 2. Other blocked real app-vs-reference parity items
-
-These are after R1, not before it.
-
-```text
-[ ] AIREADY real app-vs-reference parity
+[ ] AIREADY real app-vs-reference parity          <- NEXT RECOMMENDED
 [ ] HYPER-1A RES_2p5M real app-vs-reference parity
 [ ] HYPER-1B core tensor/NPY real app-vs-reference parity
 [ ] INT-1 internal raster real app-vs-reference parity
@@ -260,17 +197,16 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. R1 REPORT_640
-   [ ] locate private D1C REPORT_640 reference root
-   [ ] locate/generate private app REPORT_640 output root
-   [ ] confirm 3 reference TIFs
-   [ ] confirm 3 app TIFs
+1. AIREADY real app-vs-reference parity
+   [ ] write/confirm AIREADY plan
+   [ ] locate private D1C AIREADY reference root/files
+   [ ] locate/generate private app AIREADY output root/files
+   [ ] confirm required AIREADY file set
    [ ] run grid/source contract check
    [ ] run D2-gated verifier
-   [ ] record R1 verifier result
+   [ ] record AIREADY verifier result
 
-2. After R1
-   [ ] AIREADY real app-vs-reference parity
+2. After AIREADY
    [ ] HYPER-1A parity
    [ ] HYPER-1B parity
    [ ] INT-1 parity
@@ -291,5 +227,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-R1 Gate 1: locate private D1C REPORT_640 reference root
+AIREADY real app-vs-reference parity plan
 ```
