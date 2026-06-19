@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, and AIREADY-S1 verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, and HYPER-1A verifier pass.
 
 It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -19,6 +19,8 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] R1 REPORT_640 result doc recorded
 [x] AIREADY-S1 secret-layer verifier passed
 [x] AIREADY-S1 result doc recorded
+[x] HYPER-1A RES_2p5M verifier passed
+[x] HYPER-1A result doc recorded
 ```
 
 ## 1. R1 REPORT_640 real app-vs-reference parity
@@ -107,13 +109,59 @@ Remaining AIREADY work:
 
 Do not claim all AIREADY parity from AIREADY-S1 alone.
 
-## 3. Next blocked real app-vs-reference parity items
+## 3. HYPER-1A RES_2p5M real app-vs-reference parity
 
-These are after R1 and AIREADY-S1.
+Current state:
 
 ```text
-[ ] HYPER-1A RES_2p5M real app-vs-reference parity          <- NEXT RECOMMENDED
-[ ] HYPER-1B core tensor/NPY real app-vs-reference parity
+[x] HYPER-1A plan written
+[x] D1C reference RES_2p5M TIF found
+[x] D1C reference RES_2p5M NPY found
+[x] app source hypercube found
+[x] nonmatching app candidate rejected
+[x] matching app candidate selected
+[x] source hypercube values matched D1C source exactly
+[x] generator added and tested
+[x] app RES_2p5M TIF generated
+[x] app RES_2p5M NPY generated
+[x] verifier transform policy patched and tested
+[x] D2-gated HYPER-1A verifier passed
+[x] HYPER-1A result recorded
+```
+
+HYPER-1A closeout result:
+
+```text
+overall_status: passed
+expected_count: 2
+compared_count: 2
+counts_by_status:
+  passed: 2
+```
+
+Required HYPER-1A outputs passed:
+
+```text
+[x] FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif
+[x] FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy
+```
+
+Safety boundary remains:
+
+```text
+[x] no raster/NPY payloads committed
+[x] no exact coordinate-bearing paths committed
+[x] no public HYPER-1A downloads enabled
+[x] no HTTP raster/tensor serving enabled
+[x] no map overlays enabled
+```
+
+## 4. Next blocked real app-vs-reference parity items
+
+These are after R1, AIREADY-S1, and HYPER-1A.
+
+```text
+[ ] HYPER-1B core tensor/NPY real app-vs-reference parity          <- NEXT RECOMMENDED
 [ ] INT-1 internal raster real app-vs-reference parity
 [ ] S1-1 core-band real app-vs-reference parity
 ```
@@ -129,7 +177,7 @@ Common sub-checklist for each:
 [ ] Record safe docs-only result
 ```
 
-## 4. Source-recovery items
+## 5. Source-recovery items
 
 These are not ready for verifier work yet.
 
@@ -142,7 +190,7 @@ These are not ready for verifier work yet.
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
 
-### 4A. D1D object-table outputs
+### 5A. D1D object-table outputs
 
 ```text
 [ ] Recover/export same-run object-table family
@@ -152,7 +200,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run D2-gated comparison
 ```
 
-### 4B. AI_READY remaining support families
+### 5B. AI_READY remaining support families
 
 ```text
 [ ] AIREADY-FR: decide whether to build Fraction output writer path
@@ -160,7 +208,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
 ```
 
-### 4C. SAR/S1 support/intermediate/QA outputs
+### 5C. SAR/S1 support/intermediate/QA outputs
 
 ```text
 [ ] Recover exact notebook source contract
@@ -172,7 +220,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Verify only after source recovery
 ```
 
-### 4D. PAN/optical image components and stack
+### 5D. PAN/optical image components and stack
 
 ```text
 [ ] Recover optical/PAN source requirement
@@ -183,7 +231,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run PAN component and stack verifiers
 ```
 
-## 5. H5 / prediction serving boundaries still blocked
+## 6. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -201,7 +249,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 6. Paid Imagery Request Package / old V6 status
+## 7. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -225,7 +273,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 7. Deployment/auth/public exposure — later only
+## 8. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -241,17 +289,16 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. HYPER-1A RES_2p5M real app-vs-reference parity
-   [ ] write/confirm HYPER-1A plan
-   [ ] locate private D1C HYPER-1A reference files
-   [ ] locate/generate private app HYPER-1A output files
-   [ ] confirm required HYPER-1A file set
+1. HYPER-1B core tensor/NPY real app-vs-reference parity
+   [ ] write/confirm HYPER-1B plan
+   [ ] locate private D1C HYPER-1B reference files
+   [ ] locate/generate private app HYPER-1B output files
+   [ ] confirm required HYPER-1B file set
    [ ] run grid/source contract check
    [ ] run D2-gated verifier
-   [ ] record HYPER-1A verifier result
+   [ ] record HYPER-1B verifier result
 
-2. After HYPER-1A
-   [ ] HYPER-1B parity
+2. After HYPER-1B
    [ ] INT-1 parity
    [ ] S1-1 parity
 
@@ -270,5 +317,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-HYPER-1A RES_2p5M real app-vs-reference parity plan
+HYPER-1B core tensor/NPY real app-vs-reference parity plan
 ```
