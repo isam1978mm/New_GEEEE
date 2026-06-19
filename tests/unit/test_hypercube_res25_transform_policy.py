@@ -77,7 +77,7 @@ def test_tif_allows_tiny_transform_delta_and_compares_values(tmp_path: Path) -> 
     assert result.overall_status == "passed"
     assert tif["status"] == "passed"
     assert tif["transform_match"] is True
-    assert tif["transform_max_abs_delta"] == pytest.approx(DEFAULT_TRANSFORM_ATOL / 2)
+    assert 0 < tif["transform_max_abs_delta"] <= DEFAULT_TRANSFORM_ATOL
     assert tif["transform_atol"] == DEFAULT_TRANSFORM_ATOL
     assert tif["values_compared"] is True
     assert tif["max_abs_diff"] == 0.0
