@@ -44,12 +44,13 @@ def _write_set(directory: Path, *, base_value: float = 1.0) -> None:
         _write_raster(directory / name, base_value + index)
 
 
-def _write_bundle_manifest(bundle: Path) -> None:
+def _write_bundle_manifest(bundle: Path, *, reference_dir: Path | None = None) -> None:
     files = []
     for name in SECRET_LAYERS_OUTPUT_NAMES:
-        data = (bundle / name).read_bytes()
+        source = (reference_dir or bundle) / name
+        data = source.read_bytes()
         files.append({
-            "relative_path": name,
+            "relative_path": str(source.relative_to(bundle)).replace("\\", "/"),
             "sha256": hashlib.sha256(data).hexdigest(),
             "size_bytes": len(data),
             "role": "ai_ready",
@@ -67,6 +68,14 @@ def _valid_bundle(tmp_path: Path, *, base_value: float = 1.0) -> Path:
     _write_set(bundle, base_value=base_value)
     _write_bundle_manifest(bundle)
     return bundle
+
+
+def _valid_nested_bundle(tmp_path: Path, *, base_value: float = 1.0) -> tuple[Path, Path]:
+    bundle = tmp_path / "bundle"
+    reference_output_dir = bundle / "AI_READY_640"
+    _write_set(reference_output_dir, base_value=base_value)
+    _write_bundle_manifest(bundle, reference_dir=reference_output_dir)
+    return bundle, reference_output_dir
 
 
 # --- D2 gate ------------------------------------------------------------------
@@ -115,6 +124,29 @@ def test_cli_default_output_is_path_safe(tmp_path: Path, capsys) -> None:
     assert ".tif" not in out
     assert "report_path" not in out
     assert "AI_READY_640_Secret_Gold_Halo" in payload["per_output"]
+
+
+def test_cli_accepts_nested_reference_output_dir(tmp_path: Path, capsys) -> None:
+    if not RASTERIO_AVAILABLE:
+        pytest.skip("rasterio required for value comparison")
+    app = tmp_path / "app"
+    _write_set(app)
+    bundle, reference_output_dir = _valid_nested_bundle(tmp_path)
+
+    exit_code = cli.main([
+        "--app-output-dir", str(app),
+        "--bundle-dir", str(bundle),
+        "--reference-output-dir", str(reference_output_dir),
+        "--run-dir", str(tmp_path / "run"),
+    ])
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+
+    assert exit_code == 0
+    assert payload["overall_status"] == "passed"
+    assert payload["counts_by_status"] == {"passed": len(SECRET_LAYERS_OUTPUT_NAMES)}
+    assert str(tmp_path) not in out
+    assert ".tif" not in out
 
 
 def test_cli_show_details_includes_paths(tmp_path: Path, capsys) -> None:
