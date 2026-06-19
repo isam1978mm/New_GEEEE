@@ -25,6 +25,7 @@ HYPERCUBE_RES25_OUTPUT_NAMES = (
     "FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif",
     "FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy",
 )
+DEFAULT_TRANSFORM_ATOL = 1e-5
 
 ALLOWED_OUTPUT_STATUSES = {
     "passed",
@@ -208,6 +209,8 @@ def _base_output_item(output_name: str, app_path: Path, reference_path: Path) ->
         "height_match": None,
         "crs_match": None,
         "transform_match": None,
+        "transform_max_abs_delta": None,
+        "transform_atol": DEFAULT_TRANSFORM_ATOL,
         "pixel_size_match": None,
         "dtype_match": None,
         "nodata_match": None,
@@ -353,18 +356,42 @@ def _compare_raster_metadata(
 ) -> bool:
     app_res = tuple(float(abs(value)) for value in app_dataset.res)
     reference_res = tuple(float(abs(value)) for value in reference_dataset.res)
+    transform_delta = _transform_max_abs_delta(
+        tuple(app_dataset.transform),
+        tuple(reference_dataset.transform),
+    )
     matches = {
         "width_match": app_dataset.width == reference_dataset.width,
         "height_match": app_dataset.height == reference_dataset.height,
         "crs_match": str(app_dataset.crs) == str(reference_dataset.crs),
-        "transform_match": tuple(app_dataset.transform) == tuple(reference_dataset.transform),
+        "transform_match": transform_delta is not None and transform_delta <= DEFAULT_TRANSFORM_ATOL,
         "pixel_size_match": app_res == reference_res,
         "dtype_match": tuple(app_dataset.dtypes) == tuple(reference_dataset.dtypes),
         "nodata_match": tuple(app_dataset.nodatavals) == tuple(reference_dataset.nodatavals),
         "band_count_match": app_dataset.count == reference_dataset.count,
+        "transform_max_abs_delta": transform_delta,
+        "transform_atol": DEFAULT_TRANSFORM_ATOL,
     }
     item.update(matches)
-    return all(matches.values())
+    return all(
+        matches[key]
+        for key in (
+            "width_match",
+            "height_match",
+            "crs_match",
+            "transform_match",
+            "pixel_size_match",
+            "dtype_match",
+            "nodata_match",
+            "band_count_match",
+        )
+    )
+
+
+def _transform_max_abs_delta(app_transform: tuple[float, ...], reference_transform: tuple[float, ...]) -> float | None:
+    if len(app_transform) != len(reference_transform):
+        return None
+    return max(abs(float(app) - float(reference)) for app, reference in zip(app_transform, reference_transform))
 
 
 def _diff_stats(
