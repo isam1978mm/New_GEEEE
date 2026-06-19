@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review and R1 REPORT_640 verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, and AIREADY-S1 verifier pass.
 
 It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -17,6 +17,8 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] H5 score-band result doc recorded
 [x] R1 REPORT_640 verifier passed
 [x] R1 REPORT_640 result doc recorded
+[x] AIREADY-S1 secret-layer verifier passed
+[x] AIREADY-S1 result doc recorded
 ```
 
 ## 1. R1 REPORT_640 real app-vs-reference parity
@@ -58,13 +60,59 @@ Safety boundary remains:
 [x] no map overlays enabled
 ```
 
-## 2. Next blocked real app-vs-reference parity items
+## 2. AIREADY real app-vs-reference parity
 
-These are after R1.
+Current state:
 
 ```text
-[ ] AIREADY real app-vs-reference parity          <- NEXT RECOMMENDED
-[ ] HYPER-1A RES_2p5M real app-vs-reference parity
+[x] AIREADY plan written
+[x] AIREADY-S1 secret-layer reference files confirmed
+[x] AIREADY-S1 app files confirmed
+[x] AIREADY-S1 nested reference output directory support added
+[x] AIREADY-S1 CLI tests passed
+[x] AIREADY-S1 nonmatching app candidate rejected
+[x] AIREADY-S1 matching app candidate selected
+[x] AIREADY-S1 secret-layer verifier passed
+[x] AIREADY-S1 result recorded
+```
+
+AIREADY-S1 closeout result:
+
+```text
+overall_status: passed
+expected_count: 6
+compared_count: 6
+counts_by_status:
+  passed: 6
+```
+
+Required AIREADY-S1 outputs passed:
+
+```text
+[x] AI_READY_640_Secret_Gold_Halo.tif
+[x] AI_READY_640_Secret_Silver_Oxide.tif
+[x] AI_READY_640_Secret_Tunnel_Ceiling.tif
+[x] AI_READY_640_Secret_Thermal_Inertia.tif
+[x] AI_READY_640_Secret_Chemical_Protector.tif
+[x] AI_READY_640_Secret_Hidden_Doors.tif
+```
+
+Remaining AIREADY work:
+
+```text
+[ ] AIREADY-FR Fraction outputs: source known, app writer/output path still needed
+[ ] AIREADY-MH Metal Hardness: source-recovery blocked
+[ ] AIREADY-AN Magnetic/EM anomaly: source-recovery blocked
+```
+
+Do not claim all AIREADY parity from AIREADY-S1 alone.
+
+## 3. Next blocked real app-vs-reference parity items
+
+These are after R1 and AIREADY-S1.
+
+```text
+[ ] HYPER-1A RES_2p5M real app-vs-reference parity          <- NEXT RECOMMENDED
 [ ] HYPER-1B core tensor/NPY real app-vs-reference parity
 [ ] INT-1 internal raster real app-vs-reference parity
 [ ] S1-1 core-band real app-vs-reference parity
@@ -81,7 +129,7 @@ Common sub-checklist for each:
 [ ] Record safe docs-only result
 ```
 
-## 3. Source-recovery items
+## 4. Source-recovery items
 
 These are not ready for verifier work yet.
 
@@ -94,7 +142,7 @@ These are not ready for verifier work yet.
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
 
-### 3A. D1D object-table outputs
+### 4A. D1D object-table outputs
 
 ```text
 [ ] Recover/export same-run object-table family
@@ -104,19 +152,15 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run D2-gated comparison
 ```
 
-### 3B. AI_READY remaining support families
+### 4B. AI_READY remaining support families
 
 ```text
-[ ] Identify exact remaining family
-[ ] Confirm source evidence
-[ ] Define output paths
-[ ] Define metadata contract
-[ ] Freeze references
-[ ] Add/build explicit recovery task
-[ ] Verify after recovery
+[ ] AIREADY-FR: decide whether to build Fraction output writer path
+[ ] AIREADY-MH: recover Metal Hardness source/writer contract
+[ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
 ```
 
-### 3C. SAR/S1 support/intermediate/QA outputs
+### 4C. SAR/S1 support/intermediate/QA outputs
 
 ```text
 [ ] Recover exact notebook source contract
@@ -128,7 +172,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Verify only after source recovery
 ```
 
-### 3D. PAN/optical image components and stack
+### 4D. PAN/optical image components and stack
 
 ```text
 [ ] Recover optical/PAN source requirement
@@ -139,7 +183,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run PAN component and stack verifiers
 ```
 
-## 4. H5 / prediction serving boundaries still blocked
+## 5. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -157,7 +201,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 5. Paid Imagery Request Package / old V6 status
+## 6. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -181,7 +225,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 6. Deployment/auth/public exposure — later only
+## 7. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -197,17 +241,16 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. AIREADY real app-vs-reference parity
-   [ ] write/confirm AIREADY plan
-   [ ] locate private D1C AIREADY reference root/files
-   [ ] locate/generate private app AIREADY output root/files
-   [ ] confirm required AIREADY file set
+1. HYPER-1A RES_2p5M real app-vs-reference parity
+   [ ] write/confirm HYPER-1A plan
+   [ ] locate private D1C HYPER-1A reference files
+   [ ] locate/generate private app HYPER-1A output files
+   [ ] confirm required HYPER-1A file set
    [ ] run grid/source contract check
    [ ] run D2-gated verifier
-   [ ] record AIREADY verifier result
+   [ ] record HYPER-1A verifier result
 
-2. After AIREADY
-   [ ] HYPER-1A parity
+2. After HYPER-1A
    [ ] HYPER-1B parity
    [ ] INT-1 parity
    [ ] S1-1 parity
@@ -227,5 +270,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-AIREADY real app-vs-reference parity plan
+HYPER-1A RES_2p5M real app-vs-reference parity plan
 ```
