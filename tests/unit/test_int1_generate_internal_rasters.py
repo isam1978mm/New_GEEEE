@@ -48,15 +48,7 @@ def _write_relation_source(root: Path) -> None:
         encoding="utf-8",
     )
     cube = np.zeros((4, 4, len(bands)), dtype=np.float32)
-    values = {
-        "B2": 1.0,
-        "B3": 2.0,
-        "B4": 2.0,
-        "B8": 10.0,
-        "B11": 8.0,
-        "B12": 4.0,
-        "B1": 7.0,
-    }
+    values = {"B2": 1.0, "B3": 2.0, "B4": 2.0, "B8": 10.0, "B11": 8.0, "B12": 4.0, "B1": 7.0}
     for index, band in enumerate(bands):
         cube[..., index] = np.float32(values[band])
     np.save(root / writer.RELATION_S2_CUBE_NPY_NAME, cube)
@@ -74,6 +66,7 @@ def test_dry_run_blocks_full_generation_when_b8a_is_missing(tmp_path: Path) -> N
     assert result["runnable_output_count"] == 11
     assert result["blocked_output_count"] == 2
     assert result["optional_b8a_source_loaded"] is False
+    assert result["optional_statue_logic_diff_loaded"] is False
     assert result["relation_source_loaded"] is False
     assert result["relation_source_fallback_to_default"] is True
     assert result["outputs_written"] is False
@@ -92,6 +85,7 @@ def test_dry_run_accepts_recovered_b8a_array(tmp_path: Path) -> None:
     assert result["runnable_output_count"] == 13
     assert result["blocked_output_count"] == 0
     assert result["optional_b8a_source_loaded"] is True
+    assert result["optional_statue_logic_diff_loaded"] is False
     assert result["relation_source_loaded"] is False
     assert result["relation_source_fallback_to_default"] is True
 
@@ -106,6 +100,16 @@ def test_dry_run_loads_optional_relation_source(tmp_path: Path) -> None:
     assert result["relation_source_loaded"] is True
     assert result["relation_source_fallback_to_default"] is False
     assert result["relation_available_bands"] == ["B1", "B11", "B12", "B2", "B3", "B4", "B8"]
+
+
+def test_dry_run_loads_optional_statue_logic_diff(tmp_path: Path) -> None:
+    _write_run(tmp_path, include_b8a=True)
+    np.save(tmp_path / writer.OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME, np.full((4, 4), 0.09, dtype=np.float32))
+
+    result = writer.generate_int1_internal_rasters(run_dir=tmp_path)
+
+    assert result["ok"] is True
+    assert result["optional_statue_logic_diff_loaded"] is True
 
 
 def test_write_refuses_full_generation_when_b8a_is_missing(tmp_path: Path) -> None:
@@ -166,6 +170,25 @@ def test_write_uses_optional_relation_source_for_cell90_outputs(tmp_path: Path) 
         values = dataset.read(1)
 
     expected = (10.0 - 2.0) / (10.0 + 2.0)
+    assert np.allclose(values, expected, atol=1e-6, rtol=1e-6)
+
+
+@pytest.mark.skipif(not RASTERIO_AVAILABLE, reason="rasterio required")
+def test_write_uses_optional_statue_logic_diff_for_cell101_mixed_resolution_output(tmp_path: Path) -> None:
+    import rasterio
+
+    _write_run(tmp_path, include_b8a=True)
+    np.save(tmp_path / writer.OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME, np.full((4, 4), 0.09, dtype=np.float32))
+
+    result = writer.generate_int1_internal_rasters(run_dir=tmp_path, write=True)
+
+    assert result["ok"] is True
+    assert result["optional_statue_logic_diff_loaded"] is True
+
+    with rasterio.open(tmp_path / "AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif") as dataset:
+        values = dataset.read(1)
+
+    expected = 0.09 / 0.3
     assert np.allclose(values, expected, atol=1e-6, rtol=1e-6)
 
 
