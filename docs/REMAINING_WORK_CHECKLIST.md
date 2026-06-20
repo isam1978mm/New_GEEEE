@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, and HYPER-1B verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, and INT-1 verifier pass.
 
 It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -23,6 +23,8 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] HYPER-1A result doc recorded
 [x] HYPER-1B core tensor/NPY verifier passed
 [x] HYPER-1B result doc recorded
+[x] INT-1 internal AI_BEH raster verifier passed
+[x] INT-1 result doc recorded
 ```
 
 ## 1. R1 REPORT_640 real app-vs-reference parity
@@ -202,16 +204,73 @@ Safety boundary remains:
 [x] no map overlays enabled
 ```
 
-## 5. Next blocked real app-vs-reference parity items
+## 5. INT-1 internal raster real app-vs-reference parity
 
-These are after R1, AIREADY-S1, HYPER-1A, and HYPER-1B.
+Current state:
 
 ```text
-[ ] INT-1 internal raster real app-vs-reference parity          <- NEXT RECOMMENDED
-[ ] S1-1 core-band real app-vs-reference parity
+[x] INT-1 plan written
+[x] D1C reference rasters confirmed for 13 AI_BEH outputs
+[x] D1C-grid notebook rerun reproduced D1C for all 13 outputs
+[x] D1C-grid source inputs exported privately
+[x] canonical app writer patched to match notebook source/formula contract
+[x] cell-90 relation source active
+[x] B8A source active
+[x] StatueLogic raw source intermediate active
+[x] 13 canonical app rasters generated
+[x] standard D2-gated verifier passed
+[x] INT-1 result recorded
 ```
 
-Common sub-checklist for each:
+INT-1 closeout result:
+
+```text
+overall_status: passed
+expected_count: 13
+compared_count: 13
+counts_by_status:
+  passed: 13
+family_count: 6
+```
+
+Required INT-1 families passed:
+
+```text
+[x] ai_beh_relation: 3 passed
+[x] ai_beh_extended: 3 passed
+[x] ai_beh_logic: 2 passed
+[x] ai_beh_density_artifact: 2 passed
+[x] ai_beh_rare_material: 2 passed
+[x] ai_beh_alloy_statue: 1 passed
+```
+
+Safety boundary remains:
+
+```text
+[x] no raster/NPY payloads committed
+[x] no reference rasters copied as app outputs
+[x] no verifier tolerance relaxation used
+[x] no exact coordinate-bearing paths committed
+[x] no public INT-1 downloads enabled
+[x] no HTTP raster serving enabled
+[x] no map overlays enabled
+```
+
+Result doc:
+
+```text
+docs/INT_1_INTERNAL_RASTER_VERIFIER_RESULT.md
+```
+
+## 6. Next real app-vs-reference parity item
+
+This is after R1, AIREADY-S1, HYPER-1A, HYPER-1B, and INT-1.
+
+```text
+[ ] S1-1 core-band real app-vs-reference parity          <- NEXT RECOMMENDED
+```
+
+Common sub-checklist:
 
 ```text
 [ ] Locate frozen D1C reference files
@@ -222,7 +281,7 @@ Common sub-checklist for each:
 [ ] Record safe docs-only result
 ```
 
-## 6. Source-recovery items
+## 7. Source-recovery items
 
 These are not ready for verifier work yet.
 
@@ -235,7 +294,7 @@ These are not ready for verifier work yet.
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
 
-### 6A. D1D object-table outputs
+### 7A. D1D object-table outputs
 
 ```text
 [ ] Recover/export same-run object-table family
@@ -245,7 +304,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run D2-gated comparison
 ```
 
-### 6B. AI_READY remaining support families
+### 7B. AI_READY remaining support families
 
 ```text
 [ ] AIREADY-FR: decide whether to build Fraction output writer path
@@ -253,7 +312,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
 ```
 
-### 6C. SAR/S1 support/intermediate/QA outputs
+### 7C. SAR/S1 support/intermediate/QA outputs
 
 ```text
 [ ] Recover exact notebook source contract
@@ -265,7 +324,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Verify only after source recovery
 ```
 
-### 6D. PAN/optical image components and stack
+### 7D. PAN/optical image components and stack
 
 ```text
 [ ] Recover optical/PAN source requirement
@@ -276,7 +335,7 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] Run PAN component and stack verifiers
 ```
 
-## 7. H5 / prediction serving boundaries still blocked
+## 8. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -294,7 +353,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 8. Paid Imagery Request Package / old V6 status
+## 9. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -318,7 +377,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 9. Deployment/auth/public exposure — later only
+## 10. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -334,25 +393,22 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. INT-1 internal raster real app-vs-reference parity
-   [ ] write/confirm INT-1 plan
-   [ ] locate private D1C INT-1 reference files
-   [ ] locate/generate private app INT-1 output files
-   [ ] confirm required INT-1 file set
+1. S1-1 core-band real app-vs-reference parity
+   [ ] write/confirm S1-1 plan
+   [ ] locate private D1C S1-1 reference files
+   [ ] locate/generate private app S1-1 output files
+   [ ] confirm required S1-1 file set
    [ ] run grid/source contract check
    [ ] run D2-gated verifier
-   [ ] record INT-1 verifier result
+   [ ] record S1-1 verifier result
 
-2. After INT-1
-   [ ] S1-1 parity
-
-3. Heavier recovery
+2. Heavier recovery
    [ ] D1D object tables
    [ ] AI_READY remaining support families
    [ ] SAR/S1 recovery/build
    [ ] PAN recovery/build
 
-4. Later
+3. Later
    [ ] real auth provider
    [ ] public exposure review
    [ ] old external V6 source-lock track
@@ -361,5 +417,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-INT-1 internal raster real app-vs-reference parity plan
+S1-1 core-band real app-vs-reference parity plan
 ```
