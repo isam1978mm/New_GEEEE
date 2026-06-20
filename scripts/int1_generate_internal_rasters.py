@@ -13,6 +13,10 @@ The notebook INT-1 contract is cell-specific:
 * Cell 101 and CLL 25 material/advanced outputs use a 2022-01-01..2026-03-01
   S2 median source and Earth Engine ``unitScale`` normalization. Those outputs
   are generated from ``s2_raw_cube.npy`` plus ``S2_B8A_640.npy`` where needed.
+* Cell 101 ``StatueLogic`` is a mixed-native-resolution Earth Engine expression
+  (``B11.subtract(B4)``) before final grid reprojection. If
+  ``S2_STATUELOGIC_RAW_DIFF_640.npy`` is present, the script uses that raw
+  notebook-source intermediate and still applies the app-side ``unitScale(0, 0.3)``.
 
 It does not read frozen reference rasters, does not call Earth Engine, does not
 change API/frontend code, and writes no rasters unless ``--write`` is passed.
@@ -33,6 +37,8 @@ import numpy as np
 
 DEFAULT_DENOMINATOR_EPSILON = 1e-6
 OPTIONAL_B8A_NPY_NAME = "S2_B8A_640.npy"
+OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME = "S2_STATUELOGIC_RAW_DIFF_640.npy"
+STATUE_LOGIC_DIFF_BAND = "__STATUE_LOGIC_RAW_DIFF__"
 DEFAULT_S2_CUBE_NPY_NAME = "s2_raw_cube.npy"
 DEFAULT_S2_MANIFEST_NAME = "stage_s2_indices.manifest.json"
 RELATION_S2_CUBE_NPY_NAME = "s2_relation_raw_cube.npy"
@@ -101,6 +107,12 @@ def _ert_proxy(bands: dict[str, np.ndarray], eps: float) -> np.ndarray:
     return _safe_divide(bands["B8"] + bands["B4"], denominator, eps)
 
 
+def _statue_logic_raw_diff(bands: dict[str, np.ndarray], eps: float) -> np.ndarray:
+    if STATUE_LOGIC_DIFF_BAND in bands:
+        return bands[STATUE_LOGIC_DIFF_BAND].astype(np.float32, copy=False)
+    return _difference("B11", "B4")(bands, eps)
+
+
 INT1_OUTPUT_SPECS: tuple[OutputSpec, ...] = (
     OutputSpec(
         "AI_BEH_VegRoot_REL_ND_DOM_lin_640.tif",
@@ -120,56 +132,16 @@ INT1_OUTPUT_SPECS: tuple[OutputSpec, ...] = (
         _ratio("B11", "B12"),
         RELATION_SOURCE_GROUP,
     ),
-    OutputSpec(
-        "AI_BEH_GoldAlloy_REL_Ratio_DOM_lin_640.tif",
-        ("B12", "B11"),
-        _unit_scaled(_ratio("B12", "B11"), 1.0, 2.5),
-    ),
-    OutputSpec(
-        "AI_BEH_SilverCopper_REL_Ratio_DOM_lin_640.tif",
-        ("B4", "B2"),
-        _unit_scaled(_ratio("B4", "B2"), 0.5, 2.0),
-    ),
-    OutputSpec(
-        "AI_BEH_ERT_Resistivity_Proxy_DOM_lin_640.tif",
-        ("B8", "B4", "B11"),
-        _unit_scaled(_ert_proxy, 0.0, 10.0),
-    ),
-    OutputSpec(
-        "AI_BEH_SecretEntry_REL_ND_DOM_lin_640.tif",
-        ("B12", "B8A"),
-        _unit_scaled(_normalized_difference("B12", "B8A"), -0.5, 0.5),
-    ),
-    OutputSpec(
-        "AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif",
-        ("B11", "B4"),
-        _unit_scaled(_difference("B11", "B4"), 0.0, 0.3),
-    ),
-    OutputSpec(
-        "AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif",
-        ("B12", "B11"),
-        _unit_scaled(_ratio("B12", "B11"), 1.0, 2.5),
-    ),
-    OutputSpec(
-        "AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif",
-        ("B11", "B8A"),
-        _unit_scaled(_ratio("B11", "B8A"), 0.5, 2.0),
-    ),
-    OutputSpec(
-        "AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif",
-        ("B1", "B3"),
-        _unit_scaled(_ratio("B1", "B3"), 0.8, 1.8),
-    ),
-    OutputSpec(
-        "AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif",
-        ("B2", "B12"),
-        _unit_scaled(_ratio("B2", "B12"), 0.0, 5.0),
-    ),
-    OutputSpec(
-        "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif",
-        ("B4", "B8"),
-        _unit_scaled(_normalized_difference("B4", "B8"), -1.0, 1.0),
-    ),
+    OutputSpec("AI_BEH_GoldAlloy_REL_Ratio_DOM_lin_640.tif", ("B12", "B11"), _unit_scaled(_ratio("B12", "B11"), 1.0, 2.5)),
+    OutputSpec("AI_BEH_SilverCopper_REL_Ratio_DOM_lin_640.tif", ("B4", "B2"), _unit_scaled(_ratio("B4", "B2"), 0.5, 2.0)),
+    OutputSpec("AI_BEH_ERT_Resistivity_Proxy_DOM_lin_640.tif", ("B8", "B4", "B11"), _unit_scaled(_ert_proxy, 0.0, 10.0)),
+    OutputSpec("AI_BEH_SecretEntry_REL_ND_DOM_lin_640.tif", ("B12", "B8A"), _unit_scaled(_normalized_difference("B12", "B8A"), -0.5, 0.5)),
+    OutputSpec("AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif", ("B11", "B4"), _unit_scaled(_statue_logic_raw_diff, 0.0, 0.3)),
+    OutputSpec("AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif", ("B12", "B11"), _unit_scaled(_ratio("B12", "B11"), 1.0, 2.5)),
+    OutputSpec("AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif", ("B11", "B8A"), _unit_scaled(_ratio("B11", "B8A"), 0.5, 2.0)),
+    OutputSpec("AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif", ("B1", "B3"), _unit_scaled(_ratio("B1", "B3"), 0.8, 1.8)),
+    OutputSpec("AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif", ("B2", "B12"), _unit_scaled(_ratio("B2", "B12"), 0.0, 5.0)),
+    OutputSpec("AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif", ("B4", "B8"), _unit_scaled(_normalized_difference("B4", "B8"), -1.0, 1.0)),
 )
 
 
@@ -211,6 +183,12 @@ def generate_int1_internal_rasters(
         manifest_name=DEFAULT_S2_MANIFEST_NAME,
         optional_b8a_name=OPTIONAL_B8A_NPY_NAME,
     )
+    optional_statue_logic_diff_loaded = _load_optional_single_array(
+        source_root,
+        array_name=OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME,
+        band_name=STATUE_LOGIC_DIFF_BAND,
+        bands=default_bands,
+    )
     relation_bands, relation_source_loaded = _load_optional_relation_source_bands(source_root)
     if not relation_source_loaded:
         relation_bands = default_bands
@@ -219,12 +197,10 @@ def generate_int1_internal_rasters(
         DEFAULT_SOURCE_GROUP: default_bands,
         RELATION_SOURCE_GROUP: relation_bands,
     }
-    available_bands = tuple(sorted(default_bands))
+    available_bands = tuple(sorted(band for band in default_bands if not band.startswith("__")))
     relation_available_bands = tuple(sorted(relation_bands))
     missing_bands = _missing_bands_by_source_group(source_groups)
-    runnable_specs = tuple(
-        spec for spec in INT1_OUTPUT_SPECS if not (set(spec.required_bands) - set(source_groups[spec.source_group]))
-    )
+    runnable_specs = tuple(spec for spec in INT1_OUTPUT_SPECS if not (set(spec.required_bands) - set(source_groups[spec.source_group])))
     blocked_specs = tuple(spec for spec in INT1_OUTPUT_SPECS if spec not in runnable_specs)
 
     result: dict[str, Any] = {
@@ -237,6 +213,8 @@ def generate_int1_internal_rasters(
         "source_cube_name": DEFAULT_S2_CUBE_NPY_NAME,
         "optional_b8a_source_name": OPTIONAL_B8A_NPY_NAME,
         "optional_b8a_source_loaded": optional_b8a_loaded,
+        "optional_statue_logic_diff_name": OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME,
+        "optional_statue_logic_diff_loaded": optional_statue_logic_diff_loaded,
         "relation_source_cube_name": RELATION_S2_CUBE_NPY_NAME,
         "relation_source_manifest_name": RELATION_S2_MANIFEST_NAME,
         "relation_source_loaded": relation_source_loaded,
@@ -285,13 +263,7 @@ def generate_int1_internal_rasters(
             raise INT1WriterError(f"output already exists; use --overwrite: {spec.output_name}")
         data = spec.formula(source_groups[spec.source_group], denominator_epsilon)
         _write_tif(output_path, data, profile)
-        written.append(
-            {
-                "output_name": spec.output_name,
-                "source_group": spec.source_group,
-                "size_bytes": output_path.stat().st_size,
-            }
-        )
+        written.append({"output_name": spec.output_name, "source_group": spec.source_group, "size_bytes": output_path.stat().st_size})
 
     result.update(
         {
@@ -359,6 +331,24 @@ def _load_source_bands(
             bands["B8A"] = b8a
             optional_loaded = True
     return bands, optional_loaded
+
+
+def _load_optional_single_array(
+    run_dir: Path,
+    *,
+    array_name: str,
+    band_name: str,
+    bands: dict[str, np.ndarray],
+) -> bool:
+    array_path = run_dir / array_name
+    if not array_path.is_file():
+        return False
+    array = np.load(array_path, allow_pickle=False).astype(np.float32, copy=False)
+    first_shape = next(iter(bands.values())).shape
+    if array.shape != first_shape:
+        raise INT1WriterError(f"{array_name} shape must be {first_shape}, got {array.shape}")
+    bands[band_name] = array
+    return True
 
 
 def _missing_bands_by_source_group(source_groups: dict[str, dict[str, np.ndarray]]) -> tuple[str, ...]:
