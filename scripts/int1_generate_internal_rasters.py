@@ -3,12 +3,16 @@
 This local operator script computes notebook-named AI_BEH semantic rasters from
 an app run's ``s2_raw_cube.npy`` and ``stage_s2_indices.manifest.json``.
 
+If ``S2_B8A_640.npy`` is present beside the source cube, it is loaded as the
+missing B8A band needed by two INT-1 formulas.
+
 It does not read frozen reference rasters, does not call Earth Engine, does not
 change API/frontend code, and writes no rasters unless ``--write`` is passed.
 
-Important: two INT-1 formulas require B8A. If the selected app source cube does
-not contain B8A, the script reports ``blocked_missing_source_bands`` and refuses
-a full write rather than silently substituting B8.
+Important: two INT-1 formulas require B8A. If neither the source cube nor the
+recovered local B8A array is available, the script reports
+``blocked_missing_source_bands`` and refuses a full write rather than silently
+substituting B8.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ import numpy as np
 
 DEFAULT_DENOMINATOR_EPSILON = 1e-6
 DEFAULT_NODATA = -9999.0
+OPTIONAL_B8A_NPY_NAME = "S2_B8A_640.npy"
 
 
 class INT1WriterError(ValueError):
@@ -74,71 +79,19 @@ def _ert_proxy(bands: dict[str, np.ndarray], eps: float) -> np.ndarray:
 
 
 INT1_OUTPUT_SPECS: tuple[OutputSpec, ...] = (
-    OutputSpec(
-        "AI_BEH_VegRoot_REL_ND_DOM_lin_640.tif",
-        ("B8", "B4"),
-        _normalized_difference("B8", "B4"),
-    ),
-    OutputSpec(
-        "AI_BEH_IronOxide_REL_Ratio_DOM_lin_640.tif",
-        ("B4", "B3"),
-        _ratio("B4", "B3"),
-    ),
-    OutputSpec(
-        "AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif",
-        ("B11", "B12"),
-        _ratio("B11", "B12"),
-    ),
-    OutputSpec(
-        "AI_BEH_GoldAlloy_REL_Ratio_DOM_lin_640.tif",
-        ("B12", "B11"),
-        _ratio("B12", "B11"),
-    ),
-    OutputSpec(
-        "AI_BEH_SilverCopper_REL_Ratio_DOM_lin_640.tif",
-        ("B4", "B2"),
-        _ratio("B4", "B2"),
-    ),
-    OutputSpec(
-        "AI_BEH_ERT_Resistivity_Proxy_DOM_lin_640.tif",
-        ("B8", "B4", "B11"),
-        _ert_proxy,
-    ),
-    OutputSpec(
-        "AI_BEH_SecretEntry_REL_ND_DOM_lin_640.tif",
-        ("B12", "B8A"),
-        _normalized_difference("B12", "B8A"),
-    ),
-    OutputSpec(
-        "AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif",
-        ("B11", "B4"),
-        _difference("B11", "B4"),
-    ),
-    OutputSpec(
-        "AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif",
-        ("B12", "B11"),
-        _ratio("B12", "B11"),
-    ),
-    OutputSpec(
-        "AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif",
-        ("B11", "B8A"),
-        _ratio("B11", "B8A"),
-    ),
-    OutputSpec(
-        "AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif",
-        ("B1", "B3"),
-        _ratio("B1", "B3"),
-    ),
-    OutputSpec(
-        "AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif",
-        ("B2", "B12"),
-        _ratio("B2", "B12"),
-    ),
-    OutputSpec(
-        "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif",
-        ("B4", "B8"),
-        _normalized_difference("B4", "B8"),
-    ),
+    OutputSpec("AI_BEH_VegRoot_REL_ND_DOM_lin_640.tif", ("B8", "B4"), _normalized_difference("B8", "B4")),
+    OutputSpec("AI_BEH_IronOxide_REL_Ratio_DOM_lin_640.tif", ("B4", "B3"), _ratio("B4", "B3")),
+    OutputSpec("AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif", ("B11", "B12"), _ratio("B11", "B12")),
+    OutputSpec("AI_BEH_GoldAlloy_REL_Ratio_DOM_lin_640.tif", ("B12", "B11"), _ratio("B12", "B11")),
+    OutputSpec("AI_BEH_SilverCopper_REL_Ratio_DOM_lin_640.tif", ("B4", "B2"), _ratio("B4", "B2")),
+    OutputSpec("AI_BEH_ERT_Resistivity_Proxy_DOM_lin_640.tif", ("B8", "B4", "B11"), _ert_proxy),
+    OutputSpec("AI_BEH_SecretEntry_REL_ND_DOM_lin_640.tif", ("B12", "B8A"), _normalized_difference("B12", "B8A")),
+    OutputSpec("AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif", ("B11", "B4"), _difference("B11", "B4")),
+    OutputSpec("AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif", ("B12", "B11"), _ratio("B12", "B11")),
+    OutputSpec("AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif", ("B11", "B8A"), _ratio("B11", "B8A")),
+    OutputSpec("AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif", ("B1", "B3"), _ratio("B1", "B3")),
+    OutputSpec("AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif", ("B2", "B12"), _ratio("B2", "B12")),
+    OutputSpec("AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif", ("B4", "B8"), _normalized_difference("B4", "B8")),
 )
 
 
@@ -174,12 +127,10 @@ def generate_int1_internal_rasters(
     if denominator_epsilon <= 0:
         raise INT1WriterError("denominator_epsilon must be positive")
 
-    bands = _load_source_bands(source_root)
+    bands, optional_b8a_loaded = _load_source_bands(source_root)
     available_bands = tuple(sorted(bands))
     missing_bands = _missing_bands(available_bands)
-    runnable_specs = tuple(
-        spec for spec in INT1_OUTPUT_SPECS if not (set(spec.required_bands) - set(available_bands))
-    )
+    runnable_specs = tuple(spec for spec in INT1_OUTPUT_SPECS if not (set(spec.required_bands) - set(available_bands)))
     blocked_specs = tuple(spec for spec in INT1_OUTPUT_SPECS if spec not in runnable_specs)
 
     result: dict[str, Any] = {
@@ -190,6 +141,8 @@ def generate_int1_internal_rasters(
         "source_run_dir": str(source_root),
         "output_dir": str(output_root),
         "source_cube_name": "s2_raw_cube.npy",
+        "optional_b8a_source_name": OPTIONAL_B8A_NPY_NAME,
+        "optional_b8a_source_loaded": optional_b8a_loaded,
         "source_manifest_name": "stage_s2_indices.manifest.json",
         "source_layout": "HWC",
         "available_bands": list(available_bands),
@@ -243,7 +196,7 @@ def generate_int1_internal_rasters(
     return result
 
 
-def _load_source_bands(run_dir: Path) -> dict[str, np.ndarray]:
+def _load_source_bands(run_dir: Path) -> tuple[dict[str, np.ndarray], bool]:
     manifest_path = run_dir / "stage_s2_indices.manifest.json"
     cube_path = run_dir / "s2_raw_cube.npy"
     if not manifest_path.is_file():
@@ -258,10 +211,22 @@ def _load_source_bands(run_dir: Path) -> dict[str, np.ndarray]:
     if cube.ndim != 3:
         raise INT1WriterError("s2_raw_cube.npy must be a 3D array")
     if cube.shape[-1] == len(source_bands):
-        return {band: cube[..., index].astype(np.float32, copy=False) for index, band in enumerate(source_bands)}
-    if cube.shape[0] == len(source_bands):
-        return {band: cube[index, ...].astype(np.float32, copy=False) for index, band in enumerate(source_bands)}
-    raise INT1WriterError("s2_raw_cube.npy shape does not match source_bands count")
+        bands = {band: cube[..., index].astype(np.float32, copy=False) for index, band in enumerate(source_bands)}
+    elif cube.shape[0] == len(source_bands):
+        bands = {band: cube[index, ...].astype(np.float32, copy=False) for index, band in enumerate(source_bands)}
+    else:
+        raise INT1WriterError("s2_raw_cube.npy shape does not match source_bands count")
+
+    optional_path = run_dir / OPTIONAL_B8A_NPY_NAME
+    optional_loaded = False
+    if "B8A" not in bands and optional_path.is_file():
+        b8a = np.load(optional_path, allow_pickle=False).astype(np.float32, copy=False)
+        first_shape = next(iter(bands.values())).shape
+        if b8a.shape != first_shape:
+            raise INT1WriterError(f"{OPTIONAL_B8A_NPY_NAME} shape must be {first_shape}, got {b8a.shape}")
+        bands["B8A"] = b8a
+        optional_loaded = True
+    return bands, optional_loaded
 
 
 def _missing_bands(available_bands: tuple[str, ...]) -> tuple[str, ...]:
@@ -273,7 +238,7 @@ def _missing_bands(available_bands: tuple[str, ...]) -> tuple[str, ...]:
 def _build_raster_profile(run_dir: Path, shape: tuple[int, int]) -> dict[str, Any]:
     try:
         from affine import Affine
-    except ImportError as exc:  # pragma: no cover - environment dependent
+    except ImportError as exc:
         raise INT1WriterError("affine is not importable") from exc
 
     grid_path = run_dir / "grid_manifest.json"
@@ -307,7 +272,7 @@ def _build_raster_profile(run_dir: Path, shape: tuple[int, int]) -> dict[str, An
 def _write_tif(path: Path, data: np.ndarray, profile: dict[str, Any]) -> None:
     try:
         import rasterio
-    except ImportError as exc:  # pragma: no cover - environment dependent
+    except ImportError as exc:
         raise INT1WriterError("rasterio is not importable") from exc
 
     temp_path = path.with_suffix(path.suffix + ".tmp")
