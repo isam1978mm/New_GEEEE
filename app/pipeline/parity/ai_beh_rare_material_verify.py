@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.pipeline.parity.ai_beh_raster_verify_common import verify_ai_beh_raster_outputs
+from app.pipeline.parity.ai_beh_raster_verify_common import (
+    ALLOWED_OUTPUT_STATUSES,
+    ALLOWED_OVERALL_STATUSES,
+    DEFAULT_TRANSFORM_ATOL,
+    verify_ai_beh_raster_outputs,
+)
 
 
 AI_BEH_RARE_MATERIAL_VERIFICATION_SCHEMA_VERSION = (
