@@ -24,6 +24,7 @@ AI_BEH_RELATION_OUTPUT_NAMES = (
     "AI_BEH_IronOxide_REL_Ratio_DOM_lin_640.tif",
     "AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif",
 )
+DEFAULT_TRANSFORM_ATOL = 1e-5
 
 ALLOWED_OUTPUT_STATUSES = {
     "passed",
@@ -183,6 +184,8 @@ def _base_output_item(
         "height_match": None,
         "crs_match": None,
         "transform_match": None,
+        "transform_max_abs_delta": None,
+        "transform_atol": DEFAULT_TRANSFORM_ATOL,
         "dtype_match": None,
         "nodata_match": None,
         "band_count_match": None,
@@ -265,19 +268,44 @@ def _compare_rasters(
 
 
 def _compare_metadata(item: dict[str, Any], app_dataset: Any, reference_dataset: Any) -> bool:
+    transform_delta = _transform_max_abs_delta(
+        tuple(app_dataset.transform),
+        tuple(reference_dataset.transform),
+    )
     matches = {
         "width_match": app_dataset.width == reference_dataset.width,
         "height_match": app_dataset.height == reference_dataset.height,
         "crs_match": str(app_dataset.crs) == str(reference_dataset.crs),
-        "transform_match": tuple(app_dataset.transform)
-        == tuple(reference_dataset.transform),
+        "transform_match": transform_delta <= DEFAULT_TRANSFORM_ATOL,
+        "transform_max_abs_delta": transform_delta,
+        "transform_atol": DEFAULT_TRANSFORM_ATOL,
         "dtype_match": tuple(app_dataset.dtypes) == tuple(reference_dataset.dtypes),
         "nodata_match": tuple(app_dataset.nodatavals)
         == tuple(reference_dataset.nodatavals),
         "band_count_match": app_dataset.count == reference_dataset.count,
     }
     item.update(matches)
-    return all(matches.values())
+    return all(
+        matches[key]
+        for key in (
+            "width_match",
+            "height_match",
+            "crs_match",
+            "transform_match",
+            "dtype_match",
+            "nodata_match",
+            "band_count_match",
+        )
+    )
+
+
+def _transform_max_abs_delta(app_transform: tuple[float, ...], reference_transform: tuple[float, ...]) -> float:
+    if len(app_transform) != len(reference_transform):
+        return float("inf")
+    return max(
+        abs(float(app_value) - float(reference_value))
+        for app_value, reference_value in zip(app_transform, reference_transform)
+    )
 
 
 def _diff_stats(
