@@ -97,6 +97,7 @@ def test_write_generates_all_outputs_when_complete_source_exists(tmp_path: Path)
         assert dataset.height == 4
         assert dataset.count == 1
         assert dataset.dtypes == ("float32",)
+        assert dataset.nodata is None
         assert str(dataset.crs) == "EPSG:32637"
         assert tuple(round(abs(value), 6) for value in dataset.res) == (10.0, 10.0)
         values = dataset.read(1)
