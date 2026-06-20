@@ -52,8 +52,23 @@ def test_dry_run_blocks_full_generation_when_b8a_is_missing(tmp_path: Path) -> N
     assert result["expected_output_count"] == 13
     assert result["runnable_output_count"] == 11
     assert result["blocked_output_count"] == 2
+    assert result["optional_b8a_source_loaded"] is False
     assert result["outputs_written"] is False
     assert not any(tmp_path.glob("AI_BEH_*.tif"))
+
+
+def test_dry_run_accepts_recovered_b8a_array(tmp_path: Path) -> None:
+    _write_run(tmp_path, include_b8a=False)
+    np.save(tmp_path / writer.OPTIONAL_B8A_NPY_NAME, np.full((4, 4), 8.0, dtype=np.float32))
+
+    result = writer.generate_int1_internal_rasters(run_dir=tmp_path)
+
+    assert result["ok"] is True
+    assert result["status"] == "dry_run_ready"
+    assert result["missing_source_bands"] == []
+    assert result["runnable_output_count"] == 13
+    assert result["blocked_output_count"] == 0
+    assert result["optional_b8a_source_loaded"] is True
 
 
 def test_write_refuses_full_generation_when_b8a_is_missing(tmp_path: Path) -> None:
@@ -88,6 +103,20 @@ def test_write_generates_all_outputs_when_complete_source_exists(tmp_path: Path)
 
     expected = (4.0 - 3.0) / (4.0 + 3.0)
     assert np.allclose(values, expected, atol=1e-6, rtol=1e-6)
+
+
+@pytest.mark.skipif(not RASTERIO_AVAILABLE, reason="rasterio required")
+def test_write_generates_all_outputs_with_recovered_b8a(tmp_path: Path) -> None:
+    _write_run(tmp_path, include_b8a=False)
+    np.save(tmp_path / writer.OPTIONAL_B8A_NPY_NAME, np.full((4, 4), 8.0, dtype=np.float32))
+
+    result = writer.generate_int1_internal_rasters(run_dir=tmp_path, write=True)
+
+    assert result["ok"] is True
+    assert result["status"] == "int1_internal_rasters_written"
+    assert result["optional_b8a_source_loaded"] is True
+    assert result["written_output_count"] == 13
+    assert len(sorted(tmp_path.glob("AI_BEH_*.tif"))) == 13
 
 
 def test_cli_dry_run_reports_blocked_missing_b8a(tmp_path: Path) -> None:
