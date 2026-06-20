@@ -1,18 +1,21 @@
 """Generate INT-1 internal AI_BEH raster app outputs from local app sources.
 
 This local operator script computes notebook-named AI_BEH semantic rasters from
-an app run's ``s2_raw_cube.npy`` and ``stage_s2_indices.manifest.json``.
+an app run's exported Sentinel-2 source arrays and grid manifest.
 
-If ``S2_B8A_640.npy`` is present beside the source cube, it is loaded as the
-missing B8A band needed by two INT-1 formulas.
+The notebook INT-1 contract is cell-specific:
+
+* Cell 90 relation outputs use a 2024-01-01..2026-03-01 S2 median source.
+  If ``s2_relation_raw_cube.npy`` plus ``stage_s2_relation.manifest.json`` are
+  present, those three relation outputs are generated from that source. If the
+  relation cube is absent, the script falls back to ``s2_raw_cube.npy`` and
+  reports that fallback in the JSON payload.
+* Cell 101 and CLL 25 material/advanced outputs use a 2022-01-01..2026-03-01
+  S2 median source and Earth Engine ``unitScale`` normalization. Those outputs
+  are generated from ``s2_raw_cube.npy`` plus ``S2_B8A_640.npy`` where needed.
 
 It does not read frozen reference rasters, does not call Earth Engine, does not
 change API/frontend code, and writes no rasters unless ``--write`` is passed.
-
-Important: two INT-1 formulas require B8A. If neither the source cube nor the
-recovered local B8A array is available, the script reports
-``blocked_missing_source_bands`` and refuses a full write rather than silently
-substituting B8.
 """
 
 from __future__ import annotations
@@ -30,6 +33,12 @@ import numpy as np
 
 DEFAULT_DENOMINATOR_EPSILON = 1e-6
 OPTIONAL_B8A_NPY_NAME = "S2_B8A_640.npy"
+DEFAULT_S2_CUBE_NPY_NAME = "s2_raw_cube.npy"
+DEFAULT_S2_MANIFEST_NAME = "stage_s2_indices.manifest.json"
+RELATION_S2_CUBE_NPY_NAME = "s2_relation_raw_cube.npy"
+RELATION_S2_MANIFEST_NAME = "stage_s2_relation.manifest.json"
+DEFAULT_SOURCE_GROUP = "default_2022_2026"
+RELATION_SOURCE_GROUP = "relation_2024_2026"
 
 
 class INT1WriterError(ValueError):
@@ -41,6 +50,7 @@ class OutputSpec:
     output_name: str
     required_bands: tuple[str, ...]
     formula: Callable[[dict[str, np.ndarray], float], np.ndarray]
+    source_group: str = DEFAULT_SOURCE_GROUP
 
 
 class MissingBandsError(INT1WriterError):
@@ -60,6 +70,12 @@ def _nd(left: np.ndarray, right: np.ndarray, eps: float) -> np.ndarray:
     return _safe_divide(left - right, left + right, eps)
 
 
+def _unit_scale(data: np.ndarray, low: float, high: float) -> np.ndarray:
+    if high == low:
+        raise INT1WriterError("unitScale high and low must differ")
+    return ((data.astype(np.float64, copy=False) - low) / (high - low)).astype(np.float32, copy=False)
+
+
 def _ratio(numerator_band: str, denominator_band: str) -> Callable[[dict[str, np.ndarray], float], np.ndarray]:
     return lambda bands, eps: _safe_divide(bands[numerator_band], bands[denominator_band], eps)
 
@@ -72,25 +88,88 @@ def _difference(left_band: str, right_band: str) -> Callable[[dict[str, np.ndarr
     return lambda bands, eps: (bands[left_band] - bands[right_band]).astype(np.float32, copy=False)
 
 
+def _unit_scaled(
+    formula: Callable[[dict[str, np.ndarray], float], np.ndarray],
+    low: float,
+    high: float,
+) -> Callable[[dict[str, np.ndarray], float], np.ndarray]:
+    return lambda bands, eps: _unit_scale(formula(bands, eps), low, high)
+
+
 def _ert_proxy(bands: dict[str, np.ndarray], eps: float) -> np.ndarray:
     denominator = bands["B11"] + 0.001
     return _safe_divide(bands["B8"] + bands["B4"], denominator, eps)
 
 
 INT1_OUTPUT_SPECS: tuple[OutputSpec, ...] = (
-    OutputSpec("AI_BEH_VegRoot_REL_ND_DOM_lin_640.tif", ("B8", "B4"), _normalized_difference("B8", "B4")),
-    OutputSpec("AI_BEH_IronOxide_REL_Ratio_DOM_lin_640.tif", ("B4", "B3"), _ratio("B4", "B3")),
-    OutputSpec("AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif", ("B11", "B12"), _ratio("B11", "B12")),
-    OutputSpec("AI_BEH_GoldAlloy_REL_Ratio_DOM_lin_640.tif", ("B12", "B11"), _ratio("B12", "B11")),
-    OutputSpec("AI_BEH_SilverCopper_REL_Ratio_DOM_lin_640.tif", ("B4", "B2"), _ratio("B4", "B2")),
-    OutputSpec("AI_BEH_ERT_Resistivity_Proxy_DOM_lin_640.tif", ("B8", "B4", "B11"), _ert_proxy),
-    OutputSpec("AI_BEH_SecretEntry_REL_ND_DOM_lin_640.tif", ("B12", "B8A"), _normalized_difference("B12", "B8A")),
-    OutputSpec("AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif", ("B11", "B4"), _difference("B11", "B4")),
-    OutputSpec("AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif", ("B12", "B11"), _ratio("B12", "B11")),
-    OutputSpec("AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif", ("B11", "B8A"), _ratio("B11", "B8A")),
-    OutputSpec("AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif", ("B1", "B3"), _ratio("B1", "B3")),
-    OutputSpec("AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif", ("B2", "B12"), _ratio("B2", "B12")),
-    OutputSpec("AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif", ("B4", "B8"), _normalized_difference("B4", "B8")),
+    OutputSpec(
+        "AI_BEH_VegRoot_REL_ND_DOM_lin_640.tif",
+        ("B8", "B4"),
+        _normalized_difference("B8", "B4"),
+        RELATION_SOURCE_GROUP,
+    ),
+    OutputSpec(
+        "AI_BEH_IronOxide_REL_Ratio_DOM_lin_640.tif",
+        ("B4", "B3"),
+        _ratio("B4", "B3"),
+        RELATION_SOURCE_GROUP,
+    ),
+    OutputSpec(
+        "AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif",
+        ("B11", "B12"),
+        _ratio("B11", "B12"),
+        RELATION_SOURCE_GROUP,
+    ),
+    OutputSpec(
+        "AI_BEH_GoldAlloy_REL_Ratio_DOM_lin_640.tif",
+        ("B12", "B11"),
+        _unit_scaled(_ratio("B12", "B11"), 1.0, 2.5),
+    ),
+    OutputSpec(
+        "AI_BEH_SilverCopper_REL_Ratio_DOM_lin_640.tif",
+        ("B4", "B2"),
+        _unit_scaled(_ratio("B4", "B2"), 0.5, 2.0),
+    ),
+    OutputSpec(
+        "AI_BEH_ERT_Resistivity_Proxy_DOM_lin_640.tif",
+        ("B8", "B4", "B11"),
+        _unit_scaled(_ert_proxy, 0.0, 10.0),
+    ),
+    OutputSpec(
+        "AI_BEH_SecretEntry_REL_ND_DOM_lin_640.tif",
+        ("B12", "B8A"),
+        _unit_scaled(_normalized_difference("B12", "B8A"), -0.5, 0.5),
+    ),
+    OutputSpec(
+        "AI_BEH_StatueLogic_REL_Diff_DOM_lin_640.tif",
+        ("B11", "B4"),
+        _unit_scaled(_difference("B11", "B4"), 0.0, 0.3),
+    ),
+    OutputSpec(
+        "AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif",
+        ("B12", "B11"),
+        _unit_scaled(_ratio("B12", "B11"), 1.0, 2.5),
+    ),
+    OutputSpec(
+        "AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif",
+        ("B11", "B8A"),
+        _unit_scaled(_ratio("B11", "B8A"), 0.5, 2.0),
+    ),
+    OutputSpec(
+        "AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif",
+        ("B1", "B3"),
+        _unit_scaled(_ratio("B1", "B3"), 0.8, 1.8),
+    ),
+    OutputSpec(
+        "AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif",
+        ("B2", "B12"),
+        _unit_scaled(_ratio("B2", "B12"), 0.0, 5.0),
+    ),
+    OutputSpec(
+        "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif",
+        ("B4", "B8"),
+        _unit_scaled(_normalized_difference("B4", "B8"), -1.0, 1.0),
+    ),
 )
 
 
@@ -126,10 +205,26 @@ def generate_int1_internal_rasters(
     if denominator_epsilon <= 0:
         raise INT1WriterError("denominator_epsilon must be positive")
 
-    bands, optional_b8a_loaded = _load_source_bands(source_root)
-    available_bands = tuple(sorted(bands))
-    missing_bands = _missing_bands(available_bands)
-    runnable_specs = tuple(spec for spec in INT1_OUTPUT_SPECS if not (set(spec.required_bands) - set(available_bands)))
+    default_bands, optional_b8a_loaded = _load_source_bands(
+        source_root,
+        cube_name=DEFAULT_S2_CUBE_NPY_NAME,
+        manifest_name=DEFAULT_S2_MANIFEST_NAME,
+        optional_b8a_name=OPTIONAL_B8A_NPY_NAME,
+    )
+    relation_bands, relation_source_loaded = _load_optional_relation_source_bands(source_root)
+    if not relation_source_loaded:
+        relation_bands = default_bands
+
+    source_groups = {
+        DEFAULT_SOURCE_GROUP: default_bands,
+        RELATION_SOURCE_GROUP: relation_bands,
+    }
+    available_bands = tuple(sorted(default_bands))
+    relation_available_bands = tuple(sorted(relation_bands))
+    missing_bands = _missing_bands_by_source_group(source_groups)
+    runnable_specs = tuple(
+        spec for spec in INT1_OUTPUT_SPECS if not (set(spec.required_bands) - set(source_groups[spec.source_group]))
+    )
     blocked_specs = tuple(spec for spec in INT1_OUTPUT_SPECS if spec not in runnable_specs)
 
     result: dict[str, Any] = {
@@ -139,18 +234,27 @@ def generate_int1_internal_rasters(
         "created_at": datetime.now(UTC).isoformat(),
         "source_run_dir": str(source_root),
         "output_dir": str(output_root),
-        "source_cube_name": "s2_raw_cube.npy",
+        "source_cube_name": DEFAULT_S2_CUBE_NPY_NAME,
         "optional_b8a_source_name": OPTIONAL_B8A_NPY_NAME,
         "optional_b8a_source_loaded": optional_b8a_loaded,
-        "source_manifest_name": "stage_s2_indices.manifest.json",
+        "relation_source_cube_name": RELATION_S2_CUBE_NPY_NAME,
+        "relation_source_manifest_name": RELATION_S2_MANIFEST_NAME,
+        "relation_source_loaded": relation_source_loaded,
+        "relation_source_fallback_to_default": not relation_source_loaded,
+        "source_manifest_name": DEFAULT_S2_MANIFEST_NAME,
         "source_layout": "HWC",
         "available_bands": list(available_bands),
+        "relation_available_bands": list(relation_available_bands),
         "missing_source_bands": list(missing_bands),
         "expected_output_count": len(INT1_OUTPUT_SPECS),
         "runnable_output_count": len(runnable_specs),
         "blocked_output_count": len(blocked_specs),
         "blocked_outputs": [
-            {"output_name": spec.output_name, "missing_bands": sorted(set(spec.required_bands) - set(available_bands))}
+            {
+                "output_name": spec.output_name,
+                "source_group": spec.source_group,
+                "missing_bands": sorted(set(spec.required_bands) - set(source_groups[spec.source_group])),
+            }
             for spec in blocked_specs
         ],
         "outputs_written": False,
@@ -161,9 +265,9 @@ def generate_int1_internal_rasters(
         "api_frontend_changed": False,
         "raster_payloads_committed": False,
         "notes": (
-            "Full INT-1 generation requires B8A. This script refuses full write when B8A is missing."
+            "Full INT-1 generation requires all notebook-contract source bands."
             if missing_bands
-            else "All INT-1 source bands are available."
+            else "All INT-1 notebook-contract source bands are available."
         ),
     }
 
@@ -172,16 +276,22 @@ def generate_int1_internal_rasters(
     if not write:
         return result
 
-    profile = _build_raster_profile(source_root, next(iter(bands.values())).shape)
+    profile = _build_raster_profile(source_root, next(iter(default_bands.values())).shape)
     output_root.mkdir(parents=True, exist_ok=True)
     written: list[dict[str, Any]] = []
     for spec in runnable_specs:
         output_path = output_root / spec.output_name
         if output_path.exists() and not overwrite:
             raise INT1WriterError(f"output already exists; use --overwrite: {spec.output_name}")
-        data = spec.formula(bands, denominator_epsilon)
+        data = spec.formula(source_groups[spec.source_group], denominator_epsilon)
         _write_tif(output_path, data, profile)
-        written.append({"output_name": spec.output_name, "size_bytes": output_path.stat().st_size})
+        written.append(
+            {
+                "output_name": spec.output_name,
+                "source_group": spec.source_group,
+                "size_bytes": output_path.stat().st_size,
+            }
+        )
 
     result.update(
         {
@@ -195,43 +305,68 @@ def generate_int1_internal_rasters(
     return result
 
 
-def _load_source_bands(run_dir: Path) -> tuple[dict[str, np.ndarray], bool]:
-    manifest_path = run_dir / "stage_s2_indices.manifest.json"
-    cube_path = run_dir / "s2_raw_cube.npy"
-    if not manifest_path.is_file():
-        raise INT1WriterError("stage_s2_indices.manifest.json is missing")
+def _load_optional_relation_source_bands(run_dir: Path) -> tuple[dict[str, np.ndarray], bool]:
+    cube_path = run_dir / RELATION_S2_CUBE_NPY_NAME
+    manifest_path = run_dir / RELATION_S2_MANIFEST_NAME
     if not cube_path.is_file():
-        raise INT1WriterError("s2_raw_cube.npy is missing")
+        return {}, False
+    if not manifest_path.is_file():
+        raise INT1WriterError(f"{RELATION_S2_MANIFEST_NAME} is missing but {RELATION_S2_CUBE_NPY_NAME} exists")
+    bands, _optional_loaded = _load_source_bands(
+        run_dir,
+        cube_name=RELATION_S2_CUBE_NPY_NAME,
+        manifest_name=RELATION_S2_MANIFEST_NAME,
+        optional_b8a_name=None,
+    )
+    return bands, True
+
+
+def _load_source_bands(
+    run_dir: Path,
+    *,
+    cube_name: str,
+    manifest_name: str,
+    optional_b8a_name: str | None,
+) -> tuple[dict[str, np.ndarray], bool]:
+    manifest_path = run_dir / manifest_name
+    cube_path = run_dir / cube_name
+    if not manifest_path.is_file():
+        raise INT1WriterError(f"{manifest_name} is missing")
+    if not cube_path.is_file():
+        raise INT1WriterError(f"{cube_name} is missing")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     source_bands = tuple(str(band) for band in manifest.get("metadata", {}).get("source_bands", ()))
     if not source_bands:
-        raise INT1WriterError("source_bands are missing from stage_s2_indices.manifest.json")
+        raise INT1WriterError(f"source_bands are missing from {manifest_name}")
     cube = np.load(cube_path, allow_pickle=False)
     if cube.ndim != 3:
-        raise INT1WriterError("s2_raw_cube.npy must be a 3D array")
+        raise INT1WriterError(f"{cube_name} must be a 3D array")
     if cube.shape[-1] == len(source_bands):
         bands = {band: cube[..., index].astype(np.float32, copy=False) for index, band in enumerate(source_bands)}
     elif cube.shape[0] == len(source_bands):
         bands = {band: cube[index, ...].astype(np.float32, copy=False) for index, band in enumerate(source_bands)}
     else:
-        raise INT1WriterError("s2_raw_cube.npy shape does not match source_bands count")
+        raise INT1WriterError(f"{cube_name} shape does not match source_bands count")
 
-    optional_path = run_dir / OPTIONAL_B8A_NPY_NAME
     optional_loaded = False
-    if "B8A" not in bands and optional_path.is_file():
-        b8a = np.load(optional_path, allow_pickle=False).astype(np.float32, copy=False)
-        first_shape = next(iter(bands.values())).shape
-        if b8a.shape != first_shape:
-            raise INT1WriterError(f"{OPTIONAL_B8A_NPY_NAME} shape must be {first_shape}, got {b8a.shape}")
-        bands["B8A"] = b8a
-        optional_loaded = True
+    if optional_b8a_name and "B8A" not in bands:
+        optional_path = run_dir / optional_b8a_name
+        if optional_path.is_file():
+            b8a = np.load(optional_path, allow_pickle=False).astype(np.float32, copy=False)
+            first_shape = next(iter(bands.values())).shape
+            if b8a.shape != first_shape:
+                raise INT1WriterError(f"{optional_b8a_name} shape must be {first_shape}, got {b8a.shape}")
+            bands["B8A"] = b8a
+            optional_loaded = True
     return bands, optional_loaded
 
 
-def _missing_bands(available_bands: tuple[str, ...]) -> tuple[str, ...]:
-    available = set(available_bands)
-    required = {band for spec in INT1_OUTPUT_SPECS for band in spec.required_bands}
-    return tuple(sorted(required - available))
+def _missing_bands_by_source_group(source_groups: dict[str, dict[str, np.ndarray]]) -> tuple[str, ...]:
+    missing: set[str] = set()
+    for spec in INT1_OUTPUT_SPECS:
+        available = set(source_groups[spec.source_group])
+        missing.update(set(spec.required_bands) - available)
+    return tuple(sorted(missing))
 
 
 def _build_raster_profile(run_dir: Path, shape: tuple[int, int]) -> dict[str, Any]:
@@ -280,8 +415,8 @@ def _write_tif(path: Path, data: np.ndarray, profile: dict[str, Any]) -> None:
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate INT-1 AI_BEH internal rasters from local app source cube.")
-    parser.add_argument("--run-dir", required=True, help="App run directory containing s2_raw_cube.npy and stage_s2_indices.manifest.json.")
+    parser = argparse.ArgumentParser(description="Generate INT-1 AI_BEH internal rasters from local app source cubes.")
+    parser.add_argument("--run-dir", required=True, help="App run directory containing source cube(s) and manifests.")
     parser.add_argument("--output-dir", help="Directory where AI_BEH GeoTIFFs are written. Defaults to --run-dir.")
     parser.add_argument("--write", action="store_true", help="Actually write rasters. Default is dry-run only.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing outputs.")
