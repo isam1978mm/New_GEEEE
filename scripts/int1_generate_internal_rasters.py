@@ -29,7 +29,6 @@ from typing import Any, Callable
 import numpy as np
 
 DEFAULT_DENOMINATOR_EPSILON = 1e-6
-DEFAULT_NODATA = -9999.0
 OPTIONAL_B8A_NPY_NAME = "S2_B8A_640.npy"
 
 
@@ -264,7 +263,6 @@ def _build_raster_profile(run_dir: Path, shape: tuple[int, int]) -> dict[str, An
         "dtype": "float32",
         "crs": f"EPSG:{int(grid['epsg'])}",
         "transform": transform,
-        "nodata": DEFAULT_NODATA,
         "compress": "deflate",
     }
 
