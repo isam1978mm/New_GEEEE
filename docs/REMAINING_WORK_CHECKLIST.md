@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, S1 filtered stack verifier pass, and PAN/optical verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, S1 filtered stack verifier pass, PAN/optical verifier pass, and AI_READY remaining support-family blocked-status review.
 
 It separates completed work, next parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -33,6 +33,9 @@ It separates completed work, next parity work, source-recovery work, safety boun
 [x] PAN/optical component verifier passed
 [x] PAN/optical stack verifier passed
 [x] PAN/optical result doc recorded
+[x] AI_READY remaining support-family exact-name search completed
+[x] AI_READY remaining support-family broad naming-drift search completed
+[x] AI_READY remaining support-family blocked status recorded
 ```
 
 ## 1. Completed real app-vs-reference parity gates
@@ -316,14 +319,73 @@ PAN boundary:
 [x] no map overlays enabled
 ```
 
-## 2. Remaining source-recovery / parity candidates
+## 2. Explicitly blocked / source-capture required
+
+### AI_READY remaining support families
+
+```text
+[x] Exact-name D1C reference search completed
+[x] Exact-name reference manifest mention check completed
+[x] Exact-name app output search completed
+[x] Broad naming-drift search completed
+[x] Blocked/source-capture status recorded
+```
+
+Exact targets checked:
+
+```text
+AI_READY_640_Fraction_Gold.tif
+AI_READY_640_Fraction_Pottery.tif
+AI_READY_640_Fraction_Carbon_Age.tif
+AI_READY_640_Fraction_Silver_Lead.tif
+AI_READY_640_Metal_Hardness.tif
+AI_READY_640_Magnetic_Anomaly.tif
+AI_READY_640_EM_Anomaly.tif
+```
+
+Closeout status:
+
+```text
+status: blocked / source-capture required
+exact D1C reference search: 0 of 7 found
+reference manifest mentions: 0 of 7 found
+exact app output search: 0 of 7 found
+broad naming-drift search: no useful alternate Fraction/MH/AN notebook-named outputs found
+```
+
+Family decisions:
+
+```text
+AIREADY-FR Fraction rasters: blocked; exact references/app outputs missing
+AIREADY-MH Metal Hardness: blocked; exact reference/app output missing
+AIREADY-AN Magnetic/EM anomaly: blocked; exact references/app outputs missing
+```
+
+Status doc:
+
+```text
+docs/AI_READY_REMAINING_SUPPORT_STATUS.md
+```
+
+AI_READY remaining-support boundary:
+
+```text
+[x] do not claim all AIREADY parity complete from AIREADY-S1 alone
+[x] do not alias ai_ready_support_stack.* as missing Fraction/MH/AN outputs
+[x] do not alias focus_zone_ai_ready_window.npy as missing Fraction/MH/AN outputs
+[x] do not use AI_BEH_* rasters as AI_READY remaining support-family equivalents
+[x] no fabricated, synthesized, or renamed outputs used
+[x] no raster/NPY payloads committed
+[x] no public AI_READY support-family downloads enabled
+[x] no HTTP raster/array serving enabled
+[x] no map overlays enabled
+```
+
+## 3. Remaining source-recovery / parity candidates
 
 No next gate is selected yet. Choose one explicitly.
 
 ```text
-[ ] AI_READY remaining support families
-    AIREADY-FR Fraction outputs, AIREADY-MH Metal Hardness, AIREADY-AN Magnetic/EM anomaly.
-
 [ ] D1D object-table outputs
     Recover/export same-run object table family and compare only after source evidence is available.
 
@@ -331,7 +393,7 @@ No next gate is selected yet. Choose one explicitly.
     Do not broaden S1-1 or S1 filtered stack passes into all SAR/S1 parity.
 ```
 
-## 3. H5 / prediction serving boundaries still blocked
+## 4. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -349,7 +411,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 4. Paid Imagery Request Package / old V6 status
+## 5. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -373,7 +435,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 5. Deployment/auth/public exposure — later only
+## 6. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -409,5 +471,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-Choose next family: AI_READY remaining support families, D1D object tables, or SAR/S1 remaining support/QA.
+Choose next family: D1D object tables or SAR/S1 remaining support/QA.
 ```
