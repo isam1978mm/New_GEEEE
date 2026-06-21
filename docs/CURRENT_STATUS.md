@@ -134,6 +134,7 @@ AIREADY-S1 secret-layer real app-vs-reference parity passed
 HYPER-1A RES_2p5M real app-vs-reference parity passed
 HYPER-1B core tensor/NPY real app-vs-reference parity passed
 INT-1 internal AI_BEH raster real app-vs-reference parity passed
+S1-1 core-band real app-vs-reference parity plan written
 ```
 
 R1 safe result:
@@ -229,23 +230,41 @@ no private raster/NPY payloads committed
 no public downloads, HTTP raster serving, or map overlays enabled
 ```
 
+S1-1 plan doc:
+
+```text
+docs/S1_1_CORE_BAND_REAL_APP_PARITY_PLAN.md
+```
+
+S1-1 current gate:
+
+```text
+S1-1 Gate 1: locate D2-valid S1-1 reference files
+```
+
 If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
 
-## Blocked real app-vs-reference parity
-
-These remain blocked or not yet planned:
+## Active real app-vs-reference parity
 
 ```text
 S1-1 core-band real app-vs-reference parity
+status: plan ready; reference-location gate next
 ```
 
-Unblock condition:
+S1-1 covers the eight notebook Sentinel-1 ASC/DESC filtered core-band files:
 
 ```text
-produce matching app-generated output on the D1C grid/source contract
-prove CRS, scale, shape, transform/origin, dtype, band count, and semantics
-run the existing D2-gated verifier/CLI against the frozen reference bundle
+GEOTIFF_RADAR_BANDS/S1_ASC_VV_Filtered_640.tif
+GEOTIFF_RADAR_BANDS/S1_ASC_VH_Filtered_640.tif
+GEOTIFF_RADAR_BANDS/S1_DESC_VV_Filtered_640.tif
+GEOTIFF_RADAR_BANDS/S1_DESC_VH_Filtered_640.tif
+NPY_RADAR_BANDS/S1_ASC_VV_Filtered_640.npy
+NPY_RADAR_BANDS/S1_ASC_VH_Filtered_640.npy
+NPY_RADAR_BANDS/S1_DESC_VV_Filtered_640.npy
+NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
 ```
+
+Do not treat final app RTC outputs or RADAR_* app aliases as equivalent to S1-1.
 
 ## Source-recovery items
 
@@ -254,7 +273,7 @@ These need explicit recovery/build work before verification:
 ```text
 D1D object-table outputs
 AI_READY remaining support families
-SAR/S1 support, intermediate, and QA/provenance outputs
+SAR/S1 support, intermediate, stack, and QA/provenance outputs outside S1-1
 PAN/optical image components and stack
 ```
 
@@ -305,8 +324,8 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. S1-1 core-band real app-vs-reference parity plan
-   Starts the next parity item after R1, AIREADY-S1, HYPER-1A, HYPER-1B, and INT-1.
+A. S1-1 Gate 1 reference-location check
+   Confirm whether the D1C/D2 bundle contains the eight required S1-1 reference files.
 
 B. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
@@ -318,5 +337,5 @@ C. Source-recovery planning
 ## Current recommendation
 
 ```text
-Next: S1-1 core-band real app-vs-reference parity plan
+Next: S1-1 Gate 1: locate D2-valid S1-1 reference files
 ```
