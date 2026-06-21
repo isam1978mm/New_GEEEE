@@ -1,8 +1,8 @@
 # SAR processing parity result
 
-Status: core SAR band processing parity passed; intermediate first-divergence stage identified.
+Status: core SAR band processing parity passed; intermediate first-divergence stage identified and row-shift diagnostic recorded.
 
-This document records a safe docs-only summary from local-only SAR processing parity reports.
+This document records a safe docs-only summary from local-only SAR processing parity reports and targeted SAR intermediate diagnostics.
 
 No SAR JSON bodies, CSV rows, image identifiers, raster payloads, NPY payloads, private report files, coordinate-bearing values, or per-pixel values are included.
 
@@ -188,6 +188,82 @@ Treat per_image_products_db as the first divergence candidate.
 Do not change downstream SAR stack logic based on this result alone.
 ```
 
+## Targeted per_image_products_db diagnostic
+
+A targeted safe diagnostic was run for `per_image_products_db`.
+
+The diagnostic ruled out these causes:
+
+```text
+pair/order mismatch: ruled out
+ASC/DESC label mismatch: ruled out
+manifest label mismatch: ruled out
+dB-vs-linear domain mismatch: ruled out
+formula-parameter mismatch: mostly ruled out
+nodata/mask disagreement as the main cause: ruled out
+flip/transpose orientation mismatch: ruled out
+```
+
+Observed label/order facts:
+
+```text
+notebook_item_count: 8
+app_item_count: 8
+same_label_set: true
+same_order: true
+```
+
+Observed formula/domain facts:
+
+```text
+notebook and app VV/VH are both dB-scale at this stage
+notebook source contains the same border mask, dB-linear-dB path, sigma-Lee, Lee, and kernel settings as the app implementation
+angle matches on common-valid pixels
+```
+
+Observed row-shift pattern:
+
+```text
+A one-row shift of app VV/VH relative to notebook VV/VH explains the per-image divergence.
+For ASC labels, shift dr=1, dc=0 gives 100.0 percent matching and 0.0 mean absolute difference.
+For DESC labels, shift dr=1, dc=0 reduces mean absolute difference from about 0.31-0.32 dB to about 0.031-0.035 dB and raises matching to about 31 percent.
+The angle band does not need this row shift and already matches in base orientation.
+```
+
+ASC row-shift examples:
+
+```text
+pair0_asc VV_dB: base matching 0.030566 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair0_asc VH_dB: base matching 0.054286 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair1_asc VV_dB: base matching 0.039362 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair1_asc VH_dB: base matching 0.047919 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair2_asc VV_dB: base matching 0.039145 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair2_asc VH_dB: base matching 0.053380 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair3_asc VV_dB: base matching 0.041056 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+pair3_asc VH_dB: base matching 0.048754 -> dr=1,dc=0 matching 100.0, mean_abs_diff 0.0
+```
+
+DESC row-shift examples:
+
+```text
+pair0_desc VV_dB: base mean_abs_diff 0.321684 -> dr=1,dc=0 mean_abs_diff 0.032389
+pair0_desc VH_dB: base mean_abs_diff 0.321671 -> dr=1,dc=0 mean_abs_diff 0.034846
+pair1_desc VV_dB: base mean_abs_diff 0.319816 -> dr=1,dc=0 mean_abs_diff 0.033098
+pair1_desc VH_dB: base mean_abs_diff 0.321139 -> dr=1,dc=0 mean_abs_diff 0.033386
+pair2_desc VV_dB: base mean_abs_diff 0.321298 -> dr=1,dc=0 mean_abs_diff 0.032375
+pair2_desc VH_dB: base mean_abs_diff 0.320981 -> dr=1,dc=0 mean_abs_diff 0.033741
+pair3_desc VV_dB: base mean_abs_diff 0.310622 -> dr=1,dc=0 mean_abs_diff 0.031534
+pair3_desc VH_dB: base mean_abs_diff 0.312489 -> dr=1,dc=0 mean_abs_diff 0.032494
+```
+
+Interpretation:
+
+```text
+The first divergence is best classified as a per-image VV/VH row-alignment/sampling offset at per_image_products_db.
+It is not a source-image, orbit-pairing, formula-domain, label-order, or full-grid orientation issue.
+The offset appears before pair median and before RTC, and the final post-RTC outputs still match.
+```
+
 ## Summary-stat mismatch note
 
 The SAR summary-stat rows remain mismatched:
@@ -231,6 +307,7 @@ SAR core band processing parity: closed / passed
 SAR source-selection identity: closed / matched
 SAR processing-path metadata: notebook-source-supported; D1C metadata less detailed
 SAR first-divergence localization: closed / first candidate identified at per_image_products_db
+SAR per-image divergence classification: row-alignment/sampling offset in VV/VH at per_image_products_db
 SAR summary-stat reconciliation: open / report-summary issue
 Radar linear support stack parity: open / downstream diagnostic
 ```
@@ -250,6 +327,7 @@ No public downloads, HTTP table/array serving, or map overlays were enabled.
 ## Next recommended gate
 
 ```text
-Investigate per_image_products_db as the first divergent intermediate candidate.
-Do not change downstream stack assembly, SAR formulas, or tolerances before that targeted investigation.
+Investigate the per_image_products_db row-alignment/sampling offset.
+Focus on why app live replay VV/VH is one row offset from notebook intermediate VV/VH while angle is already aligned and final post-RTC outputs still match.
+Do not change downstream stack assembly, SAR formulas, or tolerances before that targeted sampling/alignment investigation.
 ```
