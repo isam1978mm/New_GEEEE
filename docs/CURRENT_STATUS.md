@@ -135,6 +135,7 @@ HYPER-1A RES_2p5M real app-vs-reference parity passed
 HYPER-1B core tensor/NPY real app-vs-reference parity passed
 INT-1 internal AI_BEH raster real app-vs-reference parity passed
 S1-1 core-band real app-vs-reference parity passed
+S1 filtered stack tensor real app-vs-reference parity passed
 ```
 
 R1 safe result:
@@ -240,19 +241,43 @@ S1-1 result doc:
 docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
 ```
 
+S1 filtered stack safe result:
+
+```text
+overall_status: passed
+status: passed
+output_name: S1_FILTERED_LAYERS_STACK_640.npy
+shape_match: true
+dtype_match: true
+hash_match: true
+count_compared_values: 1638400
+count_nan_or_nodata_values: 0
+max_abs_diff: 0.0
+mean_abs_diff: 0.0
+runtime_output_verified: true
+notebook_value_parity_verified: true
+```
+
+S1 filtered stack result doc:
+
+```text
+docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
+```
+
 S1-1 plan doc:
 
 ```text
 docs/S1_1_CORE_BAND_REAL_APP_PARITY_PLAN.md
 ```
 
-S1-1 safety boundary:
+S1/SAR safety boundary:
 
 ```text
-current SAR ASC/DESC verifier used
+current SAR ASC/DESC and S1 filtered stack verifiers used
 no verifier tolerance relaxation
-no final RTC outputs treated as S1-1 equivalents
-no RADAR_* app aliases treated as S1-1 equivalents
+no final RTC outputs treated as S1-1 or stack equivalents
+no RADAR_* app aliases treated as S1-1 or stack equivalents
+no radar_db_support_stack/radar_linear_support_stack aliasing as the filtered stack
 no private raster/NPY payloads committed
 no public downloads, HTTP raster/array serving, or map overlays enabled
 ```
@@ -262,7 +287,7 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 ## Active real app-vs-reference parity
 
 ```text
-No active verifier gate selected yet after S1-1.
+No active verifier gate selected yet after S1 filtered stack.
 ```
 
 ## Source-recovery items
@@ -272,7 +297,7 @@ These need explicit recovery/build work before verification:
 ```text
 D1D object-table outputs
 AI_READY remaining support families
-SAR/S1 support, intermediate, stack, and QA/provenance outputs outside S1-1
+SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and the filtered stack
 PAN/optical image components and stack
 ```
 
@@ -323,17 +348,17 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. S1 filtered stack tensor gate
-   Only if promoting S1_FILTERED_LAYERS_STACK_640.npy as its own closeout task.
-
-B. PAN/optical component and stack parity
+A. PAN/optical component and stack parity
    Continue source-driven notebook parity work for optical/PAN artifacts.
 
-C. AI_READY remaining support families
+B. AI_READY remaining support families
    AIREADY-FR, AIREADY-MH, and AIREADY-AN source/writer recovery.
 
-D. D1D object-table outputs
+C. D1D object-table outputs
    Recover object-table outputs and compare only after same-run source evidence is available.
+
+D. SAR/S1 remaining support, intermediate, and QA/provenance outputs
+   Continue SAR/S1 work outside S1-1 and the filtered stack.
 
 E. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
