@@ -125,7 +125,7 @@ D1/D1C frozen reference created outside Git
 D2 frozen bundle validator implemented
 D1A bundle-wide scope audit implemented
 D1B source-locked baseline created
-D1D object-table outputs documented as source-recovery
+D1D object-table real app-vs-reference parity passed
 D3 DEM curvature parity accepted end-to-end
 R1 REPORT_640 real app-vs-reference parity passed
 AIREADY-S1 secret-layer real app-vs-reference parity passed
@@ -151,6 +151,7 @@ docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
 docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
 docs/PAN_OPTICAL_VERIFIER_RESULT.md
 docs/AI_READY_REMAINING_SUPPORT_STATUS.md
+docs/D1D_OBJECT_TABLE_VERIFIER_RESULT.md
 ```
 
 ### R1 REPORT_640 safe result
@@ -273,25 +274,14 @@ PAN_LAYERS_STACK_640.npy bands match the OPT/PAN_NPY_640 components.
 
 ### AI_READY support stack safe result
 
-The earlier blocked wording for this family has been corrected. The real support-stack target is:
-
 ```text
-ai_ready_support_stack.npy
-```
-
-Safe parity result:
-
-```text
-reference_exists: true
-app_exists: true
+artifact: ai_ready_support_stack.npy
 matching_app_run: a11309bf-ed47-4bf5-bbf4-f755b904065c
 reference_shape: [640, 640, 19]
 app_shape: [640, 640, 19]
 reference_dtype: float32
 app_dtype: float32
 hash_match: true
-same_shape: true
-same_dtype: true
 same_values_exact: true
 compared_count: 7782400
 nan_count_ref: 0
@@ -300,45 +290,50 @@ max_abs_diff: 0.0
 mean_abs_diff: 0.0
 ```
 
-AI_READY support stack band list:
-
-```text
-VV_dB
-VH_dB
-logRatio_dB
-incidence
-NDVI
-NDWI
-NDMI
-NBR
-IRONOX
-IRON_SWIR
-BSI
-slope
-aspect
-curvature
-TPI
-TRI
-roughness
-TWI
-lst
-```
-
-Nonmatching app candidate rejected:
-
-```text
-e11d3280-a7b7-4c7c-a761-8b08ac9452f2
-hash_match: false
-max_abs_diff: 1.0
-mean_abs_diff: 0.29361279566396
-```
-
 Standalone AI_READY Fraction/MH/AN note:
 
 ```text
 The exact standalone planned filenames were searched but are not the support-stack parity target.
 They are not channels in the 19-band ai_ready_support_stack.npy.
 No standalone Fraction/MH/AN verifier pass is claimed.
+```
+
+### D1D object-table safe result
+
+The D1C bundle did not contain the object tables, but the wider D1 reference root did.
+
+```text
+reference_root_name: D1_NEW_IPYNB_REFERENCE_2026_06_10
+matching_app_run: e11d3280-a7b7-4c7c-a761-8b08ac9452f2
+overall_status: passed
+expected_count: 2
+passed_count: 2
+```
+
+Outputs:
+
+```text
+objects_index.csv:
+  hash_match: true
+  schema_match: true
+  row_count_match: true
+  row_count: 816
+  column_count: 11
+
+clusters_summary.csv:
+  hash_match: true
+  schema_match: true
+  row_count_match: true
+  row_count: 454
+  column_count: 5
+```
+
+D1D safety note:
+
+```text
+No CSV rows were committed.
+Only file identity, hashes, row counts, column names, and pass/fail status were recorded.
+No object patch or object mask payloads were committed.
 ```
 
 ## Safety boundary
@@ -352,7 +347,8 @@ no AI_BEH_* rasters treated as AI_READY remaining support-family equivalents
 no legacy/misplaced RADAR_BANDS PAN copies treated as canonical
 no final RTC or SAR/RADAR aliases treated as PAN equivalents
 no private raster/NPY payloads committed
-no public downloads, HTTP raster/array serving, or map overlays enabled
+no CSV rows or object patch payloads committed
+no public downloads, HTTP raster/table/array serving, or map overlays enabled
 ```
 
 If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
@@ -360,7 +356,7 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 ## Active real app-vs-reference parity
 
 ```text
-No active verifier gate selected yet after AI_READY support stack parity correction.
+No active verifier gate selected yet after D1D object-table parity closeout.
 ```
 
 ## Source-recovery items
@@ -368,7 +364,6 @@ No active verifier gate selected yet after AI_READY support stack parity correct
 These need explicit recovery/build work before verification:
 
 ```text
-D1D object-table outputs
 SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and the filtered stack
 Standalone AI_READY Fraction/MH/AN files only if the operator supplies real notebook/source evidence later
 ```
@@ -408,18 +403,15 @@ future only / blocked for public or shared mode
 Choose one, not all at once:
 
 ```text
-A. D1D object-table outputs
-   Recover object-table outputs and compare only after same-run source evidence is available.
-
-B. SAR/S1 remaining support, intermediate, and QA/provenance outputs
+A. SAR/S1 remaining support, intermediate, and QA/provenance outputs
    Continue SAR/S1 work outside S1-1 and the filtered stack.
 
-C. Real auth provider integration plan
+B. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
 ```
 
 ## Current recommendation
 
 ```text
-Next: choose D1D object-table outputs or SAR/S1 remaining support/QA explicitly.
+Next: choose SAR/S1 remaining support/QA explicitly.
 ```
