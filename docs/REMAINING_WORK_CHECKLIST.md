@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, S1 filtered stack verifier pass, PAN/optical verifier pass, and AI_READY remaining support-family blocked-status review.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, S1 filtered stack verifier pass, PAN/optical verifier pass, and AI_READY support stack verifier pass.
 
 It separates completed work, next parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -18,24 +18,24 @@ It separates completed work, next parity work, source-recovery work, safety boun
 [x] R1 REPORT_640 verifier passed
 [x] R1 REPORT_640 result doc recorded
 [x] AIREADY-S1 secret-layer verifier passed
-[x] AIREADY-S1 result doc recorded
+[x] AIREADY-S1 result recorded
 [x] HYPER-1A RES_2p5M verifier passed
-[x] HYPER-1A result doc recorded
+[x] HYPER-1A result recorded
 [x] HYPER-1B core tensor/NPY verifier passed
-[x] HYPER-1B result doc recorded
+[x] HYPER-1B result recorded
 [x] INT-1 internal AI_BEH raster verifier passed
-[x] INT-1 result doc recorded
-[x] S1-1 core-band parity plan written
+[x] INT-1 result recorded
 [x] S1-1 core-band verifier passed
-[x] S1-1 result doc recorded
+[x] S1-1 result recorded
 [x] S1 filtered stack verifier passed
-[x] S1 filtered stack result doc recorded
+[x] S1 filtered stack result recorded
 [x] PAN/optical component verifier passed
 [x] PAN/optical stack verifier passed
-[x] PAN/optical result doc recorded
-[x] AI_READY remaining support-family exact-name search completed
-[x] AI_READY remaining support-family broad naming-drift search completed
-[x] AI_READY remaining support-family blocked status recorded
+[x] PAN/optical result recorded
+[x] AI_READY support stack reference found
+[x] AI_READY support stack app candidate selected
+[x] AI_READY support stack value parity passed
+[x] AI_READY support stack status doc corrected
 ```
 
 ## 1. Completed real app-vs-reference parity gates
@@ -215,19 +215,6 @@ max_abs_diff: 0.0 for all outputs
 mean_abs_diff: 0.0 for all outputs
 ```
 
-Required S1-1 outputs passed:
-
-```text
-[x] GEOTIFF_RADAR_BANDS/S1_ASC_VV_Filtered_640.tif
-[x] GEOTIFF_RADAR_BANDS/S1_ASC_VH_Filtered_640.tif
-[x] GEOTIFF_RADAR_BANDS/S1_DESC_VV_Filtered_640.tif
-[x] GEOTIFF_RADAR_BANDS/S1_DESC_VH_Filtered_640.tif
-[x] NPY_RADAR_BANDS/S1_ASC_VV_Filtered_640.npy
-[x] NPY_RADAR_BANDS/S1_ASC_VH_Filtered_640.npy
-[x] NPY_RADAR_BANDS/S1_DESC_VV_Filtered_640.npy
-[x] NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
-```
-
 ### S1 filtered stack tensor
 
 ```text
@@ -306,59 +293,59 @@ Result doc:
 docs/PAN_OPTICAL_VERIFIER_RESULT.md
 ```
 
-PAN boundary:
+### AI_READY support stack tensor
 
 ```text
-[x] no raster/NPY payloads committed
-[x] no legacy/misplaced RADAR_BANDS PAN copies treated as canonical
-[x] no final RTC or SAR/RADAR aliases treated as PAN equivalents
-[x] no verifier tolerance relaxation used
-[x] no exact coordinate-bearing paths committed
-[x] no public PAN/optical downloads enabled
-[x] no HTTP raster/array serving enabled
-[x] no map overlays enabled
+[x] Exact standalone Fraction/MH/AN names searched
+[x] App AI_READY support stack found
+[x] AI_READY support stack 19-band list confirmed
+[x] Private notebook frozen reference found under data/private_references
+[x] Matching app run selected: a11309bf-ed47-4bf5-bbf4-f755b904065c
+[x] Nonmatching app run rejected: e11d3280-a7b7-4c7c-a761-8b08ac9452f2
+[x] AI_READY support stack parity passed
+[x] Earlier blocked wording corrected
 ```
 
-## 2. Explicitly blocked / source-capture required
-
-### AI_READY remaining support families
+Support-stack closeout result:
 
 ```text
-[x] Exact-name D1C reference search completed
-[x] Exact-name reference manifest mention check completed
-[x] Exact-name app output search completed
-[x] Broad naming-drift search completed
-[x] Blocked/source-capture status recorded
+artifact: ai_ready_support_stack.npy
+reference_exists: true
+app_exists: true
+matching_app_run: a11309bf-ed47-4bf5-bbf4-f755b904065c
+shape: [640, 640, 19]
+dtype: float32
+hash_match: true
+same_values_exact: true
+compared_count: 7782400
+nan_count_ref: 0
+nan_count_app: 0
+max_abs_diff: 0.0
+mean_abs_diff: 0.0
 ```
 
-Exact targets checked:
+Band list:
 
 ```text
-AI_READY_640_Fraction_Gold.tif
-AI_READY_640_Fraction_Pottery.tif
-AI_READY_640_Fraction_Carbon_Age.tif
-AI_READY_640_Fraction_Silver_Lead.tif
-AI_READY_640_Metal_Hardness.tif
-AI_READY_640_Magnetic_Anomaly.tif
-AI_READY_640_EM_Anomaly.tif
-```
-
-Closeout status:
-
-```text
-status: blocked / source-capture required
-exact D1C reference search: 0 of 7 found
-reference manifest mentions: 0 of 7 found
-exact app output search: 0 of 7 found
-broad naming-drift search: no useful alternate Fraction/MH/AN notebook-named outputs found
-```
-
-Family decisions:
-
-```text
-AIREADY-FR Fraction rasters: blocked; exact references/app outputs missing
-AIREADY-MH Metal Hardness: blocked; exact reference/app output missing
-AIREADY-AN Magnetic/EM anomaly: blocked; exact references/app outputs missing
+VV_dB
+VH_dB
+logRatio_dB
+incidence
+NDVI
+NDWI
+NDMI
+NBR
+IRONOX
+IRON_SWIR
+BSI
+slope
+aspect
+curvature
+TPI
+TRI
+roughness
+TWI
+lst
 ```
 
 Status doc:
@@ -367,21 +354,30 @@ Status doc:
 docs/AI_READY_REMAINING_SUPPORT_STATUS.md
 ```
 
-AI_READY remaining-support boundary:
+AI_READY boundary:
 
 ```text
-[x] do not claim all AIREADY parity complete from AIREADY-S1 alone
-[x] do not alias ai_ready_support_stack.* as missing Fraction/MH/AN outputs
-[x] do not alias focus_zone_ai_ready_window.npy as missing Fraction/MH/AN outputs
-[x] do not use AI_BEH_* rasters as AI_READY remaining support-family equivalents
-[x] no fabricated, synthesized, or renamed outputs used
 [x] no raster/NPY payloads committed
-[x] no public AI_READY support-family downloads enabled
+[x] no nonmatching app run treated as passing
+[x] no standalone Fraction/MH/AN filenames aliased to ai_ready_support_stack.npy
+[x] no focus_zone_ai_ready_window.npy aliasing as standalone Fraction/MH/AN output
+[x] no AI_BEH_* rasters treated as AI_READY remaining support-family equivalents
+[x] no fabricated, synthesized, or renamed outputs used
+[x] no public AI_READY support-stack downloads enabled
 [x] no HTTP raster/array serving enabled
 [x] no map overlays enabled
 ```
 
-## 3. Remaining source-recovery / parity candidates
+Standalone Fraction/MH/AN note:
+
+```text
+The exact standalone planned filenames were searched.
+They are not the active AI_READY support-stack parity target.
+They are not channels in the 19-band support-stack band list.
+No standalone Fraction/MH/AN verifier pass is claimed.
+```
+
+## 2. Remaining source-recovery / parity candidates
 
 No next gate is selected yet. Choose one explicitly.
 
@@ -391,9 +387,12 @@ No next gate is selected yet. Choose one explicitly.
 
 [ ] SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and stack
     Do not broaden S1-1 or S1 filtered stack passes into all SAR/S1 parity.
+
+[ ] Standalone AI_READY Fraction/MH/AN files
+    Only if the operator supplies real notebook/source evidence later.
 ```
 
-## 4. H5 / prediction serving boundaries still blocked
+## 3. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -411,7 +410,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 5. Paid Imagery Request Package / old V6 status
+## 4. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -435,7 +434,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 6. Deployment/auth/public exposure — later only
+## 5. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
