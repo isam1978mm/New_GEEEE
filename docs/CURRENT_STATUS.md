@@ -120,7 +120,7 @@ The in-scope notebook is:
 notebooks/new.ipynb
 ```
 
-The operational parity checklist currently records these as closed:
+The operational parity checklist currently records these as closed or explicitly statused:
 
 ```text
 D1/D1C frozen reference created outside Git
@@ -137,6 +137,7 @@ INT-1 internal AI_BEH raster real app-vs-reference parity passed
 S1-1 core-band real app-vs-reference parity passed
 S1 filtered stack tensor real app-vs-reference parity passed
 PAN/optical component and stack real app-vs-reference parity passed
+AI_READY remaining support families blocked/source-capture status recorded
 ```
 
 R1 safe result:
@@ -305,6 +306,32 @@ The legacy/misplaced GEOTIFF_RADAR_BANDS and NPY_RADAR_BANDS copies are not used
 PAN_LAYERS_STACK_640.npy bands match the OPT/PAN_NPY_640 components.
 ```
 
+AI_READY remaining support-family status:
+
+```text
+status: blocked / source-capture required
+exact D1C reference search: 0 of 7 found
+reference manifest mentions: 0 of 7 found
+exact app output search: 0 of 7 found
+broad naming-drift search: no useful alternate Fraction/MH/AN notebook-named outputs found
+```
+
+AI_READY remaining support-family status doc:
+
+```text
+docs/AI_READY_REMAINING_SUPPORT_STATUS.md
+```
+
+AI_READY remaining support-family boundary:
+
+```text
+Do not claim all AIREADY parity complete from AIREADY-S1 alone.
+Do not alias ai_ready_support_stack.* as the missing Fraction/MH/AN outputs.
+Do not alias focus_zone_ai_ready_window.npy as any missing Fraction/MH/AN output.
+Do not use AI_BEH_* rasters as AI_READY remaining support-family equivalents.
+No fabricated, synthesized, or renamed outputs were used.
+```
+
 Safety boundary:
 
 ```text
@@ -321,7 +348,7 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 ## Active real app-vs-reference parity
 
 ```text
-No active verifier gate selected yet after PAN/optical.
+No active verifier gate selected yet after AI_READY remaining support-family status recording.
 ```
 
 ## Source-recovery items
@@ -330,8 +357,8 @@ These need explicit recovery/build work before verification:
 
 ```text
 D1D object-table outputs
-AI_READY remaining support families
 SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and the filtered stack
+AI_READY remaining support families, only if new source captures / exact outputs are supplied later
 ```
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
@@ -381,21 +408,18 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. AI_READY remaining support families
-   AIREADY-FR, AIREADY-MH, and AIREADY-AN source/writer recovery.
-
-B. D1D object-table outputs
+A. D1D object-table outputs
    Recover object-table outputs and compare only after same-run source evidence is available.
 
-C. SAR/S1 remaining support, intermediate, and QA/provenance outputs
+B. SAR/S1 remaining support, intermediate, and QA/provenance outputs
    Continue SAR/S1 work outside S1-1 and the filtered stack.
 
-D. Real auth provider integration plan
+C. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
 ```
 
 ## Current recommendation
 
 ```text
-Next: choose the next parity/source-recovery family explicitly.
+Next: choose D1D object-table outputs or SAR/S1 remaining support/QA explicitly.
 ```
