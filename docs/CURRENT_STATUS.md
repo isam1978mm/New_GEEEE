@@ -83,7 +83,7 @@ frontend aggregate summary panel
 frontend no-row-leak tests
 H5 score-band aggregate review script
 H5 score-band write outside Git
-H5 score-band write result doc
+H5 score-band result doc
 full CI/build passing
 ```
 
@@ -136,6 +136,7 @@ HYPER-1B core tensor/NPY real app-vs-reference parity passed
 INT-1 internal AI_BEH raster real app-vs-reference parity passed
 S1-1 core-band real app-vs-reference parity passed
 S1 filtered stack tensor real app-vs-reference parity passed
+PAN/optical component and stack real app-vs-reference parity passed
 ```
 
 R1 safe result:
@@ -264,20 +265,53 @@ S1 filtered stack result doc:
 docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
 ```
 
-S1-1 plan doc:
+PAN/optical safe result:
 
 ```text
-docs/S1_1_CORE_BAND_REAL_APP_PARITY_PLAN.md
+components:
+  overall_status: passed
+  expected_count: 4
+  compared_count: 4
+  counts_by_status:
+    passed: 4
+  raster_value_comparison_available: true
+  npy_outputs_passed: true
+
+stack:
+  overall_status: passed
+  status: passed
+  output_name: PAN_LAYERS_STACK_640.npy
+  shape_match: true
+  dtype_match: true
+  hash_match: false
+  count_compared_values: 819200
+  count_nan_or_nodata_values: 0
+  max_abs_diff: 5.960464477539063e-08
+  mean_abs_diff: 9.302630132879131e-10
 ```
 
-S1/SAR safety boundary:
+PAN/optical result doc:
 
 ```text
-current SAR ASC/DESC and S1 filtered stack verifiers used
+docs/PAN_OPTICAL_VERIFIER_RESULT.md
+```
+
+PAN canonical-reference note:
+
+```text
+The D1C bundle contains duplicate PAN component filenames.
+The canonical component references are the OPT/PAN_TIFS_640 and OPT/PAN_NPY_640 copies.
+The legacy/misplaced GEOTIFF_RADAR_BANDS and NPY_RADAR_BANDS copies are not used for PAN parity.
+PAN_LAYERS_STACK_640.npy bands match the OPT/PAN_NPY_640 components.
+```
+
+Safety boundary:
+
+```text
+current PAN component and PAN stack verifiers used
 no verifier tolerance relaxation
-no final RTC outputs treated as S1-1 or stack equivalents
-no RADAR_* app aliases treated as S1-1 or stack equivalents
-no radar_db_support_stack/radar_linear_support_stack aliasing as the filtered stack
+no legacy/misplaced RADAR_BANDS PAN copies treated as canonical
+no final RTC or SAR/RADAR aliases treated as PAN equivalents
 no private raster/NPY payloads committed
 no public downloads, HTTP raster/array serving, or map overlays enabled
 ```
@@ -287,7 +321,7 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 ## Active real app-vs-reference parity
 
 ```text
-No active verifier gate selected yet after S1 filtered stack.
+No active verifier gate selected yet after PAN/optical.
 ```
 
 ## Source-recovery items
@@ -298,7 +332,6 @@ These need explicit recovery/build work before verification:
 D1D object-table outputs
 AI_READY remaining support families
 SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and the filtered stack
-PAN/optical image components and stack
 ```
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
@@ -348,19 +381,16 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. PAN/optical component and stack parity
-   Continue source-driven notebook parity work for optical/PAN artifacts.
-
-B. AI_READY remaining support families
+A. AI_READY remaining support families
    AIREADY-FR, AIREADY-MH, and AIREADY-AN source/writer recovery.
 
-C. D1D object-table outputs
+B. D1D object-table outputs
    Recover object-table outputs and compare only after same-run source evidence is available.
 
-D. SAR/S1 remaining support, intermediate, and QA/provenance outputs
+C. SAR/S1 remaining support, intermediate, and QA/provenance outputs
    Continue SAR/S1 work outside S1-1 and the filtered stack.
 
-E. Real auth provider integration plan
+D. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
 ```
 
