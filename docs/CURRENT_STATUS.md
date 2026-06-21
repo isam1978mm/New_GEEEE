@@ -134,7 +134,7 @@ AIREADY-S1 secret-layer real app-vs-reference parity passed
 HYPER-1A RES_2p5M real app-vs-reference parity passed
 HYPER-1B core tensor/NPY real app-vs-reference parity passed
 INT-1 internal AI_BEH raster real app-vs-reference parity passed
-S1-1 core-band real app-vs-reference parity plan written
+S1-1 core-band real app-vs-reference parity passed
 ```
 
 R1 safe result:
@@ -220,14 +220,24 @@ INT-1 result doc:
 docs/INT_1_INTERNAL_RASTER_VERIFIER_RESULT.md
 ```
 
-INT-1 safety boundary:
+S1-1 safe result:
 
 ```text
-standard D2-gated verifier used
-no verifier tolerance relaxation
-no reference rasters copied as app outputs
-no private raster/NPY payloads committed
-no public downloads, HTTP raster serving, or map overlays enabled
+overall_status: passed
+expected_count: 8
+compared_count: 8
+counts_by_status:
+  passed: 8
+raster_value_comparison_available: true
+npy_outputs_passed: true
+max_abs_diff: 0.0 for all outputs
+mean_abs_diff: 0.0 for all outputs
+```
+
+S1-1 result doc:
+
+```text
+docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
 ```
 
 S1-1 plan doc:
@@ -236,10 +246,15 @@ S1-1 plan doc:
 docs/S1_1_CORE_BAND_REAL_APP_PARITY_PLAN.md
 ```
 
-S1-1 current gate:
+S1-1 safety boundary:
 
 ```text
-S1-1 Gate 1: locate D2-valid S1-1 reference files
+current SAR ASC/DESC verifier used
+no verifier tolerance relaxation
+no final RTC outputs treated as S1-1 equivalents
+no RADAR_* app aliases treated as S1-1 equivalents
+no private raster/NPY payloads committed
+no public downloads, HTTP raster/array serving, or map overlays enabled
 ```
 
 If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
@@ -247,24 +262,8 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 ## Active real app-vs-reference parity
 
 ```text
-S1-1 core-band real app-vs-reference parity
-status: plan ready; reference-location gate next
+No active verifier gate selected yet after S1-1.
 ```
-
-S1-1 covers the eight notebook Sentinel-1 ASC/DESC filtered core-band files:
-
-```text
-GEOTIFF_RADAR_BANDS/S1_ASC_VV_Filtered_640.tif
-GEOTIFF_RADAR_BANDS/S1_ASC_VH_Filtered_640.tif
-GEOTIFF_RADAR_BANDS/S1_DESC_VV_Filtered_640.tif
-GEOTIFF_RADAR_BANDS/S1_DESC_VH_Filtered_640.tif
-NPY_RADAR_BANDS/S1_ASC_VV_Filtered_640.npy
-NPY_RADAR_BANDS/S1_ASC_VH_Filtered_640.npy
-NPY_RADAR_BANDS/S1_DESC_VV_Filtered_640.npy
-NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
-```
-
-Do not treat final app RTC outputs or RADAR_* app aliases as equivalent to S1-1.
 
 ## Source-recovery items
 
@@ -324,18 +323,24 @@ Private operator filesystem-only artifacts are allowed by gate. Public/shared co
 Choose one, not all at once:
 
 ```text
-A. S1-1 Gate 1 reference-location check
-   Confirm whether the D1C/D2 bundle contains the eight required S1-1 reference files.
+A. S1 filtered stack tensor gate
+   Only if promoting S1_FILTERED_LAYERS_STACK_640.npy as its own closeout task.
 
-B. Real auth provider integration plan
+B. PAN/optical component and stack parity
+   Continue source-driven notebook parity work for optical/PAN artifacts.
+
+C. AI_READY remaining support families
+   AIREADY-FR, AIREADY-MH, and AIREADY-AN source/writer recovery.
+
+D. D1D object-table outputs
+   Recover object-table outputs and compare only after same-run source evidence is available.
+
+E. Real auth provider integration plan
    Only if VPS/deployment becomes the priority.
-
-C. Source-recovery planning
-   Only after deciding to defer S1 verifier path work.
 ```
 
 ## Current recommendation
 
 ```text
-Next: S1-1 Gate 1: locate D2-valid S1-1 reference files
+Next: choose the next parity/source-recovery family explicitly.
 ```
