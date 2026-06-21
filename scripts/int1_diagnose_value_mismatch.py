@@ -4,7 +4,8 @@ This script compares three arrays for each INT-1 output:
 
 - the current app GeoTIFF output;
 - the frozen notebook-reference GeoTIFF;
-- the value recomputed from the local source cube using the canonical INT-1 writer formula.
+- the value recomputed from the local source cube(s) using the canonical INT-1
+  writer formula.
 
 It prints aggregate JSON metrics only. It does not copy reference rasters, does not
 write raster outputs, and does not expose coordinate-bearing paths in the payload.
@@ -63,7 +64,13 @@ def diagnose_int1_value_mismatch(
 
     app_root = Path(app_output_dir) if app_output_dir else Path(run_dir)
     reference_root = Path(bundle_dir)
-    bands, optional_b8a_loaded = writer._load_source_bands(Path(run_dir))
+    source_root = Path(run_dir)
+
+    try:
+        source_groups, source_payload = _load_notebook_contract_source_groups(source_root)
+    except writer.INT1WriterError as exc:
+        raise INT1ValueDiagnosticError(str(exc)) from exc
+
     specs_by_name = {spec.output_name: spec for spec in writer.INT1_OUTPUT_SPECS}
     selected_names = tuple(outputs) if outputs else tuple(specs_by_name)
 
@@ -85,6 +92,11 @@ def diagnose_int1_value_mismatch(
         if not reference_path.is_file():
             raise INT1ValueDiagnosticError(f"reference output is missing: {output_name}")
 
+        bands = source_groups[spec.source_group]
+        missing = sorted(set(spec.required_bands) - set(bands))
+        if missing:
+            raise INT1ValueDiagnosticError(f"missing source bands for {output_name}: " + ", ".join(missing))
+
         formula_data = spec.formula(bands, denominator_epsilon).astype(np.float64, copy=False)
         app_data = _read_raster_band(app_path)
         reference_data = _read_raster_band(reference_path)
@@ -100,6 +112,7 @@ def diagnose_int1_value_mismatch(
         results.append(
             {
                 "output_name": output_name,
+                "source_group": spec.source_group,
                 "required_bands": list(spec.required_bands),
                 "formula_stats": _array_stats(formula_data),
                 "app_stats": _array_stats(app_data),
@@ -122,15 +135,51 @@ def diagnose_int1_value_mismatch(
         "writes_outputs": False,
         "reference_outputs_read": True,
         "raster_payloads_committed": False,
-        "source_cube_name": "s2_raw_cube.npy",
+        "source_cube_name": writer.DEFAULT_S2_CUBE_NPY_NAME,
         "optional_b8a_source_name": writer.OPTIONAL_B8A_NPY_NAME,
-        "optional_b8a_source_loaded": optional_b8a_loaded,
+        "optional_b8a_source_loaded": source_payload["optional_b8a_source_loaded"],
+        "relation_source_cube_name": writer.RELATION_S2_CUBE_NPY_NAME,
+        "relation_source_loaded": source_payload["relation_source_loaded"],
+        "relation_source_fallback_to_default": source_payload["relation_source_fallback_to_default"],
+        "optional_statue_logic_diff_name": writer.OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME,
+        "optional_statue_logic_diff_loaded": source_payload["optional_statue_logic_diff_loaded"],
         "source_layout": "HWC_or_CHW_from_manifest_shape",
         "selected_output_count": len(results),
         "diagnosis_counts": diagnosis_counts,
         "tolerance": {"atol": atol, "rtol": rtol},
         "outputs": results,
     }
+
+
+def _load_notebook_contract_source_groups(source_root: Path) -> tuple[dict[str, dict[str, np.ndarray]], dict[str, Any]]:
+    default_bands, optional_b8a_loaded = writer._load_source_bands(
+        source_root,
+        cube_name=writer.DEFAULT_S2_CUBE_NPY_NAME,
+        manifest_name=writer.DEFAULT_S2_MANIFEST_NAME,
+        optional_b8a_name=writer.OPTIONAL_B8A_NPY_NAME,
+    )
+    optional_statue_logic_diff_loaded = writer._load_optional_single_array(
+        source_root,
+        array_name=writer.OPTIONAL_STATUE_LOGIC_DIFF_NPY_NAME,
+        band_name=writer.STATUE_LOGIC_DIFF_BAND,
+        bands=default_bands,
+    )
+    relation_bands, relation_source_loaded = writer._load_optional_relation_source_bands(source_root)
+    if not relation_source_loaded:
+        relation_bands = default_bands
+
+    return (
+        {
+            writer.DEFAULT_SOURCE_GROUP: default_bands,
+            writer.RELATION_SOURCE_GROUP: relation_bands,
+        },
+        {
+            "optional_b8a_source_loaded": optional_b8a_loaded,
+            "relation_source_loaded": relation_source_loaded,
+            "relation_source_fallback_to_default": not relation_source_loaded,
+            "optional_statue_logic_diff_loaded": optional_statue_logic_diff_loaded,
+        },
+    )
 
 
 def _read_raster_band(path: Path) -> np.ndarray:
