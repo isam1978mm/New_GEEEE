@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, and S1 filtered stack verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, S1 filtered stack verifier pass, and PAN/optical verifier pass.
 
 It separates completed work, next parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -30,6 +30,9 @@ It separates completed work, next parity work, source-recovery work, safety boun
 [x] S1-1 result doc recorded
 [x] S1 filtered stack verifier passed
 [x] S1 filtered stack result doc recorded
+[x] PAN/optical component verifier passed
+[x] PAN/optical stack verifier passed
+[x] PAN/optical result doc recorded
 ```
 
 ## 1. Completed real app-vs-reference parity gates
@@ -249,22 +252,66 @@ runtime_output_verified: true
 notebook_value_parity_verified: true
 ```
 
+### PAN/optical component and stack outputs
+
+```text
+[x] PAN component reference filenames found
+[x] duplicate PAN component paths identified
+[x] duplicate PAN values compared
+[x] canonical component reference selected: OPT/PAN_TIFS_640 and OPT/PAN_NPY_640
+[x] PAN stack reference found
+[x] stack bands matched canonical OPT/PAN_NPY_640 component arrays
+[x] app-produced canonical PAN component files found
+[x] app-produced PAN stack file found
+[x] PAN component verifier passed
+[x] PAN stack verifier passed
+[x] PAN/optical result recorded
+```
+
+Component closeout result:
+
+```text
+overall_status: passed
+expected_count: 4
+compared_count: 4
+counts_by_status:
+  passed: 4
+raster_value_comparison_available: true
+npy_outputs_passed: true
+```
+
+Stack closeout result:
+
+```text
+overall_status: passed
+status: passed
+output_name: PAN_LAYERS_STACK_640.npy
+shape_match: true
+dtype_match: true
+hash_match: false
+count_compared_values: 819200
+count_nan_or_nodata_values: 0
+max_abs_diff: 5.960464477539063e-08
+mean_abs_diff: 9.302630132879131e-10
+runtime_output_verified: true
+notebook_value_parity_verified: true
+```
+
 Result doc:
 
 ```text
-docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
+docs/PAN_OPTICAL_VERIFIER_RESULT.md
 ```
 
-SAR/S1 boundary for S1-1 and stack:
+PAN boundary:
 
 ```text
 [x] no raster/NPY payloads committed
-[x] no final RTC outputs aliased as S1-1 or stack outputs
-[x] no RADAR_* app aliases treated as S1-1 or stack equivalents
-[x] no radar_db_support_stack/radar_linear_support_stack aliasing as the filtered stack
+[x] no legacy/misplaced RADAR_BANDS PAN copies treated as canonical
+[x] no final RTC or SAR/RADAR aliases treated as PAN equivalents
 [x] no verifier tolerance relaxation used
 [x] no exact coordinate-bearing paths committed
-[x] no public S1/SAR downloads enabled
+[x] no public PAN/optical downloads enabled
 [x] no HTTP raster/array serving enabled
 [x] no map overlays enabled
 ```
@@ -274,9 +321,6 @@ SAR/S1 boundary for S1-1 and stack:
 No next gate is selected yet. Choose one explicitly.
 
 ```text
-[ ] PAN/optical component and stack parity
-    Recover optical/PAN source requirement, component outputs, and PAN_LAYERS_STACK_640.npy.
-
 [ ] AI_READY remaining support families
     AIREADY-FR Fraction outputs, AIREADY-MH Metal Hardness, AIREADY-AN Magnetic/EM anomaly.
 
@@ -365,5 +409,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-Choose next family: PAN/optical, AI_READY remaining support families, D1D object tables, or SAR/S1 remaining support/QA.
+Choose next family: AI_READY remaining support families, D1D object tables, or SAR/S1 remaining support/QA.
 ```
