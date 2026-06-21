@@ -35,8 +35,6 @@ The visible/user-facing feature name is:
 Paid Imagery Request Package
 ```
 
-Internal `v6` route, path, filename, and test labels may remain for compatibility.
-
 Current implemented behavior:
 
 ```text
@@ -137,10 +135,25 @@ INT-1 internal AI_BEH raster real app-vs-reference parity passed
 S1-1 core-band real app-vs-reference parity passed
 S1 filtered stack tensor real app-vs-reference parity passed
 PAN/optical component and stack real app-vs-reference parity passed
-AI_READY remaining support families blocked/source-capture status recorded
+AI_READY support stack tensor real app-vs-reference parity passed
+Standalone AI_READY Fraction/MH/AN filenames searched and not treated as the support-stack target
 ```
 
-R1 safe result:
+### Closed verifier/result docs
+
+```text
+docs/R1_REPORT_640_VERIFIER_RESULT.md
+docs/AIREADY_S1_SECRET_LAYERS_VERIFIER_RESULT.md
+docs/HYPER_1A_RES_2P5M_VERIFIER_RESULT.md
+docs/HYPER_1B_CORE_TENSOR_NPY_VERIFIER_RESULT.md
+docs/INT_1_INTERNAL_RASTER_VERIFIER_RESULT.md
+docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
+docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
+docs/PAN_OPTICAL_VERIFIER_RESULT.md
+docs/AI_READY_REMAINING_SUPPORT_STATUS.md
+```
+
+### R1 REPORT_640 safe result
 
 ```text
 status: passed
@@ -150,13 +163,7 @@ missing_count: 0
 comparison_unavailable_count: 0
 ```
 
-R1 result doc:
-
-```text
-docs/R1_REPORT_640_VERIFIER_RESULT.md
-```
-
-AIREADY-S1 safe result:
+### AIREADY-S1 secret-layer safe result
 
 ```text
 overall_status: passed
@@ -166,13 +173,7 @@ counts_by_status:
   passed: 6
 ```
 
-AIREADY-S1 result doc:
-
-```text
-docs/AIREADY_S1_SECRET_LAYERS_VERIFIER_RESULT.md
-```
-
-HYPER-1A safe result:
+### HYPER-1A safe result
 
 ```text
 overall_status: passed
@@ -182,13 +183,7 @@ counts_by_status:
   passed: 2
 ```
 
-HYPER-1A result doc:
-
-```text
-docs/HYPER_1A_RES_2P5M_VERIFIER_RESULT.md
-```
-
-HYPER-1B safe result:
+### HYPER-1B safe result
 
 ```text
 overall_status: passed
@@ -200,13 +195,7 @@ run_contract:
   status: comparable
 ```
 
-HYPER-1B result doc:
-
-```text
-docs/HYPER_1B_CORE_TENSOR_NPY_VERIFIER_RESULT.md
-```
-
-INT-1 safe result:
+### INT-1 safe result
 
 ```text
 overall_status: passed
@@ -217,13 +206,7 @@ counts_by_status:
 family_count: 6
 ```
 
-INT-1 result doc:
-
-```text
-docs/INT_1_INTERNAL_RASTER_VERIFIER_RESULT.md
-```
-
-S1-1 safe result:
+### S1-1 safe result
 
 ```text
 overall_status: passed
@@ -237,13 +220,7 @@ max_abs_diff: 0.0 for all outputs
 mean_abs_diff: 0.0 for all outputs
 ```
 
-S1-1 result doc:
-
-```text
-docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
-```
-
-S1 filtered stack safe result:
+### S1 filtered stack safe result
 
 ```text
 overall_status: passed
@@ -260,13 +237,7 @@ runtime_output_verified: true
 notebook_value_parity_verified: true
 ```
 
-S1 filtered stack result doc:
-
-```text
-docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
-```
-
-PAN/optical safe result:
+### PAN/optical safe result
 
 ```text
 components:
@@ -291,12 +262,6 @@ stack:
   mean_abs_diff: 9.302630132879131e-10
 ```
 
-PAN/optical result doc:
-
-```text
-docs/PAN_OPTICAL_VERIFIER_RESULT.md
-```
-
 PAN canonical-reference note:
 
 ```text
@@ -306,37 +271,84 @@ The legacy/misplaced GEOTIFF_RADAR_BANDS and NPY_RADAR_BANDS copies are not used
 PAN_LAYERS_STACK_640.npy bands match the OPT/PAN_NPY_640 components.
 ```
 
-AI_READY remaining support-family status:
+### AI_READY support stack safe result
+
+The earlier blocked wording for this family has been corrected. The real support-stack target is:
 
 ```text
-status: blocked / source-capture required
-exact D1C reference search: 0 of 7 found
-reference manifest mentions: 0 of 7 found
-exact app output search: 0 of 7 found
-broad naming-drift search: no useful alternate Fraction/MH/AN notebook-named outputs found
+ai_ready_support_stack.npy
 ```
 
-AI_READY remaining support-family status doc:
+Safe parity result:
 
 ```text
-docs/AI_READY_REMAINING_SUPPORT_STATUS.md
+reference_exists: true
+app_exists: true
+matching_app_run: a11309bf-ed47-4bf5-bbf4-f755b904065c
+reference_shape: [640, 640, 19]
+app_shape: [640, 640, 19]
+reference_dtype: float32
+app_dtype: float32
+hash_match: true
+same_shape: true
+same_dtype: true
+same_values_exact: true
+compared_count: 7782400
+nan_count_ref: 0
+nan_count_app: 0
+max_abs_diff: 0.0
+mean_abs_diff: 0.0
 ```
 
-AI_READY remaining support-family boundary:
+AI_READY support stack band list:
 
 ```text
-Do not claim all AIREADY parity complete from AIREADY-S1 alone.
-Do not alias ai_ready_support_stack.* as the missing Fraction/MH/AN outputs.
-Do not alias focus_zone_ai_ready_window.npy as any missing Fraction/MH/AN output.
-Do not use AI_BEH_* rasters as AI_READY remaining support-family equivalents.
-No fabricated, synthesized, or renamed outputs were used.
+VV_dB
+VH_dB
+logRatio_dB
+incidence
+NDVI
+NDWI
+NDMI
+NBR
+IRONOX
+IRON_SWIR
+BSI
+slope
+aspect
+curvature
+TPI
+TRI
+roughness
+TWI
+lst
 ```
 
-Safety boundary:
+Nonmatching app candidate rejected:
 
 ```text
-current PAN component and PAN stack verifiers used
+e11d3280-a7b7-4c7c-a761-8b08ac9452f2
+hash_match: false
+max_abs_diff: 1.0
+mean_abs_diff: 0.29361279566396
+```
+
+Standalone AI_READY Fraction/MH/AN note:
+
+```text
+The exact standalone planned filenames were searched but are not the support-stack parity target.
+They are not channels in the 19-band ai_ready_support_stack.npy.
+No standalone Fraction/MH/AN verifier pass is claimed.
+```
+
+## Safety boundary
+
+```text
 no verifier tolerance relaxation
+no nonmatching app run treated as passing
+no standalone AI_READY Fraction/MH/AN filenames aliased to ai_ready_support_stack.npy
+no focus_zone_ai_ready_window.npy aliasing as a standalone Fraction/MH/AN output
+no AI_BEH_* rasters treated as AI_READY remaining support-family equivalents
 no legacy/misplaced RADAR_BANDS PAN copies treated as canonical
 no final RTC or SAR/RADAR aliases treated as PAN equivalents
 no private raster/NPY payloads committed
@@ -348,7 +360,7 @@ If the private D1/D1C files are missing locally, stop and reconcile the docs bef
 ## Active real app-vs-reference parity
 
 ```text
-No active verifier gate selected yet after AI_READY remaining support-family status recording.
+No active verifier gate selected yet after AI_READY support stack parity correction.
 ```
 
 ## Source-recovery items
@@ -358,7 +370,7 @@ These need explicit recovery/build work before verification:
 ```text
 D1D object-table outputs
 SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and the filtered stack
-AI_READY remaining support families, only if new source captures / exact outputs are supplied later
+Standalone AI_READY Fraction/MH/AN files only if the operator supplies real notebook/source evidence later
 ```
 
 Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
@@ -367,13 +379,9 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 
 ### External V6 notebook/source-lock track
 
-Status:
-
 ```text
 parked separate external notebook/package track
 ```
-
-This is different from the implemented Paid Imagery Request Package app feature.
 
 The external V6 track can restart only if the operator supplies:
 
@@ -385,23 +393,15 @@ real frozen V6 package proving the workflow
 
 ### Real auth provider integration
 
-Status:
-
 ```text
 later / deployment work
 ```
 
-The app has operator-token/header paths. A real provider integration is not the next local task unless deployment becomes the priority.
-
 ### Public overlays / coordinate-bearing downloads
-
-Status:
 
 ```text
 future only / blocked for public or shared mode
 ```
-
-Private operator filesystem-only artifacts are allowed by gate. Public/shared coordinate exposure remains blocked.
 
 ## Recommended next choices
 
