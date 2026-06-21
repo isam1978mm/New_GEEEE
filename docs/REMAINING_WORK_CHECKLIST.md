@@ -1,6 +1,6 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, and S1-1 verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, and S1 filtered stack verifier pass.
 
 It separates completed work, next parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
@@ -28,6 +28,8 @@ It separates completed work, next parity work, source-recovery work, safety boun
 [x] S1-1 core-band parity plan written
 [x] S1-1 core-band verifier passed
 [x] S1-1 result doc recorded
+[x] S1 filtered stack verifier passed
+[x] S1 filtered stack result doc recorded
 ```
 
 ## 1. Completed real app-vs-reference parity gates
@@ -207,12 +209,6 @@ max_abs_diff: 0.0 for all outputs
 mean_abs_diff: 0.0 for all outputs
 ```
 
-Result doc:
-
-```text
-docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
-```
-
 Required S1-1 outputs passed:
 
 ```text
@@ -226,15 +222,49 @@ Required S1-1 outputs passed:
 [x] NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
 ```
 
-S1-1 boundary:
+### S1 filtered stack tensor
+
+```text
+[x] S1 filtered stack contract existed
+[x] S1_FILTERED_LAYERS_STACK_640.npy app output found
+[x] S1_FILTERED_LAYERS_STACK_640.npy reference output found
+[x] current S1 filtered stack verifier passed
+[x] S1 filtered stack result recorded
+```
+
+Closeout result:
+
+```text
+overall_status: passed
+status: passed
+output_name: S1_FILTERED_LAYERS_STACK_640.npy
+shape_match: true
+dtype_match: true
+hash_match: true
+count_compared_values: 1638400
+count_nan_or_nodata_values: 0
+max_abs_diff: 0.0
+mean_abs_diff: 0.0
+runtime_output_verified: true
+notebook_value_parity_verified: true
+```
+
+Result doc:
+
+```text
+docs/S1_FILTERED_STACK_VERIFIER_RESULT.md
+```
+
+SAR/S1 boundary for S1-1 and stack:
 
 ```text
 [x] no raster/NPY payloads committed
-[x] no final RTC outputs aliased as S1-1 outputs
-[x] no RADAR_* app aliases treated as S1-1 equivalents
+[x] no final RTC outputs aliased as S1-1 or stack outputs
+[x] no RADAR_* app aliases treated as S1-1 or stack equivalents
+[x] no radar_db_support_stack/radar_linear_support_stack aliasing as the filtered stack
 [x] no verifier tolerance relaxation used
 [x] no exact coordinate-bearing paths committed
-[x] no public S1-1 downloads enabled
+[x] no public S1/SAR downloads enabled
 [x] no HTTP raster/array serving enabled
 [x] no map overlays enabled
 ```
@@ -244,9 +274,6 @@ S1-1 boundary:
 No next gate is selected yet. Choose one explicitly.
 
 ```text
-[ ] S1 filtered stack tensor gate
-    Scope candidate: S1_FILTERED_LAYERS_STACK_640.npy only, separate from S1-1.
-
 [ ] PAN/optical component and stack parity
     Recover optical/PAN source requirement, component outputs, and PAN_LAYERS_STACK_640.npy.
 
@@ -256,8 +283,8 @@ No next gate is selected yet. Choose one explicitly.
 [ ] D1D object-table outputs
     Recover/export same-run object table family and compare only after source evidence is available.
 
-[ ] SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1
-    Do not broaden S1-1 pass into all SAR/S1 parity.
+[ ] SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and stack
+    Do not broaden S1-1 or S1 filtered stack passes into all SAR/S1 parity.
 ```
 
 ## 3. H5 / prediction serving boundaries still blocked
@@ -338,5 +365,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-Choose next family: S1 filtered stack tensor, PAN/optical, AI_READY remaining support families, D1D object tables, or SAR/S1 remaining support/QA.
+Choose next family: PAN/optical, AI_READY remaining support families, D1D object tables, or SAR/S1 remaining support/QA.
 ```
