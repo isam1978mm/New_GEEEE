@@ -1,8 +1,8 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, and INT-1 verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, and S1-1 verifier pass.
 
-It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
+It separates completed work, next parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
 ## 0. Current baseline
 
@@ -26,11 +26,13 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] INT-1 internal AI_BEH raster verifier passed
 [x] INT-1 result doc recorded
 [x] S1-1 core-band parity plan written
+[x] S1-1 core-band verifier passed
+[x] S1-1 result doc recorded
 ```
 
-## 1. R1 REPORT_640 real app-vs-reference parity
+## 1. Completed real app-vs-reference parity gates
 
-Current state:
+### R1 REPORT_640
 
 ```text
 [x] R1 plan written
@@ -39,7 +41,7 @@ Current state:
 [x] R1 result recorded
 ```
 
-R1 closeout result:
+Closeout result:
 
 ```text
 status: passed
@@ -57,19 +59,7 @@ Required outputs passed:
 [x] REPORT_640_FINAL_Zero_Point_Targets.tif
 ```
 
-Safety boundary remains:
-
-```text
-[x] no raster payloads committed
-[x] no exact coordinate-bearing paths committed
-[x] no public REPORT_640 downloads enabled
-[x] no HTTP raster serving enabled
-[x] no map overlays enabled
-```
-
-## 2. AIREADY real app-vs-reference parity
-
-Current state:
+### AIREADY-S1 secret layers
 
 ```text
 [x] AIREADY plan written
@@ -83,7 +73,7 @@ Current state:
 [x] AIREADY-S1 result recorded
 ```
 
-AIREADY-S1 closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -93,7 +83,7 @@ counts_by_status:
   passed: 6
 ```
 
-Required AIREADY-S1 outputs passed:
+Required outputs passed:
 
 ```text
 [x] AI_READY_640_Secret_Gold_Halo.tif
@@ -104,19 +94,9 @@ Required AIREADY-S1 outputs passed:
 [x] AI_READY_640_Secret_Hidden_Doors.tif
 ```
 
-Remaining AIREADY work:
-
-```text
-[ ] AIREADY-FR Fraction outputs: source known, app writer/output path still needed
-[ ] AIREADY-MH Metal Hardness: source-recovery blocked
-[ ] AIREADY-AN Magnetic/EM anomaly: source-recovery blocked
-```
-
 Do not claim all AIREADY parity from AIREADY-S1 alone.
 
-## 3. HYPER-1A RES_2p5M real app-vs-reference parity
-
-Current state:
+### HYPER-1A RES_2p5M
 
 ```text
 [x] HYPER-1A plan written
@@ -134,7 +114,7 @@ Current state:
 [x] HYPER-1A result recorded
 ```
 
-HYPER-1A closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -144,26 +124,7 @@ counts_by_status:
   passed: 2
 ```
 
-Required HYPER-1A outputs passed:
-
-```text
-[x] FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif
-[x] FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy
-```
-
-Safety boundary remains:
-
-```text
-[x] no raster/NPY payloads committed
-[x] no exact coordinate-bearing paths committed
-[x] no public HYPER-1A downloads enabled
-[x] no HTTP raster/tensor serving enabled
-[x] no map overlays enabled
-```
-
-## 4. HYPER-1B core tensor/NPY real app-vs-reference parity
-
-Current state:
+### HYPER-1B core tensor/NPY
 
 ```text
 [x] HYPER-1B plan written
@@ -178,7 +139,7 @@ Current state:
 [x] HYPER-1B result recorded
 ```
 
-HYPER-1B closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -188,26 +149,7 @@ counts_by_status:
   passed: 2
 ```
 
-Required HYPER-1B outputs passed:
-
-```text
-[x] FINAL_TESLA_V7_2_HYPERCUBE.npy
-[x] RADAR_STACK_HWC_640_*.npy
-```
-
-Safety boundary remains:
-
-```text
-[x] no tensor payloads committed
-[x] no exact coordinate-bearing paths committed
-[x] no public HYPER-1B downloads enabled
-[x] no HTTP tensor serving enabled
-[x] no map overlays enabled
-```
-
-## 5. INT-1 internal raster real app-vs-reference parity
-
-Current state:
+### INT-1 internal AI_BEH rasters
 
 ```text
 [x] INT-1 plan written
@@ -223,7 +165,7 @@ Current state:
 [x] INT-1 result recorded
 ```
 
-INT-1 closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -234,153 +176,91 @@ counts_by_status:
 family_count: 6
 ```
 
-Required INT-1 families passed:
+### S1-1 core-band Sentinel-1 ASC/DESC filtered outputs
 
 ```text
-[x] ai_beh_relation: 3 passed
-[x] ai_beh_extended: 3 passed
-[x] ai_beh_logic: 2 passed
-[x] ai_beh_density_artifact: 2 passed
-[x] ai_beh_rare_material: 2 passed
-[x] ai_beh_alloy_statue: 1 passed
+[x] S1-1 plan written
+[x] locate D2-valid S1-1 reference files
+[x] confirm four S1-1 GeoTIFF references exist
+[x] confirm four S1-1 NPY references exist
+[x] confirm reference manifest coverage
+[x] inspect safe reference metadata
+[x] locate app-produced S1-1 output root
+[x] confirm all eight app files exist
+[x] reject final RTC/app aliases as non-equivalent
+[x] confirm source/export manifest exists
+[x] confirm current SAR ASC/DESC verifier passed
+[x] S1-1 result recorded
 ```
 
-Safety boundary remains:
+Closeout result:
 
 ```text
-[x] no raster/NPY payloads committed
-[x] no reference rasters copied as app outputs
-[x] no verifier tolerance relaxation used
-[x] no exact coordinate-bearing paths committed
-[x] no public INT-1 downloads enabled
-[x] no HTTP raster serving enabled
-[x] no map overlays enabled
+overall_status: passed
+expected_count: 8
+compared_count: 8
+counts_by_status:
+  passed: 8
+raster_value_comparison_available: true
+npy_outputs_passed: true
+max_abs_diff: 0.0 for all outputs
+mean_abs_diff: 0.0 for all outputs
 ```
 
 Result doc:
 
 ```text
-docs/INT_1_INTERNAL_RASTER_VERIFIER_RESULT.md
+docs/S1_1_CORE_BAND_VERIFIER_RESULT.md
 ```
 
-## 6. S1-1 core-band real app-vs-reference parity
-
-Current state:
+Required S1-1 outputs passed:
 
 ```text
-[x] S1-1 plan written
-[ ] locate D2-valid S1-1 reference files
-[ ] confirm four S1-1 GeoTIFF references exist
-[ ] confirm four S1-1 NPY references exist
-[ ] confirm reference manifest coverage or safe equivalent evidence
-[ ] inspect safe reference metadata
-[ ] locate app-produced S1-1 output root
-[ ] confirm all eight app files exist
-[ ] reject final RTC/app aliases as non-equivalent
-[ ] confirm selected ASC/DESC source image contract
-[ ] confirm VV/VH and ASC/DESC ordering
-[ ] run or implement narrow D2-gated S1-1 verifier
-[ ] diagnose failures if any
-[ ] record S1-1 verifier result only after pass
+[x] GEOTIFF_RADAR_BANDS/S1_ASC_VV_Filtered_640.tif
+[x] GEOTIFF_RADAR_BANDS/S1_ASC_VH_Filtered_640.tif
+[x] GEOTIFF_RADAR_BANDS/S1_DESC_VV_Filtered_640.tif
+[x] GEOTIFF_RADAR_BANDS/S1_DESC_VH_Filtered_640.tif
+[x] NPY_RADAR_BANDS/S1_ASC_VV_Filtered_640.npy
+[x] NPY_RADAR_BANDS/S1_ASC_VH_Filtered_640.npy
+[x] NPY_RADAR_BANDS/S1_DESC_VV_Filtered_640.npy
+[x] NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
 ```
 
-S1-1 plan doc:
+S1-1 boundary:
 
 ```text
-docs/S1_1_CORE_BAND_REAL_APP_PARITY_PLAN.md
+[x] no raster/NPY payloads committed
+[x] no final RTC outputs aliased as S1-1 outputs
+[x] no RADAR_* app aliases treated as S1-1 equivalents
+[x] no verifier tolerance relaxation used
+[x] no exact coordinate-bearing paths committed
+[x] no public S1-1 downloads enabled
+[x] no HTTP raster/array serving enabled
+[x] no map overlays enabled
 ```
 
-Required S1-1 GeoTIFF outputs:
+## 2. Remaining source-recovery / parity candidates
+
+No next gate is selected yet. Choose one explicitly.
 
 ```text
-[ ] GEOTIFF_RADAR_BANDS/S1_ASC_VV_Filtered_640.tif
-[ ] GEOTIFF_RADAR_BANDS/S1_ASC_VH_Filtered_640.tif
-[ ] GEOTIFF_RADAR_BANDS/S1_DESC_VV_Filtered_640.tif
-[ ] GEOTIFF_RADAR_BANDS/S1_DESC_VH_Filtered_640.tif
-```
+[ ] S1 filtered stack tensor gate
+    Scope candidate: S1_FILTERED_LAYERS_STACK_640.npy only, separate from S1-1.
 
-Required S1-1 NPY outputs:
+[ ] PAN/optical component and stack parity
+    Recover optical/PAN source requirement, component outputs, and PAN_LAYERS_STACK_640.npy.
 
-```text
-[ ] NPY_RADAR_BANDS/S1_ASC_VV_Filtered_640.npy
-[ ] NPY_RADAR_BANDS/S1_ASC_VH_Filtered_640.npy
-[ ] NPY_RADAR_BANDS/S1_DESC_VV_Filtered_640.npy
-[ ] NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
-```
-
-Safety boundary:
-
-```text
-[ ] no raster/NPY payloads committed
-[ ] no reference files copied as app outputs
-[ ] no final RTC outputs aliased as S1-1 outputs
-[ ] no verifier tolerance relaxation without observed benign variance
-[ ] no exact coordinate-bearing paths committed
-[ ] no public S1-1 downloads enabled
-[ ] no HTTP raster/array serving enabled
-[ ] no map overlays enabled
-```
-
-Next S1-1 action:
-
-```text
-S1-1 Gate 1: locate D2-valid S1-1 reference files
-```
-
-## 7. Source-recovery items
-
-These are not ready for verifier work yet.
-
-```text
-[ ] D1D object-table outputs
 [ ] AI_READY remaining support families
-[ ] SAR/S1 support, intermediate, stack, and QA/provenance outputs outside S1-1
-[ ] PAN/optical image components and stack
+    AIREADY-FR Fraction outputs, AIREADY-MH Metal Hardness, AIREADY-AN Magnetic/EM anomaly.
+
+[ ] D1D object-table outputs
+    Recover/export same-run object table family and compare only after source evidence is available.
+
+[ ] SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1
+    Do not broaden S1-1 pass into all SAR/S1 parity.
 ```
 
-Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
-
-### 7A. D1D object-table outputs
-
-```text
-[ ] Recover/export same-run object-table family
-[ ] Confirm objects_index.csv
-[ ] Confirm clusters_summary.csv
-[ ] Confirm related source tensors consistently match same run
-[ ] Run D2-gated comparison
-```
-
-### 7B. AI_READY remaining support families
-
-```text
-[ ] AIREADY-FR: decide whether to build Fraction output writer path
-[ ] AIREADY-MH: recover Metal Hardness source/writer contract
-[ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
-```
-
-### 7C. SAR/S1 support/intermediate/QA outputs outside S1-1
-
-```text
-[ ] Recover exact notebook source contract for remaining SAR/S1 support outputs
-[ ] Recover selected source IDs / metadata for non-S1-1 outputs
-[ ] Confirm S1_FILTERED_LAYERS_STACK_640.npy requirement separately
-[ ] Confirm pre-RTC/intermediate/QA outputs
-[ ] Add app writer path if missing
-[ ] Verify only after source recovery
-```
-
-### 7D. PAN/optical image components and stack
-
-```text
-[ ] Recover optical/PAN source requirement
-[ ] Confirm notebook source logic
-[ ] Confirm PAN component outputs
-[ ] Confirm PAN_LAYERS_STACK_640.npy
-[ ] Add explicit source-driven PAN writer/run
-[ ] Run PAN component and stack verifiers
-```
-
-## 8. H5 / prediction serving boundaries still blocked
+## 3. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -398,7 +278,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 9. Paid Imagery Request Package / old V6 status
+## 4. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -422,7 +302,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 10. Deployment/auth/public exposure — later only
+## 5. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -438,22 +318,18 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. S1-1 core-band real app-vs-reference parity
-   [x] write/confirm S1-1 plan
-   [ ] locate private D1C S1-1 reference files
-   [ ] locate/generate private app S1-1 output files
-   [ ] confirm required S1-1 file set
+1. Choose the next source-recovery or parity family explicitly.
+
+2. For the selected family:
+   [ ] write/confirm plan
+   [ ] locate private D1C reference files
+   [ ] locate/generate private app output files
+   [ ] confirm required file set
    [ ] run grid/source contract check
    [ ] run D2-gated verifier
-   [ ] record S1-1 verifier result
+   [ ] record safe docs-only result
 
-2. Heavier recovery
-   [ ] D1D object tables
-   [ ] AI_READY remaining support families
-   [ ] SAR/S1 recovery/build outside S1-1
-   [ ] PAN recovery/build
-
-3. Later
+3. Later:
    [ ] real auth provider
    [ ] public exposure review
    [ ] old external V6 source-lock track
@@ -462,5 +338,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-S1-1 Gate 1: locate D2-valid S1-1 reference files
+Choose next family: S1 filtered stack tensor, PAN/optical, AI_READY remaining support families, D1D object tables, or SAR/S1 remaining support/QA.
 ```
