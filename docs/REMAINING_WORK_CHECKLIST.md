@@ -25,6 +25,7 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] HYPER-1B result doc recorded
 [x] INT-1 internal AI_BEH raster verifier passed
 [x] INT-1 result doc recorded
+[x] S1-1 core-band parity plan written
 ```
 
 ## 1. R1 REPORT_640 real app-vs-reference parity
@@ -262,23 +263,68 @@ Result doc:
 docs/INT_1_INTERNAL_RASTER_VERIFIER_RESULT.md
 ```
 
-## 6. Next real app-vs-reference parity item
+## 6. S1-1 core-band real app-vs-reference parity
 
-This is after R1, AIREADY-S1, HYPER-1A, HYPER-1B, and INT-1.
+Current state:
 
 ```text
-[ ] S1-1 core-band real app-vs-reference parity          <- NEXT RECOMMENDED
+[x] S1-1 plan written
+[ ] locate D2-valid S1-1 reference files
+[ ] confirm four S1-1 GeoTIFF references exist
+[ ] confirm four S1-1 NPY references exist
+[ ] confirm reference manifest coverage or safe equivalent evidence
+[ ] inspect safe reference metadata
+[ ] locate app-produced S1-1 output root
+[ ] confirm all eight app files exist
+[ ] reject final RTC/app aliases as non-equivalent
+[ ] confirm selected ASC/DESC source image contract
+[ ] confirm VV/VH and ASC/DESC ordering
+[ ] run or implement narrow D2-gated S1-1 verifier
+[ ] diagnose failures if any
+[ ] record S1-1 verifier result only after pass
 ```
 
-Common sub-checklist:
+S1-1 plan doc:
 
 ```text
-[ ] Locate frozen D1C reference files
-[ ] Locate or generate matching app files
-[ ] Confirm app files are real app outputs, not copied references
-[ ] Confirm CRS / scale / transform / shape / dtype / band semantics
-[ ] Run family-specific verifier
-[ ] Record safe docs-only result
+docs/S1_1_CORE_BAND_REAL_APP_PARITY_PLAN.md
+```
+
+Required S1-1 GeoTIFF outputs:
+
+```text
+[ ] GEOTIFF_RADAR_BANDS/S1_ASC_VV_Filtered_640.tif
+[ ] GEOTIFF_RADAR_BANDS/S1_ASC_VH_Filtered_640.tif
+[ ] GEOTIFF_RADAR_BANDS/S1_DESC_VV_Filtered_640.tif
+[ ] GEOTIFF_RADAR_BANDS/S1_DESC_VH_Filtered_640.tif
+```
+
+Required S1-1 NPY outputs:
+
+```text
+[ ] NPY_RADAR_BANDS/S1_ASC_VV_Filtered_640.npy
+[ ] NPY_RADAR_BANDS/S1_ASC_VH_Filtered_640.npy
+[ ] NPY_RADAR_BANDS/S1_DESC_VV_Filtered_640.npy
+[ ] NPY_RADAR_BANDS/S1_DESC_VH_Filtered_640.npy
+```
+
+Safety boundary:
+
+```text
+[ ] no raster/NPY payloads committed
+[ ] no reference files copied as app outputs
+[ ] no final RTC outputs aliased as S1-1 outputs
+[ ] no verifier tolerance relaxation without observed benign variance
+[ ] no exact coordinate-bearing paths committed
+[ ] no public S1-1 downloads enabled
+[ ] no HTTP raster/array serving enabled
+[ ] no map overlays enabled
+```
+
+Next S1-1 action:
+
+```text
+S1-1 Gate 1: locate D2-valid S1-1 reference files
 ```
 
 ## 7. Source-recovery items
@@ -288,7 +334,7 @@ These are not ready for verifier work yet.
 ```text
 [ ] D1D object-table outputs
 [ ] AI_READY remaining support families
-[ ] SAR/S1 support, intermediate, and QA/provenance outputs
+[ ] SAR/S1 support, intermediate, stack, and QA/provenance outputs outside S1-1
 [ ] PAN/optical image components and stack
 ```
 
@@ -312,13 +358,12 @@ Do not fabricate outputs. Do not treat renamed app-native equivalents as noteboo
 [ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
 ```
 
-### 7C. SAR/S1 support/intermediate/QA outputs
+### 7C. SAR/S1 support/intermediate/QA outputs outside S1-1
 
 ```text
-[ ] Recover exact notebook source contract
-[ ] Recover selected source IDs / metadata
-[ ] Confirm ASC/DESC filtered layers
-[ ] Confirm S1_FILTERED_LAYERS_STACK_640.npy requirement
+[ ] Recover exact notebook source contract for remaining SAR/S1 support outputs
+[ ] Recover selected source IDs / metadata for non-S1-1 outputs
+[ ] Confirm S1_FILTERED_LAYERS_STACK_640.npy requirement separately
 [ ] Confirm pre-RTC/intermediate/QA outputs
 [ ] Add app writer path if missing
 [ ] Verify only after source recovery
@@ -394,7 +439,7 @@ Do not reopen this now.
 
 ```text
 1. S1-1 core-band real app-vs-reference parity
-   [ ] write/confirm S1-1 plan
+   [x] write/confirm S1-1 plan
    [ ] locate private D1C S1-1 reference files
    [ ] locate/generate private app S1-1 output files
    [ ] confirm required S1-1 file set
@@ -405,7 +450,7 @@ Do not reopen this now.
 2. Heavier recovery
    [ ] D1D object tables
    [ ] AI_READY remaining support families
-   [ ] SAR/S1 recovery/build
+   [ ] SAR/S1 recovery/build outside S1-1
    [ ] PAN recovery/build
 
 3. Later
@@ -417,5 +462,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-S1-1 core-band real app-vs-reference parity plan
+S1-1 Gate 1: locate D2-valid S1-1 reference files
 ```
