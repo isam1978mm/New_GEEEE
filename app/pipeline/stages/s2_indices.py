@@ -21,6 +21,10 @@ DEFAULT_S2_CLOUD_MAX = 3
 S2_SOURCE_BANDS = ("B2", "B3", "B4", "B8", "B11", "B12", "B1")
 INDEX_NAMES = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 S2_RAW_CUBE_NPY_NAME = "s2_raw_cube.npy"
+S2_MASK_OUTPUT_DIR = "S2_MASKS"
+S2_RAW_VALID_MASK_TIF = "S2_RAW_VALID_MASK_640.tif"
+S2_INDEX_VALID_MASK_TIF = "S2_INDEX_VALID_MASK_640.tif"
+S2_DEM_MATCHED_MASK_MANIFEST_JSON = "S2_DEM_MATCHED_MASKS_manifest.json"
 
 
 class S2CubeFetcher(Protocol):
@@ -190,8 +194,25 @@ def compute_s2_indices(cube: np.ndarray, *, nodata: float) -> dict[str, np.ndarr
     }
 
 
+def compute_s2_dem_matched_masks(cube: np.ndarray, outputs: dict[str, np.ndarray], *, nodata: float) -> dict[str, np.ndarray]:
+    raw_valid = np.isfinite(cube).all(axis=-1) & (cube != nodata).all(axis=-1)
+    index_valid = np.ones(cube.shape[:2], dtype=bool)
+    for name in INDEX_NAMES:
+        array = outputs[name]
+        index_valid &= np.isfinite(array) & (array != nodata)
+    return {
+        "raw_valid_mask": raw_valid.astype(np.uint8),
+        "index_valid_mask": index_valid.astype(np.uint8),
+    }
+
+
 def write_raster(path: Path, array: np.ndarray) -> None:
     Image.fromarray(array.astype(np.float32)).save(path, format="TIFF")
+
+
+def write_mask_raster(path: Path, mask: np.ndarray) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(mask.astype(np.uint8, copy=False)).save(path, format="TIFF")
 
 
 def write_s2_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.ndarray]) -> list[Path]:
@@ -208,6 +229,72 @@ def write_s2_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.n
         )
         written_paths.append(tif_path)
     return written_paths
+
+
+def write_s2_mask_outputs(
+    run_dir: Path,
+    grid_spec: GridSpec,
+    masks: dict[str, np.ndarray],
+    *,
+    start_date: str,
+    end_date: str,
+    cloud_max: int,
+) -> dict[str, Path]:
+    mask_dir = run_dir / S2_MASK_OUTPUT_DIR
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    raw_valid_path = mask_dir / S2_RAW_VALID_MASK_TIF
+    index_valid_path = mask_dir / S2_INDEX_VALID_MASK_TIF
+    manifest_path = mask_dir / S2_DEM_MATCHED_MASK_MANIFEST_JSON
+
+    raw_valid = masks["raw_valid_mask"]
+    index_valid = masks["index_valid_mask"]
+    write_mask_raster(raw_valid_path, raw_valid)
+    write_mask_raster(index_valid_path, index_valid)
+    for path, mask in ((raw_valid_path, raw_valid), (index_valid_path, index_valid)):
+        write_raster_sidecar(
+            path,
+            grid_manifest=grid_spec.manifest,
+            nodata=0.0,
+            dtype="uint8",
+            shape=mask.shape,
+        )
+
+    manifest = {
+        "schema": "s2_dem_matched_masks_v1",
+        "stage": "s2_indices",
+        "coordinate_space": "authoritative_grid",
+        "grid_shape": [int(grid_spec.size), int(grid_spec.size)],
+        "date_rules": {
+            "primary_start": start_date,
+            "primary_end": end_date,
+            "primary_cloud_max": int(cloud_max),
+            "notebook_secret_start": "2022-01-01",
+            "notebook_secret_end": "2026-03-01",
+            "notebook_secret_cloud_max": 5,
+            "notebook_report_start": "2022-01-01",
+            "notebook_report_end": "2026-03-01",
+            "notebook_report_cloud_max": 10,
+        },
+        "source_bands": list(S2_SOURCE_BANDS),
+        "index_bands": list(INDEX_NAMES),
+        "masks": {
+            "raw_valid_mask": {
+                "path": f"{S2_MASK_OUTPUT_DIR}/{S2_RAW_VALID_MASK_TIF}",
+                "valid_fraction": round(float(raw_valid.mean()), 6),
+            },
+            "index_valid_mask": {
+                "path": f"{S2_MASK_OUTPUT_DIR}/{S2_INDEX_VALID_MASK_TIF}",
+                "valid_fraction": round(float(index_valid.mean()), 6),
+            },
+        },
+        "privacy": {"artifact_class": "FILESYSTEM_ONLY", "http_servable": False},
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    return {
+        "raw_valid_mask_tif": raw_valid_path,
+        "index_valid_mask_tif": index_valid_path,
+        "mask_manifest_json": manifest_path,
+    }
 
 
 def write_s2_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float, start_date: str, end_date: str, cloud_max: int) -> Path:
@@ -274,7 +361,16 @@ class S2IndicesStage(Stage):
         )
         cube = fetcher(grid_spec=self.grid_spec)
         outputs = compute_s2_indices(cube, nodata=self.grid_spec.nodata)
+        masks = compute_s2_dem_matched_masks(cube, outputs, nodata=self.grid_spec.nodata)
         written_paths = write_s2_outputs(context.run_dir, self.grid_spec, outputs)
+        mask_outputs = write_s2_mask_outputs(
+            context.run_dir,
+            self.grid_spec,
+            masks,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            cloud_max=self.cloud_max,
+        )
         summary_path = write_s2_summary(
             context.run_dir,
             outputs,
@@ -295,6 +391,31 @@ class S2IndicesStage(Stage):
             )
             for path in written_paths
         ]
+        artifacts.extend(
+            [
+                build_stage_artifact(
+                    name="s2_raw_valid_mask_640",
+                    relative_path=mask_outputs["raw_valid_mask_tif"].relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=mask_outputs["raw_valid_mask_tif"].stat().st_size,
+                    http_servable=False,
+                ),
+                build_stage_artifact(
+                    name="s2_index_valid_mask_640",
+                    relative_path=mask_outputs["index_valid_mask_tif"].relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=mask_outputs["index_valid_mask_tif"].stat().st_size,
+                    http_servable=False,
+                ),
+                build_stage_artifact(
+                    name="s2_dem_matched_masks_manifest",
+                    relative_path=mask_outputs["mask_manifest_json"].relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=mask_outputs["mask_manifest_json"].stat().st_size,
+                    http_servable=False,
+                ),
+            ]
+        )
         artifacts.append(
             build_stage_artifact(
                 name="s2_indices_summary",
@@ -318,8 +439,7 @@ class S2IndicesStage(Stage):
             metadata={
                 "band_names": list(INDEX_NAMES),
                 "source_bands": list(S2_SOURCE_BANDS),
-                "start_date": self.start_date,
-                "end_date": self.end_date,
-                "cloud_max": self.cloud_max,
+                "shape": [self.grid_spec.size, self.grid_spec.size],
+                "mask_names": ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"],
             },
         )
