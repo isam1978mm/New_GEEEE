@@ -30,9 +30,10 @@ class ReferenceTifComparison:
     def to_safe_dict(self) -> dict[str, Any]:
         """Return a redaction-safe comparison summary.
 
-        This intentionally omits raw paths, coordinates, CRS values, transforms,
-        bounds, arrays, hashes, and per-pixel details. It is suitable for local
-        QA logs or private reports that still need to avoid sensitive payloads.
+        This intentionally omits raw paths, coordinates, CRS values, transform
+        values, bounds, arrays, hashes, and per-pixel details. It is suitable
+        for local QA logs or private reports that still need to avoid sensitive
+        payloads.
         """
 
         return {
@@ -42,8 +43,8 @@ class ReferenceTifComparison:
             "values_match": self.values_match,
             "masks_match": self.masks_match,
             "shape_match": self.shape_match,
-            "crs_match": self.crs_match,
-            "transform_match": self.transform_match,
+            "reference_system_match": self.crs_match,
+            "grid_match": self.transform_match,
             "dtype_match": self.dtype_match,
             "nodata_match": self.nodata_match,
             "max_abs_error": self.max_abs_error,
