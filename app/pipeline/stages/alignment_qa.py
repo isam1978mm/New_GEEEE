@@ -21,12 +21,13 @@ ALIGNMENT_MASK_SELECTION_NAME = "alignment_mask_selection.json"
 ALIGNMENT_SUMMARY_REDACTED_NAME = "alignment_summary_redacted.json"
 ALIGNMENT_MAX_CENTER_OFFSET_PX = 0.25
 ALIGNMENT_EXCLUDED_NAMES = {"hypercube.tif"}
+ALIGNMENT_EXCLUDED_DIR_PARTS = {"PRIVATE", "experimental"}
 
 
 def collect_raster_sidecars(run_dir: Path) -> list[tuple[Path, Path]]:
     raster_pairs: list[tuple[Path, Path]] = []
-    for raster_path in sorted(run_dir.glob("*.tif")):
-        if raster_path.name in ALIGNMENT_EXCLUDED_NAMES:
+    for raster_path in sorted(run_dir.rglob("*.tif")):
+        if _is_alignment_excluded_raster(run_dir=run_dir, raster_path=raster_path):
             continue
         sidecar_path = raster_sidecar_path(raster_path)
         if sidecar_path.is_file():
@@ -34,6 +35,23 @@ def collect_raster_sidecars(run_dir: Path) -> list[tuple[Path, Path]]:
     if not raster_pairs:
         raise StageError("Alignment QA requires raster outputs with sidecar metadata.")
     return raster_pairs
+
+
+def _is_alignment_excluded_raster(*, run_dir: Path, raster_path: Path) -> bool:
+    if raster_path.name in ALIGNMENT_EXCLUDED_NAMES:
+        return True
+    try:
+        relative_parts = raster_path.relative_to(run_dir).parts
+    except ValueError:
+        return True
+    return any(part in ALIGNMENT_EXCLUDED_DIR_PARTS for part in relative_parts)
+
+
+def _safe_artifact_label(run_dir: Path, raster_path: Path) -> str:
+    try:
+        return raster_path.relative_to(run_dir).as_posix()
+    except ValueError:
+        return raster_path.name
 
 
 def _edge_valid_fraction(array: np.ndarray, nodata: float) -> float:
@@ -54,6 +72,7 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
 
     expected_center = pixel_center_from_transform(grid_spec.transform, row=0, col=0)
     for raster_path, sidecar_path in collect_raster_sidecars(run_dir):
+        artifact_label = _safe_artifact_label(run_dir, raster_path)
         sidecar = read_manifest(sidecar_path)
         array = np.array([])
         try:
@@ -62,7 +81,7 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
             with Image.open(raster_path) as image:
                 array = np.array(image, dtype=np.float32)
         except Exception as exc:  # pragma: no cover - defensive
-            raise StageError(f"Failed to inspect raster for alignment QA: {raster_path.name}") from exc
+            raise StageError(f"Failed to inspect raster for alignment QA: {artifact_label}") from exc
 
         raster_transform = tuple(float(value) for value in sidecar["transform"])
         raster_center = pixel_center_from_transform(raster_transform, row=0, col=0)
@@ -80,7 +99,7 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
             and center_offset_px <= ALIGNMENT_MAX_CENTER_OFFSET_PX
         )
         if not passes:
-            failing_files.append(raster_path.name)
+            failing_files.append(artifact_label)
 
         finite = np.isfinite(array)
         valid = finite & (array != float(sidecar["nodata"]))
@@ -88,11 +107,11 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
         edge_valid_fraction = _edge_valid_fraction(array, float(sidecar["nodata"]))
         if valid_fraction > best_anchor_score:
             best_anchor_score = valid_fraction
-            best_anchor_name = raster_path.name
+            best_anchor_name = artifact_label
 
         audit_rows.append(
             {
-                "artifact_name": raster_path.name,
+                "artifact_name": artifact_label,
                 "dtype": str(sidecar["dtype"]),
                 "height": int(sidecar["height"]),
                 "width": int(sidecar["width"]),
