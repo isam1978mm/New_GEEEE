@@ -256,12 +256,52 @@ pair3_desc VV_dB: base mean_abs_diff 0.310622 -> dr=1,dc=0 mean_abs_diff 0.03153
 pair3_desc VH_dB: base mean_abs_diff 0.312489 -> dr=1,dc=0 mean_abs_diff 0.032494
 ```
 
+## Global-vs-per-tile row-shift diagnostic
+
+A third targeted diagnostic compared a global `dr=1, dc=0` shift against a per-tile `dr=1, dc=0` shift using the SAR tile size.
+
+```text
+DEM_TILE_SIZE: 320
+```
+
+Result:
+
+```text
+global dr=1 and per-tile dr=1 are effectively equivalent for this diagnostic.
+ASC labels reach 100.0 percent matching and 0.0 mean absolute difference with either shift class.
+DESC labels improve strongly with either shift class, but retain residual mean absolute difference around 0.031-0.035 dB.
+```
+
+Examples:
+
+```text
+pair0_asc VV_dB:
+  base matching: 0.030566
+  global dr=1 matching: 100.0, mean_abs_diff: 0.0
+  per-tile dr=1 matching: 100.0, mean_abs_diff: 0.0
+
+pair1_asc VH_dB:
+  base matching: 0.047919
+  global dr=1 matching: 100.0, mean_abs_diff: 0.0
+  per-tile dr=1 matching: 100.0, mean_abs_diff: 0.0
+
+pair0_desc VV_dB:
+  base mean_abs_diff: 0.321684
+  global dr=1 mean_abs_diff: 0.032389
+  per-tile dr=1 mean_abs_diff: 0.032401
+
+pair3_desc VH_dB:
+  base mean_abs_diff: 0.312489
+  global dr=1 mean_abs_diff: 0.032494
+  per-tile dr=1 mean_abs_diff: 0.032504
+```
+
 Interpretation:
 
 ```text
-The first divergence is best classified as a per-image VV/VH row-alignment/sampling offset at per_image_products_db.
-It is not a source-image, orbit-pairing, formula-domain, label-order, or full-grid orientation issue.
-The offset appears before pair median and before RTC, and the final post-RTC outputs still match.
+The observed offset is a systematic one-row sampling/alignment offset in app live-replayed VV/VH intermediates relative to the notebook intermediate references.
+The diagnostic does not isolate the offset to tile-boundary placement; global and per-tile shifts give effectively the same conclusion at this grid/tile size.
+Because app full-intermediate post_rtc arrays exactly match runtime final SAR NPY outputs, this remains an intermediate diagnostic and not a final-output parity failure.
 ```
 
 ## Summary-stat mismatch note
@@ -307,7 +347,8 @@ SAR core band processing parity: closed / passed
 SAR source-selection identity: closed / matched
 SAR processing-path metadata: notebook-source-supported; D1C metadata less detailed
 SAR first-divergence localization: closed / first candidate identified at per_image_products_db
-SAR per-image divergence classification: row-alignment/sampling offset in VV/VH at per_image_products_db
+SAR per-image divergence classification: systematic row-alignment/sampling offset in VV/VH at per_image_products_db
+SAR global-vs-per-tile offset classification: not isolated to tile-boundary placement; global/per-tile dr=1 give equivalent conclusion
 SAR summary-stat reconciliation: open / report-summary issue
 Radar linear support stack parity: open / downstream diagnostic
 ```
@@ -327,7 +368,7 @@ No public downloads, HTTP table/array serving, or map overlays were enabled.
 ## Next recommended gate
 
 ```text
-Investigate the per_image_products_db row-alignment/sampling offset.
-Focus on why app live replay VV/VH is one row offset from notebook intermediate VV/VH while angle is already aligned and final post-RTC outputs still match.
-Do not change downstream stack assembly, SAR formulas, or tolerances before that targeted sampling/alignment investigation.
+Investigate the exact sampling origin convention for per_image_products_db VV/VH intermediate references.
+Compare notebook Cell 25 sampleRectangle/grid code against app to_grid_radar/finalize_for_sample/build_sar_tile_requests.
+Do not change downstream stack assembly, SAR formulas, or tolerances before that targeted sampling-origin investigation.
 ```
