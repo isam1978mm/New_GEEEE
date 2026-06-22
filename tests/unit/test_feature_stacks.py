@@ -12,7 +12,16 @@ from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
-from app.pipeline.stages.feature_stacks import FeatureStacksStage, NOTEBOOK_STACK_OUTPUT_DIR, SCIENCE_CORE_BANDS
+from app.pipeline.stages.feature_stacks import (
+    FeatureStacksStage,
+    NOTEBOOK_AI_READY_STACK_NPY,
+    NOTEBOOK_RADAR_LINEAR_STACK_NPY,
+    NOTEBOOK_RADAR_STACK_NPY,
+    NOTEBOOK_SCIENCE_CORE_STACK_NPY,
+    NOTEBOOK_STACK_ALIAS_MANIFEST_JSON,
+    NOTEBOOK_STACK_OUTPUT_DIR,
+    SCIENCE_CORE_BANDS,
+)
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
@@ -49,6 +58,10 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "tensor_audit_summary",
             "geometry_consistency_summary",
             "notebook_RADAR_STACK_HWC_640_npy",
+            "notebook_SCIENCE_CORE_STACK_HWC_640_npy",
+            "notebook_RADAR_LINEAR_SUPPORT_STACK_640_npy",
+            "notebook_AI_READY_SUPPORT_STACK_640_npy",
+            "notebook_stack_alias_manifest",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -61,7 +74,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         radar_linear_stack = np.load(run_dir / "stacks" / "tensor_support" / "radar_linear_support_stack.npy")
         assert radar_linear_stack.shape == (grid_spec.size, grid_spec.size, 4)
         assert float(radar_linear_stack[:, :, 0].min()) >= 0.0
-        notebook_radar_stack_path = run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "RADAR_STACK_HWC_640_app.npy"
+        notebook_radar_stack_path = run_dir / NOTEBOOK_STACK_OUTPUT_DIR / NOTEBOOK_RADAR_STACK_NPY
         assert notebook_radar_stack_path.is_file()
         assert not (run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "FINAL_TESLA_V7_2_HYPERCUBE.tif").exists()
         assert not (run_dir / NOTEBOOK_STACK_OUTPUT_DIR / "FINAL_TESLA_V7_2_HYPERCUBE.npy").exists()
@@ -88,6 +101,25 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert float(ai_ready_stack.max()) <= 1.0
         ai_ready_sidecar = read_manifest(raster_sidecar_path(run_dir / "stacks" / "tensor_support" / "ai_ready_support_stack.tif"))
         assert ai_ready_sidecar["transform"] == grid_spec.manifest.crs_transform
+
+        notebook_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+        np.testing.assert_array_equal(np.load(notebook_dir / NOTEBOOK_SCIENCE_CORE_STACK_NPY), stack_cube)
+        np.testing.assert_array_equal(np.load(notebook_dir / NOTEBOOK_RADAR_LINEAR_STACK_NPY), radar_linear_stack)
+        np.testing.assert_array_equal(np.load(notebook_dir / NOTEBOOK_AI_READY_STACK_NPY), ai_ready_stack)
+        alias_manifest = json.loads((notebook_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON).read_text(encoding="utf-8"))
+        assert alias_manifest["schema"] == "notebook_stack_alias_manifest_v1"
+        assert alias_manifest["status"] == "partial_alias_contract"
+        assert alias_manifest["privacy"] == {"artifact_class": "FILESYSTEM_ONLY", "http_servable": False}
+        alias_by_file = {entry["filename"]: entry for entry in alias_manifest["aliases"]}
+        assert alias_by_file[NOTEBOOK_RADAR_STACK_NPY]["status"] == "implemented"
+        assert alias_by_file[NOTEBOOK_RADAR_LINEAR_STACK_NPY]["status"] == "implemented_subset"
+        assert alias_by_file[NOTEBOOK_AI_READY_STACK_NPY]["status"] == "implemented_subset"
+        assert set(alias_manifest["deferred_families"]) == {
+            "NANO_STACK",
+            "GPHYS_MASTER_640",
+            "RAD_MASTER_CUBE_640",
+            "ULTIMATE_GPHYS_SCAN_640",
+        }
 
         with (run_dir / "QA" / "stacks" / "band_stats.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
