@@ -19,6 +19,7 @@ from app.pipeline.stages.feature_stacks import (
     NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
     NOTEBOOK_RAD_S0_MASTER_STACK_NPY,
     NOTEBOOK_RAD_MASTER_CUBE_NPY,
+    NOTEBOOK_GPHYS_MASTER_STACK_NPY,
     NOTEBOOK_RADAR_STACK_NPY,
     NOTEBOOK_SCIENCE_CORE_STACK_NPY,
     NOTEBOOK_STACK_ALIAS_MANIFEST_JSON,
@@ -27,6 +28,7 @@ from app.pipeline.stages.feature_stacks import (
     NANO_GEOPHYSICS_BANDS,
     RAD_S0_MASTER_BANDS,
     RAD_MASTER_CUBE_BANDS,
+    GPHYS_MASTER_BANDS,
     SCIENCE_CORE_BANDS,
     TREASURE_GEOPHYSICS_BANDS,
 )
@@ -71,6 +73,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "notebook_AI_READY_SUPPORT_STACK_640_npy",
             "notebook_RAD_S0_MASTER_STACK_640_npy",
             "notebook_RAD_MASTER_CUBE_640_npy",
+            "notebook_GPHYS_MASTER_STACK_640_npy",
             "notebook_NANO_GEOPHYSICS_STACK_640_npy",
             "notebook_TREASURE_GEOPHYSICS_STACK_640_npy",
             "notebook_stack_alias_manifest",
@@ -169,6 +172,36 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             atol=1e-5,
         )
 
+        gphys_master = np.load(notebook_dir / NOTEBOOK_GPHYS_MASTER_STACK_NPY)
+        assert gphys_master.shape == (grid_spec.size, grid_spec.size, len(GPHYS_MASTER_BANDS))
+
+        vh_lin_windows = np.lib.stride_tricks.sliding_window_view(np.pad(vh_lin_grid, 1, mode="edge"), (3, 3))
+        vh_lin_med = np.median(vh_lin_windows, axis=(-2, -1)).astype(np.float32)
+
+        vv_std = np.std(vv_lin_windows, axis=(-2, -1)).astype(np.float32)
+        vh_std = np.std(vh_lin_windows, axis=(-2, -1)).astype(np.float32)
+
+        def mean3_valid(array):
+            padded = np.pad(array, 1, mode="edge")
+            windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
+            finite = np.isfinite(windows)
+            counts = finite.sum(axis=(-2, -1))
+            sums = np.where(finite, windows, 0.0).sum(axis=(-2, -1))
+            return (sums / np.maximum(counts, 1)).astype(np.float32)
+
+        vv_sigma_mean_lin = mean3_valid(np.where(vv_std > 0.0, vv_lin_grid, np.nan).astype(np.float32))
+        vh_sigma_mean_lin = mean3_valid(np.where(vh_std > 0.0, vh_lin_grid, np.nan).astype(np.float32))
+        vh_med_db_expected = (np.log10(np.maximum(vh_lin_med, np.float32(1e-10))) * np.float32(10.0)).astype(np.float32)
+        vv_sigma_mean_db_expected = (np.log10(np.maximum(vv_sigma_mean_lin, np.float32(1e-10))) * np.float32(10.0)).astype(np.float32)
+        vh_sigma_mean_db_expected = (np.log10(np.maximum(vh_sigma_mean_lin, np.float32(1e-10))) * np.float32(10.0)).astype(np.float32)
+
+        np.testing.assert_allclose(gphys_master[:, :, 0][valid], vv_db[valid], rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(gphys_master[:, :, 1][valid], vh_db[valid], rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(gphys_master[:, :, 2][valid], vv_med_db_expected[valid], rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(gphys_master[:, :, 3][valid], vh_med_db_expected[valid], rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(gphys_master[:, :, 4][valid], vv_sigma_mean_db_expected[valid], rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(gphys_master[:, :, 5][valid], vh_sigma_mean_db_expected[valid], rtol=1e-5, atol=1e-5)
+
         nano_stack = np.load(notebook_dir / NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY)
         assert nano_stack.shape == (grid_spec.size, grid_spec.size, len(NANO_GEOPHYSICS_BANDS))
         np.testing.assert_allclose(nano_stack[:, :, 0][valid], vv_lin / (vh_lin + np.float32(1e-6)), rtol=1e-5, atol=1e-5)
@@ -197,7 +230,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             atol=1e-5,
         )
 
-        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
+        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
             assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()
             tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}_640.tif"
             assert tif_path.is_file()
@@ -215,12 +248,13 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert alias_by_file[NOTEBOOK_RAD_S0_MASTER_STACK_NPY]["source_cell"] == "cell_050"
         assert alias_by_file[NOTEBOOK_RAD_MASTER_CUBE_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_RAD_MASTER_CUBE_NPY]["source_cell"] == "cell_053"
+        assert alias_by_file[NOTEBOOK_GPHYS_MASTER_STACK_NPY]["status"] == "implemented"
+        assert alias_by_file[NOTEBOOK_GPHYS_MASTER_STACK_NPY]["source_cell"] == "cell_051"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["source_cell"] == "cell_037"
         assert alias_by_file[NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY]["source_cell"] == "cell_039"
         assert set(alias_manifest["deferred_families"]) == {
-            "GPHYS_MASTER_640",
             "ULTIMATE_GPHYS_SCAN_640",
         }
 
@@ -238,6 +272,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "radar_linear_support_stack",
             "rad_s0_master_stack",
             "rad_master_cube_stack",
+            "gphys_master_stack",
             "nano_geophysics_stack",
             "treasure_geophysics_stack",
             "ai_ready_support_stack",
@@ -251,11 +286,12 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert family_statuses["RAD_S0_MASTER_STACK_640"]["artifact_name"] == "rad_s0_master_stack"
         assert family_statuses["RAD_MASTER_CUBE_640"]["status"] == "implemented"
         assert family_statuses["RAD_MASTER_CUBE_640"]["artifact_name"] == "rad_master_cube_stack"
+        assert family_statuses["GPHYS_MASTER_640"]["status"] == "implemented"
+        assert family_statuses["GPHYS_MASTER_640"]["artifact_name"] == "gphys_master_stack"
         assert family_statuses["NANO_STACK"]["status"] == "implemented"
         assert family_statuses["NANO_STACK"]["artifact_name"] == "nano_geophysics_stack"
         assert family_statuses["TREASURE_GEOPHYSICS_STACK_640"]["status"] == "implemented"
         assert family_statuses["TREASURE_GEOPHYSICS_STACK_640"]["artifact_name"] == "treasure_geophysics_stack"
-        assert family_statuses["GPHYS_MASTER_640"]["status"] == "deferred"
         assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["status"] == "deferred"
 
         tensor_audit = json.loads((run_dir / "QA" / "stacks" / "tensor_audit_summary.json").read_text(encoding="utf-8"))
