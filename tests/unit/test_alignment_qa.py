@@ -44,16 +44,17 @@ def test_alignment_qa_recursively_collects_official_nested_rasters() -> None:
         _write_raster(run_dir / "PRIVATE" / "secret.tif", np.ones((grid_spec.size, grid_spec.size), dtype=np.float32), grid_spec)
         _write_raster(run_dir / "experimental" / "debug.tif", np.ones((grid_spec.size, grid_spec.size), dtype=np.float32), grid_spec)
 
-        collected = [path.relative_to(run_dir).as_posix() for path, _sidecar in collect_raster_sidecars(run_dir)]
+        collected = {path.relative_to(run_dir).as_posix() for path, _sidecar in collect_raster_sidecars(run_dir)}
         audit_rows, summary, _mask_selection = build_alignment_reports(run_dir, grid_spec)
         audit_names = {str(row["artifact_name"]) for row in audit_rows}
-
-        assert collected == [
+        expected = {
             "DEM_GEO8_TIFS/DEM_640.tif",
             "QA/QA_GRID_validmask_640.tif",
             "dem.tif",
-        ]
-        assert audit_names == set(collected)
+        }
+
+        assert collected == expected
+        assert audit_names == expected
         assert summary["checked_raster_count"] == 3
         assert summary["pass"] is True
 
