@@ -55,7 +55,31 @@ NOTEBOOK_RADAR_STACK_NPY = "RADAR_STACK_HWC_640_app.npy"
 NOTEBOOK_SCIENCE_CORE_STACK_NPY = "SCIENCE_CORE_STACK_HWC_640_app.npy"
 NOTEBOOK_RADAR_LINEAR_STACK_NPY = "RADAR_LINEAR_SUPPORT_STACK_640_app.npy"
 NOTEBOOK_AI_READY_STACK_NPY = "AI_READY_SUPPORT_STACK_640_app.npy"
+NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY = "NANO_GEOPHYSICS_STACK_640.npy"
+NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY = "TREASURE_GEOPHYSICS_STACK_640.npy"
+NOTEBOOK_RAD_S0_MASTER_STACK_NPY = "RAD_S0_MASTER_STACK_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
+NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
+NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
+NANO_GEOPHYSICS_BANDS = (
+    "NANO_Depth_Penetration",
+    "NANO_Human_Geometry_Detector",
+    "NANO_Mass_Anomaly",
+    "NANO_RVI_Clean",
+)
+TREASURE_GEOPHYSICS_BANDS = (
+    "NANO_Metal_Signal_Pulse",
+    "GEOPHYS_Sirdab_Cavity_Void",
+    "GEOLOGIC_Chamber_Entry_Proxy",
+)
+RAD_S0_MASTER_BANDS = (
+    "RAD_S0_VV_dB",
+    "RAD_S0_VH_dB",
+    "RAD_S0_VV_Med1p5px_dB",
+    "RAD_S0_VH_Med1p5px_dB",
+    "RAD_S0_VH_VV_Ratio_lin",
+    "RAD_S0_Angle_deg",
+)
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 EPS = 1e-6
@@ -84,6 +108,122 @@ def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, objec
 def _db_to_linear(array: np.ndarray, *, nodata: float) -> np.ndarray:
     linear = np.where(array == nodata, nodata, np.power(10.0, array / 10.0)).astype(np.float32)
     return linear
+
+
+def _median_3x3_grid(array: np.ndarray, *, nodata: float) -> np.ndarray:
+    valid = np.isfinite(array) & (array != nodata)
+    if not valid.any():
+        return np.full(array.shape, nodata, dtype=np.float32)
+    filled = np.where(valid, array, np.nan).astype(np.float32)
+    padded = np.pad(filled, 1, mode="edge")
+    windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
+    median = np.nanmedian(windows, axis=(-2, -1)).astype(np.float32)
+    return np.where(np.isfinite(median), median, nodata).astype(np.float32)
+
+
+def _compute_rad_s0_master_products(
+    vv_db: np.ndarray,
+    vh_db: np.ndarray,
+    incidence: np.ndarray,
+    *,
+    nodata: float,
+) -> dict[str, object]:
+    valid_vv_vh = (
+        np.isfinite(vv_db)
+        & np.isfinite(vh_db)
+        & (vv_db != nodata)
+        & (vh_db != nodata)
+    )
+    valid_angle = np.isfinite(incidence) & (incidence != nodata)
+
+    rad_s0_vv_db = np.where(valid_vv_vh, vv_db, nodata).astype(np.float32)
+    rad_s0_vh_db = np.where(valid_vv_vh, vh_db, nodata).astype(np.float32)
+    rad_s0_vv_med = _median_3x3_grid(rad_s0_vv_db, nodata=nodata)
+    rad_s0_vh_med = _median_3x3_grid(rad_s0_vh_db, nodata=nodata)
+
+    ratio = np.full(vv_db.shape, nodata, dtype=np.float32)
+    ratio[valid_vv_vh] = np.power(
+        10.0,
+        (vh_db[valid_vv_vh] - vv_db[valid_vv_vh]) / 10.0,
+    ).astype(np.float32)
+
+    angle = np.where(valid_angle, incidence, nodata).astype(np.float32)
+
+    stack = np.stack(
+        [
+            rad_s0_vv_db,
+            rad_s0_vh_db,
+            rad_s0_vv_med,
+            rad_s0_vh_med,
+            ratio,
+            angle,
+        ],
+        axis=-1,
+    ).astype(np.float32)
+
+    return {
+        "rad_s0_master_band_names": list(RAD_S0_MASTER_BANDS),
+        "rad_s0_master_stack": stack,
+    }
+
+
+def _compute_plan_b_geophysics_products(
+    vv_db: np.ndarray,
+    vh_db: np.ndarray,
+    *,
+    nodata: float,
+) -> dict[str, object]:
+    valid = (
+        np.isfinite(vv_db)
+        & np.isfinite(vh_db)
+        & (vv_db != nodata)
+        & (vh_db != nodata)
+    )
+
+    vv_lin = np.full(vv_db.shape, np.nan, dtype=np.float32)
+    vh_lin = np.full(vh_db.shape, np.nan, dtype=np.float32)
+    vv_lin[valid] = np.power(10.0, vv_db[valid] / 10.0).astype(np.float32)
+    vh_lin[valid] = np.power(10.0, vh_db[valid] / 10.0).astype(np.float32)
+
+    def clean(array: np.ndarray) -> np.ndarray:
+        return np.where(valid & np.isfinite(array), array, nodata).astype(np.float32)
+
+    # Cell 037 exact formulas.
+    nano_depth_penetration = clean(vv_lin / (vh_lin + np.float32(1e-6)))
+    nano_human_geometry_detector = clean(vv_db - vh_db)
+    nano_mass_anomaly = clean(np.sqrt(vv_lin * vh_lin))
+    nano_rvi_clean = clean((vh_lin * np.float32(4.0)) / (vv_lin + vh_lin + np.float32(1e-6)))
+
+    nano_stack = np.stack(
+        [
+            nano_depth_penetration,
+            nano_human_geometry_detector,
+            nano_mass_anomaly,
+            nano_rvi_clean,
+        ],
+        axis=-1,
+    ).astype(np.float32)
+
+    # Cell 039 exact formulas.
+    geophys_sirdab_cavity_void = clean(np.log(vv_lin) - np.log(vh_lin))
+    nano_metal_signal_pulse = clean((vh_lin * vv_lin) / (vv_lin + vh_lin + np.float32(1e-6)))
+    geologic_chamber_entry_proxy = clean(vh_lin / ((vv_lin ** np.float32(2.0)) + np.float32(1e-6)))
+
+    treasure_stack = np.stack(
+        [
+            nano_metal_signal_pulse,
+            geophys_sirdab_cavity_void,
+            geologic_chamber_entry_proxy,
+        ],
+        axis=-1,
+    ).astype(np.float32)
+
+    return {
+        "nano_geophysics_band_names": list(NANO_GEOPHYSICS_BANDS),
+        "nano_geophysics_stack": nano_stack,
+        "treasure_geophysics_band_names": list(TREASURE_GEOPHYSICS_BANDS),
+        "treasure_geophysics_stack": treasure_stack,
+    }
 
 
 def _build_ai_ready_stack(cube: np.ndarray, *, nodata: float) -> np.ndarray:
@@ -162,6 +302,8 @@ def build_feature_stack_products(
     ).astype(np.float32)
     radar_db_stack = np.stack([vv_db, vh_db, log_ratio_db, incidence], axis=-1).astype(np.float32)
     ai_ready_stack = _build_ai_ready_stack(cube, nodata=nodata)
+    plan_b_geophysics = _compute_plan_b_geophysics_products(vv_db, vh_db, nodata=nodata)
+    rad_s0_master = _compute_rad_s0_master_products(vv_db, vh_db, incidence, nodata=nodata)
 
     stats_rows: list[dict[str, object]] = []
     for band_index, band_name in enumerate(band_names):
@@ -199,6 +341,21 @@ def build_feature_stack_products(
                 "band_names": ["vv_sigma0_linear", "vh_sigma0_linear", "ratio_sigma0_linear", "incidence_angle"],
             },
             {
+                "artifact_name": "rad_s0_master_stack",
+                "source_notebook_family": "RAD_S0_MASTER_STACK_640",
+                "band_names": list(RAD_S0_MASTER_BANDS),
+            },
+            {
+                "artifact_name": "nano_geophysics_stack",
+                "source_notebook_family": "NANO_GEOPHYSICS_STACK_640",
+                "band_names": list(NANO_GEOPHYSICS_BANDS),
+            },
+            {
+                "artifact_name": "treasure_geophysics_stack",
+                "source_notebook_family": "TREASURE_GEOPHYSICS_STACK_640",
+                "band_names": list(TREASURE_GEOPHYSICS_BANDS),
+            },
+            {
                 "artifact_name": "ai_ready_support_stack",
                 "source_notebook_family": "TESLA_V7_2_TENSOR_EXPORT",
                 "band_names": band_names,
@@ -207,14 +364,30 @@ def build_feature_stack_products(
         "notebook_family_statuses": [
             {
                 "family": "NANO_STACK",
-                "status": "deferred",
-                "reason": "Cells 36-37 are duplicate nano-scale variants with unstable internals and no single canonical formula yet.",
+                "status": "implemented",
+                "artifact_name": "nano_geophysics_stack",
+                "source_cell": "cell_037",
+                "reason": "Cell 037 selected as canonical first Nano geophysics variant after exact formula extraction.",
+            },
+            {
+                "family": "TREASURE_GEOPHYSICS_STACK_640",
+                "status": "implemented",
+                "artifact_name": "treasure_geophysics_stack",
+                "source_cell": "cell_039",
+                "reason": "Cell 039 selected as canonical first Treasure/Geophysics variant after exact formula extraction.",
             },
             {
                 "family": "SIGMA0_MASTER_640",
                 "status": "implemented",
                 "artifact_name": "radar_linear_support_stack",
                 "reason": "Neutral linearized radar support stack captures the reproducible sigma0-style variant without notebook master naming.",
+            },
+            {
+                "family": "RAD_S0_MASTER_STACK_640",
+                "status": "implemented",
+                "artifact_name": "rad_s0_master_stack",
+                "source_cell": "cell_050",
+                "reason": "Cell 050 selected as canonical clean-AI-naming Sigma0 master stack for Plan B item 9.",
             },
             {
                 "family": "GPHYS_MASTER_640",
@@ -263,6 +436,12 @@ def build_feature_stack_products(
         "radar_db_band_names": ["VV_dB", "VH_dB", "logRatio_dB", "angle"],
         "radar_db_stack": radar_db_stack,
         "ai_ready_stack": ai_ready_stack,
+        "nano_geophysics_band_names": plan_b_geophysics["nano_geophysics_band_names"],
+        "nano_geophysics_stack": plan_b_geophysics["nano_geophysics_stack"],
+        "treasure_geophysics_band_names": plan_b_geophysics["treasure_geophysics_band_names"],
+        "treasure_geophysics_stack": plan_b_geophysics["treasure_geophysics_stack"],
+        "rad_s0_master_band_names": rad_s0_master["rad_s0_master_band_names"],
+        "rad_s0_master_stack": rad_s0_master["rad_s0_master_stack"],
         "band_stats_rows": stats_rows,
         "stack_presence_summary": stack_presence_summary,
         "tensor_audit_summary": tensor_audit_summary,
@@ -308,9 +487,32 @@ def _build_stack_alias_manifest(
                 "band_names": band_names,
                 "status": "implemented_subset",
             },
+            {
+                "filename": NOTEBOOK_RAD_S0_MASTER_STACK_NPY,
+                "source_notebook_family": "RAD_S0_MASTER_STACK_640",
+                "app_artifact": "rad_s0_master_stack",
+                "band_names": list(RAD_S0_MASTER_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_050",
+            },
+            {
+                "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
+                "source_notebook_family": "NANO_GEOPHYSICS_STACK_640",
+                "app_artifact": "nano_geophysics_stack",
+                "band_names": list(NANO_GEOPHYSICS_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_037",
+            },
+            {
+                "filename": NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY,
+                "source_notebook_family": "TREASURE_GEOPHYSICS_STACK_640",
+                "app_artifact": "treasure_geophysics_stack",
+                "band_names": list(TREASURE_GEOPHYSICS_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_039",
+            },
         ],
         "deferred_families": [
-            "NANO_STACK",
             "GPHYS_MASTER_640",
             "RAD_MASTER_CUBE_640",
             "ULTIMATE_GPHYS_SCAN_640",
@@ -328,6 +530,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     radar_linear_stack = products["radar_linear_stack"]
     radar_db_stack = products["radar_db_stack"]
     ai_ready_stack = products["ai_ready_stack"]
+    nano_geophysics_stack = products["nano_geophysics_stack"]
+    treasure_geophysics_stack = products["treasure_geophysics_stack"]
+    rad_s0_master_stack = products["rad_s0_master_stack"]
     band_stats_rows = products["band_stats_rows"]
     stack_presence_summary = products["stack_presence_summary"]
     tensor_audit_summary = products["tensor_audit_summary"]
@@ -340,6 +545,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     assert isinstance(radar_linear_stack, np.ndarray)
     assert isinstance(radar_db_stack, np.ndarray)
     assert isinstance(ai_ready_stack, np.ndarray)
+    assert isinstance(nano_geophysics_stack, np.ndarray)
+    assert isinstance(treasure_geophysics_stack, np.ndarray)
+    assert isinstance(rad_s0_master_stack, np.ndarray)
     assert isinstance(band_stats_rows, list)
     assert isinstance(stack_presence_summary, dict)
     assert isinstance(tensor_audit_summary, dict)
@@ -352,10 +560,14 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     optical_dir = run_dir / "stacks" / "optical_support"
     qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     notebook_stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    notebook_sar_tif_dir = run_dir / NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR
+    notebook_sar_npy_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
     tensor_dir.mkdir(parents=True, exist_ok=True)
     optical_dir.mkdir(parents=True, exist_ok=True)
     qa_dir.mkdir(parents=True, exist_ok=True)
     notebook_stack_dir.mkdir(parents=True, exist_ok=True)
+    notebook_sar_tif_dir.mkdir(parents=True, exist_ok=True)
+    notebook_sar_npy_dir.mkdir(parents=True, exist_ok=True)
 
     stack_tif_path = tensor_dir / SCIENCE_CORE_STACK_TIF
     stack_npy_path = tensor_dir / SCIENCE_CORE_STACK_NPY
@@ -374,6 +586,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     notebook_science_core_stack_npy_path = notebook_stack_dir / NOTEBOOK_SCIENCE_CORE_STACK_NPY
     notebook_radar_linear_stack_npy_path = notebook_stack_dir / NOTEBOOK_RADAR_LINEAR_STACK_NPY
     notebook_ai_ready_stack_npy_path = notebook_stack_dir / NOTEBOOK_AI_READY_STACK_NPY
+    notebook_nano_geophysics_stack_npy_path = notebook_stack_dir / NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY
+    notebook_treasure_geophysics_stack_npy_path = notebook_stack_dir / NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY
+    notebook_rad_s0_master_stack_npy_path = notebook_stack_dir / NOTEBOOK_RAD_S0_MASTER_STACK_NPY
     notebook_stack_alias_manifest_path = notebook_stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
 
     _save_multipage_tiff(stack_tif_path, cube)
@@ -384,6 +599,52 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     np.save(notebook_science_core_stack_npy_path, cube)
     np.save(notebook_radar_linear_stack_npy_path, radar_linear_stack)
     np.save(notebook_ai_ready_stack_npy_path, ai_ready_stack)
+    np.save(notebook_nano_geophysics_stack_npy_path, nano_geophysics_stack)
+    np.save(notebook_treasure_geophysics_stack_npy_path, treasure_geophysics_stack)
+    np.save(notebook_rad_s0_master_stack_npy_path, rad_s0_master_stack)
+
+    for band_index, band_name in enumerate(NANO_GEOPHYSICS_BANDS):
+        band_array = nano_geophysics_stack[:, :, band_index].astype(np.float32, copy=False)
+        band_tif = notebook_sar_tif_dir / f"{band_name}_640.tif"
+        band_npy = notebook_sar_npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(band_tif, band_array, grid_spec)
+        write_raster_sidecar(
+            band_tif,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(band_npy, band_array)
+
+    for band_index, band_name in enumerate(TREASURE_GEOPHYSICS_BANDS):
+        band_array = treasure_geophysics_stack[:, :, band_index].astype(np.float32, copy=False)
+        band_tif = notebook_sar_tif_dir / f"{band_name}_640.tif"
+        band_npy = notebook_sar_npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(band_tif, band_array, grid_spec)
+        write_raster_sidecar(
+            band_tif,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(band_npy, band_array)
+
+    for band_index, band_name in enumerate(RAD_S0_MASTER_BANDS):
+        band_array = rad_s0_master_stack[:, :, band_index].astype(np.float32, copy=False)
+        band_tif = notebook_sar_tif_dir / f"{band_name}_640.tif"
+        band_npy = notebook_sar_npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(band_tif, band_array, grid_spec)
+        write_raster_sidecar(
+            band_tif,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(band_npy, band_array)
+
     write_georeferenced_raster(radar_db_tif_path, radar_db_stack, grid_spec)
     np.save(radar_db_npy_path, radar_db_stack)
     _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)
@@ -446,6 +707,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         "notebook_science_core_stack_npy": notebook_science_core_stack_npy_path,
         "notebook_radar_linear_stack_npy": notebook_radar_linear_stack_npy_path,
         "notebook_ai_ready_stack_npy": notebook_ai_ready_stack_npy_path,
+        "notebook_nano_geophysics_stack_npy": notebook_nano_geophysics_stack_npy_path,
+        "notebook_treasure_geophysics_stack_npy": notebook_treasure_geophysics_stack_npy_path,
+        "notebook_rad_s0_master_stack_npy": notebook_rad_s0_master_stack_npy_path,
         "notebook_stack_alias_manifest_json": notebook_stack_alias_manifest_path,
     }
 
@@ -579,6 +843,27 @@ class FeatureStacksStage(Stage):
                 relative_path=outputs["notebook_ai_ready_stack_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["notebook_ai_ready_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_RAD_S0_MASTER_STACK_640_npy",
+                relative_path=outputs["notebook_rad_s0_master_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_rad_s0_master_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_NANO_GEOPHYSICS_STACK_640_npy",
+                relative_path=outputs["notebook_nano_geophysics_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_nano_geophysics_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_TREASURE_GEOPHYSICS_STACK_640_npy",
+                relative_path=outputs["notebook_treasure_geophysics_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_treasure_geophysics_stack_npy"].stat().st_size,
                 http_servable=False,
             ),
             build_stage_artifact(
