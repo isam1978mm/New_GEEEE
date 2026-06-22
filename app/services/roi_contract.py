@@ -40,12 +40,7 @@ def build_run_roi_contract(
 
     transformer = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     center_x, center_y = transformer.transform(lon, lat)
-    bounds = {
-        "xmin": float(grid.bounds_m["xmin"]),
-        "ymin": float(grid.bounds_m["ymin"]),
-        "xmax": float(grid.bounds_m["xmax"]),
-        "ymax": float(grid.bounds_m["ymax"]),
-    }
+    bounds = _normalized_bounds(grid)
     processing_roi_polygon = _utm_polygon_from_bounds(bounds)
     search_roi_polygon = _approx_wgs84_square(lon=lon, lat=lat, side_km=DEFAULT_SEARCH_ROI_SIDE_KM)
 
@@ -112,6 +107,37 @@ def write_run_roi_contract(
     grid_manifest: GridManifest | None = None,
 ) -> Path:
     contract = build_run_roi_contract(latitude=latitude, longitude=longitude, grid_manifest=grid_manifest)
+    return write_run_roi_contract_payload(settings=settings, run_id=run_id, contract=contract)
+
+
+def build_run_roi_contract_from_grid_manifest(*, grid_manifest: GridManifest) -> dict[str, Any]:
+    """Rebuild the private ROI contract from an authoritative GRID manifest.
+
+    This lets save_grid_manifest() create the A1 contract without duplicating
+    run-creation logic. The selected point is recovered from the exact UTM grid
+    center and transformed back to WGS84.
+    """
+
+    bounds = _normalized_bounds(grid_manifest)
+    center_x = (bounds["xmin"] + bounds["xmax"]) / 2.0
+    center_y = (bounds["ymin"] + bounds["ymax"]) / 2.0
+    crs = f"EPSG:{grid_manifest.epsg}"
+    transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    lon, lat = transformer.transform(center_x, center_y)
+    return build_run_roi_contract(latitude=float(lat), longitude=float(lon), grid_manifest=grid_manifest)
+
+
+def write_run_roi_contract_from_grid_manifest(
+    *,
+    settings: Settings,
+    run_id: str,
+    grid_manifest: GridManifest,
+) -> Path:
+    contract = build_run_roi_contract_from_grid_manifest(grid_manifest=grid_manifest)
+    return write_run_roi_contract_payload(settings=settings, run_id=run_id, contract=contract)
+
+
+def write_run_roi_contract_payload(*, settings: Settings, run_id: str, contract: dict[str, Any]) -> Path:
     run_dir = initialize_run_storage(settings, run_id)
     path = run_dir / ROI_CONTRACT_RELATIVE_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,6 +153,15 @@ def _coerce_coordinate(value: float, *, minimum: float, maximum: float, label: s
     if coordinate < minimum or coordinate > maximum:
         raise ValueError(f"{label} is outside the allowed range.")
     return coordinate
+
+
+def _normalized_bounds(grid: GridManifest) -> dict[str, float]:
+    return {
+        "xmin": float(grid.bounds_m["xmin"]),
+        "ymin": float(grid.bounds_m["ymin"]),
+        "xmax": float(grid.bounds_m["xmax"]),
+        "ymax": float(grid.bounds_m["ymax"]),
+    }
 
 
 def _utm_polygon_from_bounds(bounds: dict[str, float]) -> list[list[float]]:
