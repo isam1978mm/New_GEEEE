@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 9 third stack family implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 9 fourth stack family implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -27,7 +27,7 @@ Can we make it in app?
 | # | Not-done-now notebook item | Is it done now? | Can we make it in app? | Plan B note |
 |---:|---|---|---:|---|
 | 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | Implemented so far: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, and cell 051 GPHYS_MASTER_STACK_640. Remaining item #9 stack families still pending. Frozen notebook numeric parity still pending. |
+| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | Implemented so far: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, and cell 047 MASTER_RTC_REFINED_STACK_640. Remaining item #9 stack families still pending. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟥 No | Yes | Optional/private stage unless specifically required by target pipeline. |
 | 17 | Extra S2 era pulls / masks | 🟥 No | Yes | Add historical/seasonal S2 pull stage using notebook date/cloud rules. |
 | 18 | DEM-matched S2 masks | 🟥 No | Yes | Add or extend S2 mask products so they align to the DEM/grid contract. |
@@ -90,7 +90,7 @@ Remaining:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### B1.2 result — item 9 More feature stacks / rename layers, first stack family
+### B1.2 result — item 9 More feature stacks / rename layers, RAD_S0 stack family
 
 ```text
 Status:
@@ -123,7 +123,7 @@ Validation done:
   STACK_ALIAS_MANIFEST records source_cell cell_050 and status implemented.
 ```
 
-### B1.3 result — item 9 More feature stacks / rename layers, second stack family
+### B1.3 result — item 9 More feature stacks / rename layers, Radar Master Cube family
 
 ```text
 Status:
@@ -159,7 +159,7 @@ Validation done:
   STACK_ALIAS_MANIFEST records source_cell cell_053 and status implemented.
 ```
 
-### B1.4 result — item 9 More feature stacks / rename layers, third stack family
+### B1.4 result — item 9 More feature stacks / rename layers, GPHYS Master family
 
 ```text
 Status:
@@ -189,41 +189,77 @@ Implemented band order:
   GPHYS_VV_SigmaMean1p5px_dB
   GPHYS_VH_SigmaMean1p5px_dB
 
-Implementation choice:
-  Use existing app SAR arrays VV_dB and VH_dB from npy_radar_bands.
-  Compute the Geophysical Master stack locally in FeatureStacksStage.
-  Do not add another Earth Engine sampling stage for this stack family.
-
 Validation done:
   focused feature stack test passed.
   full-run integration test passed.
   local existing run regenerated and confirmed output files/shapes exist.
   GPHYS_MASTER stack shape confirmed as (640, 640, 6) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_051 and status implemented.
+```
+
+### B1.5 result — item 9 More feature stacks / rename layers, Master RTC Refined family
+
+```text
+Status:
+  App port implemented.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_047 -> MASTER_RTC_REFINED_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/MASTER_RTC_REFINED_STACK_640.npy
+  NPY_RADAR_BANDS/RAD_MasterVV_dB_640.npy
+  NPY_RADAR_BANDS/RAD_MasterVH_dB_640.npy
+  NPY_RADAR_BANDS/RAD_MasterAngle_deg_640.npy
+  NPY_RADAR_BANDS/RAD_MasterVV_Median3m_dB_640.npy
+  NPY_RADAR_BANDS/RAD_MasterVH_Median3m_dB_640.npy
+  NPY_RADAR_BANDS/RAD_MasterVH_VV_Ratio_lin_640.npy
+  GEOTIFF_RADAR_BANDS/{6 RAD_Master bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{6 RAD_Master bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_047
+
+Implemented band order:
+  RAD_MasterVV_dB
+  RAD_MasterVH_dB
+  RAD_MasterAngle_deg
+  RAD_MasterVV_Median3m_dB
+  RAD_MasterVH_Median3m_dB
+  RAD_MasterVH_VV_Ratio_lin
+
+Implementation choice:
+  Use existing app SAR arrays VV_dB, VH_dB, and incidence from npy_radar_bands.
+  Compute the Master RTC Refined stack locally in FeatureStacksStage.
+  Do not add another Earth Engine sampling stage for this stack family.
+
+Validation done:
+  focused feature stack test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  MASTER_RTC_REFINED stack shape confirmed as (640, 640, 6) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_047 and status implemented.
 
 Remaining item #9 families:
-  cell_047 -> MASTER_RTC_REFINED_STACK_640.npy
   cell_052 -> ARCH_TARGETS_STACK_640.npy
   cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
 Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.4 artifacts.
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.5 artifacts.
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.4
+### Next main item scan after B1.5
 
 ```text
 Recommended next main item:
   Continue item #9 with the next stack-family target.
 
 Candidate order:
-  1. cell_047 -> MASTER_RTC_REFINED_STACK_640.npy
-  2. cell_052 -> ARCH_TARGETS_STACK_640.npy
-  3. cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
+  1. cell_052 -> ARCH_TARGETS_STACK_640.npy
+  2. cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
 Next action:
-  Inspect exact formula requirements for cell_047 against current app SAR arrays.
+  Inspect exact formula requirements for cell_052 against current app arrays.
   Produce a gap table before coding.
 ```
 
