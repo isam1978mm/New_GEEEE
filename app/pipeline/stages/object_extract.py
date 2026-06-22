@@ -12,7 +12,6 @@ from PIL import Image
 from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError, StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
-from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
@@ -23,6 +22,11 @@ OBJECTS_INDEX_NAME = "objects_index.csv"
 CLUSTERS_SUMMARY_NAME = "clusters_summary.csv"
 OBJECT_PATCHES_DIRNAME = "objects/object_patches"
 OBJECT_MASK_NAME = "object_mask.npy"
+TARGET_OUTPUT_DIRNAME = "targets"
+TARGET_CANDIDATES_CSV_NAME = "target_candidates.csv"
+TARGET_SUMMARY_JSON_NAME = "target_summary.json"
+TARGET_SUMMARY_TXT_NAME = "target_summary.txt"
+DETECTED_FEATURES_GEOJSON_NAME = "detected_features_pixel.geojson"
 
 MIN_OBJECT_PIXELS = 4
 ANOMALY_PERCENTILE = 90.0
@@ -248,6 +252,7 @@ def build_object_products(
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -255,22 +260,110 @@ def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, objec
             writer.writerow(row)
 
 
+def _build_target_summary(*, objects: list[dict[str, object]], clusters: list[dict[str, object]], threshold: float) -> dict[str, object]:
+    return {
+        "schema": "target_outputs_v1",
+        "coordinate_space": "pixel_grid",
+        "object_count": len(objects),
+        "cluster_count": len(clusters),
+        "candidate_threshold": float(threshold),
+        "max_object_anomaly": max((float(row["max_anomaly"]) for row in objects), default=None),
+        "outputs": {
+            "csv": f"{TARGET_OUTPUT_DIRNAME}/{TARGET_CANDIDATES_CSV_NAME}",
+            "txt": f"{TARGET_OUTPUT_DIRNAME}/{TARGET_SUMMARY_TXT_NAME}",
+            "json": f"{TARGET_OUTPUT_DIRNAME}/{TARGET_SUMMARY_JSON_NAME}",
+            "geojson": f"{TARGET_OUTPUT_DIRNAME}/{DETECTED_FEATURES_GEOJSON_NAME}",
+        },
+        "privacy": {
+            "artifact_class": "FILESYSTEM_ONLY",
+            "http_servable": False,
+            "geographic_coordinates_included": False,
+        },
+    }
+
+
+def _build_target_summary_text(summary: dict[str, object]) -> str:
+    return "\n".join(
+        [
+            "Target output summary",
+            f"Coordinate space: {summary['coordinate_space']}",
+            f"Object count: {summary['object_count']}",
+            f"Cluster count: {summary['cluster_count']}",
+            f"Candidate threshold: {summary['candidate_threshold']}",
+            "Geographic coordinates included: no",
+            "Visibility: local filesystem only",
+            "",
+        ]
+    )
+
+
+def _pixel_bbox_polygon(row: dict[str, object]) -> list[list[list[float]]]:
+    row_min = float(row["row_min"])
+    row_max = float(row["row_max"]) + 1.0
+    col_min = float(row["col_min"])
+    col_max = float(row["col_max"]) + 1.0
+    return [
+        [
+            [col_min, row_min],
+            [col_max, row_min],
+            [col_max, row_max],
+            [col_min, row_max],
+            [col_min, row_min],
+        ]
+    ]
+
+
+def _build_detected_features_geojson(objects: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "type": "FeatureCollection",
+        "coordinate_space": "pixel_grid",
+        "geographic_coordinates_included": False,
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": _pixel_bbox_polygon(row),
+                },
+                "properties": {
+                    "object_id": int(row["object_id"]),
+                    "cluster_id": int(row["cluster_id"]),
+                    "area_px": int(row["area_px"]),
+                    "row_center": float(row["row_center"]),
+                    "col_center": float(row["col_center"]),
+                    "mean_anomaly": float(row["mean_anomaly"]),
+                    "max_anomaly": float(row["max_anomaly"]),
+                },
+            }
+            for row in objects
+        ],
+    }
+
+
 def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str, Path | list[Path]]:
     objects = products["objects"]
     clusters = products["clusters"]
     mask = products["mask"]
     hypercube = products["hypercube"]
+    threshold = products["threshold"]
     assert isinstance(objects, list)
     assert isinstance(clusters, list)
     assert isinstance(mask, np.ndarray)
     assert isinstance(hypercube, np.ndarray)
+    assert isinstance(threshold, float)
 
     objects_path = run_dir / OBJECTS_INDEX_NAME
     clusters_path = run_dir / CLUSTERS_SUMMARY_NAME
     mask_path = run_dir / "objects" / OBJECT_MASK_NAME
     patches_dir = run_dir / OBJECT_PATCHES_DIRNAME
+    targets_dir = run_dir / TARGET_OUTPUT_DIRNAME
+    target_candidates_path = targets_dir / TARGET_CANDIDATES_CSV_NAME
+    target_summary_json_path = targets_dir / TARGET_SUMMARY_JSON_NAME
+    target_summary_txt_path = targets_dir / TARGET_SUMMARY_TXT_NAME
+    detected_features_geojson_path = targets_dir / DETECTED_FEATURES_GEOJSON_NAME
     patches_dir.mkdir(parents=True, exist_ok=True)
     mask_path.parent.mkdir(parents=True, exist_ok=True)
+    targets_dir.mkdir(parents=True, exist_ok=True)
 
     object_fields = [
         "object_id",
@@ -294,8 +387,16 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
     ]
 
     _write_csv(objects_path, object_fields, objects)
+    _write_csv(target_candidates_path, object_fields, objects)
     _write_csv(clusters_path, cluster_fields, clusters)
     np.save(mask_path, mask.astype(np.uint8))
+    summary = _build_target_summary(objects=objects, clusters=clusters, threshold=threshold)
+    target_summary_json_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    target_summary_txt_path.write_text(_build_target_summary_text(summary), encoding="utf-8")
+    detected_features_geojson_path.write_text(
+        json.dumps(_build_detected_features_geojson(objects), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
     patch_paths: list[Path] = []
     for row in objects:
@@ -312,6 +413,10 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
         "objects_csv": objects_path,
         "clusters_csv": clusters_path,
         "mask_npy": mask_path,
+        "target_candidates_csv": target_candidates_path,
+        "target_summary_json": target_summary_json_path,
+        "target_summary_txt": target_summary_txt_path,
+        "detected_features_geojson": detected_features_geojson_path,
         "patches": patch_paths,
     }
 
@@ -348,6 +453,34 @@ class ObjectExtractStage(Stage):
                 relative_path=Path(outputs["mask_npy"]).relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=Path(outputs["mask_npy"]).stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="target_candidates_csv",
+                relative_path=Path(outputs["target_candidates_csv"]).relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=Path(outputs["target_candidates_csv"]).stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="target_summary_json",
+                relative_path=Path(outputs["target_summary_json"]).relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=Path(outputs["target_summary_json"]).stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="target_summary_txt",
+                relative_path=Path(outputs["target_summary_txt"]).relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=Path(outputs["target_summary_txt"]).stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="detected_features_geojson",
+                relative_path=Path(outputs["detected_features_geojson"]).relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=Path(outputs["detected_features_geojson"]).stat().st_size,
                 http_servable=False,
             ),
         ]
