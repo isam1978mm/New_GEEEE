@@ -64,12 +64,22 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
         result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
 
         artifact_names = [artifact.name for artifact in result.artifacts]
-        assert artifact_names[:3] == ["objects_index", "clusters_summary", "object_mask"]
+        assert artifact_names[:7] == [
+            "objects_index",
+            "clusters_summary",
+            "object_mask",
+            "target_candidates_csv",
+            "target_summary_json",
+            "target_summary_txt",
+            "detected_features_geojson",
+        ]
         assert result.artifacts[0].artifact_class == ArtifactClass.REDACTED_PUBLIC
         assert result.artifacts[1].artifact_class == ArtifactClass.REDACTED_PUBLIC
-        assert result.artifacts[2].artifact_class == ArtifactClass.FILESYSTEM_ONLY
+        for artifact in result.artifacts[2:7]:
+            assert artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY
+            assert artifact.http_servable is False
         assert all(artifact.http_servable is False for artifact in result.artifacts[2:])
-        assert any(name.startswith("object_patch_") for name in artifact_names[3:])
+        assert any(name.startswith("object_patch_") for name in artifact_names[7:])
 
         with (run_dir / "objects_index.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
@@ -87,6 +97,34 @@ def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
             "mean_anomaly",
             "max_anomaly",
         }
+
+        with (run_dir / "targets" / "target_candidates.csv").open("r", encoding="utf-8", newline="") as handle:
+            target_rows = list(csv.DictReader(handle))
+        assert target_rows == rows
+
+        target_summary = json.loads((run_dir / "targets" / "target_summary.json").read_text(encoding="utf-8"))
+        assert target_summary["schema"] == "target_outputs_v1"
+        assert target_summary["coordinate_space"] == "pixel_grid"
+        assert target_summary["object_count"] == 2
+        assert target_summary["cluster_count"] == 2
+        assert target_summary["privacy"] == {
+            "artifact_class": "FILESYSTEM_ONLY",
+            "geographic_coordinates_included": False,
+            "http_servable": False,
+        }
+        summary_text = (run_dir / "targets" / "target_summary.txt").read_text(encoding="utf-8")
+        assert "Geographic coordinates included: no" in summary_text
+
+        feature_collection = json.loads((run_dir / "targets" / "detected_features_pixel.geojson").read_text(encoding="utf-8"))
+        assert feature_collection["type"] == "FeatureCollection"
+        assert feature_collection["coordinate_space"] == "pixel_grid"
+        assert feature_collection["geographic_coordinates_included"] is False
+        assert len(feature_collection["features"]) == 2
+        assert feature_collection["features"][0]["geometry"]["type"] == "Polygon"
+        assert feature_collection["features"][0]["properties"]["object_id"] == 1
+        serialized_targets = json.dumps(feature_collection).casefold()
+        for forbidden in ("latitude", "longitude", "epsg", "crs", "utm", str(run_dir).casefold()):
+            assert forbidden not in serialized_targets
 
         patch_paths = sorted((run_dir / "objects" / "object_patches").glob("*.npy"))
         assert len(patch_paths) == 2
