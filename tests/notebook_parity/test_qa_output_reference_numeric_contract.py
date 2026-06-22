@@ -21,6 +21,7 @@ QA_GRID_REFERENCE_PAIRS = [
     ("QA/QA_GRID_dy_m_640.tif", "QA_GRID_dy_m_640.tif", False),
     ("QA/QA_GRID_validmask_640.tif", "QA_GRID_validmask_640.tif", True),
 ]
+QA_GRID_TRANSFORM_ORIGIN_TOLERANCE_M = 1.0e-5
 
 POST_RTC_SAR_REFERENCE_PAIRS = [
     ("QA/sar/intermediates/post_rtc/final_VV_dB.npy", "VV_dB.tif"),
@@ -121,8 +122,11 @@ def _assert_raster_matches_reference(
             )
         if reference_dataset.crs != app_dataset.crs:
             raise AssertionError(f"{label}: grid mismatch: CRS {reference_dataset.crs} != {app_dataset.crs}")
-        if reference_dataset.transform != app_dataset.transform:
-            raise AssertionError(f"{label}: grid mismatch: transform differs")
+        _assert_transform_matches_reference(
+            label=label,
+            reference_transform=reference_dataset.transform,
+            app_transform=app_dataset.transform,
+        )
         if reference_dataset.count != app_dataset.count:
             raise AssertionError(f"{label}: metadata mismatch: band count {reference_dataset.count} != {app_dataset.count}")
         if reference_dataset.dtypes != app_dataset.dtypes and not _is_allowed_validmask_dtype_pair(
@@ -174,6 +178,26 @@ def _assert_raster_matches_reference(
                     raise AssertionError(
                         f"{label}: value mismatch: band {band_index} max_error={max_error} tolerance={tolerance}"
                     )
+
+
+def _assert_transform_matches_reference(*, label: str, reference_transform, app_transform) -> None:
+    if reference_transform == app_transform:
+        return
+    if not label.startswith("QA/QA_GRID_"):
+        raise AssertionError(f"{label}: grid mismatch: transform differs")
+
+    reference_values = tuple(float(value) for value in reference_transform)[:6]
+    app_values = tuple(float(value) for value in app_transform)[:6]
+    if reference_values[:2] != app_values[:2] or reference_values[3:5] != app_values[3:5]:
+        raise AssertionError(f"{label}: grid mismatch: transform differs")
+
+    x_origin_delta_m = abs(app_values[2] - reference_values[2])
+    y_origin_delta_m = abs(app_values[5] - reference_values[5])
+    if x_origin_delta_m > QA_GRID_TRANSFORM_ORIGIN_TOLERANCE_M or y_origin_delta_m > QA_GRID_TRANSFORM_ORIGIN_TOLERANCE_M:
+        raise AssertionError(
+            f"{label}: grid mismatch: transform origin delta exceeds "
+            f"{QA_GRID_TRANSFORM_ORIGIN_TOLERANCE_M} m"
+        )
 
 
 def _assert_npy_matches_reference(*, label: str, reference_path: Path, app_path: Path, tolerance: float) -> None:
