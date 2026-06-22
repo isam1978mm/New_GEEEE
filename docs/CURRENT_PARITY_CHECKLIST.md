@@ -166,7 +166,7 @@ No private payloads, raster data, NPY data, CSV rows, SAR JSON bodies, image ide
 Main subitems for the current opening item:
 
 ```text
-[ ] run targeted tests for touched SAR/parity docs and any touched parity scripts
+[x] targeted closeout tests passed: 22 passed, 1 warning
 [ ] run full pytest suite if required before merge
 [ ] confirm git status is clean after docs/code updates
 ```
@@ -174,7 +174,7 @@ Main subitems for the current opening item:
 ## Final closeout still needed
 
 ```text
-[ ] Run final targeted tests for touched parity/SAR docs and scripts
+[x] Run final targeted tests for touched parity/SAR docs and scripts: 22 passed, 1 warning
 [ ] Run full pytest suite if required before merge
 [ ] Confirm git status is clean after docs/code updates
 ```
