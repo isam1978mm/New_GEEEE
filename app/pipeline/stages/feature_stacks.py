@@ -58,6 +58,7 @@ NOTEBOOK_AI_READY_STACK_NPY = "AI_READY_SUPPORT_STACK_640_app.npy"
 NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY = "NANO_GEOPHYSICS_STACK_640.npy"
 NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY = "TREASURE_GEOPHYSICS_STACK_640.npy"
 NOTEBOOK_RAD_S0_MASTER_STACK_NPY = "RAD_S0_MASTER_STACK_640.npy"
+NOTEBOOK_RAD_MASTER_CUBE_NPY = "RAD_MASTER_CUBE_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
@@ -79,6 +80,13 @@ RAD_S0_MASTER_BANDS = (
     "RAD_S0_VH_Med1p5px_dB",
     "RAD_S0_VH_VV_Ratio_lin",
     "RAD_S0_Angle_deg",
+)
+RAD_MASTER_CUBE_BANDS = (
+    "RADM_VV_dB",
+    "RADM_VH_dB",
+    "RADM_VV_Med1p5px_dB",
+    "RADM_VV_Mean1p5px_dB",
+    "RADM_VH_VV_Ratio_lin",
 )
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
@@ -164,6 +172,71 @@ def _compute_rad_s0_master_products(
     return {
         "rad_s0_master_band_names": list(RAD_S0_MASTER_BANDS),
         "rad_s0_master_stack": stack,
+    }
+
+
+def _mean_3x3_grid(array: np.ndarray, *, nodata: float) -> np.ndarray:
+    valid = np.isfinite(array) & (array != nodata)
+    if not valid.any():
+        return np.full(array.shape, nodata, dtype=np.float32)
+    filled = np.where(valid, array, np.nan).astype(np.float32)
+    padded = np.pad(filled, 1, mode="edge")
+    windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
+    finite = np.isfinite(windows)
+    counts = finite.sum(axis=(-2, -1))
+    sums = np.where(finite, windows, 0.0).sum(axis=(-2, -1))
+    mean = np.where(counts > 0, sums / np.maximum(counts, 1), nodata).astype(np.float32)
+    return np.where(np.isfinite(mean), mean, nodata).astype(np.float32)
+
+
+def _lin_to_db_grid(array: np.ndarray, *, nodata: float) -> np.ndarray:
+    valid = np.isfinite(array) & (array != nodata) & (array > 0)
+    out = np.full(array.shape, nodata, dtype=np.float32)
+    out[valid] = (np.log10(np.maximum(array[valid], np.float32(1e-10))) * np.float32(10.0)).astype(np.float32)
+    return out
+
+
+def _compute_rad_master_cube_products(
+    vv_db: np.ndarray,
+    vh_db: np.ndarray,
+    *,
+    nodata: float,
+) -> dict[str, object]:
+    valid = (
+        np.isfinite(vv_db)
+        & np.isfinite(vh_db)
+        & (vv_db != nodata)
+        & (vh_db != nodata)
+    )
+
+    radm_vv_db = np.where(valid, vv_db, nodata).astype(np.float32)
+    radm_vh_db = np.where(valid, vh_db, nodata).astype(np.float32)
+
+    rad_vv_lin = np.full(vv_db.shape, np.nan, dtype=np.float32)
+    rad_vh_lin = np.full(vh_db.shape, np.nan, dtype=np.float32)
+    rad_vv_lin[valid] = np.power(10.0, vv_db[valid] / 10.0).astype(np.float32)
+    rad_vh_lin[valid] = np.power(10.0, vh_db[valid] / 10.0).astype(np.float32)
+
+    radm_vv_med_db = _lin_to_db_grid(_median_3x3_grid(rad_vv_lin, nodata=nodata), nodata=nodata)
+    radm_vv_mean_db = _lin_to_db_grid(_mean_3x3_grid(rad_vv_lin, nodata=nodata), nodata=nodata)
+
+    ratio = np.full(vv_db.shape, nodata, dtype=np.float32)
+    ratio[valid] = (rad_vh_lin[valid] / (rad_vv_lin[valid] + np.float32(1e-10))).astype(np.float32)
+
+    stack = np.stack(
+        [
+            radm_vv_db,
+            radm_vh_db,
+            radm_vv_med_db,
+            radm_vv_mean_db,
+            ratio,
+        ],
+        axis=-1,
+    ).astype(np.float32)
+
+    return {
+        "rad_master_cube_band_names": list(RAD_MASTER_CUBE_BANDS),
+        "rad_master_cube_stack": stack,
     }
 
 
@@ -304,6 +377,7 @@ def build_feature_stack_products(
     ai_ready_stack = _build_ai_ready_stack(cube, nodata=nodata)
     plan_b_geophysics = _compute_plan_b_geophysics_products(vv_db, vh_db, nodata=nodata)
     rad_s0_master = _compute_rad_s0_master_products(vv_db, vh_db, incidence, nodata=nodata)
+    rad_master_cube = _compute_rad_master_cube_products(vv_db, vh_db, nodata=nodata)
 
     stats_rows: list[dict[str, object]] = []
     for band_index, band_name in enumerate(band_names):
@@ -344,6 +418,11 @@ def build_feature_stack_products(
                 "artifact_name": "rad_s0_master_stack",
                 "source_notebook_family": "RAD_S0_MASTER_STACK_640",
                 "band_names": list(RAD_S0_MASTER_BANDS),
+            },
+            {
+                "artifact_name": "rad_master_cube_stack",
+                "source_notebook_family": "RAD_MASTER_CUBE_640",
+                "band_names": list(RAD_MASTER_CUBE_BANDS),
             },
             {
                 "artifact_name": "nano_geophysics_stack",
@@ -396,8 +475,10 @@ def build_feature_stack_products(
             },
             {
                 "family": "RAD_MASTER_CUBE_640",
-                "status": "deferred",
-                "reason": "The notebook radar master cube is a near-duplicate assembly of existing science-core radar layers without a distinct stable contract.",
+                "status": "implemented",
+                "artifact_name": "rad_master_cube_stack",
+                "source_cell": "cell_053",
+                "reason": "Cell 053 selected as canonical Radar Master Cube stack for Plan B item 9 B1.3.",
             },
             {
                 "family": "ULTIMATE_GPHYS_SCAN_640",
@@ -442,6 +523,8 @@ def build_feature_stack_products(
         "treasure_geophysics_stack": plan_b_geophysics["treasure_geophysics_stack"],
         "rad_s0_master_band_names": rad_s0_master["rad_s0_master_band_names"],
         "rad_s0_master_stack": rad_s0_master["rad_s0_master_stack"],
+        "rad_master_cube_band_names": rad_master_cube["rad_master_cube_band_names"],
+        "rad_master_cube_stack": rad_master_cube["rad_master_cube_stack"],
         "band_stats_rows": stats_rows,
         "stack_presence_summary": stack_presence_summary,
         "tensor_audit_summary": tensor_audit_summary,
@@ -496,6 +579,14 @@ def _build_stack_alias_manifest(
                 "source_cell": "cell_050",
             },
             {
+                "filename": NOTEBOOK_RAD_MASTER_CUBE_NPY,
+                "source_notebook_family": "RAD_MASTER_CUBE_640",
+                "app_artifact": "rad_master_cube_stack",
+                "band_names": list(RAD_MASTER_CUBE_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_053",
+            },
+            {
                 "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
                 "source_notebook_family": "NANO_GEOPHYSICS_STACK_640",
                 "app_artifact": "nano_geophysics_stack",
@@ -514,7 +605,6 @@ def _build_stack_alias_manifest(
         ],
         "deferred_families": [
             "GPHYS_MASTER_640",
-            "RAD_MASTER_CUBE_640",
             "ULTIMATE_GPHYS_SCAN_640",
         ],
         "privacy": {
@@ -533,6 +623,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     nano_geophysics_stack = products["nano_geophysics_stack"]
     treasure_geophysics_stack = products["treasure_geophysics_stack"]
     rad_s0_master_stack = products["rad_s0_master_stack"]
+    rad_master_cube_stack = products["rad_master_cube_stack"]
     band_stats_rows = products["band_stats_rows"]
     stack_presence_summary = products["stack_presence_summary"]
     tensor_audit_summary = products["tensor_audit_summary"]
@@ -548,6 +639,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     assert isinstance(nano_geophysics_stack, np.ndarray)
     assert isinstance(treasure_geophysics_stack, np.ndarray)
     assert isinstance(rad_s0_master_stack, np.ndarray)
+    assert isinstance(rad_master_cube_stack, np.ndarray)
     assert isinstance(band_stats_rows, list)
     assert isinstance(stack_presence_summary, dict)
     assert isinstance(tensor_audit_summary, dict)
@@ -589,6 +681,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     notebook_nano_geophysics_stack_npy_path = notebook_stack_dir / NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY
     notebook_treasure_geophysics_stack_npy_path = notebook_stack_dir / NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY
     notebook_rad_s0_master_stack_npy_path = notebook_stack_dir / NOTEBOOK_RAD_S0_MASTER_STACK_NPY
+    notebook_rad_master_cube_npy_path = notebook_stack_dir / NOTEBOOK_RAD_MASTER_CUBE_NPY
     notebook_stack_alias_manifest_path = notebook_stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
 
     _save_multipage_tiff(stack_tif_path, cube)
@@ -602,6 +695,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     np.save(notebook_nano_geophysics_stack_npy_path, nano_geophysics_stack)
     np.save(notebook_treasure_geophysics_stack_npy_path, treasure_geophysics_stack)
     np.save(notebook_rad_s0_master_stack_npy_path, rad_s0_master_stack)
+    np.save(notebook_rad_master_cube_npy_path, rad_master_cube_stack)
 
     for band_index, band_name in enumerate(NANO_GEOPHYSICS_BANDS):
         band_array = nano_geophysics_stack[:, :, band_index].astype(np.float32, copy=False)
@@ -633,6 +727,20 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
 
     for band_index, band_name in enumerate(RAD_S0_MASTER_BANDS):
         band_array = rad_s0_master_stack[:, :, band_index].astype(np.float32, copy=False)
+        band_tif = notebook_sar_tif_dir / f"{band_name}_640.tif"
+        band_npy = notebook_sar_npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(band_tif, band_array, grid_spec)
+        write_raster_sidecar(
+            band_tif,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(band_npy, band_array)
+
+    for band_index, band_name in enumerate(RAD_MASTER_CUBE_BANDS):
+        band_array = rad_master_cube_stack[:, :, band_index].astype(np.float32, copy=False)
         band_tif = notebook_sar_tif_dir / f"{band_name}_640.tif"
         band_npy = notebook_sar_npy_dir / f"{band_name}_640.npy"
         write_georeferenced_raster(band_tif, band_array, grid_spec)
@@ -710,6 +818,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         "notebook_nano_geophysics_stack_npy": notebook_nano_geophysics_stack_npy_path,
         "notebook_treasure_geophysics_stack_npy": notebook_treasure_geophysics_stack_npy_path,
         "notebook_rad_s0_master_stack_npy": notebook_rad_s0_master_stack_npy_path,
+        "notebook_rad_master_cube_npy": notebook_rad_master_cube_npy_path,
         "notebook_stack_alias_manifest_json": notebook_stack_alias_manifest_path,
     }
 
@@ -850,6 +959,13 @@ class FeatureStacksStage(Stage):
                 relative_path=outputs["notebook_rad_s0_master_stack_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["notebook_rad_s0_master_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_RAD_MASTER_CUBE_640_npy",
+                relative_path=outputs["notebook_rad_master_cube_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_rad_master_cube_npy"].stat().st_size,
                 http_servable=False,
             ),
             build_stage_artifact(
