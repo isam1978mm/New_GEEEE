@@ -148,26 +148,27 @@ No private payloads, raster data, NPY data, CSV rows, SAR JSON bodies, image ide
     [x] notebook raw dB reference converted to linear contract
     [x] app radar_linear_support_stack passed converted-reference contract within tolerance
 
-[ ] SAR summary-stat reconciliation
-    [ ] inspect app QA/sar/sar_summary.csv vs notebook SUMMARY_RADAR / QA/sar/sar_summary.csv fields
-    [ ] determine whether mismatch is formatting, column naming, nodata field naming, or real summary computation difference
-    [ ] close as report-summary issue if underlying raster/NPY parity remains passed
+[x] SAR summary-stat reconciliation
+    [x] exact notebook summary CSV selected by the report was located
+    [x] schema mismatch identified: app nodata_count vs notebook nodata_px
+    [x] band-name mapping identified: incidence maps to notebook angle
+    [x] numeric min/max/mean differences classified as rounded summary-format deltas
+    [x] app final NPY stats recomputed and aligned with app summary at expected precision
+    [x] closed as report-summary schema/formatting issue, not underlying SAR raster/NPY failure
 ```
 
 ## Current opening item
 
 ```text
-[ ] SAR summary-stat reconciliation
+[ ] Final closeout tests and clean working tree
 ```
 
 Main subitems for the current opening item:
 
 ```text
-[ ] locate exact notebook summary CSV selected by the parity report
-[ ] compare schemas and band-name mapping
-[ ] compare min/max/mean/nodata fields with numeric tolerance
-[ ] compare summary values recomputed from the already-passed final app/reference arrays
-[ ] decide whether to patch summary writer/comparator or document formatting-only mismatch
+[ ] run targeted tests for touched SAR/parity docs and any touched parity scripts
+[ ] run full pytest suite if required before merge
+[ ] confirm git status is clean after docs/code updates
 ```
 
 ## Final closeout still needed
