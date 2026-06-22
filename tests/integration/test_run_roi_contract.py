@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -31,8 +32,8 @@ def test_create_run_writes_private_roi_contract_without_public_exposure(monkeypa
         assert contract_path.is_file()
         contract = json.loads(contract_path.read_text(encoding="utf-8"))
         assert contract["schema"] == ROI_CONTRACT_SCHEMA
-        assert contract["selected_point"]["latitude"] == 35.59499
-        assert contract["selected_point"]["longitude"] == 36.12694
+        assert contract["selected_point"]["latitude"] == pytest.approx(35.59499, abs=1e-8)
+        assert contract["selected_point"]["longitude"] == pytest.approx(36.12694, abs=1e-8)
         assert contract["roi_15km_wgs84_approx"]["side_length_km"] == 15.0
         assert contract["roi_6_4km_utm"]["side_length_m"] == 6400.0
         assert contract["grid"]["scale_m"] == 10
