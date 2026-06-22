@@ -14,9 +14,14 @@ from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import (
     INDEX_NAMES,
+    S2_DEM_MATCHED_MASK_MANIFEST_JSON,
+    S2_INDEX_VALID_MASK_TIF,
+    S2_MASK_OUTPUT_DIR,
+    S2_RAW_VALID_MASK_TIF,
     S2_SOURCE_BANDS,
     S2IndicesStage,
     build_s2_composite,
+    compute_s2_dem_matched_masks,
     compute_s2_indices,
     create_ee_s2_cube_fetcher,
     deterministic_s2_cube_fetcher,
@@ -57,6 +62,20 @@ def test_compute_s2_indices_masks_only_formulas_that_require_nodata_band() -> No
     assert outputs["NDVI"][0, 0] == pytest.approx((0.6 - 0.3) / (0.6 + 0.3))
     assert outputs["NDMI"][0, 0] == pytest.approx((0.6 - 0.4) / (0.6 + 0.4))
     assert outputs["BSI"][0, 0] == pytest.approx(((0.4 + 0.3) - (0.6 + 0.1)) / ((0.4 + 0.3) + (0.6 + 0.1)))
+
+
+def test_compute_s2_dem_matched_masks_tracks_raw_and_index_validity() -> None:
+    nodata = -9999.0
+    cube = np.ones((2, 2, len(S2_SOURCE_BANDS)), dtype=np.float32)
+    cube[0, 1, 5] = nodata
+    outputs = compute_s2_indices(cube, nodata=nodata)
+
+    masks = compute_s2_dem_matched_masks(cube, outputs, nodata=nodata)
+
+    assert masks["raw_valid_mask"].dtype == np.uint8
+    assert masks["index_valid_mask"].dtype == np.uint8
+    assert masks["raw_valid_mask"].tolist() == [[1, 0], [1, 1]]
+    assert masks["index_valid_mask"].tolist() == [[1, 0], [1, 1]]
 
 
 def test_build_s2_composite_uses_notebook_filters(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -151,21 +170,48 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
 
         result = asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == [*INDEX_NAMES, "s2_indices_summary", "s2_raw_cube"]
+        assert [artifact.name for artifact in result.artifacts] == [
+            *INDEX_NAMES,
+            "s2_raw_valid_mask_640",
+            "s2_index_valid_mask_640",
+            "s2_dem_matched_masks_manifest",
+            "s2_indices_summary",
+            "s2_raw_cube",
+        ]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
         for name in INDEX_NAMES:
             assert artifact_classes[name] == ArtifactClass.LOCAL_SENSITIVE
-        assert artifact_classes["s2_indices_summary"] == ArtifactClass.FILESYSTEM_ONLY
-        assert artifact_classes["s2_raw_cube"] == ArtifactClass.FILESYSTEM_ONLY
+        for name in ("s2_raw_valid_mask_640", "s2_index_valid_mask_640", "s2_dem_matched_masks_manifest", "s2_indices_summary", "s2_raw_cube"):
+            assert artifact_classes[name] == ArtifactClass.FILESYSTEM_ONLY
+        assert all(artifact.http_servable is False for artifact in result.artifacts if artifact.name.startswith("s2_") and artifact.name not in INDEX_NAMES)
         assert result.metadata["band_names"] == list(INDEX_NAMES)
+        assert result.metadata["mask_names"] == ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"]
 
         for name in INDEX_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
             assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        for filename in (S2_RAW_VALID_MASK_TIF, S2_INDEX_VALID_MASK_TIF):
+            sidecar = read_manifest(raster_sidecar_path(run_dir / S2_MASK_OUTPUT_DIR / filename))
+            assert sidecar["transform"] == grid_spec.manifest.crs_transform
+            assert sidecar["dtype"] == "uint8"
+            assert sidecar["nodata"] == 0.0
+
         summary = json.loads((run_dir / "QA" / "stacks" / "s2_indices_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "s2_indices"
         assert summary["index_bands"] == list(INDEX_NAMES)
         assert summary["source_bands"] == list(S2_SOURCE_BANDS)
+
+        mask_manifest = json.loads((run_dir / S2_MASK_OUTPUT_DIR / S2_DEM_MATCHED_MASK_MANIFEST_JSON).read_text(encoding="utf-8"))
+        assert mask_manifest["schema"] == "s2_dem_matched_masks_v1"
+        assert mask_manifest["coordinate_space"] == "authoritative_grid"
+        assert mask_manifest["grid_shape"] == [grid_spec.size, grid_spec.size]
+        assert mask_manifest["privacy"] == {"artifact_class": "FILESYSTEM_ONLY", "http_servable": False}
+        assert mask_manifest["date_rules"]["primary_start"] == "2022-01-01"
+        assert mask_manifest["date_rules"]["primary_cloud_max"] == 3
+        assert mask_manifest["date_rules"]["notebook_secret_cloud_max"] == 5
+        assert mask_manifest["date_rules"]["notebook_report_cloud_max"] == 10
+        assert mask_manifest["masks"]["raw_valid_mask"]["valid_fraction"] == 1.0
+        assert mask_manifest["masks"]["index_valid_mask"]["valid_fraction"] == 1.0
 
 
 def _settings(run_dir: Path):
