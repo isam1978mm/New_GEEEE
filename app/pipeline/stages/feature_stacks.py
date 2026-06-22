@@ -52,6 +52,10 @@ TENSOR_AUDIT_SUMMARY_JSON = "tensor_audit_summary.json"
 GEOMETRY_CONSISTENCY_SUMMARY_JSON = "geometry_consistency_summary.json"
 NOTEBOOK_STACK_OUTPUT_DIR = "NPY_STACKS"
 NOTEBOOK_RADAR_STACK_NPY = "RADAR_STACK_HWC_640_app.npy"
+NOTEBOOK_SCIENCE_CORE_STACK_NPY = "SCIENCE_CORE_STACK_HWC_640_app.npy"
+NOTEBOOK_RADAR_LINEAR_STACK_NPY = "RADAR_LINEAR_SUPPORT_STACK_640_app.npy"
+NOTEBOOK_AI_READY_STACK_NPY = "AI_READY_SUPPORT_STACK_640_app.npy"
+NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
 EPS = 1e-6
@@ -266,6 +270,58 @@ def build_feature_stack_products(
     }
 
 
+def _build_stack_alias_manifest(
+    *,
+    band_names: list[str],
+    radar_db_band_names: list[str],
+    radar_linear_band_names: list[str],
+) -> dict[str, object]:
+    return {
+        "schema": "notebook_stack_alias_manifest_v1",
+        "status": "partial_alias_contract",
+        "aliases": [
+            {
+                "filename": NOTEBOOK_RADAR_STACK_NPY,
+                "source_notebook_family": "RADAR_STACK_HWC_640",
+                "app_artifact": "radar_db_support_stack",
+                "band_names": radar_db_band_names,
+                "status": "implemented",
+            },
+            {
+                "filename": NOTEBOOK_SCIENCE_CORE_STACK_NPY,
+                "source_notebook_family": "SCIENCE_CORE_STACK_HWC_640",
+                "app_artifact": "science_core_stack",
+                "band_names": band_names,
+                "status": "app_native_alias",
+            },
+            {
+                "filename": NOTEBOOK_RADAR_LINEAR_STACK_NPY,
+                "source_notebook_family": "SIGMA0_MASTER_640",
+                "app_artifact": "radar_linear_support_stack",
+                "band_names": radar_linear_band_names,
+                "status": "implemented_subset",
+            },
+            {
+                "filename": NOTEBOOK_AI_READY_STACK_NPY,
+                "source_notebook_family": "TESLA_V7_2_TENSOR_EXPORT",
+                "app_artifact": "ai_ready_support_stack",
+                "band_names": band_names,
+                "status": "implemented_subset",
+            },
+        ],
+        "deferred_families": [
+            "NANO_STACK",
+            "GPHYS_MASTER_640",
+            "RAD_MASTER_CUBE_640",
+            "ULTIMATE_GPHYS_SCAN_640",
+        ],
+        "privacy": {
+            "artifact_class": "FILESYSTEM_ONLY",
+            "http_servable": False,
+        },
+    }
+
+
 def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     cube = products["cube"]
     s2_mask = products["s2_mask"]
@@ -276,6 +332,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     stack_presence_summary = products["stack_presence_summary"]
     tensor_audit_summary = products["tensor_audit_summary"]
     geometry_consistency_summary = products["geometry_consistency_summary"]
+    band_names = products["band_names"]
+    radar_db_band_names = products["radar_db_band_names"]
+    radar_linear_band_names = products["radar_linear_band_names"]
     assert isinstance(cube, np.ndarray)
     assert isinstance(s2_mask, np.ndarray)
     assert isinstance(radar_linear_stack, np.ndarray)
@@ -285,6 +344,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     assert isinstance(stack_presence_summary, dict)
     assert isinstance(tensor_audit_summary, dict)
     assert isinstance(geometry_consistency_summary, dict)
+    assert isinstance(band_names, list)
+    assert isinstance(radar_db_band_names, list)
+    assert isinstance(radar_linear_band_names, list)
 
     tensor_dir = run_dir / "stacks" / "tensor_support"
     optical_dir = run_dir / "stacks" / "optical_support"
@@ -309,24 +371,25 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     tensor_audit_path = qa_dir / TENSOR_AUDIT_SUMMARY_JSON
     geometry_summary_path = qa_dir / GEOMETRY_CONSISTENCY_SUMMARY_JSON
     notebook_radar_stack_npy_path = notebook_stack_dir / NOTEBOOK_RADAR_STACK_NPY
+    notebook_science_core_stack_npy_path = notebook_stack_dir / NOTEBOOK_SCIENCE_CORE_STACK_NPY
+    notebook_radar_linear_stack_npy_path = notebook_stack_dir / NOTEBOOK_RADAR_LINEAR_STACK_NPY
+    notebook_ai_ready_stack_npy_path = notebook_stack_dir / NOTEBOOK_AI_READY_STACK_NPY
+    notebook_stack_alias_manifest_path = notebook_stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
 
     _save_multipage_tiff(stack_tif_path, cube)
     np.save(stack_npy_path, cube)
     _save_multipage_tiff(radar_linear_tif_path, radar_linear_stack)
     np.save(radar_linear_npy_path, radar_linear_stack)
     np.save(notebook_radar_stack_npy_path, radar_db_stack)
+    np.save(notebook_science_core_stack_npy_path, cube)
+    np.save(notebook_radar_linear_stack_npy_path, radar_linear_stack)
+    np.save(notebook_ai_ready_stack_npy_path, ai_ready_stack)
     write_georeferenced_raster(radar_db_tif_path, radar_db_stack, grid_spec)
     np.save(radar_db_npy_path, radar_db_stack)
     _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)
     np.save(ai_ready_npy_path, ai_ready_stack)
     Image.fromarray(s2_mask.astype(np.float32)).save(s2_mask_path, format="TIFF")
-    write_raster_sidecar(
-        stack_tif_path,
-        grid_manifest=grid_spec.manifest,
-        nodata=grid_spec.nodata,
-        dtype="float32",
-        shape=cube.shape[:2],
-    )
+    write_raster_sidecar(stack_tif_path, grid_manifest=grid_spec.manifest, nodata=grid_spec.nodata, dtype="float32", shape=cube.shape[:2])
     write_raster_sidecar(
         radar_linear_tif_path,
         grid_manifest=grid_spec.manifest,
@@ -341,20 +404,8 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         dtype="float32",
         shape=radar_db_stack.shape[:2],
     )
-    write_raster_sidecar(
-        ai_ready_tif_path,
-        grid_manifest=grid_spec.manifest,
-        nodata=grid_spec.nodata,
-        dtype="float32",
-        shape=ai_ready_stack.shape[:2],
-    )
-    write_raster_sidecar(
-        s2_mask_path,
-        grid_manifest=grid_spec.manifest,
-        nodata=grid_spec.nodata,
-        dtype="float32",
-        shape=s2_mask.shape,
-    )
+    write_raster_sidecar(ai_ready_tif_path, grid_manifest=grid_spec.manifest, nodata=grid_spec.nodata, dtype="float32", shape=ai_ready_stack.shape[:2])
+    write_raster_sidecar(s2_mask_path, grid_manifest=grid_spec.manifest, nodata=grid_spec.nodata, dtype="float32", shape=s2_mask.shape)
 
     _write_csv(
         band_stats_path,
@@ -364,6 +415,18 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     stack_presence_path.write_text(json.dumps(stack_presence_summary, indent=2, sort_keys=True), encoding="utf-8")
     tensor_audit_path.write_text(json.dumps(tensor_audit_summary, indent=2, sort_keys=True), encoding="utf-8")
     geometry_summary_path.write_text(json.dumps(geometry_consistency_summary, indent=2, sort_keys=True), encoding="utf-8")
+    notebook_stack_alias_manifest_path.write_text(
+        json.dumps(
+            _build_stack_alias_manifest(
+                band_names=band_names,
+                radar_db_band_names=radar_db_band_names,
+                radar_linear_band_names=radar_linear_band_names,
+            ),
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
     return {
         "stack_tif": stack_tif_path,
@@ -380,6 +443,10 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         "tensor_audit_summary_json": tensor_audit_path,
         "geometry_consistency_summary_json": geometry_summary_path,
         "notebook_radar_stack_npy": notebook_radar_stack_npy_path,
+        "notebook_science_core_stack_npy": notebook_science_core_stack_npy_path,
+        "notebook_radar_linear_stack_npy": notebook_radar_linear_stack_npy_path,
+        "notebook_ai_ready_stack_npy": notebook_ai_ready_stack_npy_path,
+        "notebook_stack_alias_manifest_json": notebook_stack_alias_manifest_path,
     }
 
 
@@ -491,6 +558,34 @@ class FeatureStacksStage(Stage):
                 relative_path=outputs["notebook_radar_stack_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["notebook_radar_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_SCIENCE_CORE_STACK_HWC_640_npy",
+                relative_path=outputs["notebook_science_core_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_science_core_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_RADAR_LINEAR_SUPPORT_STACK_640_npy",
+                relative_path=outputs["notebook_radar_linear_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_radar_linear_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_AI_READY_SUPPORT_STACK_640_npy",
+                relative_path=outputs["notebook_ai_ready_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_ai_ready_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_stack_alias_manifest",
+                relative_path=outputs["notebook_stack_alias_manifest_json"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_stack_alias_manifest_json"].stat().st_size,
                 http_servable=False,
             ),
         ]
