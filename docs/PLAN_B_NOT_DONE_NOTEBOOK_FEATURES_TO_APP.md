@@ -1,6 +1,8 @@
 # Plan B — Implement Not-Done Notebook Features In The App
 
-Status: planning document.
+Status: active implementation document.
+
+Last update: 2026-06-22 — B1 item 8 app port implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -24,7 +26,7 @@ Can we make it in app?
 
 | # | Not-done-now notebook item | Is it done now? | Can we make it in app? | Plan B note |
 |---:|---|---|---:|---|
-| 8 | Nano / treasure / geophysics stacks | 🟥 No | Yes | Choose the final notebook variant first. Do not port duplicate variants blindly. |
+| 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 9 | More feature stacks / rename layers | 🟥 No | Yes | Define output layer names and contracts, then add missing writers. |
 | 15 | Bonus / simulator features | 🟥 No | Yes | Optional/private stage unless specifically required by target pipeline. |
 | 17 | Extra S2 era pulls / masks | 🟥 No | Yes | Add historical/seasonal S2 pull stage using notebook date/cloud rules. |
@@ -62,6 +64,66 @@ Target items:
 
 Outcome:
   all non-ML tensor/raster inputs required by the late notebook classifier phases exist in the app.
+```
+
+### B1.1 result — item 8 Nano / treasure / geophysics stacks
+
+```text
+Status:
+  App port implemented.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variants selected:
+  cell_037 -> NANO_GEOPHYSICS_STACK_640.npy
+  cell_039 -> TREASURE_GEOPHYSICS_STACK_640.npy
+
+Skipped for first B1 implementation:
+  cell_036 -> duplicate/older Nano variant
+  cell_044 -> explicitly experimental ALT variant
+  cell_051 -> later Geophysical Master stack
+  cell_054 -> later Ultimate Geophysical Scan
+
+Implemented app outputs:
+  NPY_STACKS/NANO_GEOPHYSICS_STACK_640.npy
+  NPY_STACKS/TREASURE_GEOPHYSICS_STACK_640.npy
+  NPY_RADAR_BANDS/{7 Plan B B1 bands}_640.npy
+  GEOTIFF_RADAR_BANDS/{7 Plan B B1 bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{7 Plan B B1 bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entries for source_cell cell_037 and cell_039
+
+Implementation choice:
+  Use existing app SAR arrays VV_dB and VH_dB from npy_radar_bands.
+  Do not add another Earth Engine sampling stage for these formulas.
+
+Validation done:
+  feature_stacks syntax check passed.
+  focused feature stack tests passed.
+  related SAR/alignment/runs API checks passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+
+Remaining:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B1.1
+
+```text
+Recommended next main item:
+  #9 More feature stacks / rename layers
+
+Why:
+  #8 now has an app implementation and local output proof.
+  #9 is the next item in B1 and affects naming/contracts for later fusion and ML tensors.
+  #15 bonus/simulator is optional.
+  #17/#18 S2-era/mask work should come after stack naming/contracts are clean.
+  #20 fusion/intelligence tensors should come after the stack family and rename contracts are stable.
+
+Next action:
+  Inspect exact notebook cells for item #9.
+  Compare current app stack aliases, band names, and output folders.
+  Produce a gap table before coding.
 ```
 
 ### B2 — Focus-analysis and target-output contracts
