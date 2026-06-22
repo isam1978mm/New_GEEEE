@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 8 app port implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 9 first stack target implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -27,7 +27,7 @@ Can we make it in app?
 | # | Not-done-now notebook item | Is it done now? | Can we make it in app? | Plan B note |
 |---:|---|---|---:|---|
 | 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 9 | More feature stacks / rename layers | 🟥 No | Yes | Define output layer names and contracts, then add missing writers. |
+| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | First target implemented: canonical cell 050 RAD_S0_MASTER_STACK_640. Remaining item #9 stack families still pending. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟥 No | Yes | Optional/private stage unless specifically required by target pipeline. |
 | 17 | Extra S2 era pulls / masks | 🟥 No | Yes | Add historical/seasonal S2 pull stage using notebook date/cloud rules. |
 | 18 | DEM-matched S2 masks | 🟥 No | Yes | Add or extend S2 mask products so they align to the DEM/grid contract. |
@@ -107,22 +107,71 @@ Remaining:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.1
+### B1.2 result — item 9 More feature stacks / rename layers, first target
+
+```text
+Status:
+  First item #9 target app port implemented.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected for first target:
+  cell_050 -> RAD_S0_MASTER_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/RAD_S0_MASTER_STACK_640.npy
+  NPY_RADAR_BANDS/{6 RAD_S0 bands}_640.npy
+  GEOTIFF_RADAR_BANDS/{6 RAD_S0 bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{6 RAD_S0 bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_050
+
+Implemented band order:
+  RAD_S0_VV_dB
+  RAD_S0_VH_dB
+  RAD_S0_VV_Med1p5px_dB
+  RAD_S0_VH_Med1p5px_dB
+  RAD_S0_VH_VV_Ratio_lin
+  RAD_S0_Angle_deg
+
+Implementation choice:
+  Use existing app SAR arrays VV_dB, VH_dB, and incidence from npy_radar_bands.
+  Compute the clean Sigma0 naming contract locally in FeatureStacksStage.
+  Do not add another Earth Engine sampling stage for this first target.
+
+Validation done:
+  feature_stacks syntax check passed.
+  focused feature stack test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  RAD_S0 stack shape confirmed as (640, 640, 6) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_050 and status implemented.
+
+Remaining item #9 families:
+  cell_047 -> MASTER_RTC_REFINED_STACK_640.npy
+  cell_051 -> GPHYS_MASTER_STACK_640.npy
+  cell_052 -> ARCH_TARGETS_STACK_640.npy
+  cell_053 -> RAD_MASTER_CUBE_640.npy
+  cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.2 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B1.2
 
 ```text
 Recommended next main item:
-  #9 More feature stacks / rename layers
+  Continue item #9 with the next stack-family target.
 
-Why:
-  #8 now has an app implementation and local output proof.
-  #9 is the next item in B1 and affects naming/contracts for later fusion and ML tensors.
-  #15 bonus/simulator is optional.
-  #17/#18 S2-era/mask work should come after stack naming/contracts are clean.
-  #20 fusion/intelligence tensors should come after the stack family and rename contracts are stable.
+Candidate order:
+  1. cell_053 -> RAD_MASTER_CUBE_640.npy
+  2. cell_051 -> GPHYS_MASTER_STACK_640.npy
+  3. cell_047 -> MASTER_RTC_REFINED_STACK_640.npy
+  4. cell_052 -> ARCH_TARGETS_STACK_640.npy
+  5. cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
 Next action:
-  Inspect exact notebook cells for item #9.
-  Compare current app stack aliases, band names, and output folders.
+  Inspect exact formula requirements for cell_053 against current app SAR arrays.
   Produce a gap table before coding.
 ```
 
