@@ -1,6 +1,6 @@
 # Current parity checklist
 
-Status: closed checklist snapshot for the current parity/recovery workflow.
+Status: closed checklist snapshot for the current parity/recovery workflow, with Plan A closeout recorded on 2026-06-22.
 
 No private payloads, raster data, NPY data, CSV rows, SAR JSON bodies, image identifiers, coordinates, or per-pixel values are included.
 
@@ -157,10 +157,49 @@ No private payloads, raster data, NPY data, CSV rows, SAR JSON bodies, image ide
     [x] closed as report-summary schema/formatting issue, not underlying SAR raster/NPY failure
 ```
 
+## Plan A closeout
+
+```text
+[x] A1 map point picker / ROI selection
+    [x] backend ROI/grid contract added and validated
+    [x] API-created run writes PRIVATE/RUN_ROI_CONTRACT.json
+    [x] UI fixed-grid wording clarified
+    [x] QA-grid micro transform tolerance documented for frozen validation
+
+[x] A2 QA completion
+    [x] recursive official-TIF alignment audit added
+    [x] geometry/auditor coverage expanded
+    [x] safe reference-TIF comparison helper added
+    [x] public API safety regression passed
+
+[x] A3 stack and mask scaffolding
+    [x] notebook stack aliases added under local-only NPY_STACKS
+    [x] STACK_ALIAS_MANIFEST.json added
+    [x] unstable Nano/GPHYS/Ultimate formulas remain honestly deferred
+    [x] feature-stack, alignment, and safety regressions passed
+
+[x] A4 focus and target/export scaffolding
+    [x] 17m focus mask regression passed
+    [x] target CSV/TXT/JSON outputs added as local-only outputs
+    [x] detected-feature GeoJSON added as pixel-grid local-only output
+    [x] object/focus/public-safety tests passed
+
+[x] A5 S2 masks / era rules / fusion prerequisites
+    [x] DEM-matched S2 raw-valid and index-valid masks added
+    [x] S2 era/date/cloud rules recorded in mask manifest
+    [x] zero-point/report stages inspected and confirmed already implemented
+    [x] S2/feature/alignment/public-safety tests passed
+
+[x] Plan A focused roll-up validation
+    [x] 27 passed, 2 warnings
+    [x] warnings are non-blocking local/deprecation warnings
+    [x] git status clean after validation
+```
+
 ## Current opening item
 
 ```text
-none
+none — stop before Plan B
 ```
 
 Main subitems for final closeout:
@@ -169,6 +208,8 @@ Main subitems for final closeout:
 [x] targeted closeout tests passed: 22 passed, 1 warning
 [x] full pytest suite passed: 1656 passed, 40 skipped, 2 warnings
 [x] git status clean after fast-forward pull
+[x] Plan A focused roll-up passed: 27 passed, 2 warnings
+[x] Plan A docs updated; do not start Plan B yet
 ```
 
 ## Final closeout
@@ -177,4 +218,5 @@ Main subitems for final closeout:
 [x] Run final targeted tests for touched parity/SAR docs and scripts: 22 passed, 1 warning
 [x] Run full pytest suite: 1656 passed, 40 skipped, 2 warnings
 [x] Confirm git status is clean after docs/code updates and fast-forward pull
+[x] Record Plan A closeout status before Plan B
 ```
