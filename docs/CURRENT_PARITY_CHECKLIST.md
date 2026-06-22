@@ -1,6 +1,6 @@
 # Current parity checklist
 
-Status: active checklist snapshot for the current parity/recovery workflow.
+Status: closed checklist snapshot for the current parity/recovery workflow.
 
 No private payloads, raster data, NPY data, CSV rows, SAR JSON bodies, image identifiers, coordinates, or per-pixel values are included.
 
@@ -160,21 +160,21 @@ No private payloads, raster data, NPY data, CSV rows, SAR JSON bodies, image ide
 ## Current opening item
 
 ```text
-[ ] Final clean working tree check
+none
 ```
 
-Main subitems for the current opening item:
+Main subitems for final closeout:
 
 ```text
 [x] targeted closeout tests passed: 22 passed, 1 warning
 [x] full pytest suite passed: 1656 passed, 40 skipped, 2 warnings
-[ ] confirm git status is clean after docs/code updates
+[x] git status clean after fast-forward pull
 ```
 
-## Final closeout still needed
+## Final closeout
 
 ```text
 [x] Run final targeted tests for touched parity/SAR docs and scripts: 22 passed, 1 warning
 [x] Run full pytest suite: 1656 passed, 40 skipped, 2 warnings
-[ ] Confirm git status is clean after docs/code updates
+[x] Confirm git status is clean after docs/code updates and fast-forward pull
 ```
