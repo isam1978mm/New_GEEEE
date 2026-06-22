@@ -1,8 +1,8 @@
 # Remaining Work Checklist
 
-This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, and HYPER-1B verifier pass.
+This document is the working checklist for choosing the next task after the H5 score-band aggregate review, R1 REPORT_640 verifier pass, AIREADY-S1 verifier pass, HYPER-1A verifier pass, HYPER-1B verifier pass, INT-1 verifier pass, S1-1 verifier pass, S1 filtered stack verifier pass, PAN/optical verifier pass, AI_READY support stack verifier pass, and D1D object-table verifier pass.
 
-It separates completed work, next parity work, blocked parity work, source-recovery work, safety boundaries, and later/deployment-only work.
+It separates completed work, next parity work, source-recovery work, safety boundaries, and later/deployment-only work.
 
 ## 0. Current baseline
 
@@ -18,16 +18,33 @@ It separates completed work, next parity work, blocked parity work, source-recov
 [x] R1 REPORT_640 verifier passed
 [x] R1 REPORT_640 result doc recorded
 [x] AIREADY-S1 secret-layer verifier passed
-[x] AIREADY-S1 result doc recorded
+[x] AIREADY-S1 result recorded
 [x] HYPER-1A RES_2p5M verifier passed
-[x] HYPER-1A result doc recorded
+[x] HYPER-1A result recorded
 [x] HYPER-1B core tensor/NPY verifier passed
-[x] HYPER-1B result doc recorded
+[x] HYPER-1B result recorded
+[x] INT-1 internal AI_BEH raster verifier passed
+[x] INT-1 result recorded
+[x] S1-1 core-band verifier passed
+[x] S1-1 result recorded
+[x] S1 filtered stack verifier passed
+[x] S1 filtered stack result recorded
+[x] PAN/optical component verifier passed
+[x] PAN/optical stack verifier passed
+[x] PAN/optical result recorded
+[x] AI_READY support stack reference found
+[x] AI_READY support stack app candidate selected
+[x] AI_READY support stack value parity passed
+[x] AI_READY support stack status doc corrected
+[x] D1D object-table reference found in D1 root
+[x] D1D object-table app candidate selected
+[x] D1D object-table hash/schema/row-count parity passed
+[x] D1D object-table result recorded
 ```
 
-## 1. R1 REPORT_640 real app-vs-reference parity
+## 1. Completed real app-vs-reference parity gates
 
-Current state:
+### R1 REPORT_640
 
 ```text
 [x] R1 plan written
@@ -36,7 +53,7 @@ Current state:
 [x] R1 result recorded
 ```
 
-R1 closeout result:
+Closeout result:
 
 ```text
 status: passed
@@ -46,41 +63,17 @@ missing_count: 0
 comparison_unavailable_count: 0
 ```
 
-Required outputs passed:
+### AIREADY-S1 secret layers
 
 ```text
-[x] REPORT_640_Pottery_Report.tif
-[x] REPORT_640_Mass_Report.tif
-[x] REPORT_640_FINAL_Zero_Point_Targets.tif
-```
-
-Safety boundary remains:
-
-```text
-[x] no raster payloads committed
-[x] no exact coordinate-bearing paths committed
-[x] no public REPORT_640 downloads enabled
-[x] no HTTP raster serving enabled
-[x] no map overlays enabled
-```
-
-## 2. AIREADY real app-vs-reference parity
-
-Current state:
-
-```text
-[x] AIREADY plan written
 [x] AIREADY-S1 secret-layer reference files confirmed
 [x] AIREADY-S1 app files confirmed
-[x] AIREADY-S1 nested reference output directory support added
-[x] AIREADY-S1 CLI tests passed
-[x] AIREADY-S1 nonmatching app candidate rejected
 [x] AIREADY-S1 matching app candidate selected
 [x] AIREADY-S1 secret-layer verifier passed
 [x] AIREADY-S1 result recorded
 ```
 
-AIREADY-S1 closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -90,48 +83,21 @@ counts_by_status:
   passed: 6
 ```
 
-Required AIREADY-S1 outputs passed:
-
-```text
-[x] AI_READY_640_Secret_Gold_Halo.tif
-[x] AI_READY_640_Secret_Silver_Oxide.tif
-[x] AI_READY_640_Secret_Tunnel_Ceiling.tif
-[x] AI_READY_640_Secret_Thermal_Inertia.tif
-[x] AI_READY_640_Secret_Chemical_Protector.tif
-[x] AI_READY_640_Secret_Hidden_Doors.tif
-```
-
-Remaining AIREADY work:
-
-```text
-[ ] AIREADY-FR Fraction outputs: source known, app writer/output path still needed
-[ ] AIREADY-MH Metal Hardness: source-recovery blocked
-[ ] AIREADY-AN Magnetic/EM anomaly: source-recovery blocked
-```
-
 Do not claim all AIREADY parity from AIREADY-S1 alone.
 
-## 3. HYPER-1A RES_2p5M real app-vs-reference parity
-
-Current state:
+### HYPER-1A RES_2p5M
 
 ```text
 [x] HYPER-1A plan written
-[x] D1C reference RES_2p5M TIF found
-[x] D1C reference RES_2p5M NPY found
-[x] app source hypercube found
-[x] nonmatching app candidate rejected
+[x] reference RES_2p5M TIF/NPY found
 [x] matching app candidate selected
-[x] source hypercube values matched D1C source exactly
+[x] source hypercube values matched reference source exactly
 [x] generator added and tested
-[x] app RES_2p5M TIF generated
-[x] app RES_2p5M NPY generated
-[x] verifier transform policy patched and tested
 [x] D2-gated HYPER-1A verifier passed
 [x] HYPER-1A result recorded
 ```
 
-HYPER-1A closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -141,41 +107,19 @@ counts_by_status:
   passed: 2
 ```
 
-Required HYPER-1A outputs passed:
-
-```text
-[x] FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.tif
-[x] FINAL_TESLA_V7_2_HYPERCUBE_RES_2p5M.npy
-```
-
-Safety boundary remains:
-
-```text
-[x] no raster/NPY payloads committed
-[x] no exact coordinate-bearing paths committed
-[x] no public HYPER-1A downloads enabled
-[x] no HTTP raster/tensor serving enabled
-[x] no map overlays enabled
-```
-
-## 4. HYPER-1B core tensor/NPY real app-vs-reference parity
-
-Current state:
+### HYPER-1B core tensor/NPY
 
 ```text
 [x] HYPER-1B plan written
-[x] D1C reference FINAL_TESLA_V7_2_HYPERCUBE.npy found
-[x] D1C reference RADAR_STACK_HWC_640_*.npy found
-[x] app FINAL_TESLA_V7_2_HYPERCUBE.npy found
-[x] app RADAR_STACK_HWC_640_app.npy found
-[x] nonmatching app candidate rejected
+[x] reference FINAL_TESLA_V7_2_HYPERCUBE.npy found
+[x] reference RADAR_STACK_HWC_640_*.npy found
 [x] matching app candidate selected
 [x] run-contract transform policy patched and tested
 [x] D2-gated HYPER-1B verifier passed
 [x] HYPER-1B result recorded
 ```
 
-HYPER-1B closeout result:
+Closeout result:
 
 ```text
 overall_status: passed
@@ -185,98 +129,226 @@ counts_by_status:
   passed: 2
 ```
 
-Required HYPER-1B outputs passed:
+### INT-1 internal AI_BEH rasters
 
 ```text
-[x] FINAL_TESLA_V7_2_HYPERCUBE.npy
-[x] RADAR_STACK_HWC_640_*.npy
+[x] INT-1 plan written
+[x] D1C reference rasters confirmed for 13 AI_BEH outputs
+[x] D1C-grid notebook rerun reproduced D1C for all 13 outputs
+[x] D1C-grid source inputs exported privately
+[x] canonical app writer patched to match notebook source/formula contract
+[x] 13 canonical app rasters generated
+[x] standard D2-gated verifier passed
+[x] INT-1 result recorded
 ```
 
-Safety boundary remains:
+Closeout result:
 
 ```text
-[x] no tensor payloads committed
-[x] no exact coordinate-bearing paths committed
-[x] no public HYPER-1B downloads enabled
-[x] no HTTP tensor serving enabled
+overall_status: passed
+expected_count: 13
+compared_count: 13
+counts_by_status:
+  passed: 13
+family_count: 6
+```
+
+### S1-1 core-band Sentinel-1 ASC/DESC filtered outputs
+
+```text
+[x] S1-1 plan written
+[x] four S1-1 GeoTIFF references exist
+[x] four S1-1 NPY references exist
+[x] matching app output root found
+[x] all eight app files exist
+[x] final RTC/app aliases rejected as non-equivalent
+[x] SAR ASC/DESC verifier passed
+[x] S1-1 result recorded
+```
+
+Closeout result:
+
+```text
+overall_status: passed
+expected_count: 8
+compared_count: 8
+counts_by_status:
+  passed: 8
+raster_value_comparison_available: true
+npy_outputs_passed: true
+max_abs_diff: 0.0 for all outputs
+mean_abs_diff: 0.0 for all outputs
+```
+
+### S1 filtered stack tensor
+
+```text
+[x] S1_FILTERED_LAYERS_STACK_640.npy app output found
+[x] S1_FILTERED_LAYERS_STACK_640.npy reference output found
+[x] current S1 filtered stack verifier passed
+[x] S1 filtered stack result recorded
+```
+
+Closeout result:
+
+```text
+overall_status: passed
+status: passed
+output_name: S1_FILTERED_LAYERS_STACK_640.npy
+shape_match: true
+dtype_match: true
+hash_match: true
+count_compared_values: 1638400
+count_nan_or_nodata_values: 0
+max_abs_diff: 0.0
+mean_abs_diff: 0.0
+```
+
+### PAN/optical component and stack outputs
+
+```text
+[x] duplicate PAN component paths identified
+[x] canonical component reference selected: OPT/PAN_TIFS_640 and OPT/PAN_NPY_640
+[x] app-produced canonical PAN component files found
+[x] PAN component verifier passed
+[x] PAN stack verifier passed
+[x] PAN/optical result recorded
+```
+
+Component closeout result:
+
+```text
+overall_status: passed
+expected_count: 4
+compared_count: 4
+counts_by_status:
+  passed: 4
+```
+
+Stack closeout result:
+
+```text
+overall_status: passed
+status: passed
+output_name: PAN_LAYERS_STACK_640.npy
+shape_match: true
+dtype_match: true
+hash_match: false
+count_compared_values: 819200
+count_nan_or_nodata_values: 0
+max_abs_diff: 5.960464477539063e-08
+mean_abs_diff: 9.302630132879131e-10
+```
+
+### AI_READY support stack tensor
+
+```text
+[x] App AI_READY support stack found
+[x] 19-band list confirmed
+[x] Private notebook frozen reference found under data/private_references
+[x] Matching app run selected: a11309bf-ed47-4bf5-bbf4-f755b904065c
+[x] Nonmatching app run rejected: e11d3280-a7b7-4c7c-a761-8b08ac9452f2
+[x] AI_READY support stack parity passed
+[x] Earlier blocked wording corrected
+```
+
+Closeout result:
+
+```text
+artifact: ai_ready_support_stack.npy
+matching_app_run: a11309bf-ed47-4bf5-bbf4-f755b904065c
+shape: [640, 640, 19]
+dtype: float32
+hash_match: true
+same_values_exact: true
+compared_count: 7782400
+nan_count_ref: 0
+nan_count_app: 0
+max_abs_diff: 0.0
+mean_abs_diff: 0.0
+```
+
+Standalone Fraction/MH/AN note:
+
+```text
+The exact standalone planned filenames were searched.
+They are not the active AI_READY support-stack parity target.
+They are not channels in the 19-band support-stack band list.
+No standalone Fraction/MH/AN verifier pass is claimed.
+```
+
+### D1D object-table outputs
+
+```text
+[x] D1C bundle exact search done: object tables not found there
+[x] wider D1 reference root searched
+[x] reference object tables found: D1_NEW_IPYNB_REFERENCE_2026_06_10
+[x] app outputs found in two runs
+[x] matching app run selected by hash: e11d3280-a7b7-4c7c-a761-8b08ac9452f2
+[x] schema-only / row-count / hash check completed
+[x] D1D object-table parity passed
+[x] D1D result recorded
+```
+
+Closeout result:
+
+```text
+overall_status: passed
+reference_root_name: D1_NEW_IPYNB_REFERENCE_2026_06_10
+matching_app_run: e11d3280-a7b7-4c7c-a761-8b08ac9452f2
+expected_count: 2
+passed_count: 2
+```
+
+Outputs:
+
+```text
+objects_index.csv:
+  hash_match: true
+  schema_match: true
+  row_count_match: true
+  row_count: 816
+  column_count: 11
+
+clusters_summary.csv:
+  hash_match: true
+  schema_match: true
+  row_count_match: true
+  row_count: 454
+  column_count: 5
+```
+
+Result doc:
+
+```text
+docs/D1D_OBJECT_TABLE_VERIFIER_RESULT.md
+```
+
+D1D boundary:
+
+```text
+[x] no CSV rows committed
+[x] no object patches committed
+[x] no object_mask.npy payload committed
+[x] no coordinate-bearing row values committed
+[x] no public object-table downloads enabled
+[x] no HTTP table/array serving enabled
 [x] no map overlays enabled
 ```
 
-## 5. Next blocked real app-vs-reference parity items
+## 2. Remaining source-recovery / parity candidates
 
-These are after R1, AIREADY-S1, HYPER-1A, and HYPER-1B.
-
-```text
-[ ] INT-1 internal raster real app-vs-reference parity          <- NEXT RECOMMENDED
-[ ] S1-1 core-band real app-vs-reference parity
-```
-
-Common sub-checklist for each:
+No next gate is selected yet. Choose one explicitly.
 
 ```text
-[ ] Locate frozen D1C reference files
-[ ] Locate or generate matching app files
-[ ] Confirm app files are real app outputs, not copied references
-[ ] Confirm CRS / scale / transform / shape / dtype / band semantics
-[ ] Run family-specific verifier
-[ ] Record safe docs-only result
+[ ] SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and stack
+    Do not broaden S1-1 or S1 filtered stack passes into all SAR/S1 parity.
+
+[ ] Standalone AI_READY Fraction/MH/AN files
+    Only if the operator supplies real notebook/source evidence later.
 ```
 
-## 6. Source-recovery items
-
-These are not ready for verifier work yet.
-
-```text
-[ ] D1D object-table outputs
-[ ] AI_READY remaining support families
-[ ] SAR/S1 support, intermediate, and QA/provenance outputs
-[ ] PAN/optical image components and stack
-```
-
-Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
-
-### 6A. D1D object-table outputs
-
-```text
-[ ] Recover/export same-run object-table family
-[ ] Confirm objects_index.csv
-[ ] Confirm clusters_summary.csv
-[ ] Confirm related source tensors consistently match same run
-[ ] Run D2-gated comparison
-```
-
-### 6B. AI_READY remaining support families
-
-```text
-[ ] AIREADY-FR: decide whether to build Fraction output writer path
-[ ] AIREADY-MH: recover Metal Hardness source/writer contract
-[ ] AIREADY-AN: recover Magnetic/EM anomaly source/writer contract
-```
-
-### 6C. SAR/S1 support/intermediate/QA outputs
-
-```text
-[ ] Recover exact notebook source contract
-[ ] Recover selected source IDs / metadata
-[ ] Confirm ASC/DESC filtered layers
-[ ] Confirm S1_FILTERED_LAYERS_STACK_640.npy requirement
-[ ] Confirm pre-RTC/intermediate/QA outputs
-[ ] Add app writer path if missing
-[ ] Verify only after source recovery
-```
-
-### 6D. PAN/optical image components and stack
-
-```text
-[ ] Recover optical/PAN source requirement
-[ ] Confirm notebook source logic
-[ ] Confirm PAN component outputs
-[ ] Confirm PAN_LAYERS_STACK_640.npy
-[ ] Add explicit source-driven PAN writer/run
-[ ] Run PAN component and stack verifiers
-```
-
-## 7. H5 / prediction serving boundaries still blocked
+## 3. H5 / prediction serving boundaries still blocked
 
 H5 is complete at aggregate level. These remain blocked:
 
@@ -294,7 +366,7 @@ H5 is complete at aggregate level. These remain blocked:
 
 Allowed H5 level remains aggregate/redacted only.
 
-## 8. Paid Imagery Request Package / old V6 status
+## 4. Paid Imagery Request Package / old V6 status
 
 No main work now.
 
@@ -318,7 +390,7 @@ The external old V6 notebook/source-lock track remains parked:
 
 Do not reopen this now.
 
-## 9. Deployment/auth/public exposure — later only
+## 5. Deployment/auth/public exposure — later only
 
 ```text
 [ ] Real auth provider integration
@@ -334,25 +406,18 @@ Do not reopen this now.
 ## Correct next order
 
 ```text
-1. INT-1 internal raster real app-vs-reference parity
-   [ ] write/confirm INT-1 plan
-   [ ] locate private D1C INT-1 reference files
-   [ ] locate/generate private app INT-1 output files
-   [ ] confirm required INT-1 file set
+1. Choose the next source-recovery or parity family explicitly.
+
+2. For the selected family:
+   [ ] write/confirm plan
+   [ ] locate private reference files
+   [ ] locate/generate private app output files
+   [ ] confirm required file set
    [ ] run grid/source contract check
-   [ ] run D2-gated verifier
-   [ ] record INT-1 verifier result
+   [ ] run D2-gated verifier or safe metadata/hash verifier as appropriate
+   [ ] record safe docs-only result
 
-2. After INT-1
-   [ ] S1-1 parity
-
-3. Heavier recovery
-   [ ] D1D object tables
-   [ ] AI_READY remaining support families
-   [ ] SAR/S1 recovery/build
-   [ ] PAN recovery/build
-
-4. Later
+3. Later:
    [ ] real auth provider
    [ ] public exposure review
    [ ] old external V6 source-lock track
@@ -361,5 +426,5 @@ Do not reopen this now.
 ## Next actionable item
 
 ```text
-INT-1 internal raster real app-vs-reference parity plan
+Choose next family: SAR/S1 remaining support/QA.
 ```

@@ -6,24 +6,10 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from app.pipeline.parity import resolve_run_output_path
 
-
-AI_BEH_RELATION_VERIFICATION_SCHEMA_VERSION = (
-    "ai_beh_relation_parity_verification_v1"
-)
-AI_BEH_RELATION_REPORT_RELATIVE_PATH = (
-    "manifests/ai_beh_relation_parity_verification.json"
-)
-AI_BEH_RELATION_CLASSIFICATION = "notebook-parity semantic raster stage"
-AI_BEH_RELATION_FAMILY = "AI_BEH semantic rasters"
-AI_BEH_RELATION_OUTPUT_NAMES = (
-    "AI_BEH_VegRoot_REL_ND_DOM_lin_640.tif",
-    "AI_BEH_IronOxide_REL_Ratio_DOM_lin_640.tif",
-    "AI_BEH_ClayThermal_REL_Ratio_DOM_lin_640.tif",
-)
 DEFAULT_TRANSFORM_ATOL = 1e-5
 
 ALLOWED_OUTPUT_STATUSES = {
@@ -44,24 +30,30 @@ ALLOWED_OVERALL_STATUSES = {
 
 
 @dataclass(frozen=True)
-class AIBehRelationVerificationResult:
+class AIBehRasterVerificationPayload:
     report_path: Path
     overall_status: str
     outputs: tuple[dict[str, Any], ...]
     raster_value_comparison_available: bool
 
 
-def verify_ai_beh_relation_parity(
+def verify_ai_beh_raster_outputs(
+    *,
     app_output_dir: str | Path,
     notebook_reference_dir: str | Path,
     run_dir: str | Path,
     run_id: str,
-    *,
+    output_names: Sequence[str],
+    schema_version: str,
+    report_relative_path: str | Path,
+    classification: str,
+    family: str,
+    missing_app_note: str,
+    missing_reference_note: str,
     atol: float = 1e-6,
     rtol: float = 1e-6,
-    report_relative_path: str | Path = AI_BEH_RELATION_REPORT_RELATIVE_PATH,
-) -> AIBehRelationVerificationResult:
-    """Verify AI_BEH relation parity against frozen notebook reference rasters."""
+) -> AIBehRasterVerificationPayload:
+    """Verify one AI_BEH raster family against frozen notebook references."""
 
     app_root = Path(app_output_dir)
     reference_root = Path(notebook_reference_dir)
@@ -75,21 +67,24 @@ def verify_ai_beh_relation_parity(
             app_root / output_name,
             reference_root / output_name,
             rasterio_available=rasterio_available,
+            classification=classification,
+            missing_app_note=missing_app_note,
+            missing_reference_note=missing_reference_note,
             atol=atol,
             rtol=rtol,
         )
-        for output_name in AI_BEH_RELATION_OUTPUT_NAMES
+        for output_name in output_names
     )
     overall_status = _overall_status(output_items)
     payload = {
-        "schema_version": AI_BEH_RELATION_VERIFICATION_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "run_id": run_id,
         "created_at": datetime.now(UTC).isoformat(),
         "app_output_dir": str(app_root),
         "notebook_reference_dir": str(reference_root),
         "outputs": list(output_items),
-        "classification": AI_BEH_RELATION_CLASSIFICATION,
-        "family": AI_BEH_RELATION_FAMILY,
+        "classification": classification,
+        "family": family,
         "target_mode": "notebook_parity",
         "artifact_class": "LOCAL_SENSITIVE",
         "http_servable": False,
@@ -100,7 +95,7 @@ def verify_ai_beh_relation_parity(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    return AIBehRelationVerificationResult(
+    return AIBehRasterVerificationPayload(
         report_path=report_path,
         overall_status=overall_status,
         outputs=output_items,
@@ -114,10 +109,13 @@ def _verify_one_output(
     reference_path: Path,
     *,
     rasterio_available: bool,
+    classification: str,
+    missing_app_note: str,
+    missing_reference_note: str,
     atol: float,
     rtol: float,
 ) -> dict[str, Any]:
-    item = _base_output_item(output_name, app_path, reference_path)
+    item = _base_output_item(output_name, app_path, reference_path, classification)
     app_exists = app_path.is_file()
     reference_exists = reference_path.is_file()
     item["app_exists"] = app_exists
@@ -131,17 +129,13 @@ def _verify_one_output(
     )
 
     if not app_exists:
-        return _finish_output(
-            item,
-            status="missing_app_output",
-            notes="App AI_BEH relation output is missing.",
-        )
+        return _finish_output(item, status="missing_app_output", notes=missing_app_note)
     if not reference_exists:
         return _finish_output(
             item,
             status="missing_reference_output",
             runtime_output_verified=True,
-            notes="Frozen notebook AI_BEH relation reference is missing.",
+            notes=missing_reference_note,
         )
     if not rasterio_available:
         return _finish_output(
@@ -166,7 +160,10 @@ def _verify_one_output(
 
 
 def _base_output_item(
-    output_name: str, app_path: Path, reference_path: Path
+    output_name: str,
+    app_path: Path,
+    reference_path: Path,
+    classification: str,
 ) -> dict[str, Any]:
     return {
         "output_name": output_name,
@@ -197,7 +194,7 @@ def _base_output_item(
         "runtime_output_verified": False,
         "notebook_value_parity_verified": False,
         "status": "comparison_unavailable",
-        "classification": AI_BEH_RELATION_CLASSIFICATION,
+        "classification": classification,
         "target_mode": "notebook_parity",
         "artifact_class": "LOCAL_SENSITIVE",
         "http_servable": False,
@@ -216,7 +213,7 @@ def _finish_output(
     notes: str,
 ) -> dict[str, Any]:
     if status not in ALLOWED_OUTPUT_STATUSES:
-        raise ValueError(f"unsupported AI_BEH relation output status: {status}")
+        raise ValueError(f"unsupported AI_BEH output status: {status}")
     item["status"] = status
     item["runtime_output_verified"] = runtime_output_verified
     item["notebook_value_parity_verified"] = notebook_value_parity_verified
@@ -280,8 +277,7 @@ def _compare_metadata(item: dict[str, Any], app_dataset: Any, reference_dataset:
         "transform_max_abs_delta": transform_delta,
         "transform_atol": DEFAULT_TRANSFORM_ATOL,
         "dtype_match": tuple(app_dataset.dtypes) == tuple(reference_dataset.dtypes),
-        "nodata_match": tuple(app_dataset.nodatavals)
-        == tuple(reference_dataset.nodatavals),
+        "nodata_match": tuple(app_dataset.nodatavals) == tuple(reference_dataset.nodatavals),
         "band_count_match": app_dataset.count == reference_dataset.count,
     }
     item.update(matches)
@@ -374,5 +370,5 @@ def _overall_status(outputs: tuple[dict[str, Any], ...]) -> str:
         overall_status = "failed"
 
     if overall_status not in ALLOWED_OVERALL_STATUSES:
-        raise ValueError(f"unsupported AI_BEH relation overall status: {overall_status}")
+        raise ValueError(f"unsupported AI_BEH overall status: {overall_status}")
     return overall_status
