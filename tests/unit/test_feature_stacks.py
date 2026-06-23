@@ -22,6 +22,7 @@ from app.pipeline.stages.feature_stacks import (
     NOTEBOOK_GPHYS_MASTER_STACK_NPY,
     NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY,
     NOTEBOOK_ARCH_TARGETS_STACK_NPY,
+    NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY,
     NOTEBOOK_RADAR_STACK_NPY,
     NOTEBOOK_SCIENCE_CORE_STACK_NPY,
     NOTEBOOK_STACK_ALIAS_MANIFEST_JSON,
@@ -33,6 +34,7 @@ from app.pipeline.stages.feature_stacks import (
     GPHYS_MASTER_BANDS,
     MASTER_RTC_REFINED_BANDS,
     ARCH_TARGETS_BANDS,
+    ULTIMATE_GPHYS_SCAN_BANDS,
     SCIENCE_CORE_BANDS,
     TREASURE_GEOPHYSICS_BANDS,
 )
@@ -80,6 +82,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "notebook_GPHYS_MASTER_STACK_640_npy",
             "notebook_MASTER_RTC_REFINED_STACK_640_npy",
             "notebook_ARCH_TARGETS_STACK_640_npy",
+            "notebook_ULTIMATE_GPHYS_SCAN_640_npy",
             "notebook_NANO_GEOPHYSICS_STACK_640_npy",
             "notebook_TREASURE_GEOPHYSICS_STACK_640_npy",
             "notebook_stack_alias_manifest",
@@ -248,6 +251,63 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         np.testing.assert_allclose(arch_targets[:, :, 4], expected_double, rtol=1e-6, atol=1e-6)
         np.testing.assert_allclose(arch_targets[:, :, 5], expected_mid, rtol=1e-6, atol=1e-6)
 
+        ultimate_gphys = np.load(notebook_dir / NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY)
+        assert ultimate_gphys.shape == (grid_spec.size, grid_spec.size, len(ULTIMATE_GPHYS_SCAN_BANDS))
+
+        ugs_vv = np.where(valid, vv_db * np.float32(1.45), grid_spec.nodata).astype(np.float32)
+        ugs_vh = np.where(valid, vh_db * np.float32(1.45), grid_spec.nodata).astype(np.float32)
+
+        def std_circle2(array):
+            filled = np.where(array != grid_spec.nodata, array, np.nan).astype(np.float32)
+            padded = np.pad(filled, 2, mode="edge")
+            windows = np.lib.stride_tricks.sliding_window_view(padded, (5, 5))
+            yy, xx = np.ogrid[-2:3, -2:3]
+            circle = (xx * xx + yy * yy) <= 4
+            samples = windows[:, :, circle]
+            return np.nanstd(samples, axis=-1).astype(np.float32)
+
+        ugs_std_vv = std_circle2(ugs_vv)
+        expected_rvi = np.full(vv_db.shape, grid_spec.nodata, dtype=np.float32)
+        expected_rvi[valid] = (ugs_vh[valid] * np.float32(4.0)) / (ugs_vv[valid] + ugs_vh[valid] + np.float32(1e-6))
+
+        expected_box_vertical = (valid & (ugs_vv > 0.0)).astype(np.float32)
+        expected_box_horizontal = (valid & (ugs_vv > -4.0) & (ugs_std_vv < 2.0)).astype(np.float32)
+        expected_under_cover = (valid & (ugs_vh < -22.0) & (ugs_vv > -5.0)).astype(np.float32)
+        expected_exposed_metal = (valid & (ugs_vh > -15.0) & (ugs_vv > -3.0)).astype(np.float32)
+        expected_depot_proxy = (expected_box_horizontal.astype(bool) & expected_under_cover.astype(bool)).astype(np.float32)
+        expected_box_mine = (valid & (ugs_std_vv > 5.0) & (ugs_vv > -5.0)).astype(np.float32)
+        expected_jar_dense = (valid & (ugs_vv > -2.5)).astype(np.float32)
+        expected_pottery = (valid & (ugs_vv > -18.0) & (ugs_vv < -12.0)).astype(np.float32)
+        expected_gear_tent = (valid & (ugs_vh > -18.0) & (ugs_vh < -14.0) & (ugs_vv > -6.0)).astype(np.float32)
+        expected_chamber_mid = (valid & (ugs_std_vv > 4.2) & (ugs_vv > -8.0)).astype(np.float32)
+        expected_base_deep = (valid & (ugs_vv > -12.0) & (ugs_vv < -7.0)).astype(np.float32)
+
+        expected_box_count = np.full(vv_db.shape, grid_spec.nodata, dtype=np.float32)
+        expected_jar_count = np.full(vv_db.shape, grid_spec.nodata, dtype=np.float32)
+        expected_box_count[valid] = np.floor(ugs_vv[valid] + np.float32(10.0))
+        expected_jar_count[valid] = np.floor(((ugs_vv[valid] - ugs_vh[valid]) - np.float32(10.0)) / np.float32(2.0))
+
+        expected_ugs = [
+            ugs_vv,
+            ugs_vh,
+            expected_rvi,
+            expected_box_vertical,
+            expected_box_horizontal,
+            expected_under_cover,
+            expected_exposed_metal,
+            expected_depot_proxy,
+            expected_box_mine,
+            expected_jar_dense,
+            expected_pottery,
+            expected_gear_tent,
+            expected_chamber_mid,
+            expected_base_deep,
+            expected_box_count,
+            expected_jar_count,
+        ]
+        for band_index, expected in enumerate(expected_ugs):
+            np.testing.assert_allclose(ultimate_gphys[:, :, band_index], expected, rtol=1e-5, atol=1e-5)
+
         nano_stack = np.load(notebook_dir / NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY)
         assert nano_stack.shape == (grid_spec.size, grid_spec.size, len(NANO_GEOPHYSICS_BANDS))
         np.testing.assert_allclose(nano_stack[:, :, 0][valid], vv_lin / (vh_lin + np.float32(1e-6)), rtol=1e-5, atol=1e-5)
@@ -276,7 +336,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             atol=1e-5,
         )
 
-        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *MASTER_RTC_REFINED_BANDS, *ARCH_TARGETS_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
+        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *MASTER_RTC_REFINED_BANDS, *ARCH_TARGETS_BANDS, *ULTIMATE_GPHYS_SCAN_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
             assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()
             tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}_640.tif"
             assert tif_path.is_file()
@@ -300,13 +360,13 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert alias_by_file[NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY]["source_cell"] == "cell_047"
         assert alias_by_file[NOTEBOOK_ARCH_TARGETS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_ARCH_TARGETS_STACK_NPY]["source_cell"] == "cell_052"
+        assert alias_by_file[NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY]["status"] == "implemented"
+        assert alias_by_file[NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY]["source_cell"] == "cell_054"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["source_cell"] == "cell_037"
         assert alias_by_file[NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY]["source_cell"] == "cell_039"
-        assert set(alias_manifest["deferred_families"]) == {
-            "ULTIMATE_GPHYS_SCAN_640",
-        }
+        assert set(alias_manifest["deferred_families"]) == set()
 
         with (run_dir / "QA" / "stacks" / "band_stats.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
@@ -325,6 +385,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "gphys_master_stack",
             "master_rtc_refined_stack",
             "arch_targets_stack",
+            "ultimate_gphys_scan_stack",
             "nano_geophysics_stack",
             "treasure_geophysics_stack",
             "ai_ready_support_stack",
@@ -344,11 +405,12 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert family_statuses["MASTER_RTC_REFINED_STACK_640"]["artifact_name"] == "master_rtc_refined_stack"
         assert family_statuses["ARCH_TARGETS_STACK_640"]["status"] == "implemented"
         assert family_statuses["ARCH_TARGETS_STACK_640"]["artifact_name"] == "arch_targets_stack"
+        assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["status"] == "implemented"
+        assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["artifact_name"] == "ultimate_gphys_scan_stack"
         assert family_statuses["NANO_STACK"]["status"] == "implemented"
         assert family_statuses["NANO_STACK"]["artifact_name"] == "nano_geophysics_stack"
         assert family_statuses["TREASURE_GEOPHYSICS_STACK_640"]["status"] == "implemented"
         assert family_statuses["TREASURE_GEOPHYSICS_STACK_640"]["artifact_name"] == "treasure_geophysics_stack"
-        assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["status"] == "deferred"
 
         tensor_audit = json.loads((run_dir / "QA" / "stacks" / "tensor_audit_summary.json").read_text(encoding="utf-8"))
         assert tensor_audit["shape"] == [grid_spec.size, grid_spec.size, len(SCIENCE_CORE_BANDS)]
