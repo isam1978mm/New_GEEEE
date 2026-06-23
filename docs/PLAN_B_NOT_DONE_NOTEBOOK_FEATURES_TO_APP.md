@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 9 fifth stack family implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 9 final stack family implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -27,7 +27,7 @@ Can we make it in app?
 | # | Not-done-now notebook item | Is it done now? | Can we make it in app? | Plan B note |
 |---:|---|---|---:|---|
 | 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | Implemented so far: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, cell 047 MASTER_RTC_REFINED_STACK_640, and cell 052 ARCH_TARGETS_STACK_640. Remaining item #9 stack family still pending. Frozen notebook numeric parity still pending. |
+| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | App port implemented for selected stack families: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, cell 047 MASTER_RTC_REFINED_STACK_640, cell 052 ARCH_TARGETS_STACK_640, and cell 054 ULTIMATE_GPHYS_SCAN_640. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟥 No | Yes | Optional/private stage unless specifically required by target pipeline. |
 | 17 | Extra S2 era pulls / masks | 🟥 No | Yes | Add historical/seasonal S2 pull stage using notebook date/cloud rules. |
 | 18 | DEM-matched S2 masks | 🟥 No | Yes | Add or extend S2 mask products so they align to the DEM/grid contract. |
@@ -265,37 +265,84 @@ Implemented band order:
   TGT_StrongDoubleBounce
   TGT_MidReflectance_Band
 
-Implementation choice:
-  Use existing app SAR arrays VV_dB and VH_dB from npy_radar_bands.
-  Compute the archaeological/target anomaly stack locally in FeatureStacksStage.
-  Do not add another Earth Engine sampling stage for this stack family.
-
 Validation done:
   focused feature stack test passed.
   full-run integration test passed.
   local existing run regenerated and confirmed output files/shapes exist.
   ARCH_TARGETS stack shape confirmed as (640, 640, 6) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_052 and status implemented.
+```
 
-Remaining item #9 family:
+### B1.7 result — item 9 More feature stacks / rename layers, Ultimate GPHYS Scan family
+
+```text
+Status:
+  App port implemented.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
   cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
+Implemented app outputs:
+  NPY_STACKS/ULTIMATE_GPHYS_SCAN_640.npy
+  NPY_RADAR_BANDS/{16 UGS bands}_640.npy
+  GEOTIFF_RADAR_BANDS/{16 UGS bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{16 UGS bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_054
+
+Implemented band order:
+  UGS_VV_dB
+  UGS_VH_dB
+  UGS_DeepStruct_RVI
+  UGS_BoxVertical
+  UGS_BoxHorizontal
+  UGS_UnderCover
+  UGS_ExposedMetal
+  UGS_DepotProxy
+  UGS_BoxMineProxy
+  UGS_JarDenseProxy
+  UGS_PotteryBand
+  UGS_GearTentProxy
+  UGS_ChamberMid
+  UGS_BaseDeep
+  UGS_EstBoxCount
+  UGS_EstJarCount
+
+Implementation choice:
+  Use existing app SAR arrays VV_dB and VH_dB from npy_radar_bands.
+  Compute the Ultimate Geophysical Scan stack locally in FeatureStacksStage.
+  Do not add another Earth Engine sampling stage for this stack family.
+  Notebook cell 054 is pair-based; this app port is app-native and frozen notebook numeric parity remains pending.
+
+Validation done:
+  focused feature stack test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  ULTIMATE_GPHYS_SCAN stack shape confirmed as (640, 640, 16) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_054 and status implemented.
+
+Remaining item #9 stack families:
+  none identified in the selected Phase G set.
+
 Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.6 artifacts.
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.7 artifacts.
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.6
+### Next main item scan after B1.7
 
 ```text
 Recommended next main item:
-  Continue item #9 with the final remaining stack-family target.
+  Move to Plan B item #15: Bonus / simulator features.
 
-Candidate:
-  cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
+Why:
+  Plan B item #9 selected Phase G stack families are app-ported.
+  Frozen notebook numeric parity remains pending for item #9, but the next missing app capability in B1 order is item #15.
+  Item #15 is optional/private, so first action is inspection and classification, not coding.
 
 Next action:
-  Inspect exact formula requirements for cell_054 against current app arrays and pair data availability.
+  Inspect exact notebook cell(s) for item #15 Bonus / simulator features.
+  Decide whether to implement, defer, or replace as a private diagnostic/simulator stage.
   Produce a gap table before coding.
 ```
 
