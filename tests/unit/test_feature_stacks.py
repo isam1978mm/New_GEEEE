@@ -23,6 +23,8 @@ from app.pipeline.stages.feature_stacks import (
     NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY,
     NOTEBOOK_ARCH_TARGETS_STACK_NPY,
     NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY,
+    NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY,
+    NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY,
     NOTEBOOK_RADAR_STACK_NPY,
     NOTEBOOK_SCIENCE_CORE_STACK_NPY,
     NOTEBOOK_STACK_ALIAS_MANIFEST_JSON,
@@ -35,6 +37,8 @@ from app.pipeline.stages.feature_stacks import (
     MASTER_RTC_REFINED_BANDS,
     ARCH_TARGETS_BANDS,
     ULTIMATE_GPHYS_SCAN_BANDS,
+    AUX_BONUS_FEATURES_BANDS,
+    SIM_GEOPHYSICAL_BANDS,
     SCIENCE_CORE_BANDS,
     TREASURE_GEOPHYSICS_BANDS,
 )
@@ -83,6 +87,8 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "notebook_MASTER_RTC_REFINED_STACK_640_npy",
             "notebook_ARCH_TARGETS_STACK_640_npy",
             "notebook_ULTIMATE_GPHYS_SCAN_640_npy",
+            "notebook_AUX_BONUS_FEATURES_STACK_640_npy",
+            "notebook_SIM_GEOPHYSICAL_STACK_640_npy",
             "notebook_NANO_GEOPHYSICS_STACK_640_npy",
             "notebook_TREASURE_GEOPHYSICS_STACK_640_npy",
             "notebook_stack_alias_manifest",
@@ -134,6 +140,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         vv_db = np.load(run_dir / "npy_radar_bands" / "VV_dB.npy")
         vh_db = np.load(run_dir / "npy_radar_bands" / "VH_dB.npy")
         incidence = np.load(run_dir / "npy_radar_bands" / "incidence.npy")
+        log_ratio_db = np.load(run_dir / "npy_radar_bands" / "logRatio_dB.npy")
         valid = (vv_db != grid_spec.nodata) & (vh_db != grid_spec.nodata)
         vv_lin = np.power(10.0, vv_db[valid] / 10.0).astype(np.float32)
         vh_lin = np.power(10.0, vh_db[valid] / 10.0).astype(np.float32)
@@ -308,6 +315,77 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         for band_index, expected in enumerate(expected_ugs):
             np.testing.assert_allclose(ultimate_gphys[:, :, band_index], expected, rtol=1e-5, atol=1e-5)
 
+        aux_bonus = np.load(notebook_dir / NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY)
+        sim_geophysical = np.load(notebook_dir / NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY)
+        assert aux_bonus.shape == (grid_spec.size, grid_spec.size, len(AUX_BONUS_FEATURES_BANDS))
+        assert sim_geophysical.shape == (grid_spec.size, grid_spec.size, len(SIM_GEOPHYSICAL_BANDS))
+
+        def nanfill_median(array):
+            out = array.copy().astype(np.float32)
+            finite = np.isfinite(out)
+            fill = np.float32(np.nanmedian(out)) if finite.any() else np.float32(0.0)
+            out[~finite] = fill
+            return out
+
+        def entropy3(array, valid_mask):
+            filled = nanfill_median(array)
+            padded = np.pad(filled, 1, mode="edge")
+            windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
+            flat = windows.reshape(windows.shape[0], windows.shape[1], 9)
+            lo = flat.min(axis=-1)
+            hi = flat.max(axis=-1)
+            span = hi - lo
+            usable = span > np.float32(1e-12)
+            entropy = np.zeros(array.shape, dtype=np.float32)
+            for bin_index in range(16):
+                lower = lo + span * np.float32(bin_index / 16.0)
+                upper = lo + span * np.float32((bin_index + 1) / 16.0)
+                if bin_index == 15:
+                    hits = usable[:, :, None] & (flat >= lower[:, :, None]) & (flat <= upper[:, :, None])
+                else:
+                    hits = usable[:, :, None] & (flat >= lower[:, :, None]) & (flat < upper[:, :, None])
+                counts = hits.sum(axis=-1).astype(np.float32)
+                probs = counts / np.float32(9.0)
+                entropy = np.where(probs > 0.0, entropy - probs * np.log2(probs), entropy).astype(np.float32)
+            return np.where(valid_mask, entropy, grid_spec.nodata).astype(np.float32)
+
+        def laplacian_abs(array, valid_mask):
+            filled = nanfill_median(array)
+            padded = np.pad(filled, 1, mode="edge")
+            windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
+            kernel = np.array([[1.0, 1.0, 1.0], [1.0, -8.0, 1.0], [1.0, 1.0, 1.0]], dtype=np.float32)
+            out = np.abs((windows * kernel).sum(axis=(-2, -1))).astype(np.float32)
+            return np.where(valid_mask, out, grid_spec.nodata).astype(np.float32)
+
+        vv_lin_full = np.full(vv_db.shape, np.nan, dtype=np.float32)
+        vh_lin_full = np.full(vh_db.shape, np.nan, dtype=np.float32)
+        vv_lin_full[valid] = np.power(10.0, vv_db[valid] / 10.0).astype(np.float32)
+        vh_lin_full[valid] = np.power(10.0, vh_db[valid] / 10.0).astype(np.float32)
+
+        expected_entropy = entropy3(vv_lin_full, valid)
+        expected_moisture = np.full(vv_db.shape, grid_spec.nodata, dtype=np.float32)
+        expected_moisture[valid] = vh_lin_full[valid] / np.maximum(vv_lin_full[valid], np.float32(1e-6))
+        valid_logratio = np.isfinite(log_ratio_db) & (log_ratio_db != grid_spec.nodata)
+        expected_logratio = np.where(valid_logratio, log_ratio_db, grid_spec.nodata).astype(np.float32)
+
+        np.testing.assert_allclose(aux_bonus[:, :, 0], expected_entropy, rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(aux_bonus[:, :, 1], expected_logratio, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(aux_bonus[:, :, 2], expected_moisture, rtol=1e-5, atol=1e-5)
+
+        expected_gpr = np.full(vv_db.shape, grid_spec.nodata, dtype=np.float32)
+        expected_gpr[valid] = np.log10(np.abs(vv_lin_full[valid] - vh_lin_full[valid]) + np.float32(1e-6)).astype(np.float32)
+        expected_magnetic = laplacian_abs(vv_lin_full, valid)
+        expected_emi = expected_moisture
+        expected_microgravity = np.full(vv_db.shape, grid_spec.nodata, dtype=np.float32)
+        expected_microgravity[valid] = (
+            np.float32(1.0) / np.maximum((vv_lin_full[valid] + vh_lin_full[valid]) / np.float32(2.0), np.float32(1e-6))
+        ).astype(np.float32)
+
+        np.testing.assert_allclose(sim_geophysical[:, :, 0], expected_gpr, rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(sim_geophysical[:, :, 1], expected_magnetic, rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(sim_geophysical[:, :, 2], expected_emi, rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(sim_geophysical[:, :, 3], expected_microgravity, rtol=1e-5, atol=1e-5)
+
         nano_stack = np.load(notebook_dir / NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY)
         assert nano_stack.shape == (grid_spec.size, grid_spec.size, len(NANO_GEOPHYSICS_BANDS))
         np.testing.assert_allclose(nano_stack[:, :, 0][valid], vv_lin / (vh_lin + np.float32(1e-6)), rtol=1e-5, atol=1e-5)
@@ -336,7 +414,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             atol=1e-5,
         )
 
-        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *MASTER_RTC_REFINED_BANDS, *ARCH_TARGETS_BANDS, *ULTIMATE_GPHYS_SCAN_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
+        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *MASTER_RTC_REFINED_BANDS, *ARCH_TARGETS_BANDS, *ULTIMATE_GPHYS_SCAN_BANDS, *AUX_BONUS_FEATURES_BANDS, *SIM_GEOPHYSICAL_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
             assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()
             tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}_640.tif"
             assert tif_path.is_file()
@@ -362,6 +440,10 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert alias_by_file[NOTEBOOK_ARCH_TARGETS_STACK_NPY]["source_cell"] == "cell_052"
         assert alias_by_file[NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY]["source_cell"] == "cell_054"
+        assert alias_by_file[NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY]["status"] == "implemented"
+        assert alias_by_file[NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY]["source_cell"] == "cell_072"
+        assert alias_by_file[NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY]["status"] == "implemented"
+        assert alias_by_file[NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY]["source_cell"] == "cell_073"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["source_cell"] == "cell_037"
         assert alias_by_file[NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
@@ -386,6 +468,8 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "master_rtc_refined_stack",
             "arch_targets_stack",
             "ultimate_gphys_scan_stack",
+            "aux_bonus_features_stack",
+            "sim_geophysical_stack",
             "nano_geophysics_stack",
             "treasure_geophysics_stack",
             "ai_ready_support_stack",
@@ -407,6 +491,10 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert family_statuses["ARCH_TARGETS_STACK_640"]["artifact_name"] == "arch_targets_stack"
         assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["status"] == "implemented"
         assert family_statuses["ULTIMATE_GPHYS_SCAN_640"]["artifact_name"] == "ultimate_gphys_scan_stack"
+        assert family_statuses["AUX_BONUS_FEATURES_STACK_640"]["status"] == "implemented"
+        assert family_statuses["AUX_BONUS_FEATURES_STACK_640"]["artifact_name"] == "aux_bonus_features_stack"
+        assert family_statuses["SIM_GEOPHYSICAL_STACK_640"]["status"] == "implemented"
+        assert family_statuses["SIM_GEOPHYSICAL_STACK_640"]["artifact_name"] == "sim_geophysical_stack"
         assert family_statuses["NANO_STACK"]["status"] == "implemented"
         assert family_statuses["NANO_STACK"]["artifact_name"] == "nano_geophysics_stack"
         assert family_statuses["TREASURE_GEOPHYSICS_STACK_640"]["status"] == "implemented"
