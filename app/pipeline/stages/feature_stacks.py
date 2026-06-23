@@ -571,7 +571,8 @@ def _local_entropy_3x3_grid(array: np.ndarray, *, valid_mask: np.ndarray, nodata
             hits = usable[:, :, None] & (flat >= lower[:, :, None]) & (flat < upper[:, :, None])
         counts = hits.sum(axis=-1).astype(np.float32)
         probs = counts / np.float32(9.0)
-        entropy = np.where(probs > 0.0, entropy - probs * np.log2(probs), entropy).astype(np.float32)
+        safe_probs = np.where(probs > 0.0, probs, np.float32(1.0)).astype(np.float32)
+        entropy = np.where(probs > 0.0, entropy - probs * np.log2(safe_probs), entropy).astype(np.float32)
 
     return np.where(valid_mask, entropy, nodata).astype(np.float32)
 
