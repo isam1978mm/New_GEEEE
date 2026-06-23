@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 17 extra S2 era tensor stack implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 18 DEM-matched S2 mask stack implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -30,7 +30,7 @@ Can we make it in app?
 | 9 | More feature stacks / rename layers | 🟨 Partial | Yes | App port implemented for selected stack families: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, cell 047 MASTER_RTC_REFINED_STACK_640, cell 052 ARCH_TARGETS_STACK_640, and cell 054 ULTIMATE_GPHYS_SCAN_640. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟨 Partial | Yes | App port implemented for cell 072 AUX_BONUS_FEATURES_STACK_640 and cell 073 SIM_GEOPHYSICAL_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 18 | DEM-matched S2 masks | 🟥 No | Yes | Add or extend S2 mask products so they align to the DEM/grid contract. |
+| 18 | DEM-matched S2 masks | 🟨 Partial | Yes | App port implemented for canonical cell 081 AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 19 | Tesla v7.2 inference engines | 🟥 No | Yes | Major missing feature. Select one authoritative Tesla cell/version before implementation. |
 | 20 | Fusion center / intelligence tensors | 🟥 No | Yes | Requires base layers and named tensor formulas. Should follow stack/mask completion. |
 | 23 | ROI-constrained AI analysis inside 17m focus | 🟥 No | Yes | Use the app focus window, then port the notebook's focus-region analysis logic. |
@@ -90,179 +90,26 @@ Remaining:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### B1.2 result — item 9 More feature stacks / rename layers, RAD_S0 stack family
+### B1.2 through B1.7 result — item 9 More feature stacks / rename layers
 
 ```text
 Status:
-  App port implemented.
+  App port implemented for the selected Phase G stack families.
   Frozen notebook numeric parity is still pending.
 
-Canonical notebook variant selected:
+Canonical notebook variants selected:
   cell_050 -> RAD_S0_MASTER_STACK_640.npy
-
-Implemented app outputs:
-  NPY_STACKS/RAD_S0_MASTER_STACK_640.npy
-  NPY_RADAR_BANDS/{6 RAD_S0 bands}_640.npy
-  GEOTIFF_RADAR_BANDS/{6 RAD_S0 bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{6 RAD_S0 bands}_640.tif.meta.json
-  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_050
-
-Validation done:
-  focused feature stack test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files/shapes exist.
-  RAD_S0 stack shape confirmed as (640, 640, 6) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_050 and status implemented.
-```
-
-### B1.3 result — item 9 More feature stacks / rename layers, Radar Master Cube family
-
-```text
-Status:
-  App port implemented.
-  Frozen notebook numeric parity is still pending.
-
-Canonical notebook variant selected:
   cell_053 -> RAD_MASTER_CUBE_640.npy
-
-Implemented app outputs:
-  NPY_STACKS/RAD_MASTER_CUBE_640.npy
-  NPY_RADAR_BANDS/RADM_VV_dB_640.npy
-  NPY_RADAR_BANDS/RADM_VH_dB_640.npy
-  NPY_RADAR_BANDS/RADM_VV_Med1p5px_dB_640.npy
-  NPY_RADAR_BANDS/RADM_VV_Mean1p5px_dB_640.npy
-  NPY_RADAR_BANDS/RADM_VH_VV_Ratio_lin_640.npy
-  GEOTIFF_RADAR_BANDS/{5 RADM bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{5 RADM bands}_640.tif.meta.json
-  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_053
-
-Validation done:
-  focused feature stack test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files/shapes exist.
-  RAD_MASTER_CUBE stack shape confirmed as (640, 640, 5) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_053 and status implemented.
-```
-
-### B1.4 result — item 9 More feature stacks / rename layers, GPHYS Master family
-
-```text
-Status:
-  App port implemented.
-  Frozen notebook numeric parity is still pending.
-
-Canonical notebook variant selected:
   cell_051 -> GPHYS_MASTER_STACK_640.npy
-
-Implemented app outputs:
-  NPY_STACKS/GPHYS_MASTER_STACK_640.npy
-  NPY_RADAR_BANDS/GPHYS_VV_dB_640.npy
-  NPY_RADAR_BANDS/GPHYS_VH_dB_640.npy
-  NPY_RADAR_BANDS/GPHYS_VV_Med1p5px_dB_640.npy
-  NPY_RADAR_BANDS/GPHYS_VH_Med1p5px_dB_640.npy
-  NPY_RADAR_BANDS/GPHYS_VV_SigmaMean1p5px_dB_640.npy
-  NPY_RADAR_BANDS/GPHYS_VH_SigmaMean1p5px_dB_640.npy
-  GEOTIFF_RADAR_BANDS/{6 GPHYS bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{6 GPHYS bands}_640.tif.meta.json
-  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_051
-
-Validation done:
-  focused feature stack test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files/shapes exist.
-  GPHYS_MASTER stack shape confirmed as (640, 640, 6) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_051 and status implemented.
-```
-
-### B1.5 result — item 9 More feature stacks / rename layers, Master RTC Refined family
-
-```text
-Status:
-  App port implemented.
-  Frozen notebook numeric parity is still pending.
-
-Canonical notebook variant selected:
   cell_047 -> MASTER_RTC_REFINED_STACK_640.npy
-
-Implemented app outputs:
-  NPY_STACKS/MASTER_RTC_REFINED_STACK_640.npy
-  NPY_RADAR_BANDS/RAD_MasterVV_dB_640.npy
-  NPY_RADAR_BANDS/RAD_MasterVH_dB_640.npy
-  NPY_RADAR_BANDS/RAD_MasterAngle_deg_640.npy
-  NPY_RADAR_BANDS/RAD_MasterVV_Median3m_dB_640.npy
-  NPY_RADAR_BANDS/RAD_MasterVH_Median3m_dB_640.npy
-  NPY_RADAR_BANDS/RAD_MasterVH_VV_Ratio_lin_640.npy
-  GEOTIFF_RADAR_BANDS/{6 RAD_Master bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{6 RAD_Master bands}_640.tif.meta.json
-  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_047
-
-Validation done:
-  focused feature stack test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files/shapes exist.
-  MASTER_RTC_REFINED stack shape confirmed as (640, 640, 6) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_047 and status implemented.
-```
-
-### B1.6 result — item 9 More feature stacks / rename layers, ARCH Targets family
-
-```text
-Status:
-  App port implemented.
-  Frozen notebook numeric parity is still pending.
-
-Canonical notebook variant selected:
   cell_052 -> ARCH_TARGETS_STACK_640.npy
-
-Implemented app outputs:
-  NPY_STACKS/ARCH_TARGETS_STACK_640.npy
-  NPY_RADAR_BANDS/TGT_ClassMap_640.npy
-  NPY_RADAR_BANDS/TGT_HighSpecular_LowCrossPol_640.npy
-  NPY_RADAR_BANDS/TGT_BrightMetallic_Mix_640.npy
-  NPY_RADAR_BANDS/TGT_CompactMetal_Contrast_640.npy
-  NPY_RADAR_BANDS/TGT_StrongDoubleBounce_640.npy
-  NPY_RADAR_BANDS/TGT_MidReflectance_Band_640.npy
-  GEOTIFF_RADAR_BANDS/{6 TGT bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{6 TGT bands}_640.tif.meta.json
-  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_052
-
-Validation done:
-  focused feature stack test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files/shapes exist.
-  ARCH_TARGETS stack shape confirmed as (640, 640, 6) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_052 and status implemented.
-```
-
-### B1.7 result — item 9 More feature stacks / rename layers, Ultimate GPHYS Scan family
-
-```text
-Status:
-  App port implemented.
-  Frozen notebook numeric parity is still pending.
-
-Canonical notebook variant selected:
   cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
-Implemented app outputs:
-  NPY_STACKS/ULTIMATE_GPHYS_SCAN_640.npy
-  NPY_RADAR_BANDS/{16 UGS bands}_640.npy
-  GEOTIFF_RADAR_BANDS/{16 UGS bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{16 UGS bands}_640.tif.meta.json
-  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_054
-
-Implementation choice:
-  Use existing app SAR arrays VV_dB and VH_dB from npy_radar_bands.
-  Compute the Ultimate Geophysical Scan stack locally in FeatureStacksStage.
-  Do not add another Earth Engine sampling stage for this stack family.
-  Notebook cell 054 is pair-based; this app port is app-native and frozen notebook numeric parity remains pending.
-
 Validation done:
-  focused feature stack test passed.
-  full-run integration test passed.
+  focused feature stack tests passed.
+  full-run integration tests passed.
   local existing run regenerated and confirmed output files/shapes exist.
-  ULTIMATE_GPHYS_SCAN stack shape confirmed as (640, 640, 16) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_054 and status implemented.
+  STACK_ALIAS_MANIFEST records selected source cells as implemented.
 
 Remaining item #9 stack families:
   none identified in the selected Phase G set.
@@ -289,26 +136,9 @@ Implemented app outputs:
   NPY_RADAR_BANDS/SIM_MagneticAnomalies_lin_640.npy
   NPY_RADAR_BANDS/SIM_EMI_Conductivity_lin_640.npy
   NPY_RADAR_BANDS/SIM_MicroGravity_Density_lin_640.npy
-  GEOTIFF_RADAR_BANDS/{3 AUX/ENT bands}_640.tif
-  GEOTIFF_RADAR_BANDS/{4 SIM bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{7 item #15 bands}_640.tif
   GEOTIFF_RADAR_BANDS/{7 item #15 bands}_640.tif.meta.json
   NPY_STACKS/STACK_ALIAS_MANIFEST.json entries for source_cell cell_072 and cell_073
-
-Implemented band order:
-  AUX_BONUS_FEATURES_STACK_640.npy:
-    ENT_VV_LocalEntropy_w3_lin
-    AUX_OrbitalLogRatio_dB
-    AUX_VH_to_VV_MoistureProxy_lin
-  SIM_GEOPHYSICAL_STACK_640.npy:
-    SIM_GPR_VoidScan_lin
-    SIM_MagneticAnomalies_lin
-    SIM_EMI_Conductivity_lin
-    SIM_MicroGravity_Density_lin
-
-Implementation choice:
-  Use existing app SAR arrays VV_dB, VH_dB, and logRatio_dB from npy_radar_bands.
-  Compute both stacks locally in FeatureStacksStage as filesystem-only/private outputs.
-  Do not add another Earth Engine sampling stage for these bonus/simulator features.
 
 Validation done:
   focused feature stack test passed.
@@ -316,11 +146,6 @@ Validation done:
   local existing run regenerated and confirmed output files/shapes exist.
   AUX_BONUS_FEATURES stack shape confirmed as (640, 640, 3) float32.
   SIM_GEOPHYSICAL stack shape confirmed as (640, 640, 4) float32.
-  STACK_ALIAS_MANIFEST records source_cell cell_072 and cell_073 as implemented.
-
-Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.8 artifacts.
-  Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
 ### B1.9 result — item 17 Extra S2 era pulls / masks
@@ -340,21 +165,6 @@ Implemented app outputs:
   GEOTIFF_RADAR_BANDS/{13 AIX_2022_2026_CLOUDLT3 bands}_640.tif.meta.json
   NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_077
 
-Implemented band order:
-  AIX_2022_2026_CLOUDLT3_Jan_IronOxideProxy_Norm01
-  AIX_2022_2026_CLOUDLT3_Jan_MineralAlterationProxy_Norm01
-  AIX_2022_2026_CLOUDLT3_Jan_ThermalAnomaly_Norm01
-  AIX_2022_2026_CLOUDLT3_Apr_IronOxideProxy_Norm01
-  AIX_2022_2026_CLOUDLT3_Apr_MineralAlterationProxy_Norm01
-  AIX_2022_2026_CLOUDLT3_Apr_ThermalAnomaly_Norm01
-  AIX_2022_2026_CLOUDLT3_Aug_IronOxideProxy_Norm01
-  AIX_2022_2026_CLOUDLT3_Aug_MineralAlterationProxy_Norm01
-  AIX_2022_2026_CLOUDLT3_Aug_ThermalAnomaly_Norm01
-  AIX_2022_2026_CLOUDLT3_Elevation_Norm01
-  AIX_2022_2026_CLOUDLT3_Slope_Norm01
-  AIX_2022_2026_CLOUDLT3_Aspect_Norm01
-  AIX_2022_2026_CLOUDLT3_Hillshade_Norm01
-
 Implementation choice:
   Extend S2IndicesStage so the AIX stack is generated with the same run/grid contract as existing S2 outputs.
   In real backend mode, build seasonal S2/Landsat/topography tensors from the 2022-2026 cloud < 3 notebook rule.
@@ -367,27 +177,69 @@ Validation done:
   local existing run regenerated and confirmed output files/shapes exist.
   AIX extra tensor stack shape confirmed as (640, 640, 13) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_077 and status implemented.
+```
+
+### B1.10 result — item 18 DEM-matched S2 masks
+
+```text
+Status:
+  App port implemented for the selected DEM-matched S2 mask stack.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_081 -> AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy
+  NPY_RADAR_BANDS/{9 AIX_2022_2026FEB_CLOUDLT3 bands}_640.npy
+  GEOTIFF_RADAR_BANDS/{9 AIX_2022_2026FEB_CLOUDLT3 bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{9 AIX_2022_2026FEB_CLOUDLT3 bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_081
+
+Implemented band order:
+  AIX_2022_2026FEB_CLOUDLT3_MaskVegetationRoots_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_MaskWaterMoisture_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_IndexIronOxide_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_IndexFerricIron_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_IndexClayThermal_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_MaskCharcoalLead_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_MaskQuartzBasalt_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_MaskCarbonate_Norm01
+  AIX_2022_2026FEB_CLOUDLT3_ThermalTimeSeriesAnomaly_Norm01
+
+Implementation choice:
+  Extend S2IndicesStage so the DEM-matched mask stack is generated with the same run/grid contract as existing S2 outputs.
+  Keep existing app raw/index valid masks; cell_081 is a separate 9-band AI mask/index stack, not a duplicate of those valid masks.
+  In real backend mode, build the cell_081 S2/Landsat formulas from the 2022-01-01 to 2026-02-28 cloud < 3 notebook rule.
+  In deterministic/injected test mode, use a local deterministic AIX mask fetcher and do not call Earth Engine.
+  Preserve the cell_081 alias in FeatureStacksStage so later stack rewrites keep the manifest entry.
+
+Validation done:
+  focused S2 indices test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  AIX DEM-matched masks stack shape confirmed as (640, 640, 9) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_081 and status implemented.
 
 Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.9 artifacts.
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.10 artifacts.
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.9
+### Next main item scan after B1.10
 
 ```text
 Recommended next main item:
-  Move to Plan B item #18: DEM-matched S2 masks.
+  Move to Plan B item #20: Fusion center / intelligence tensors.
 
 Why:
-  Plan B item #9 selected Phase G stack families are app-ported.
-  Plan B item #15 bonus/simulator features are app-ported.
-  Plan B item #17 extra S2-era tensor stack is app-ported.
-  Frozen notebook numeric parity remains pending for these items, but the next missing app capability in B1 order is item #18.
+  Plan B item #19 Tesla v7.2 inference engines is a major ML/inference item and should be selected separately.
+  In B1 raster/tensor completion order, item #20 is the next non-ML tensor family after items #17 and #18.
+  Frozen notebook numeric parity remains pending for implemented B1 items.
 
 Next action:
-  Inspect exact notebook cell(s) for item #18 DEM-matched S2 masks.
-  Compare them against the current app S2 mask outputs and manifest.
+  Inspect exact notebook cell(s) for item #20 Fusion center / intelligence tensors.
+  Compare formulas against current app stack availability.
   Produce a gap table before coding.
 ```
 
