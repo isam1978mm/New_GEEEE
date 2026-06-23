@@ -65,6 +65,7 @@ NOTEBOOK_ARCH_TARGETS_STACK_NPY = "ARCH_TARGETS_STACK_640.npy"
 NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY = "ULTIMATE_GPHYS_SCAN_640.npy"
 NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY = "AUX_BONUS_FEATURES_STACK_640.npy"
 NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY = "SIM_GEOPHYSICAL_STACK_640.npy"
+NOTEBOOK_AIX_EXTRA_TENSORS_STACK_NPY = "AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
@@ -146,6 +147,21 @@ SIM_GEOPHYSICAL_BANDS = (
     "SIM_MagneticAnomalies_lin",
     "SIM_EMI_Conductivity_lin",
     "SIM_MicroGravity_Density_lin",
+)
+AIX_EXTRA_TENSOR_BANDS = (
+    "AIX_2022_2026_CLOUDLT3_Jan_IronOxideProxy_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Jan_MineralAlterationProxy_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Jan_ThermalAnomaly_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Apr_IronOxideProxy_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Apr_MineralAlterationProxy_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Apr_ThermalAnomaly_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Aug_IronOxideProxy_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Aug_MineralAlterationProxy_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Aug_ThermalAnomaly_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Elevation_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Slope_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Aspect_Norm01",
+    "AIX_2022_2026_CLOUDLT3_Hillshade_Norm01",
 )
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
@@ -1136,6 +1152,14 @@ def _build_stack_alias_manifest(
                 "band_names": list(SIM_GEOPHYSICAL_BANDS),
                 "status": "implemented",
                 "source_cell": "cell_073",
+            },
+            {
+                "filename": NOTEBOOK_AIX_EXTRA_TENSORS_STACK_NPY,
+                "source_notebook_family": "AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640",
+                "app_artifact": "aix_extra_tensors_stack",
+                "band_names": list(AIX_EXTRA_TENSOR_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_077",
             },
             {
                 "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
