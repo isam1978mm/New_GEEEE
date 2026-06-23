@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 18 DEM-matched S2 mask stack implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 20 fusion intelligence stack implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -32,7 +32,7 @@ Can we make it in app?
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 18 | DEM-matched S2 masks | 🟨 Partial | Yes | App port implemented for canonical cell 081 AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 19 | Tesla v7.2 inference engines | 🟥 No | Yes | Major missing feature. Select one authoritative Tesla cell/version before implementation. |
-| 20 | Fusion center / intelligence tensors | 🟥 No | Yes | Requires base layers and named tensor formulas. Should follow stack/mask completion. |
+| 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 23 | ROI-constrained AI analysis inside 17m focus | 🟥 No | Yes | Use the app focus window, then port the notebook's focus-region analysis logic. |
 | 24 | Hard classifiers / target type rules | 🟥 No | Yes | Need clean rule specification from the final notebook classifier cells. |
 | 25 | Target CSV / TXT / JSON outputs | 🟥 No | Yes | Define final target schema: columns, labels, confidence fields, and local/private policy. |
@@ -220,26 +220,67 @@ Validation done:
   local existing run regenerated and confirmed output files/shapes exist.
   AIX DEM-matched masks stack shape confirmed as (640, 640, 9) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_081 and status implemented.
+```
+
+### B1.11 result — item 20 Fusion center / intelligence tensors
+
+```text
+Status:
+  App port implemented for the selected final intelligence report stack.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_099 -> REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy
+  NPY_RADAR_BANDS/REPORT_640_FINAL_Zero_Point_Targets_640.npy
+  NPY_RADAR_BANDS/REPORT_640_Mass_Report_640.npy
+  NPY_RADAR_BANDS/REPORT_640_Pottery_Report_640.npy
+  GEOTIFF_RADAR_BANDS/REPORT_640_FINAL_Zero_Point_Targets_640.tif
+  GEOTIFF_RADAR_BANDS/REPORT_640_Mass_Report_640.tif
+  GEOTIFF_RADAR_BANDS/REPORT_640_Pottery_Report_640.tif
+  GEOTIFF_RADAR_BANDS/{3 REPORT_640 bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_099
+
+Implemented band order:
+  REPORT_640_FINAL_Zero_Point_Targets
+  REPORT_640_Mass_Report
+  REPORT_640_Pottery_Report
+
+Implementation choice:
+  Use cell_099 as canonical instead of cell_097 because cell_099 is the DEM-anchored final reprojection variant.
+  Extend S2IndicesStage so the fusion intelligence stack is generated with the same run/grid contract as existing S2 outputs.
+  In real backend mode, build the cell_099 S2/Landsat formulas from the 2022-01-01 to 2026-02-28 notebook rule.
+  In deterministic/injected test mode, use a local deterministic fusion fetcher and do not call Earth Engine.
+  Preserve the cell_099 alias in FeatureStacksStage so later stack rewrites keep the manifest entry.
+
+Validation done:
+  focused S2 indices test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  REPORT_640 final intelligence stack shape confirmed as (640, 640, 3) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_099 and status implemented.
 
 Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.10 artifacts.
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.11 artifacts.
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.10
+### Next main item scan after B1.11
 
 ```text
 Recommended next main item:
-  Move to Plan B item #20: Fusion center / intelligence tensors.
+  Move to Plan B item #19: Tesla v7.2 inference engines.
 
 Why:
-  Plan B item #19 Tesla v7.2 inference engines is a major ML/inference item and should be selected separately.
-  In B1 raster/tensor completion order, item #20 is the next non-ML tensor family after items #17 and #18.
+  The selected B1 non-ML raster/tensor families are now app-ported through item #20.
+  Item #19 was intentionally skipped until the raster/tensor inputs were available because it is a major ML/inference item.
   Frozen notebook numeric parity remains pending for implemented B1 items.
 
 Next action:
-  Inspect exact notebook cell(s) for item #20 Fusion center / intelligence tensors.
-  Compare formulas against current app stack availability.
+  Inspect exact notebook cell(s) for item #19 Tesla v7.2 inference engines.
+  Select one authoritative Tesla v7.2 cell/version before implementation.
   Produce a gap table before coding.
 ```
 
