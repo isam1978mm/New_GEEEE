@@ -61,6 +61,7 @@ NOTEBOOK_RAD_S0_MASTER_STACK_NPY = "RAD_S0_MASTER_STACK_640.npy"
 NOTEBOOK_RAD_MASTER_CUBE_NPY = "RAD_MASTER_CUBE_640.npy"
 NOTEBOOK_GPHYS_MASTER_STACK_NPY = "GPHYS_MASTER_STACK_640.npy"
 NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY = "MASTER_RTC_REFINED_STACK_640.npy"
+NOTEBOOK_ARCH_TARGETS_STACK_NPY = "ARCH_TARGETS_STACK_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
@@ -105,6 +106,14 @@ MASTER_RTC_REFINED_BANDS = (
     "RAD_MasterVV_Median3m_dB",
     "RAD_MasterVH_Median3m_dB",
     "RAD_MasterVH_VV_Ratio_lin",
+)
+ARCH_TARGETS_BANDS = (
+    "TGT_ClassMap",
+    "TGT_HighSpecular_LowCrossPol",
+    "TGT_BrightMetallic_Mix",
+    "TGT_CompactMetal_Contrast",
+    "TGT_StrongDoubleBounce",
+    "TGT_MidReflectance_Band",
 )
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
@@ -368,6 +377,53 @@ def _compute_master_rtc_refined_products(
     }
 
 
+def _compute_arch_targets_products(
+    vv_db: np.ndarray,
+    vh_db: np.ndarray,
+    *,
+    nodata: float,
+) -> dict[str, object]:
+    valid = (
+        np.isfinite(vv_db)
+        & np.isfinite(vh_db)
+        & (vv_db != nodata)
+        & (vh_db != nodata)
+    )
+
+    vv_ref = _median_3x3_grid(np.where(valid, vv_db, nodata).astype(np.float32), nodata=nodata)
+
+    high_specular_low_crosspol = (valid & (vv_db > -3.5) & (vh_db < -18.0)).astype(np.float32)
+    bright_metallic_mix = (valid & (vv_db > -3.5) & (vh_db > -18.0)).astype(np.float32)
+    compact_metal_contrast = (valid & (np.abs(vv_db - vv_ref) > 4.5)).astype(np.float32)
+    strong_double_bounce = (valid & (vv_db > 0.0)).astype(np.float32)
+    mid_reflectance_band = (valid & (vv_db > -17.0) & (vv_db < -13.0)).astype(np.float32)
+
+    class_map = np.zeros(vv_db.shape, dtype=np.float32)
+    class_map[mid_reflectance_band.astype(bool)] = 1.0
+    class_map[compact_metal_contrast.astype(bool)] = 2.0
+    class_map[high_specular_low_crosspol.astype(bool)] = 3.0
+    class_map[bright_metallic_mix.astype(bool)] = 4.0
+    class_map[strong_double_bounce.astype(bool)] = 5.0
+    class_map[~valid] = nodata
+
+    stack = np.stack(
+        [
+            class_map,
+            high_specular_low_crosspol,
+            bright_metallic_mix,
+            compact_metal_contrast,
+            strong_double_bounce,
+            mid_reflectance_band,
+        ],
+        axis=-1,
+    ).astype(np.float32)
+
+    return {
+        "arch_targets_band_names": list(ARCH_TARGETS_BANDS),
+        "arch_targets_stack": stack,
+    }
+
+
 def _compute_plan_b_geophysics_products(
     vv_db: np.ndarray,
     vh_db: np.ndarray,
@@ -508,6 +564,7 @@ def build_feature_stack_products(
     rad_master_cube = _compute_rad_master_cube_products(vv_db, vh_db, nodata=nodata)
     gphys_master = _compute_gphys_master_products(vv_db, vh_db, nodata=nodata)
     master_rtc_refined = _compute_master_rtc_refined_products(vv_db, vh_db, incidence, nodata=nodata)
+    arch_targets = _compute_arch_targets_products(vv_db, vh_db, nodata=nodata)
 
     stats_rows: list[dict[str, object]] = []
     for band_index, band_name in enumerate(band_names):
@@ -563,6 +620,11 @@ def build_feature_stack_products(
                 "artifact_name": "master_rtc_refined_stack",
                 "source_notebook_family": "MASTER_RTC_REFINED_STACK_640",
                 "band_names": list(MASTER_RTC_REFINED_BANDS),
+            },
+            {
+                "artifact_name": "arch_targets_stack",
+                "source_notebook_family": "ARCH_TARGETS_STACK_640",
+                "band_names": list(ARCH_TARGETS_BANDS),
             },
             {
                 "artifact_name": "nano_geophysics_stack",
@@ -623,6 +685,13 @@ def build_feature_stack_products(
                 "reason": "Cell 047 selected as canonical Master RTC refined stack for Plan B item 9 B1.5.",
             },
             {
+                "family": "ARCH_TARGETS_STACK_640",
+                "status": "implemented",
+                "artifact_name": "arch_targets_stack",
+                "source_cell": "cell_052",
+                "reason": "Cell 052 selected as canonical archaeological/target anomaly stack for Plan B item 9 B1.6.",
+            },
+            {
                 "family": "RAD_MASTER_CUBE_640",
                 "status": "implemented",
                 "artifact_name": "rad_master_cube_stack",
@@ -678,6 +747,8 @@ def build_feature_stack_products(
         "gphys_master_stack": gphys_master["gphys_master_stack"],
         "master_rtc_refined_band_names": master_rtc_refined["master_rtc_refined_band_names"],
         "master_rtc_refined_stack": master_rtc_refined["master_rtc_refined_stack"],
+        "arch_targets_band_names": arch_targets["arch_targets_band_names"],
+        "arch_targets_stack": arch_targets["arch_targets_stack"],
         "band_stats_rows": stats_rows,
         "stack_presence_summary": stack_presence_summary,
         "tensor_audit_summary": tensor_audit_summary,
@@ -756,6 +827,14 @@ def _build_stack_alias_manifest(
                 "source_cell": "cell_047",
             },
             {
+                "filename": NOTEBOOK_ARCH_TARGETS_STACK_NPY,
+                "source_notebook_family": "ARCH_TARGETS_STACK_640",
+                "app_artifact": "arch_targets_stack",
+                "band_names": list(ARCH_TARGETS_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_052",
+            },
+            {
                 "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
                 "source_notebook_family": "NANO_GEOPHYSICS_STACK_640",
                 "app_artifact": "nano_geophysics_stack",
@@ -794,6 +873,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     rad_master_cube_stack = products["rad_master_cube_stack"]
     gphys_master_stack = products["gphys_master_stack"]
     master_rtc_refined_stack = products["master_rtc_refined_stack"]
+    arch_targets_stack = products["arch_targets_stack"]
     band_stats_rows = products["band_stats_rows"]
     stack_presence_summary = products["stack_presence_summary"]
     tensor_audit_summary = products["tensor_audit_summary"]
@@ -812,6 +892,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     assert isinstance(rad_master_cube_stack, np.ndarray)
     assert isinstance(gphys_master_stack, np.ndarray)
     assert isinstance(master_rtc_refined_stack, np.ndarray)
+    assert isinstance(arch_targets_stack, np.ndarray)
     assert isinstance(band_stats_rows, list)
     assert isinstance(stack_presence_summary, dict)
     assert isinstance(tensor_audit_summary, dict)
@@ -856,6 +937,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     notebook_rad_master_cube_npy_path = notebook_stack_dir / NOTEBOOK_RAD_MASTER_CUBE_NPY
     notebook_gphys_master_stack_npy_path = notebook_stack_dir / NOTEBOOK_GPHYS_MASTER_STACK_NPY
     notebook_master_rtc_refined_stack_npy_path = notebook_stack_dir / NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY
+    notebook_arch_targets_stack_npy_path = notebook_stack_dir / NOTEBOOK_ARCH_TARGETS_STACK_NPY
     notebook_stack_alias_manifest_path = notebook_stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
 
     _save_multipage_tiff(stack_tif_path, cube)
@@ -872,6 +954,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     np.save(notebook_rad_master_cube_npy_path, rad_master_cube_stack)
     np.save(notebook_gphys_master_stack_npy_path, gphys_master_stack)
     np.save(notebook_master_rtc_refined_stack_npy_path, master_rtc_refined_stack)
+    np.save(notebook_arch_targets_stack_npy_path, arch_targets_stack)
 
     for band_index, band_name in enumerate(NANO_GEOPHYSICS_BANDS):
         band_array = nano_geophysics_stack[:, :, band_index].astype(np.float32, copy=False)
@@ -957,6 +1040,20 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         )
         np.save(band_npy, band_array)
 
+    for band_index, band_name in enumerate(ARCH_TARGETS_BANDS):
+        band_array = arch_targets_stack[:, :, band_index].astype(np.float32, copy=False)
+        band_tif = notebook_sar_tif_dir / f"{band_name}_640.tif"
+        band_npy = notebook_sar_npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(band_tif, band_array, grid_spec)
+        write_raster_sidecar(
+            band_tif,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(band_npy, band_array)
+
     write_georeferenced_raster(radar_db_tif_path, radar_db_stack, grid_spec)
     np.save(radar_db_npy_path, radar_db_stack)
     _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)
@@ -1025,6 +1122,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
         "notebook_rad_master_cube_npy": notebook_rad_master_cube_npy_path,
         "notebook_gphys_master_stack_npy": notebook_gphys_master_stack_npy_path,
         "notebook_master_rtc_refined_stack_npy": notebook_master_rtc_refined_stack_npy_path,
+        "notebook_arch_targets_stack_npy": notebook_arch_targets_stack_npy_path,
         "notebook_stack_alias_manifest_json": notebook_stack_alias_manifest_path,
     }
 
@@ -1186,6 +1284,13 @@ class FeatureStacksStage(Stage):
                 relative_path=outputs["notebook_master_rtc_refined_stack_npy"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["notebook_master_rtc_refined_stack_npy"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="notebook_ARCH_TARGETS_STACK_640_npy",
+                relative_path=outputs["notebook_arch_targets_stack_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["notebook_arch_targets_stack_npy"].stat().st_size,
                 http_servable=False,
             ),
             build_stage_artifact(

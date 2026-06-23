@@ -21,6 +21,7 @@ from app.pipeline.stages.feature_stacks import (
     NOTEBOOK_RAD_MASTER_CUBE_NPY,
     NOTEBOOK_GPHYS_MASTER_STACK_NPY,
     NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY,
+    NOTEBOOK_ARCH_TARGETS_STACK_NPY,
     NOTEBOOK_RADAR_STACK_NPY,
     NOTEBOOK_SCIENCE_CORE_STACK_NPY,
     NOTEBOOK_STACK_ALIAS_MANIFEST_JSON,
@@ -31,6 +32,7 @@ from app.pipeline.stages.feature_stacks import (
     RAD_MASTER_CUBE_BANDS,
     GPHYS_MASTER_BANDS,
     MASTER_RTC_REFINED_BANDS,
+    ARCH_TARGETS_BANDS,
     SCIENCE_CORE_BANDS,
     TREASURE_GEOPHYSICS_BANDS,
 )
@@ -77,6 +79,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "notebook_RAD_MASTER_CUBE_640_npy",
             "notebook_GPHYS_MASTER_STACK_640_npy",
             "notebook_MASTER_RTC_REFINED_STACK_640_npy",
+            "notebook_ARCH_TARGETS_STACK_640_npy",
             "notebook_NANO_GEOPHYSICS_STACK_640_npy",
             "notebook_TREASURE_GEOPHYSICS_STACK_640_npy",
             "notebook_stack_alias_manifest",
@@ -220,6 +223,31 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             atol=1e-5,
         )
 
+        arch_targets = np.load(notebook_dir / NOTEBOOK_ARCH_TARGETS_STACK_NPY)
+        assert arch_targets.shape == (grid_spec.size, grid_spec.size, len(ARCH_TARGETS_BANDS))
+
+        vv_ref_for_arch = vv_med
+        expected_high = (valid & (vv_db > -3.5) & (vh_db < -18.0)).astype(np.float32)
+        expected_bright = (valid & (vv_db > -3.5) & (vh_db > -18.0)).astype(np.float32)
+        expected_compact = (valid & (np.abs(vv_db - vv_ref_for_arch) > 4.5)).astype(np.float32)
+        expected_double = (valid & (vv_db > 0.0)).astype(np.float32)
+        expected_mid = (valid & (vv_db > -17.0) & (vv_db < -13.0)).astype(np.float32)
+
+        expected_class = np.zeros(vv_db.shape, dtype=np.float32)
+        expected_class[expected_mid.astype(bool)] = 1.0
+        expected_class[expected_compact.astype(bool)] = 2.0
+        expected_class[expected_high.astype(bool)] = 3.0
+        expected_class[expected_bright.astype(bool)] = 4.0
+        expected_class[expected_double.astype(bool)] = 5.0
+        expected_class[~valid] = grid_spec.nodata
+
+        np.testing.assert_allclose(arch_targets[:, :, 0], expected_class, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(arch_targets[:, :, 1], expected_high, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(arch_targets[:, :, 2], expected_bright, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(arch_targets[:, :, 3], expected_compact, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(arch_targets[:, :, 4], expected_double, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(arch_targets[:, :, 5], expected_mid, rtol=1e-6, atol=1e-6)
+
         nano_stack = np.load(notebook_dir / NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY)
         assert nano_stack.shape == (grid_spec.size, grid_spec.size, len(NANO_GEOPHYSICS_BANDS))
         np.testing.assert_allclose(nano_stack[:, :, 0][valid], vv_lin / (vh_lin + np.float32(1e-6)), rtol=1e-5, atol=1e-5)
@@ -248,7 +276,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             atol=1e-5,
         )
 
-        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *MASTER_RTC_REFINED_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
+        for band_name in (*RAD_S0_MASTER_BANDS, *RAD_MASTER_CUBE_BANDS, *GPHYS_MASTER_BANDS, *MASTER_RTC_REFINED_BANDS, *ARCH_TARGETS_BANDS, *NANO_GEOPHYSICS_BANDS, *TREASURE_GEOPHYSICS_BANDS):
             assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()
             tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}_640.tif"
             assert tif_path.is_file()
@@ -270,6 +298,8 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert alias_by_file[NOTEBOOK_GPHYS_MASTER_STACK_NPY]["source_cell"] == "cell_051"
         assert alias_by_file[NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_MASTER_RTC_REFINED_STACK_NPY]["source_cell"] == "cell_047"
+        assert alias_by_file[NOTEBOOK_ARCH_TARGETS_STACK_NPY]["status"] == "implemented"
+        assert alias_by_file[NOTEBOOK_ARCH_TARGETS_STACK_NPY]["source_cell"] == "cell_052"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
         assert alias_by_file[NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY]["source_cell"] == "cell_037"
         assert alias_by_file[NOTEBOOK_TREASURE_GEOPHYSICS_STACK_NPY]["status"] == "implemented"
@@ -294,6 +324,7 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
             "rad_master_cube_stack",
             "gphys_master_stack",
             "master_rtc_refined_stack",
+            "arch_targets_stack",
             "nano_geophysics_stack",
             "treasure_geophysics_stack",
             "ai_ready_support_stack",
@@ -311,6 +342,8 @@ def test_feature_stacks_stage_writes_filesystem_only_support_outputs() -> None:
         assert family_statuses["GPHYS_MASTER_640"]["artifact_name"] == "gphys_master_stack"
         assert family_statuses["MASTER_RTC_REFINED_STACK_640"]["status"] == "implemented"
         assert family_statuses["MASTER_RTC_REFINED_STACK_640"]["artifact_name"] == "master_rtc_refined_stack"
+        assert family_statuses["ARCH_TARGETS_STACK_640"]["status"] == "implemented"
+        assert family_statuses["ARCH_TARGETS_STACK_640"]["artifact_name"] == "arch_targets_stack"
         assert family_statuses["NANO_STACK"]["status"] == "implemented"
         assert family_statuses["NANO_STACK"]["artifact_name"] == "nano_geophysics_stack"
         assert family_statuses["TREASURE_GEOPHYSICS_STACK_640"]["status"] == "implemented"
