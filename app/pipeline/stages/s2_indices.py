@@ -51,6 +51,19 @@ AIX_EXTRA_TENSOR_BANDS = (
     f"AIX_{AIX_TIME_TAG}_Aspect_Norm01",
     f"AIX_{AIX_TIME_TAG}_Hillshade_Norm01",
 )
+AIX_DEM_MASK_TIME_TAG = "2022_2026FEB_CLOUDLT3"
+AIX_DEM_MATCHED_MASKS_STACK_NPY = f"AIX_{AIX_DEM_MASK_TIME_TAG}_DEM_MATCHED_MASKS_STACK_640.npy"
+AIX_DEM_MATCHED_MASK_BANDS = (
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskVegetationRoots_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskWaterMoisture_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_IndexIronOxide_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_IndexFerricIron_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_IndexClayThermal_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskCharcoalLead_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskQuartzBasalt_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskCarbonate_Norm01",
+    f"AIX_{AIX_DEM_MASK_TIME_TAG}_ThermalTimeSeriesAnomaly_Norm01",
+)
 
 
 class S2CubeFetcher(Protocol):
@@ -58,6 +71,10 @@ class S2CubeFetcher(Protocol):
 
 
 class AIXExtraTensorFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
+
+class AIXDemMatchedMaskFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
 
@@ -190,6 +207,66 @@ def build_aix_extra_tensor_image(grid_spec: GridSpec):
     return ee.Image.cat(band_images).rename(list(AIX_EXTRA_TENSOR_BANDS))
 
 
+def build_aix_dem_matched_mask_image(grid_spec: GridSpec):
+    region = build_grid_region(grid_spec)
+    s2 = (
+        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-02-28")
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 3))
+        .select(["B1", "B2", "B3", "B4", "B5", "B8", "B11", "B12"])
+        .median()
+    )
+
+    l8 = (
+        ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-02-28")
+        .select(["ST_B10"])
+        .median()
+    )
+    l9 = (
+        ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-02-28")
+        .select(["ST_B10"])
+        .median()
+    )
+    thermal = ee.ImageCollection([l8.select("ST_B10"), l9.select("ST_B10")]).median()
+
+    return ee.Image.cat(
+        [
+            s2.normalizedDifference(["B8", "B4"]).unitScale(-1, 1).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskVegetationRoots_Norm01"
+            ),
+            s2.normalizedDifference(["B3", "B8"]).unitScale(-1, 1).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskWaterMoisture_Norm01"
+            ),
+            s2.select("B4").divide(s2.select("B3")).unitScale(0, 5).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_IndexIronOxide_Norm01"
+            ),
+            s2.select("B4").divide(s2.select("B1")).unitScale(0, 5).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_IndexFerricIron_Norm01"
+            ),
+            s2.select("B11").divide(s2.select("B12")).unitScale(0, 5).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_IndexClayThermal_Norm01"
+            ),
+            s2.normalizedDifference(["B8", "B12"]).unitScale(-1, 1).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskCharcoalLead_Norm01"
+            ),
+            s2.select("B12").divide(s2.select("B11")).unitScale(0, 5).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskQuartzBasalt_Norm01"
+            ),
+            s2.select("B11").add(s2.select("B4")).divide(s2.select("B8")).unitScale(0, 5).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskCarbonate_Norm01"
+            ),
+            thermal.select("ST_B10").multiply(0.00341802).add(149.0).unitScale(280, 320).rename(
+                f"AIX_{AIX_DEM_MASK_TIME_TAG}_ThermalTimeSeriesAnomaly_Norm01"
+            ),
+        ]
+    ).rename(list(AIX_DEM_MATCHED_MASK_BANDS))
+
+
 def to_grid_s2(image, grid_spec: GridSpec):
     return ee.Image(image).toFloat().reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform)).clip(
         build_grid_region(grid_spec)
@@ -308,6 +385,62 @@ def deterministic_aix_extra_tensor_fetcher(*, grid_spec: GridSpec) -> np.ndarray
     return np.stack(layers, axis=-1).astype(np.float32)
 
 
+def create_ee_aix_dem_matched_mask_fetcher(settings, grid_spec: GridSpec) -> AIXDemMatchedMaskFetcher:
+    initialize_ee_session(settings)
+    final_for_sample = finalize_for_sample(build_aix_dem_matched_mask_image(grid_spec), grid_spec)
+    requests = build_s2_tile_requests(grid_spec)
+
+    def fetch_cube(*, grid_spec: GridSpec) -> np.ndarray:
+        cube = np.full((grid_spec.size, grid_spec.size, len(AIX_DEM_MATCHED_MASK_BANDS)), grid_spec.nodata, dtype=np.float32)
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle(
+                [request["xmin"], request["ymin"], request["xmax"], request["ymax"]],
+                grid_spec.crs,
+                False,
+            )
+            rect = final_for_sample.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            for band_index, band_name in enumerate(AIX_DEM_MATCHED_MASK_BANDS):
+                data = np.array(rect["properties"][band_name], dtype=np.float32)[: DEM_TILE_SIZE, : DEM_TILE_SIZE]
+                row_start = request["tile_row"] * DEM_TILE_SIZE
+                col_start = request["tile_col"] * DEM_TILE_SIZE
+                cube[row_start : row_start + DEM_TILE_SIZE, col_start : col_start + DEM_TILE_SIZE, band_index] = data
+        return cube.astype(np.float32, copy=False)
+
+    return fetch_cube
+
+
+def deterministic_aix_dem_matched_mask_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
+    s2 = deterministic_s2_cube_fetcher(grid_spec=grid_spec)
+    b2 = s2[:, :, 0]
+    b3 = s2[:, :, 1]
+    b4 = s2[:, :, 2]
+    b8 = s2[:, :, 3]
+    b11 = s2[:, :, 4]
+    b12 = s2[:, :, 5]
+    b1 = s2[:, :, 6]
+
+    rows, cols = np.indices((grid_spec.size, grid_spec.size), dtype=np.float32)
+    row_norm = rows / np.float32(max(grid_spec.size - 1, 1))
+    col_norm = cols / np.float32(max(grid_spec.size - 1, 1))
+    thermal_st_b10 = (np.float32(290.0) + row_norm * np.float32(4.0) + col_norm * np.float32(2.0) - np.float32(149.0)) / np.float32(0.00341802)
+
+    def nd(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        return ((a - b) / np.maximum(a + b, np.float32(1e-6))).astype(np.float32)
+
+    layers = [
+        (nd(b8, b4) + np.float32(1.0)) / np.float32(2.0),
+        (nd(b3, b8) + np.float32(1.0)) / np.float32(2.0),
+        (b4 / np.maximum(b3, np.float32(1e-6))) / np.float32(5.0),
+        (b4 / np.maximum(b1, np.float32(1e-6))) / np.float32(5.0),
+        (b11 / np.maximum(b12, np.float32(1e-6))) / np.float32(5.0),
+        (nd(b8, b12) + np.float32(1.0)) / np.float32(2.0),
+        (b12 / np.maximum(b11, np.float32(1e-6))) / np.float32(5.0),
+        ((b11 + b4) / np.maximum(b8, np.float32(1e-6))) / np.float32(5.0),
+        ((thermal_st_b10 * np.float32(0.00341802) + np.float32(149.0)) - np.float32(280.0)) / np.float32(40.0),
+    ]
+    return np.stack(layers, axis=-1).astype(np.float32)
+
+
 def deterministic_s2_cube_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
     size = grid_spec.size
     rows, cols = np.indices((size, size), dtype=np.float32)
@@ -423,6 +556,17 @@ def _build_aix_extra_tensor_alias() -> dict[str, object]:
     }
 
 
+def _build_aix_dem_matched_masks_alias() -> dict[str, object]:
+    return {
+        "filename": AIX_DEM_MATCHED_MASKS_STACK_NPY,
+        "source_notebook_family": "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640",
+        "app_artifact": "aix_dem_matched_masks_stack",
+        "band_names": list(AIX_DEM_MATCHED_MASK_BANDS),
+        "status": "implemented",
+        "source_cell": "cell_081",
+    }
+
+
 def write_aix_extra_tensor_alias_manifest(stack_dir: Path) -> Path:
     stack_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
@@ -440,9 +584,10 @@ def write_aix_extra_tensor_alias_manifest(stack_dir: Path) -> Path:
     manifest.setdefault("deferred_families", [])
     manifest.setdefault("privacy", {"artifact_class": "FILESYSTEM_ONLY", "http_servable": False})
 
-    alias = _build_aix_extra_tensor_alias()
-    manifest["aliases"] = [entry for entry in manifest.get("aliases", []) if entry.get("filename") != AIX_EXTRA_TENSORS_STACK_NPY]
-    manifest["aliases"].append(alias)
+    aliases = [_build_aix_extra_tensor_alias(), _build_aix_dem_matched_masks_alias()]
+    filenames = {alias["filename"] for alias in aliases}
+    manifest["aliases"] = [entry for entry in manifest.get("aliases", []) if entry.get("filename") not in filenames]
+    manifest["aliases"].extend(aliases)
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
     return manifest_path
 
@@ -466,6 +611,45 @@ def write_aix_extra_tensor_outputs(run_dir: Path, grid_spec: GridSpec, cube: np.
     np.save(stack_path, cube)
 
     for band_index, band_name in enumerate(AIX_EXTRA_TENSOR_BANDS):
+        band_array = cube[:, :, band_index].astype(np.float32, copy=False)
+        tif_path = tif_dir / f"{band_name}_640.tif"
+        npy_path = npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(tif_path, band_array, grid_spec)
+        write_raster_sidecar(
+            tif_path,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(npy_path, band_array)
+
+    alias_manifest_path = write_aix_extra_tensor_alias_manifest(stack_dir)
+    return {
+        "stack_npy": stack_path,
+        "alias_manifest_json": alias_manifest_path,
+    }
+
+
+def write_aix_dem_matched_mask_outputs(run_dir: Path, grid_spec: GridSpec, cube: np.ndarray) -> dict[str, Path]:
+    if cube.shape != (grid_spec.size, grid_spec.size, len(AIX_DEM_MATCHED_MASK_BANDS)):
+        raise ValueError(
+            f"AIX DEM-matched mask cube shape {cube.shape} does not match expected "
+            f"{(grid_spec.size, grid_spec.size, len(AIX_DEM_MATCHED_MASK_BANDS))}."
+        )
+
+    stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    tif_dir = run_dir / NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR
+    npy_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
+    stack_dir.mkdir(parents=True, exist_ok=True)
+    tif_dir.mkdir(parents=True, exist_ok=True)
+    npy_dir.mkdir(parents=True, exist_ok=True)
+
+    cube = _finite_or_nodata(cube, nodata=grid_spec.nodata)
+    stack_path = stack_dir / AIX_DEM_MATCHED_MASKS_STACK_NPY
+    np.save(stack_path, cube)
+
+    for band_index, band_name in enumerate(AIX_DEM_MATCHED_MASK_BANDS):
         band_array = cube[:, :, band_index].astype(np.float32, copy=False)
         tif_path = tif_dir / f"{band_name}_640.tif"
         npy_path = npy_dir / f"{band_name}_640.npy"
@@ -616,6 +800,7 @@ class S2IndicesStage(Stage):
         cloud_max: int = DEFAULT_S2_CLOUD_MAX,
         s2_cube_fetcher: S2CubeFetcher | None = None,
         aix_extra_tensor_fetcher: AIXExtraTensorFetcher | None = None,
+        aix_dem_matched_mask_fetcher: AIXDemMatchedMaskFetcher | None = None,
     ) -> None:
         self.grid_spec = grid_spec
         self.start_date = start_date
@@ -623,6 +808,7 @@ class S2IndicesStage(Stage):
         self.cloud_max = cloud_max
         self.s2_cube_fetcher = s2_cube_fetcher
         self.aix_extra_tensor_fetcher = aix_extra_tensor_fetcher
+        self.aix_dem_matched_mask_fetcher = aix_dem_matched_mask_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
         fetcher = self.s2_cube_fetcher or create_ee_s2_cube_fetcher(
@@ -665,6 +851,15 @@ class S2IndicesStage(Stage):
             aix_fetcher = create_ee_aix_extra_tensor_fetcher(context.settings, self.grid_spec)
         aix_cube = aix_fetcher(grid_spec=self.grid_spec)
         aix_extra_tensor_outputs = write_aix_extra_tensor_outputs(context.run_dir, self.grid_spec, aix_cube)
+
+        if self.aix_dem_matched_mask_fetcher is not None:
+            aix_mask_fetcher = self.aix_dem_matched_mask_fetcher
+        elif self.s2_cube_fetcher is not None:
+            aix_mask_fetcher = deterministic_aix_dem_matched_mask_fetcher
+        else:
+            aix_mask_fetcher = create_ee_aix_dem_matched_mask_fetcher(context.settings, self.grid_spec)
+        aix_dem_matched_mask_cube = aix_mask_fetcher(grid_spec=self.grid_spec)
+        aix_dem_matched_mask_outputs = write_aix_dem_matched_mask_outputs(context.run_dir, self.grid_spec, aix_dem_matched_mask_cube)
 
         artifacts = [
             build_stage_artifact(
@@ -728,10 +923,17 @@ class S2IndicesStage(Stage):
                     http_servable=False,
                 ),
                 build_stage_artifact(
-                    name="aix_extra_tensors_stack_alias_manifest",
-                    relative_path=aix_extra_tensor_outputs["alias_manifest_json"].relative_to(context.run_dir).as_posix(),
+                    name="notebook_AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640_npy",
+                    relative_path=aix_dem_matched_mask_outputs["stack_npy"].relative_to(context.run_dir).as_posix(),
                     artifact_class=ArtifactClass.FILESYSTEM_ONLY,
-                    size_bytes=aix_extra_tensor_outputs["alias_manifest_json"].stat().st_size,
+                    size_bytes=aix_dem_matched_mask_outputs["stack_npy"].stat().st_size,
+                    http_servable=False,
+                ),
+                build_stage_artifact(
+                    name="aix_extra_tensors_stack_alias_manifest",
+                    relative_path=aix_dem_matched_mask_outputs["alias_manifest_json"].relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=aix_dem_matched_mask_outputs["alias_manifest_json"].stat().st_size,
                     http_servable=False,
                 ),
             ]
@@ -745,5 +947,7 @@ class S2IndicesStage(Stage):
                 "mask_names": ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"],
                 "aix_extra_tensor_stack": AIX_EXTRA_TENSORS_STACK_NPY,
                 "aix_extra_tensor_bands": list(AIX_EXTRA_TENSOR_BANDS),
+                "aix_dem_matched_masks_stack": AIX_DEM_MATCHED_MASKS_STACK_NPY,
+                "aix_dem_matched_mask_bands": list(AIX_DEM_MATCHED_MASK_BANDS),
             },
         )

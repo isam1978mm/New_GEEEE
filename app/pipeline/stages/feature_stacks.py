@@ -66,6 +66,7 @@ NOTEBOOK_ULTIMATE_GPHYS_SCAN_NPY = "ULTIMATE_GPHYS_SCAN_640.npy"
 NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY = "AUX_BONUS_FEATURES_STACK_640.npy"
 NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY = "SIM_GEOPHYSICAL_STACK_640.npy"
 NOTEBOOK_AIX_EXTRA_TENSORS_STACK_NPY = "AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640.npy"
+NOTEBOOK_AIX_DEM_MATCHED_MASKS_STACK_NPY = "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
@@ -162,6 +163,17 @@ AIX_EXTRA_TENSOR_BANDS = (
     "AIX_2022_2026_CLOUDLT3_Slope_Norm01",
     "AIX_2022_2026_CLOUDLT3_Aspect_Norm01",
     "AIX_2022_2026_CLOUDLT3_Hillshade_Norm01",
+)
+AIX_DEM_MATCHED_MASK_BANDS = (
+    "AIX_2022_2026FEB_CLOUDLT3_MaskVegetationRoots_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_MaskWaterMoisture_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_IndexIronOxide_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_IndexFerricIron_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_IndexClayThermal_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_MaskCharcoalLead_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_MaskQuartzBasalt_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_MaskCarbonate_Norm01",
+    "AIX_2022_2026FEB_CLOUDLT3_ThermalTimeSeriesAnomaly_Norm01",
 )
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
@@ -1160,6 +1172,14 @@ def _build_stack_alias_manifest(
                 "band_names": list(AIX_EXTRA_TENSOR_BANDS),
                 "status": "implemented",
                 "source_cell": "cell_077",
+            },
+            {
+                "filename": NOTEBOOK_AIX_DEM_MATCHED_MASKS_STACK_NPY,
+                "source_notebook_family": "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640",
+                "app_artifact": "aix_dem_matched_masks_stack",
+                "band_names": list(AIX_DEM_MATCHED_MASK_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_081",
             },
             {
                 "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
