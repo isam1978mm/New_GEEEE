@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 15 bonus/simulator features implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 17 extra S2 era tensor stack implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -29,7 +29,7 @@ Can we make it in app?
 | 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 9 | More feature stacks / rename layers | 🟨 Partial | Yes | App port implemented for selected stack families: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, cell 047 MASTER_RTC_REFINED_STACK_640, cell 052 ARCH_TARGETS_STACK_640, and cell 054 ULTIMATE_GPHYS_SCAN_640. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟨 Partial | Yes | App port implemented for cell 072 AUX_BONUS_FEATURES_STACK_640 and cell 073 SIM_GEOPHYSICAL_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 17 | Extra S2 era pulls / masks | 🟥 No | Yes | Add historical/seasonal S2 pull stage using notebook date/cloud rules. |
+| 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 18 | DEM-matched S2 masks | 🟥 No | Yes | Add or extend S2 mask products so they align to the DEM/grid contract. |
 | 19 | Tesla v7.2 inference engines | 🟥 No | Yes | Major missing feature. Select one authoritative Tesla cell/version before implementation. |
 | 20 | Fusion center / intelligence tensors | 🟥 No | Yes | Requires base layers and named tensor formulas. Should follow stack/mask completion. |
@@ -40,7 +40,7 @@ Can we make it in app?
 | 27 | KMZ heatmap / 3D target visualization | 🟥 No | Yes | Depends on final target detections. Should be private/local by default. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟥 No | Yes | Planning/inspection feature. Easier than actual inference. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟥 No | Yes | Define input shape, band order, normalization, and saved tensor contract. |
-| 30 | Training / learn weights cells | 🟥 No | Yes, separate | Build as a separate training workflow, not a normal app run stage. |
+| 30 | Training / learn weights cells | 🟥 No | Yes, separate | Build as a separate training workflow, not a normal app stage. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟥 No | Yes | Requires selected model, weights policy, dependency plan, and CPU/GPU expectations. |
 | 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
 | 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
@@ -323,20 +323,71 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.8
+### B1.9 result — item 17 Extra S2 era pulls / masks
+
+```text
+Status:
+  App port implemented for the selected extra S2-era tensor stack.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_077 -> AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640.npy
+  NPY_RADAR_BANDS/{13 AIX_2022_2026_CLOUDLT3 bands}_640.npy
+  GEOTIFF_RADAR_BANDS/{13 AIX_2022_2026_CLOUDLT3 bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{13 AIX_2022_2026_CLOUDLT3 bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_077
+
+Implemented band order:
+  AIX_2022_2026_CLOUDLT3_Jan_IronOxideProxy_Norm01
+  AIX_2022_2026_CLOUDLT3_Jan_MineralAlterationProxy_Norm01
+  AIX_2022_2026_CLOUDLT3_Jan_ThermalAnomaly_Norm01
+  AIX_2022_2026_CLOUDLT3_Apr_IronOxideProxy_Norm01
+  AIX_2022_2026_CLOUDLT3_Apr_MineralAlterationProxy_Norm01
+  AIX_2022_2026_CLOUDLT3_Apr_ThermalAnomaly_Norm01
+  AIX_2022_2026_CLOUDLT3_Aug_IronOxideProxy_Norm01
+  AIX_2022_2026_CLOUDLT3_Aug_MineralAlterationProxy_Norm01
+  AIX_2022_2026_CLOUDLT3_Aug_ThermalAnomaly_Norm01
+  AIX_2022_2026_CLOUDLT3_Elevation_Norm01
+  AIX_2022_2026_CLOUDLT3_Slope_Norm01
+  AIX_2022_2026_CLOUDLT3_Aspect_Norm01
+  AIX_2022_2026_CLOUDLT3_Hillshade_Norm01
+
+Implementation choice:
+  Extend S2IndicesStage so the AIX stack is generated with the same run/grid contract as existing S2 outputs.
+  In real backend mode, build seasonal S2/Landsat/topography tensors from the 2022-2026 cloud < 3 notebook rule.
+  In deterministic/injected test mode, use a local deterministic AIX fetcher and do not call Earth Engine.
+  Preserve the AIX alias in FeatureStacksStage so later stack rewrites keep the cell_077 manifest entry.
+
+Validation done:
+  focused S2 indices test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  AIX extra tensor stack shape confirmed as (640, 640, 13) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_077 and status implemented.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.9 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B1.9
 
 ```text
 Recommended next main item:
-  Move to Plan B item #17: Extra S2 era pulls / masks.
+  Move to Plan B item #18: DEM-matched S2 masks.
 
 Why:
   Plan B item #9 selected Phase G stack families are app-ported.
   Plan B item #15 bonus/simulator features are app-ported.
-  Frozen notebook numeric parity remains pending for these items, but the next missing app capability in B1 order is item #17.
+  Plan B item #17 extra S2-era tensor stack is app-ported.
+  Frozen notebook numeric parity remains pending for these items, but the next missing app capability in B1 order is item #18.
 
 Next action:
-  Inspect exact notebook cell(s) for item #17 Extra S2 era pulls / masks.
-  Decide whether to extend the current S2 stage or add a separate historical/seasonal S2 stage.
+  Inspect exact notebook cell(s) for item #18 DEM-matched S2 masks.
+  Compare them against the current app S2 mask outputs and manifest.
   Produce a gap table before coding.
 ```
 
