@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 9 fourth stack family implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 9 fifth stack family implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -27,7 +27,7 @@ Can we make it in app?
 | # | Not-done-now notebook item | Is it done now? | Can we make it in app? | Plan B note |
 |---:|---|---|---:|---|
 | 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | Implemented so far: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, and cell 047 MASTER_RTC_REFINED_STACK_640. Remaining item #9 stack families still pending. Frozen notebook numeric parity still pending. |
+| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | Implemented so far: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, cell 047 MASTER_RTC_REFINED_STACK_640, and cell 052 ARCH_TARGETS_STACK_640. Remaining item #9 stack family still pending. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟥 No | Yes | Optional/private stage unless specifically required by target pipeline. |
 | 17 | Extra S2 era pulls / masks | 🟥 No | Yes | Add historical/seasonal S2 pull stage using notebook date/cloud rules. |
 | 18 | DEM-matched S2 masks | 🟥 No | Yes | Add or extend S2 mask products so they align to the DEM/grid contract. |
@@ -227,39 +227,75 @@ Implemented band order:
   RAD_MasterVH_Median3m_dB
   RAD_MasterVH_VV_Ratio_lin
 
-Implementation choice:
-  Use existing app SAR arrays VV_dB, VH_dB, and incidence from npy_radar_bands.
-  Compute the Master RTC Refined stack locally in FeatureStacksStage.
-  Do not add another Earth Engine sampling stage for this stack family.
-
 Validation done:
   focused feature stack test passed.
   full-run integration test passed.
   local existing run regenerated and confirmed output files/shapes exist.
   MASTER_RTC_REFINED stack shape confirmed as (640, 640, 6) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_047 and status implemented.
+```
 
-Remaining item #9 families:
+### B1.6 result — item 9 More feature stacks / rename layers, ARCH Targets family
+
+```text
+Status:
+  App port implemented.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
   cell_052 -> ARCH_TARGETS_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/ARCH_TARGETS_STACK_640.npy
+  NPY_RADAR_BANDS/TGT_ClassMap_640.npy
+  NPY_RADAR_BANDS/TGT_HighSpecular_LowCrossPol_640.npy
+  NPY_RADAR_BANDS/TGT_BrightMetallic_Mix_640.npy
+  NPY_RADAR_BANDS/TGT_CompactMetal_Contrast_640.npy
+  NPY_RADAR_BANDS/TGT_StrongDoubleBounce_640.npy
+  NPY_RADAR_BANDS/TGT_MidReflectance_Band_640.npy
+  GEOTIFF_RADAR_BANDS/{6 TGT bands}_640.tif
+  GEOTIFF_RADAR_BANDS/{6 TGT bands}_640.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_052
+
+Implemented band order:
+  TGT_ClassMap
+  TGT_HighSpecular_LowCrossPol
+  TGT_BrightMetallic_Mix
+  TGT_CompactMetal_Contrast
+  TGT_StrongDoubleBounce
+  TGT_MidReflectance_Band
+
+Implementation choice:
+  Use existing app SAR arrays VV_dB and VH_dB from npy_radar_bands.
+  Compute the archaeological/target anomaly stack locally in FeatureStacksStage.
+  Do not add another Earth Engine sampling stage for this stack family.
+
+Validation done:
+  focused feature stack test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  ARCH_TARGETS stack shape confirmed as (640, 640, 6) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_052 and status implemented.
+
+Remaining item #9 family:
   cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
 Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.5 artifacts.
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.6 artifacts.
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.5
+### Next main item scan after B1.6
 
 ```text
 Recommended next main item:
-  Continue item #9 with the next stack-family target.
+  Continue item #9 with the final remaining stack-family target.
 
-Candidate order:
-  1. cell_052 -> ARCH_TARGETS_STACK_640.npy
-  2. cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
+Candidate:
+  cell_054 -> ULTIMATE_GPHYS_SCAN_640.npy
 
 Next action:
-  Inspect exact formula requirements for cell_052 against current app arrays.
+  Inspect exact formula requirements for cell_054 against current app arrays and pair data availability.
   Produce a gap table before coding.
 ```
 
