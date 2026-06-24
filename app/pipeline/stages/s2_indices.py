@@ -70,6 +70,14 @@ FUSION_INTELLIGENCE_BANDS = (
     "REPORT_640_Mass_Report",
     "REPORT_640_Pottery_Report",
 )
+TESLA_ATOMIC_INFERENCE_STACK_NPY = "TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy"
+TESLA_ATOMIC_INFERENCE_BANDS = (
+    "AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640",
+    "AI_BEH_Artifacts_Jars_Chests_DOM_lin_640",
+    "AI_BEH_Mercury_RareChemicals_DOM_lin_640",
+    "AI_BEH_Gemstones_AncientGlass_DOM_lin_640",
+    "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640",
+)
 
 
 class S2CubeFetcher(Protocol):
@@ -85,6 +93,10 @@ class AIXDemMatchedMaskFetcher(Protocol):
 
 
 class FusionIntelligenceFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
+
+class TeslaAtomicInferenceFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
 
@@ -322,6 +334,38 @@ def build_fusion_intelligence_image(grid_spec: GridSpec):
     ).rename(list(FUSION_INTELLIGENCE_BANDS))
 
 
+def build_tesla_atomic_inference_image(grid_spec: GridSpec):
+    region = build_grid_region(grid_spec)
+    s2 = (
+        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-03-01")
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 5))
+        .select(["B1", "B2", "B3", "B4", "B8", "B8A", "B11", "B12"])
+        .median()
+    )
+
+    return ee.Image.cat(
+        [
+            s2.select("B12").divide(s2.select("B11")).unitScale(1.0, 2.5).rename(
+                "AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640"
+            ),
+            s2.select("B11").divide(s2.select("B8A")).unitScale(0.5, 2.0).rename(
+                "AI_BEH_Artifacts_Jars_Chests_DOM_lin_640"
+            ),
+            s2.select("B1").divide(s2.select("B3")).unitScale(0.8, 1.8).rename(
+                "AI_BEH_Mercury_RareChemicals_DOM_lin_640"
+            ),
+            s2.select("B2").divide(s2.select("B12")).unitScale(0.0, 5.0).rename(
+                "AI_BEH_Gemstones_AncientGlass_DOM_lin_640"
+            ),
+            s2.normalizedDifference(["B4", "B8"]).unitScale(-1.0, 1.0).rename(
+                "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640"
+            ),
+        ]
+    ).rename(list(TESLA_ATOMIC_INFERENCE_BANDS))
+
+
 def to_grid_s2(image, grid_spec: GridSpec):
     return ee.Image(image).toFloat().reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform)).clip(
         build_grid_region(grid_spec)
@@ -547,6 +591,54 @@ def deterministic_fusion_intelligence_fetcher(*, grid_spec: GridSpec) -> np.ndar
     return np.stack([final_targets, mass_report, pottery_report], axis=-1).astype(np.float32)
 
 
+def create_ee_tesla_atomic_inference_fetcher(settings, grid_spec: GridSpec) -> TeslaAtomicInferenceFetcher:
+    initialize_ee_session(settings)
+    final_for_sample = finalize_for_sample(build_tesla_atomic_inference_image(grid_spec), grid_spec)
+    requests = build_s2_tile_requests(grid_spec)
+
+    def fetch_cube(*, grid_spec: GridSpec) -> np.ndarray:
+        cube = np.full((grid_spec.size, grid_spec.size, len(TESLA_ATOMIC_INFERENCE_BANDS)), grid_spec.nodata, dtype=np.float32)
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle(
+                [request["xmin"], request["ymin"], request["xmax"], request["ymax"]],
+                grid_spec.crs,
+                False,
+            )
+            rect = final_for_sample.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            for band_index, band_name in enumerate(TESLA_ATOMIC_INFERENCE_BANDS):
+                data = np.array(rect["properties"][band_name], dtype=np.float32)[: DEM_TILE_SIZE, : DEM_TILE_SIZE]
+                row_start = request["tile_row"] * DEM_TILE_SIZE
+                col_start = request["tile_col"] * DEM_TILE_SIZE
+                cube[row_start : row_start + DEM_TILE_SIZE, col_start : col_start + DEM_TILE_SIZE, band_index] = data
+        return cube.astype(np.float32, copy=False)
+
+    return fetch_cube
+
+
+def deterministic_tesla_atomic_inference_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
+    s2 = deterministic_s2_cube_fetcher(grid_spec=grid_spec)
+    b2 = s2[:, :, 0]
+    b3 = s2[:, :, 1]
+    b4 = s2[:, :, 2]
+    b8 = s2[:, :, 3]
+    b11 = s2[:, :, 4]
+    b12 = s2[:, :, 5]
+    b1 = s2[:, :, 6]
+    b8a = b8 + np.float32(0.04)
+
+    def nd(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        return ((a - b) / np.maximum(a + b, np.float32(1e-6))).astype(np.float32)
+
+    layers = [
+        ((b12 / np.maximum(b11, np.float32(1e-6))) - np.float32(1.0)) / np.float32(1.5),
+        ((b11 / np.maximum(b8a, np.float32(1e-6))) - np.float32(0.5)) / np.float32(1.5),
+        ((b1 / np.maximum(b3, np.float32(1e-6))) - np.float32(0.8)) / np.float32(1.0),
+        (b2 / np.maximum(b12, np.float32(1e-6))) / np.float32(5.0),
+        (nd(b4, b8) + np.float32(1.0)) / np.float32(2.0),
+    ]
+    return np.stack(layers, axis=-1).astype(np.float32)
+
+
 def deterministic_s2_cube_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
     size = grid_spec.size
     rows, cols = np.indices((size, size), dtype=np.float32)
@@ -684,6 +776,17 @@ def _build_fusion_intelligence_alias() -> dict[str, object]:
     }
 
 
+def _build_tesla_atomic_inference_alias() -> dict[str, object]:
+    return {
+        "filename": TESLA_ATOMIC_INFERENCE_STACK_NPY,
+        "source_notebook_family": "TESLA_V7_2_ATOMIC_INFERENCE_ENGINE_640",
+        "app_artifact": "tesla_atomic_inference_stack",
+        "band_names": list(TESLA_ATOMIC_INFERENCE_BANDS),
+        "status": "implemented",
+        "source_cell": "cell_095",
+    }
+
+
 def write_aix_extra_tensor_alias_manifest(stack_dir: Path) -> Path:
     stack_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
@@ -701,7 +804,12 @@ def write_aix_extra_tensor_alias_manifest(stack_dir: Path) -> Path:
     manifest.setdefault("deferred_families", [])
     manifest.setdefault("privacy", {"artifact_class": "FILESYSTEM_ONLY", "http_servable": False})
 
-    aliases = [_build_aix_extra_tensor_alias(), _build_aix_dem_matched_masks_alias(), _build_fusion_intelligence_alias()]
+    aliases = [
+        _build_aix_extra_tensor_alias(),
+        _build_aix_dem_matched_masks_alias(),
+        _build_fusion_intelligence_alias(),
+        _build_tesla_atomic_inference_alias(),
+    ]
     filenames = {alias["filename"] for alias in aliases}
     manifest["aliases"] = [entry for entry in manifest.get("aliases", []) if entry.get("filename") not in filenames]
     manifest["aliases"].extend(aliases)
@@ -809,6 +917,45 @@ def write_fusion_intelligence_outputs(run_dir: Path, grid_spec: GridSpec, cube: 
         band_array = cube[:, :, band_index].astype(np.float32, copy=False)
         tif_path = tif_dir / f"{band_name}_640.tif"
         npy_path = npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(tif_path, band_array, grid_spec)
+        write_raster_sidecar(
+            tif_path,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(npy_path, band_array)
+
+    alias_manifest_path = write_aix_extra_tensor_alias_manifest(stack_dir)
+    return {
+        "stack_npy": stack_path,
+        "alias_manifest_json": alias_manifest_path,
+    }
+
+
+def write_tesla_atomic_inference_outputs(run_dir: Path, grid_spec: GridSpec, cube: np.ndarray) -> dict[str, Path]:
+    if cube.shape != (grid_spec.size, grid_spec.size, len(TESLA_ATOMIC_INFERENCE_BANDS)):
+        raise ValueError(
+            f"Tesla atomic inference cube shape {cube.shape} does not match expected "
+            f"{(grid_spec.size, grid_spec.size, len(TESLA_ATOMIC_INFERENCE_BANDS))}."
+        )
+
+    stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    tif_dir = run_dir / NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR
+    npy_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
+    stack_dir.mkdir(parents=True, exist_ok=True)
+    tif_dir.mkdir(parents=True, exist_ok=True)
+    npy_dir.mkdir(parents=True, exist_ok=True)
+
+    cube = _finite_or_nodata(cube, nodata=grid_spec.nodata)
+    stack_path = stack_dir / TESLA_ATOMIC_INFERENCE_STACK_NPY
+    np.save(stack_path, cube)
+
+    for band_index, band_name in enumerate(TESLA_ATOMIC_INFERENCE_BANDS):
+        band_array = cube[:, :, band_index].astype(np.float32, copy=False)
+        tif_path = tif_dir / f"{band_name}.tif"
+        npy_path = npy_dir / f"{band_name}.npy"
         write_georeferenced_raster(tif_path, band_array, grid_spec)
         write_raster_sidecar(
             tif_path,
@@ -958,6 +1105,7 @@ class S2IndicesStage(Stage):
         aix_extra_tensor_fetcher: AIXExtraTensorFetcher | None = None,
         aix_dem_matched_mask_fetcher: AIXDemMatchedMaskFetcher | None = None,
         fusion_intelligence_fetcher: FusionIntelligenceFetcher | None = None,
+        tesla_atomic_inference_fetcher: TeslaAtomicInferenceFetcher | None = None,
     ) -> None:
         self.grid_spec = grid_spec
         self.start_date = start_date
@@ -967,6 +1115,7 @@ class S2IndicesStage(Stage):
         self.aix_extra_tensor_fetcher = aix_extra_tensor_fetcher
         self.aix_dem_matched_mask_fetcher = aix_dem_matched_mask_fetcher
         self.fusion_intelligence_fetcher = fusion_intelligence_fetcher
+        self.tesla_atomic_inference_fetcher = tesla_atomic_inference_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
         fetcher = self.s2_cube_fetcher or create_ee_s2_cube_fetcher(
@@ -1027,6 +1176,17 @@ class S2IndicesStage(Stage):
             fusion_fetcher = create_ee_fusion_intelligence_fetcher(context.settings, self.grid_spec)
         fusion_intelligence_cube = fusion_fetcher(grid_spec=self.grid_spec)
         fusion_intelligence_outputs = write_fusion_intelligence_outputs(context.run_dir, self.grid_spec, fusion_intelligence_cube)
+
+        if self.tesla_atomic_inference_fetcher is not None:
+            tesla_fetcher = self.tesla_atomic_inference_fetcher
+        elif self.s2_cube_fetcher is not None:
+            tesla_fetcher = deterministic_tesla_atomic_inference_fetcher
+        else:
+            tesla_fetcher = create_ee_tesla_atomic_inference_fetcher(context.settings, self.grid_spec)
+        tesla_atomic_inference_cube = tesla_fetcher(grid_spec=self.grid_spec)
+        tesla_atomic_inference_outputs = write_tesla_atomic_inference_outputs(
+            context.run_dir, self.grid_spec, tesla_atomic_inference_cube
+        )
 
         artifacts = [
             build_stage_artifact(
@@ -1104,6 +1264,13 @@ class S2IndicesStage(Stage):
                     http_servable=False,
                 ),
                 build_stage_artifact(
+                    name="notebook_TESLA_V7_2_ATOMIC_INFERENCE_STACK_640_npy",
+                    relative_path=tesla_atomic_inference_outputs["stack_npy"].relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=tesla_atomic_inference_outputs["stack_npy"].stat().st_size,
+                    http_servable=False,
+                ),
+                build_stage_artifact(
                     name="aix_extra_tensors_stack_alias_manifest",
                     relative_path=aix_dem_matched_mask_outputs["alias_manifest_json"].relative_to(context.run_dir).as_posix(),
                     artifact_class=ArtifactClass.FILESYSTEM_ONLY,
@@ -1125,5 +1292,7 @@ class S2IndicesStage(Stage):
                 "aix_dem_matched_mask_bands": list(AIX_DEM_MATCHED_MASK_BANDS),
                 "fusion_intelligence_stack": FUSION_INTELLIGENCE_STACK_NPY,
                 "fusion_intelligence_bands": list(FUSION_INTELLIGENCE_BANDS),
+                "tesla_atomic_inference_stack": TESLA_ATOMIC_INFERENCE_STACK_NPY,
+                "tesla_atomic_inference_bands": list(TESLA_ATOMIC_INFERENCE_BANDS),
             },
         )

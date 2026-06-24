@@ -21,6 +21,8 @@ from app.pipeline.stages.s2_indices import (
     FUSION_INTELLIGENCE_STACK_NPY,
     INDEX_NAMES,
     S2_DEM_MATCHED_MASK_MANIFEST_JSON,
+    TESLA_ATOMIC_INFERENCE_BANDS,
+    TESLA_ATOMIC_INFERENCE_STACK_NPY,
     S2_INDEX_VALID_MASK_TIF,
     S2_MASK_OUTPUT_DIR,
     S2_RAW_VALID_MASK_TIF,
@@ -186,6 +188,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640_npy",
             "notebook_AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640_npy",
             "notebook_REPORT_640_FINAL_INTELLIGENCE_STACK_640_npy",
+            "notebook_TESLA_V7_2_ATOMIC_INFERENCE_STACK_640_npy",
             "aix_extra_tensors_stack_alias_manifest",
         ]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
@@ -200,6 +203,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
             "notebook_AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640_npy",
             "notebook_AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640_npy",
             "notebook_REPORT_640_FINAL_INTELLIGENCE_STACK_640_npy",
+            "notebook_TESLA_V7_2_ATOMIC_INFERENCE_STACK_640_npy",
             "aix_extra_tensors_stack_alias_manifest",
         ):
             assert artifact_classes[name] == ArtifactClass.FILESYSTEM_ONLY
@@ -212,6 +216,8 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         assert result.metadata["aix_dem_matched_mask_bands"] == list(AIX_DEM_MATCHED_MASK_BANDS)
         assert result.metadata["fusion_intelligence_stack"] == FUSION_INTELLIGENCE_STACK_NPY
         assert result.metadata["fusion_intelligence_bands"] == list(FUSION_INTELLIGENCE_BANDS)
+        assert result.metadata["tesla_atomic_inference_stack"] == TESLA_ATOMIC_INFERENCE_STACK_NPY
+        assert result.metadata["tesla_atomic_inference_bands"] == list(TESLA_ATOMIC_INFERENCE_BANDS)
 
         for name in INDEX_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
@@ -257,6 +263,23 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         assert fusion_alias["source_cell"] == "cell_099"
         assert fusion_alias["status"] == "implemented"
         assert fusion_alias["band_names"] == list(FUSION_INTELLIGENCE_BANDS)
+
+        tesla_atomic_stack = np.load(run_dir / "NPY_STACKS" / TESLA_ATOMIC_INFERENCE_STACK_NPY)
+        assert tesla_atomic_stack.shape == (grid_spec.size, grid_spec.size, len(TESLA_ATOMIC_INFERENCE_BANDS))
+        assert tesla_atomic_stack.dtype == np.float32
+
+        tesla_atomic_alias = next(entry for entry in alias_manifest["aliases"] if entry["filename"] == TESLA_ATOMIC_INFERENCE_STACK_NPY)
+        assert tesla_atomic_alias["source_cell"] == "cell_095"
+        assert tesla_atomic_alias["status"] == "implemented"
+        assert tesla_atomic_alias["band_names"] == list(TESLA_ATOMIC_INFERENCE_BANDS)
+
+        for band_name in TESLA_ATOMIC_INFERENCE_BANDS:
+            assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}.npy").is_file()
+            tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}.tif"
+            assert tif_path.is_file()
+            sidecar = read_manifest(raster_sidecar_path(tif_path))
+            assert sidecar["transform"] == grid_spec.manifest.crs_transform
+            assert sidecar["dtype"] == "float32"
 
         for band_name in FUSION_INTELLIGENCE_BANDS:
             assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()

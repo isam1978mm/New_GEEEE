@@ -68,6 +68,7 @@ NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY = "SIM_GEOPHYSICAL_STACK_640.npy"
 NOTEBOOK_AIX_EXTRA_TENSORS_STACK_NPY = "AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640.npy"
 NOTEBOOK_AIX_DEM_MATCHED_MASKS_STACK_NPY = "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy"
 NOTEBOOK_FUSION_INTELLIGENCE_STACK_NPY = "REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy"
+NOTEBOOK_TESLA_ATOMIC_INFERENCE_STACK_NPY = "TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
@@ -180,6 +181,13 @@ FUSION_INTELLIGENCE_BANDS = (
     "REPORT_640_FINAL_Zero_Point_Targets",
     "REPORT_640_Mass_Report",
     "REPORT_640_Pottery_Report",
+)
+TESLA_ATOMIC_INFERENCE_BANDS = (
+    "AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640",
+    "AI_BEH_Artifacts_Jars_Chests_DOM_lin_640",
+    "AI_BEH_Mercury_RareChemicals_DOM_lin_640",
+    "AI_BEH_Gemstones_AncientGlass_DOM_lin_640",
+    "AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640",
 )
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
@@ -1194,6 +1202,14 @@ def _build_stack_alias_manifest(
                 "band_names": list(FUSION_INTELLIGENCE_BANDS),
                 "status": "implemented",
                 "source_cell": "cell_099",
+            },
+            {
+                "filename": NOTEBOOK_TESLA_ATOMIC_INFERENCE_STACK_NPY,
+                "source_notebook_family": "TESLA_V7_2_ATOMIC_INFERENCE_ENGINE_640",
+                "app_artifact": "tesla_atomic_inference_stack",
+                "band_names": list(TESLA_ATOMIC_INFERENCE_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_095",
             },
             {
                 "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,
