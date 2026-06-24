@@ -47,6 +47,9 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "focus_17m_pixel_report_v7_2",
             "focus_17m_targets_v7_2",
             "focus_17m_targets_geojson_v7_2",
+            "hard_type_classifier_core9_csv",
+            "hard_type_classifier_core9_txt",
+            "hard_type_classifier_core9_json",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -99,6 +102,30 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert geojson["type"] == "FeatureCollection"
         assert 1 <= len(geojson["features"]) <= 5
         assert geojson["features"][0]["geometry"]["type"] == "Point"
+
+        hard_csv = run_dir / "full_job" / "focus" / "AI_HARD_TYPE_CLASSIFIER_CORE9.csv"
+        hard_txt = run_dir / "full_job" / "focus" / "AI_HARD_TYPE_CLASSIFIER_CORE9.txt"
+        hard_json = run_dir / "full_job" / "focus" / "AI_HARD_TYPE_CLASSIFIER_CORE9.json"
+        assert hard_csv.is_file()
+        assert hard_txt.is_file()
+        assert hard_json.is_file()
+
+        with hard_csv.open("r", encoding="utf-8", newline="") as handle:
+            hard_rows = list(csv.DictReader(handle))
+        assert len(hard_rows) == 1
+        assert hard_rows[0]["Source_Cell"] == "cell_128"
+        assert hard_rows[0]["Primary_Class"]
+        assert hard_rows[0]["Void_Type"]
+        assert hard_rows[0]["Metal_Type"]
+        assert hard_rows[0]["Content_Type"]
+        assert "Final_Confidence" in hard_rows[0]
+
+        hard_payload = json.loads(hard_json.read_text(encoding="utf-8"))
+        assert hard_payload["source_cell"] == "cell_128"
+        assert hard_payload["status"] == "implemented"
+        assert hard_payload["record"]["Primary_Class"] == hard_rows[0]["Primary_Class"]
+        assert "AI HARD TYPE CLASSIFIER" in hard_txt.read_text(encoding="utf-8")
+
 
 
 

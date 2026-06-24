@@ -24,6 +24,9 @@ FOCUS_BAND_SUMMARY_CSV_NAME = "focus_zone_band_summary.csv"
 FOCUS_PIXEL_REPORT_CSV_NAME = "AI_FOCUS_17M_PIXEL_REPORT_V7_2.csv"
 FOCUS_TARGET_REPORT_CSV_NAME = "AI_FOCUS_17M_TARGETS_V7_2.csv"
 FOCUS_TARGET_GEOJSON_NAME = "AI_FOCUS_17M_TARGETS_V7_2.geojson"
+HARD_TYPE_CLASSIFIER_CSV_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.csv"
+HARD_TYPE_CLASSIFIER_TXT_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.txt"
+HARD_TYPE_CLASSIFIER_JSON_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.json"
 FOCUS_DIR_PARTS = ("full_job", "focus")
 FOCUS_SIZE_M = 17.0
 
@@ -318,6 +321,475 @@ def build_focus_roi_analysis_products(
     }
 
 
+
+def _hard_get_vals(arr: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    vals = arr[mask].astype(np.float64)
+    vals = vals[np.isfinite(vals)]
+    return vals
+
+
+def _hard_robust_contrast(core_vals: np.ndarray, ref_vals: np.ndarray) -> float:
+    if len(core_vals) == 0 or len(ref_vals) == 0:
+        return 0.0
+    ref_med = np.nanmedian(ref_vals)
+    ref_mad = np.nanmedian(np.abs(ref_vals - ref_med)) * 1.4826
+    if not np.isfinite(ref_mad) or ref_mad < 1e-9:
+        ref_mad = np.nanstd(ref_vals)
+    if not np.isfinite(ref_mad) or ref_mad < 1e-9:
+        return 0.0
+    return float((np.nanmean(core_vals) - ref_med) / ref_mad)
+
+
+def _hard_effect_size(core_vals: np.ndarray, ref_vals: np.ndarray) -> float:
+    if len(core_vals) == 0 or len(ref_vals) == 0:
+        return 0.0
+    m1 = np.nanmean(core_vals)
+    m2 = np.nanmean(ref_vals)
+    s1 = np.nanstd(core_vals)
+    s2 = np.nanstd(ref_vals)
+    pooled = np.sqrt((s1**2 + s2**2) / 2.0)
+    if not np.isfinite(pooled) or pooled < 1e-9:
+        return 0.0
+    return float((m1 - m2) / pooled)
+
+
+def _hard_clip01(x: float) -> float:
+    return float(np.clip(x, 0.0, 1.0))
+
+
+def _hard_prob(x: float, *, bias: float = 0.0, gain: float = 1.0) -> float:
+    z = gain * (x - bias)
+    z = float(np.clip(z, -60.0, 60.0))
+    return _hard_clip01(1.0 / (1.0 + np.exp(-z)))
+
+
+def _hard_safe_mean(arr: np.ndarray, mask: np.ndarray) -> float:
+    vals = arr[mask]
+    vals = vals[np.isfinite(vals)]
+    return float(np.mean(vals)) if len(vals) else 0.0
+
+
+def _hard_dilate(mask: np.ndarray, iterations: int) -> np.ndarray:
+    out = mask.astype(bool).copy()
+    for _ in range(iterations):
+        padded = np.pad(out, 1, mode="constant", constant_values=False)
+        nxt = np.zeros_like(out, dtype=bool)
+        for dr in range(3):
+            for dc in range(3):
+                nxt |= padded[dr : dr + out.shape[0], dc : dc + out.shape[1]]
+        out = nxt
+    return out
+
+
+def _hard_ring_masks(core_mask: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    dil2 = _hard_dilate(core_mask, 2)
+    dil4 = _hard_dilate(core_mask, 4)
+    dil6 = _hard_dilate(core_mask, 6)
+    ring_near = dil2 & (~core_mask)
+    ring_far = dil4 & (~dil2)
+    ring_wide = dil6 & (~dil4)
+    scene_mask = np.ones_like(core_mask, dtype=bool)
+    return ring_near, ring_far, ring_wide, scene_mask
+
+
+def _hard_band_pack(
+    arr: np.ndarray,
+    *,
+    core_mask: np.ndarray,
+    ring_near: np.ndarray,
+    ring_far: np.ndarray,
+    ring_wide: np.ndarray,
+    scene_mask: np.ndarray,
+) -> dict[str, float]:
+    core_vals = _hard_get_vals(arr, core_mask)
+    near_vals = _hard_get_vals(arr, ring_near)
+    far_vals = _hard_get_vals(arr, ring_far)
+    wide_vals = _hard_get_vals(arr, ring_wide)
+    scene_vals = _hard_get_vals(arr, scene_mask)
+    return {
+        "core_mean": float(np.nanmean(core_vals)) if len(core_vals) else 0.0,
+        "near_mean": float(np.nanmean(near_vals)) if len(near_vals) else 0.0,
+        "far_mean": float(np.nanmean(far_vals)) if len(far_vals) else 0.0,
+        "wide_mean": float(np.nanmean(wide_vals)) if len(wide_vals) else 0.0,
+        "scene_mean": float(np.nanmean(scene_vals)) if len(scene_vals) else 0.0,
+        "rc_near": _hard_robust_contrast(core_vals, near_vals),
+        "rc_far": _hard_robust_contrast(core_vals, far_vals),
+        "rc_wide": _hard_robust_contrast(core_vals, wide_vals),
+        "rc_scene": _hard_robust_contrast(core_vals, scene_vals),
+        "ef_near": _hard_effect_size(core_vals, near_vals),
+        "ef_scene": _hard_effect_size(core_vals, scene_vals),
+    }
+
+
+def _hard_rc(stats: dict[str, dict[str, float]], band: str, key: str) -> float:
+    return float(stats.get(band, {}).get(key, 0.0))
+
+
+def _hard_robust_norm(arr: np.ndarray) -> np.ndarray:
+    arr = np.asarray(arr, dtype=np.float32)
+    vals = arr[np.isfinite(arr)]
+    if vals.size == 0:
+        return np.zeros_like(arr, dtype=np.float32)
+    lo = np.percentile(vals, 2)
+    hi = np.percentile(vals, 98)
+    if not np.isfinite(hi - lo) or abs(float(hi - lo)) < 1e-9:
+        return np.zeros_like(arr, dtype=np.float32)
+    return np.clip((arr - lo) / (hi - lo + 1e-9), 0, 1).astype(np.float32)
+
+
+def _hard_count_local_peaks(score_map: np.ndarray, mask: np.ndarray, *, threshold_q: float) -> int:
+    vals = score_map[mask]
+    vals = vals[np.isfinite(vals)]
+    if vals.size == 0:
+        return 0
+    threshold = float(np.percentile(vals, threshold_q))
+    candidates = (score_map >= threshold) & mask
+    count = 0
+    rr, cc = np.where(candidates)
+    for r, c in zip(rr, cc):
+        r0 = max(0, int(r) - 1)
+        r1 = min(score_map.shape[0], int(r) + 2)
+        c0 = max(0, int(c) - 1)
+        c1 = min(score_map.shape[1], int(c) + 2)
+        if float(score_map[int(r), int(c)]) >= float(np.nanmax(score_map[r0:r1, c0:c1])):
+            count += 1
+    return int(count)
+
+
+def _hard_elongation_from_mask(mask: np.ndarray) -> float:
+    rr, cc = np.where(mask)
+    if len(rr) < 2:
+        return 1.0
+    pts = np.column_stack([cc, rr]).astype(np.float64)
+    pts -= pts.mean(axis=0, keepdims=True)
+    cov = np.cov(pts.T)
+    vals = np.linalg.eigvalsh(cov)
+    vals = np.sort(np.maximum(vals, 1e-9))
+    return float(np.sqrt(vals[-1] / vals[0]))
+
+
+def _hard_axis_orientation(mask: np.ndarray) -> str:
+    rr, cc = np.where(mask)
+    if len(rr) < 2:
+        return "UNRESOLVED"
+    pts = np.column_stack([cc, rr]).astype(np.float64)
+    pts -= pts.mean(axis=0, keepdims=True)
+    cov = np.cov(pts.T)
+    vals, vecs = np.linalg.eigh(cov)
+    vec = vecs[:, int(np.argmax(vals))]
+    angle = float(np.degrees(np.arctan2(vec[1], vec[0])))
+    if -22.5 <= angle <= 22.5 or angle >= 157.5 or angle <= -157.5:
+        return "E_W"
+    if 67.5 <= angle <= 112.5 or -112.5 <= angle <= -67.5:
+        return "N_S"
+    if angle > 0:
+        return "NE_SW"
+    return "NW_SE"
+
+
+def build_hard_type_classifier_products(
+    *,
+    focus_mask: np.ndarray,
+    analysis_bands: dict[str, np.ndarray],
+    grid_spec: GridSpec,
+) -> dict[str, object]:
+    core_mask = focus_mask.astype(bool)
+    if int(core_mask.sum()) == 0:
+        raise StageError("Hard type classifier requires a non-empty focus/core mask.")
+
+    missing = [name for name in FOCUS_ANALYSIS_BANDS if name not in analysis_bands]
+    if missing:
+        raise StageError(f"Hard type classifier is missing required bands: {', '.join(missing)}")
+
+    ring_near, ring_far, ring_wide, scene_mask = _hard_ring_masks(core_mask)
+    stats = {
+        name: _hard_band_pack(
+            analysis_bands[name],
+            core_mask=core_mask,
+            ring_near=ring_near,
+            ring_far=ring_far,
+            ring_wide=ring_wide,
+            scene_mask=scene_mask,
+        )
+        for name in FOCUS_ANALYSIS_BANDS
+    }
+
+    gold = analysis_bands["Secret_Gold_Halo"]
+    silver = analysis_bands["Secret_Silver_Oxide"]
+    tunnel = analysis_bands["Secret_Tunnel_Ceiling"]
+    thermal = analysis_bands["Secret_Thermal_Inertia"]
+    chemical = analysis_bands["Secret_Chemical_Protector"]
+    doors = analysis_bands["Secret_Hidden_Doors"]
+    zero = analysis_bands["REPORT_640_FINAL_Zero_Point_Targets"]
+    mass = analysis_bands["REPORT_640_Mass_Report"]
+    pottery = analysis_bands["REPORT_640_Pottery_Report"]
+
+    focus_rows, focus_cols = np.where(core_mask)
+    center_r = float(np.mean(focus_rows))
+    center_c = float(np.mean(focus_cols))
+    rr, cc = np.indices(core_mask.shape)
+    direction_mask = core_mask | ring_near
+    directional_arr = _hard_robust_norm(doors) + _hard_robust_norm(tunnel) + _hard_robust_norm(zero)
+    dir_scores = {
+        "north": _hard_safe_mean(directional_arr, direction_mask & (rr < center_r)),
+        "south": _hard_safe_mean(directional_arr, direction_mask & (rr > center_r)),
+        "west": _hard_safe_mean(directional_arr, direction_mask & (cc < center_c)),
+        "east": _hard_safe_mean(directional_arr, direction_mask & (cc > center_c)),
+    }
+    best_dir = max(dir_scores, key=dir_scores.get)
+    sorted_dir = sorted(dir_scores.values(), reverse=True)
+    directionality_strength = float(sorted_dir[0] - sorted_dir[1]) if len(sorted_dir) > 1 else 0.0
+
+    void_family_score = (
+        0.34 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near")
+        + 0.26 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_near")
+        + 0.18 * _hard_rc(stats, "REPORT_640_FINAL_Zero_Point_Targets", "rc_scene")
+        + 0.12 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_far")
+        + 0.10 * directionality_strength
+    )
+    metal_family_score = (
+        0.36 * _hard_rc(stats, "Secret_Gold_Halo", "rc_scene")
+        + 0.28 * _hard_rc(stats, "Secret_Silver_Oxide", "rc_scene")
+        + 0.22 * _hard_rc(stats, "REPORT_640_Mass_Report", "rc_near")
+        + 0.14 * _hard_rc(stats, "Secret_Chemical_Protector", "rc_scene")
+    )
+    fill_family_score = (
+        0.42 * _hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene")
+        + 0.22 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene")
+        + 0.18 * _hard_rc(stats, "Secret_Chemical_Protector", "rc_near")
+        + 0.18 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_far")
+    )
+    entrance_family_score = (
+        0.34 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_near")
+        + 0.28 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near")
+        + 0.18 * directionality_strength
+        + 0.20 * _hard_rc(stats, "REPORT_640_FINAL_Zero_Point_Targets", "rc_near")
+    )
+    surface_penalty_raw = abs(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene")) * 0.35
+    surface_exclusion_score = _hard_clip01(_hard_prob(1.2 - surface_penalty_raw, bias=0.0, gain=1.0))
+
+    p_void_raw = _hard_prob(void_family_score, bias=0.85, gain=0.90)
+    p_metal_raw = _hard_prob(metal_family_score, bias=0.70, gain=0.90)
+    p_fill_raw = _hard_prob(fill_family_score, bias=0.70, gain=0.85)
+    p_entry_raw = _hard_prob(entrance_family_score, bias=0.90, gain=0.85)
+
+    surface_gate = _hard_clip01(0.20 + 0.80 * surface_exclusion_score)
+    entry_gate = _hard_clip01(0.55 * p_void_raw + 0.45 * directionality_strength)
+    p_void = p_void_raw
+    p_fill = p_fill_raw
+    p_metal = _hard_clip01(p_metal_raw * (0.65 + 0.35 * surface_gate))
+    p_entry = _hard_clip01(p_entry_raw * entry_gate)
+
+    shaft_score = _hard_clip01(
+        0.42 * p_void
+        + 0.20 * _hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_scene"), bias=0.5, gain=0.7)
+        + 0.14 * surface_exclusion_score
+        + 0.24 * _hard_prob(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene"), bias=0.4, gain=0.7)
+    )
+    entrance_score = _hard_clip01(
+        0.34 * p_void
+        + 0.30 * p_entry
+        + 0.18 * directionality_strength
+        + 0.18 * _hard_prob(_hard_rc(stats, "Secret_Hidden_Doors", "rc_near"), bias=0.5, gain=0.7)
+    )
+    chamber_score = _hard_clip01(
+        0.45 * p_void
+        + 0.18 * surface_exclusion_score
+        + 0.20 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.7)
+        + 0.17 * _hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_wide"), bias=0.5, gain=0.7)
+    )
+    drain_void_score = _hard_clip01(
+        0.32 * p_void
+        + 0.32 * _hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near"), bias=0.5, gain=0.7)
+        + 0.20 * directionality_strength
+        + 0.16 * _hard_prob(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_far"), bias=0.5, gain=0.7)
+    )
+
+    gold_like_score = _hard_clip01(
+        0.42 * p_metal
+        + 0.34 * _hard_prob(_hard_rc(stats, "Secret_Gold_Halo", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.12 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.12 * surface_exclusion_score
+    )
+    silver_like_score = _hard_clip01(
+        0.42 * p_metal
+        + 0.34 * _hard_prob(_hard_rc(stats, "Secret_Silver_Oxide", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.12 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.12 * surface_exclusion_score
+    )
+    dense_metal_score = _hard_clip01(
+        0.55 * p_metal
+        + 0.25 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.20 * max(gold_like_score, silver_like_score)
+    )
+
+    coins_score = _hard_clip01(0.34 * p_metal + 0.18 * gold_like_score + 0.16 * silver_like_score + 0.20 * p_fill + 0.12 * surface_exclusion_score)
+    ingots_score = _hard_clip01(0.42 * p_metal + 0.26 * dense_metal_score + 0.12 * gold_like_score + 0.10 * surface_exclusion_score + 0.10 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75))
+    statues_score = _hard_clip01(0.28 * p_metal + 0.22 * dense_metal_score + 0.18 * p_void + 0.16 * surface_exclusion_score + 0.16 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_near"), bias=0.5, gain=0.75))
+    pottery_treasures_score = _hard_clip01(0.38 * p_fill + 0.18 * p_void + 0.18 * _hard_prob(_hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene"), bias=0.5, gain=0.75) + 0.16 * surface_exclusion_score + 0.10 * _hard_prob(_hard_rc(stats, "Secret_Chemical_Protector", "rc_scene"), bias=0.5, gain=0.75))
+    general_antiquities_score = _hard_clip01(0.22 * p_void + 0.22 * p_metal + 0.18 * p_fill + 0.18 * surface_exclusion_score + 0.20 * max(gold_like_score, silver_like_score, dense_metal_score))
+
+    if p_void >= 0.60 and p_metal >= 0.58 and surface_exclusion_score >= 0.55:
+        primary_class = "MIXED_VOID_METAL"
+    elif p_void >= 0.60 and surface_exclusion_score >= 0.55:
+        primary_class = "STRUCTURAL_VOID"
+    elif p_metal >= 0.58 and surface_exclusion_score >= 0.50:
+        primary_class = "METAL_DENSE"
+    elif p_fill >= 0.58:
+        primary_class = "FILL_OR_POTTERY"
+    else:
+        primary_class = "UNRESOLVED_ANOMALY"
+
+    void_subscores = {
+        "ENTRANCE": entrance_score,
+        "SHAFT": shaft_score,
+        "CHAMBER": chamber_score,
+        "DRAIN_VOID": drain_void_score,
+    }
+    best_void_subtype = max(void_subscores, key=void_subscores.get)
+    if primary_class in {"STRUCTURAL_VOID", "MIXED_VOID_METAL"} and p_void >= 0.60:
+        void_type = best_void_subtype if void_subscores[best_void_subtype] >= 0.56 else "VOID_UNRESOLVED"
+    else:
+        void_type = "NO_CONFIRMED_VOID"
+
+    metal_subscores = {
+        "GOLD_LIKE": gold_like_score,
+        "SILVER_LIKE": silver_like_score,
+        "DENSE_METAL": dense_metal_score,
+    }
+    best_metal_subtype = max(metal_subscores, key=metal_subscores.get)
+    if p_metal >= 0.55:
+        metal_type = best_metal_subtype if metal_subscores[best_metal_subtype] >= 0.54 else "METAL_UNRESOLVED"
+    else:
+        metal_type = "NO_CONFIRMED_METAL"
+
+    analysis_mask = core_mask | ring_near
+    metal_combo = _hard_robust_norm(gold) + _hard_robust_norm(silver) + _hard_robust_norm(mass)
+    jar_combo = _hard_robust_norm(pottery) + _hard_robust_norm(chemical) + _hard_robust_norm(thermal)
+
+    metal_vals = metal_combo[analysis_mask]
+    jar_vals = jar_combo[analysis_mask]
+    metal_thr = float(np.percentile(metal_vals[np.isfinite(metal_vals)], 70)) if np.isfinite(metal_vals).sum() else 0.7
+    jar_thr = float(np.percentile(jar_vals[np.isfinite(jar_vals)], 68)) if np.isfinite(jar_vals).sum() else 0.68
+    metal_obj_mask = (metal_combo >= metal_thr) & analysis_mask
+    jar_obj_mask = (jar_combo >= jar_thr) & analysis_mask
+
+    elongation = _hard_elongation_from_mask(metal_obj_mask if metal_obj_mask.sum() > 0 else core_mask)
+    orientation = _hard_axis_orientation(metal_obj_mask if metal_obj_mask.sum() > 0 else core_mask)
+    if p_metal < 0.50:
+        metal_shape = "NO_CONFIRMED_METAL_SHAPE"
+    elif elongation >= 2.8:
+        metal_shape = f"LINEAR_{orientation}"
+    elif elongation >= 1.45:
+        metal_shape = f"ELLIPSOID_{orientation}"
+    else:
+        metal_shape = "COMPACT_CLUSTER"
+
+    estimated_stacked_boxes = 0
+    if p_metal >= 0.58 and dense_metal_score >= 0.58:
+        estimated_stacked_boxes = min(4, max(1, _hard_count_local_peaks(metal_combo, analysis_mask, threshold_q=75)))
+
+    estimated_aligned_jars = 0
+    if p_fill >= 0.56 and pottery_treasures_score >= 0.56:
+        estimated_aligned_jars = min(6, max(1, _hard_count_local_peaks(jar_combo, analysis_mask, threshold_q=72)))
+
+    content_subscores = {
+        "COINS": coins_score,
+        "INGOTS": ingots_score,
+        "STATUES": statues_score,
+        "POTTERY_TREASURES": pottery_treasures_score,
+        "GENERAL_ANTIQUITIES": general_antiquities_score,
+    }
+    best_content_type = max(content_subscores, key=content_subscores.get)
+    content_type = best_content_type if content_subscores[best_content_type] >= 0.50 else "CONTENT_UNRESOLVED"
+
+    final_confidence = _hard_clip01(
+        max(
+            0.34 * p_void + 0.34 * p_metal + 0.16 * surface_exclusion_score + 0.16 * max(gold_like_score, silver_like_score, dense_metal_score),
+            0.52 * p_void + 0.22 * surface_exclusion_score + 0.16 * max(entrance_score, shaft_score, chamber_score, drain_void_score),
+            0.54 * p_metal + 0.20 * surface_exclusion_score + 0.26 * max(gold_like_score, silver_like_score, dense_metal_score),
+            0.55 * p_fill + 0.25 * pottery_treasures_score + 0.20 * surface_exclusion_score,
+        )
+    )
+
+    record = {
+        "Core_Mask_Source": "focus_zone_17m",
+        "Source_Cell": "cell_128",
+        "Core_Pixels": int(core_mask.sum()),
+        "Near_Ring_Pixels": int(ring_near.sum()),
+        "Far_Ring_Pixels": int(ring_far.sum()),
+        "Wide_Ring_Pixels": int(ring_wide.sum()),
+        "Primary_Class": primary_class,
+        "Void_Type": void_type,
+        "Metal_Type": metal_type,
+        "Metal_Shape": metal_shape,
+        "Content_Type": content_type,
+        "Estimated_Stacked_Boxes": int(estimated_stacked_boxes),
+        "Estimated_Aligned_Jars": int(estimated_aligned_jars),
+        "Final_Confidence": round(final_confidence, 4),
+        "Void_Probability": round(p_void, 4),
+        "Metal_Probability": round(p_metal, 4),
+        "Fill_Probability": round(p_fill, 4),
+        "Entrance_Probability": round(p_entry, 4),
+        "Surface_Exclusion": round(surface_exclusion_score, 4),
+        "Dominant_Direction": best_dir,
+        "Directionality_Strength": round(directionality_strength, 4),
+        "Entrance_Score": round(entrance_score, 4),
+        "Shaft_Score": round(shaft_score, 4),
+        "Chamber_Score": round(chamber_score, 4),
+        "Drain_Void_Score": round(drain_void_score, 4),
+        "Gold_Like_Score": round(gold_like_score, 4),
+        "Silver_Like_Score": round(silver_like_score, 4),
+        "Dense_Metal_Score": round(dense_metal_score, 4),
+        "Coins_Score": round(coins_score, 4),
+        "Ingots_Score": round(ingots_score, 4),
+        "Statues_Score": round(statues_score, 4),
+        "Pottery_Treasures_Score": round(pottery_treasures_score, 4),
+        "General_Antiquities_Score": round(general_antiquities_score, 4),
+    }
+
+    summary_lines = [
+        "AI HARD TYPE CLASSIFIER - CORE 9 ONLY",
+        "=" * 82,
+        f"Core mask source          : {record['Core_Mask_Source']}",
+        f"Core pixels               : {record['Core_Pixels']}",
+        f"Near/Far/Wide ring pixels : {record['Near_Ring_Pixels']} / {record['Far_Ring_Pixels']} / {record['Wide_Ring_Pixels']}",
+        "-" * 82,
+        f"Primary class             : {primary_class}",
+        f"Void type                 : {void_type}",
+        f"Metal type                : {metal_type}",
+        f"Metal shape               : {metal_shape}",
+        f"Content type              : {content_type}",
+        f"Estimated stacked boxes   : {int(estimated_stacked_boxes)}",
+        f"Estimated aligned jars    : {int(estimated_aligned_jars)}",
+        f"Final confidence          : {final_confidence:.2%}",
+        "-" * 82,
+        f"Void probability          : {p_void:.2%}",
+        f"Metal probability         : {p_metal:.2%}",
+        f"Fill probability          : {p_fill:.2%}",
+        f"Entrance probability      : {p_entry:.2%}",
+        f"Surface exclusion         : {surface_exclusion_score:.2%}",
+        "-" * 82,
+        f"Void scores               : entrance={entrance_score:.4f} | shaft={shaft_score:.4f} | chamber={chamber_score:.4f} | drain={drain_void_score:.4f}",
+        f"Metal scores              : gold={gold_like_score:.4f} | silver={silver_like_score:.4f} | dense={dense_metal_score:.4f}",
+        f"Content scores            : coins={coins_score:.4f} | ingots={ingots_score:.4f} | statues={statues_score:.4f} | pottery={pottery_treasures_score:.4f} | antiquities={general_antiquities_score:.4f}",
+        f"Dominant direction        : {best_dir}",
+        f"Directionality strength   : {directionality_strength:.4f}",
+    ]
+
+    return {
+        "hard_type_record": record,
+        "hard_type_json": {
+            "source_cell": "cell_128",
+            "source_notebook_family": "AI_HARD_TYPE_CLASSIFIER_CORE9",
+            "status": "implemented",
+            "privacy": "FILESYSTEM_ONLY",
+            "record": record,
+            "band_stats": stats,
+        },
+        "hard_type_summary_lines": summary_lines,
+    }
+
 def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     mask = products["mask"]
     masked_window = products["masked_window"]
@@ -326,6 +798,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     pixel_records = products["pixel_records"]
     target_records = products["target_records"]
     target_geojson = products["target_geojson"]
+    hard_type_record = products["hard_type_record"]
+    hard_type_json = products["hard_type_json"]
+    hard_type_summary_lines = products["hard_type_summary_lines"]
     assert isinstance(mask, np.ndarray)
     assert isinstance(masked_window, np.ndarray)
     assert isinstance(summary, dict)
@@ -333,6 +808,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     assert isinstance(pixel_records, list)
     assert isinstance(target_records, list)
     assert isinstance(target_geojson, dict)
+    assert isinstance(hard_type_record, dict)
+    assert isinstance(hard_type_json, dict)
+    assert isinstance(hard_type_summary_lines, list)
 
     focus_dir = run_dir.joinpath(*FOCUS_DIR_PARTS)
     focus_dir.mkdir(parents=True, exist_ok=True)
@@ -345,6 +823,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     pixel_report_path = focus_dir / FOCUS_PIXEL_REPORT_CSV_NAME
     target_report_path = focus_dir / FOCUS_TARGET_REPORT_CSV_NAME
     target_geojson_path = focus_dir / FOCUS_TARGET_GEOJSON_NAME
+    hard_type_csv_path = focus_dir / HARD_TYPE_CLASSIFIER_CSV_NAME
+    hard_type_txt_path = focus_dir / HARD_TYPE_CLASSIFIER_TXT_NAME
+    hard_type_json_path = focus_dir / HARD_TYPE_CLASSIFIER_JSON_NAME
 
     _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
@@ -367,6 +848,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     _write_csv(pixel_report_path, pixel_fields, pixel_records)
     _write_csv(target_report_path, target_fields, target_records)
     target_geojson_path.write_text(json.dumps(target_geojson, indent=2, sort_keys=True), encoding="utf-8")
+    _write_csv(hard_type_csv_path, list(hard_type_record.keys()), [hard_type_record])
+    hard_type_txt_path.write_text("\n".join(str(line) for line in hard_type_summary_lines), encoding="utf-8")
+    hard_type_json_path.write_text(json.dumps(hard_type_json, indent=2, sort_keys=True), encoding="utf-8")
 
     write_raster_sidecar(
         mask_tif_path,
@@ -385,6 +869,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "focus_pixel_report_csv": pixel_report_path,
         "focus_target_report_csv": target_report_path,
         "focus_target_geojson": target_geojson_path,
+        "hard_type_classifier_csv": hard_type_csv_path,
+        "hard_type_classifier_txt": hard_type_txt_path,
+        "hard_type_classifier_json": hard_type_json_path,
     }
 
 
@@ -420,6 +907,13 @@ class FocusMaskStage(Stage):
         analysis_bands = load_focus_analysis_bands(context.run_dir, grid_spec=self.grid_spec)
         products.update(
             build_focus_roi_analysis_products(
+                focus_mask=products["mask"],
+                analysis_bands=analysis_bands,
+                grid_spec=self.grid_spec,
+            )
+        )
+        products.update(
+            build_hard_type_classifier_products(
                 focus_mask=products["mask"],
                 analysis_bands=analysis_bands,
                 grid_spec=self.grid_spec,
@@ -483,11 +977,34 @@ class FocusMaskStage(Stage):
                 size_bytes=outputs["focus_target_geojson"].stat().st_size,
                 http_servable=False,
             ),
+            build_stage_artifact(
+                name="hard_type_classifier_core9_csv",
+                relative_path=outputs["hard_type_classifier_csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["hard_type_classifier_csv"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="hard_type_classifier_core9_txt",
+                relative_path=outputs["hard_type_classifier_txt"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["hard_type_classifier_txt"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="hard_type_classifier_core9_json",
+                relative_path=outputs["hard_type_classifier_json"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["hard_type_classifier_json"].stat().st_size,
+                http_servable=False,
+            ),
         ]
         summary = products["summary"]
         assert isinstance(summary, dict)
         target_records = products["target_records"]
+        hard_type_record = products["hard_type_record"]
         assert isinstance(target_records, list)
+        assert isinstance(hard_type_record, dict)
         return StageResult(
             artifacts=artifacts,
             metadata={
@@ -498,5 +1015,10 @@ class FocusMaskStage(Stage):
                 "roi_target_report": FOCUS_TARGET_REPORT_CSV_NAME,
                 "roi_target_geojson": FOCUS_TARGET_GEOJSON_NAME,
                 "target_count": len(target_records),
+                "hard_type_classifier_csv": HARD_TYPE_CLASSIFIER_CSV_NAME,
+                "hard_type_classifier_txt": HARD_TYPE_CLASSIFIER_TXT_NAME,
+                "hard_type_classifier_json": HARD_TYPE_CLASSIFIER_JSON_NAME,
+                "hard_type_primary_class": hard_type_record["Primary_Class"],
+                "hard_type_source_cell": "cell_128",
             },
         )
