@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B2 item 24 hard type classifier implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B2 item 25 target CSV/TXT/JSON outputs implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -35,7 +35,7 @@ Can we make it in app?
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 23 | ROI-constrained AI analysis inside 17m focus | 🟨 Partial | Yes | App port implemented for canonical cell 119 ROI-constrained 17m focus analysis. Pixel CSV, target CSV, and target GeoJSON outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 24 | Hard classifiers / target type rules | 🟨 Partial | Yes | App port implemented for canonical cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9. CSV, TXT, JSON outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 25 | Target CSV / TXT / JSON outputs | 🟥 No | Yes | Define final target schema: columns, labels, confidence fields, and local/private policy. |
+| 25 | Target CSV / TXT / JSON outputs | 🟨 Partial | Yes | App port implemented for canonical cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 26 | GeoJSON detected-feature exports | 🟥 No | Yes | Generate after final target schema and detections exist. Should be private/local by default. |
 | 27 | KMZ heatmap / 3D target visualization | 🟥 No | Yes | Depends on final target detections. Should be private/local by default. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟥 No | Yes | Planning/inspection feature. Easier than actual inference. |
@@ -381,21 +381,84 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B2.2
+### B2.3 result — item 25 Target CSV / TXT / JSON outputs
+
+```text
+Status:
+  App port implemented for the selected core/ring/scene target output contract.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_121 -> AI_CORE_RING_SCENE_TARGETS_V7_2C / AI_CORE_RING_SCENE_DECISION_V7_2C.
+
+Implemented app outputs:
+  full_job/focus/AI_CORE_RING_SCENE_TARGETS_V7_2C.csv
+  full_job/focus/AI_CORE_RING_SCENE_DECISION_V7_2C.txt
+  full_job/focus/AI_CORE_RING_SCENE_DECISION_V7_2C.json
+
+Implemented target-output contract:
+  Use the existing app 17m focus mask as the notebook Class_E equivalent.
+  Reuse item #23 ROI target records and item #24 hard classifier record.
+  Write one final core/ring/scene target-decision CSV row with:
+    Scenario
+    Burial_Style_Inference
+    Void_Probability
+    Entrance_Probability
+    Metal_Probability
+    Pottery_Probability
+    Reliability
+    Detection_Confidence
+    Interpretation_Confidence
+    Final_Confidence
+    Decision_Grade
+    Entrance_Type
+    Metal_Type
+    Room_Count_Inference
+    Content_Inference
+    Dominant_Direction
+    Directionality_Strength
+    Resolution_Note
+    Source_Cell
+  Write matching TXT summary and JSON payload with source_cell cell_121 and embedded target/hard-classifier context.
+
+Privacy/artifact policy:
+  All outputs are FILESYSTEM_ONLY and http_servable=False.
+  Keep target CSV/TXT/JSON outputs local/private by default.
+
+Validation done:
+  focused focus-mask unit test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files exist.
+  FocusMaskStage artifact count confirmed as 14.
+  CORE_RING_ROWS confirmed as 1.
+  SOURCE_CELL_CSV confirmed as cell_121.
+  SOURCE_CELL_JSON confirmed as cell_121.
+  STATUS_JSON confirmed as implemented.
+  TARGET_COUNT_JSON confirmed as 5.
+  TXT_HAS_TITLE confirmed as True.
+  Local run example produced Decision_Grade C_LOW_CONFIDENCE_REVIEW and Final_Confidence 0.7047.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B2.3 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B2.3
 
 ```text
 Recommended next main item:
-  Move to Plan B item #25: Target CSV / TXT / JSON outputs.
+  Move to Plan B item #26: GeoJSON detected-feature exports.
 
 Why:
-  Item #23 now produces ROI-constrained pixel/target reports inside the 17m focus area.
+  Item #23 now produces ROI-constrained pixel/target reports and a focus target GeoJSON.
   Item #24 now produces the hard type classifier CSV/TXT/JSON record.
-  The next B2 contract item is standardizing/exporting final target CSV/TXT/JSON outputs.
+  Item #25 now produces the core/ring/scene target CSV/TXT/JSON outputs.
+  The next B2 contract item is standardizing/exporting detected-feature GeoJSON.
   Frozen notebook numeric parity remains pending for implemented B1/B2 items.
 
 Next action:
-  Inspect exact notebook cell(s) for item #25 target CSV / TXT / JSON outputs.
-  Compare them against current focus target and hard-classifier outputs.
+  Inspect exact notebook cell(s) for item #26 GeoJSON detected-feature exports.
+  Compare them against current focus target GeoJSON and target output JSON.
   Produce a gap table before coding.
 ```
 
