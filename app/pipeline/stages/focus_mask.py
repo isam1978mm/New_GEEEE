@@ -30,6 +30,7 @@ HARD_TYPE_CLASSIFIER_JSON_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.json"
 CORE_RING_SCENE_TARGETS_CSV_NAME = "AI_CORE_RING_SCENE_TARGETS_V7_2C.csv"
 CORE_RING_SCENE_DECISION_TXT_NAME = "AI_CORE_RING_SCENE_DECISION_V7_2C.txt"
 CORE_RING_SCENE_DECISION_JSON_NAME = "AI_CORE_RING_SCENE_DECISION_V7_2C.json"
+DETECTED_FEATURES_WGS84_GEOJSON_NAME = "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson"
 FOCUS_DIR_PARTS = ("full_job", "focus")
 FOCUS_SIZE_M = 17.0
 
@@ -958,6 +959,73 @@ def build_core_ring_scene_decision_products(
         "core_ring_scene_summary_lines": summary_lines,
     }
 
+
+def build_detected_features_wgs84_geojson_products(
+    *,
+    target_records: list[dict[str, object]],
+    hard_type_record: dict[str, object],
+    core_ring_scene_record: dict[str, object],
+    grid_spec: GridSpec,
+) -> dict[str, object]:
+    try:
+        from pyproj import Transformer
+    except Exception as exc:  # pragma: no cover - dependency should be present through rasterio/pyproj stack
+        raise StageError("WGS84 detected-feature GeoJSON export requires pyproj.") from exc
+
+    transformer = Transformer.from_crs(grid_spec.crs, "EPSG:4326", always_xy=True)
+
+    features: list[dict[str, object]] = []
+    for row in target_records:
+        utm_e = float(row["UTM_E"])
+        utm_n = float(row["UTM_N"])
+        lon, lat = transformer.transform(utm_e, utm_n)
+
+        props = {
+            "Target_ID": int(row["Target_ID"]),
+            "Source_Cell": "cell_123",
+            "Source_Notebook_Family": "AI_FOCUS_17M_TARGETS_WGS84_V7_2",
+            "row": int(row["row"]),
+            "col": int(row["col"]),
+            "UTM_E": round(utm_e, 3),
+            "UTM_N": round(utm_n, 3),
+            "Lon": round(float(lon), 8),
+            "Lat": round(float(lat), 8),
+            "Google_Maps_Link": f"https://www.google.com/maps?q={float(lat):.8f},{float(lon):.8f}",
+            "Classification": str(row.get("Classification", "")),
+            "Confidence": str(row.get("Confidence", "")),
+            "ROI_Composite_Score": float(row.get("ROI_Composite_Score", 0.0)),
+            "Hard_Primary_Class": str(hard_type_record.get("Primary_Class", "")),
+            "Hard_Void_Type": str(hard_type_record.get("Void_Type", "")),
+            "Hard_Metal_Type": str(hard_type_record.get("Metal_Type", "")),
+            "Hard_Content_Type": str(hard_type_record.get("Content_Type", "")),
+            "Decision_Grade": str(core_ring_scene_record.get("Decision_Grade", "")),
+            "Scenario": str(core_ring_scene_record.get("Scenario", "")),
+            "Final_Confidence": float(core_ring_scene_record.get("Final_Confidence", 0.0)),
+        }
+
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [float(lon), float(lat)],
+                },
+                "properties": props,
+            }
+        )
+
+    return {
+        "detected_features_wgs84_geojson": {
+            "type": "FeatureCollection",
+            "name": "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2",
+            "source_cell": "cell_123",
+            "source_notebook_family": "AI_FOCUS_17M_TARGETS_WGS84_V7_2",
+            "coordinate_reference_system": "EPSG:4326",
+            "privacy": "FILESYSTEM_ONLY",
+            "features": features,
+        }
+    }
+
 def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     mask = products["mask"]
     masked_window = products["masked_window"]
@@ -972,6 +1040,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     core_ring_scene_record = products["core_ring_scene_record"]
     core_ring_scene_json = products["core_ring_scene_json"]
     core_ring_scene_summary_lines = products["core_ring_scene_summary_lines"]
+    detected_features_wgs84_geojson = products["detected_features_wgs84_geojson"]
     assert isinstance(mask, np.ndarray)
     assert isinstance(masked_window, np.ndarray)
     assert isinstance(summary, dict)
@@ -985,6 +1054,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     assert isinstance(core_ring_scene_record, dict)
     assert isinstance(core_ring_scene_json, dict)
     assert isinstance(core_ring_scene_summary_lines, list)
+    assert isinstance(detected_features_wgs84_geojson, dict)
 
     focus_dir = run_dir.joinpath(*FOCUS_DIR_PARTS)
     focus_dir.mkdir(parents=True, exist_ok=True)
@@ -1003,6 +1073,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     core_ring_scene_csv_path = focus_dir / CORE_RING_SCENE_TARGETS_CSV_NAME
     core_ring_scene_txt_path = focus_dir / CORE_RING_SCENE_DECISION_TXT_NAME
     core_ring_scene_json_path = focus_dir / CORE_RING_SCENE_DECISION_JSON_NAME
+    detected_features_wgs84_geojson_path = focus_dir / DETECTED_FEATURES_WGS84_GEOJSON_NAME
 
     _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
@@ -1031,6 +1102,10 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     _write_csv(core_ring_scene_csv_path, list(core_ring_scene_record.keys()), [core_ring_scene_record])
     core_ring_scene_txt_path.write_text("\n".join(str(line) for line in core_ring_scene_summary_lines), encoding="utf-8")
     core_ring_scene_json_path.write_text(json.dumps(core_ring_scene_json, indent=2, sort_keys=True), encoding="utf-8")
+    detected_features_wgs84_geojson_path.write_text(
+        json.dumps(detected_features_wgs84_geojson, indent=2, sort_keys=True, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
     write_raster_sidecar(
         mask_tif_path,
@@ -1055,6 +1130,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "core_ring_scene_targets_csv": core_ring_scene_csv_path,
         "core_ring_scene_decision_txt": core_ring_scene_txt_path,
         "core_ring_scene_decision_json": core_ring_scene_json_path,
+        "detected_features_wgs84_geojson": detected_features_wgs84_geojson_path,
     }
 
 
@@ -1107,6 +1183,14 @@ class FocusMaskStage(Stage):
                 hard_type_record=products["hard_type_record"],
                 hard_type_json=products["hard_type_json"],
                 target_records=products["target_records"],
+            )
+        )
+        products.update(
+            build_detected_features_wgs84_geojson_products(
+                target_records=products["target_records"],
+                hard_type_record=products["hard_type_record"],
+                core_ring_scene_record=products["core_ring_scene_record"],
+                grid_spec=self.grid_spec,
             )
         )
         outputs = write_focus_mask_outputs(context.run_dir, self.grid_spec, products)
@@ -1209,6 +1293,13 @@ class FocusMaskStage(Stage):
                 size_bytes=outputs["core_ring_scene_decision_json"].stat().st_size,
                 http_servable=False,
             ),
+            build_stage_artifact(
+                name="detected_features_wgs84_geojson_v7_2",
+                relative_path=outputs["detected_features_wgs84_geojson"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["detected_features_wgs84_geojson"].stat().st_size,
+                http_servable=False,
+            ),
         ]
         summary = products["summary"]
         assert isinstance(summary, dict)
@@ -1238,5 +1329,8 @@ class FocusMaskStage(Stage):
                 "core_ring_scene_decision_json": CORE_RING_SCENE_DECISION_JSON_NAME,
                 "core_ring_scene_source_cell": "cell_121",
                 "core_ring_scene_decision_grade": core_ring_scene_record["Decision_Grade"],
+                "detected_features_wgs84_geojson": DETECTED_FEATURES_WGS84_GEOJSON_NAME,
+                "detected_features_wgs84_source_cell": "cell_123",
+                "detected_features_wgs84_feature_count": len(target_records),
             },
         )

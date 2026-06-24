@@ -53,6 +53,7 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "core_ring_scene_targets_v7_2c_csv",
             "core_ring_scene_decision_v7_2c_txt",
             "core_ring_scene_decision_v7_2c_json",
+            "detected_features_wgs84_geojson_v7_2",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -151,6 +152,26 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert core_payload["status"] == "implemented"
         assert core_payload["target_count"] == len(target_rows)
         assert "AI CORE-vs-RING-vs-SCENE DECISION" in core_txt.read_text(encoding="utf-8")
+
+        detected_geojson = run_dir / "full_job" / "focus" / "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson"
+        assert detected_geojson.is_file()
+
+        detected_payload = json.loads(detected_geojson.read_text(encoding="utf-8"))
+        assert detected_payload["type"] == "FeatureCollection"
+        assert detected_payload["source_cell"] == "cell_123"
+        assert detected_payload["coordinate_reference_system"] == "EPSG:4326"
+        assert len(detected_payload["features"]) == len(target_rows)
+
+        first_feature = detected_payload["features"][0]
+        assert first_feature["geometry"]["type"] == "Point"
+        lon, lat = first_feature["geometry"]["coordinates"]
+        assert -180.0 <= float(lon) <= 180.0
+        assert -90.0 <= float(lat) <= 90.0
+        assert first_feature["properties"]["Source_Cell"] == "cell_123"
+        assert "UTM_E" in first_feature["properties"]
+        assert "UTM_N" in first_feature["properties"]
+        assert "Google_Maps_Link" in first_feature["properties"]
+
 
 
 
