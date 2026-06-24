@@ -14,6 +14,7 @@ from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sid
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.focus_mask import FocusMaskStage
+from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
@@ -32,6 +33,7 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=deterministic_s2_cube_fetcher).run(context))
         asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
+        asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
         asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
 
         result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
@@ -42,6 +44,9 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "focus_zone_ai_ready_window",
             "focus_zone_summary",
             "focus_band_summary",
+            "focus_17m_pixel_report_v7_2",
+            "focus_17m_targets_v7_2",
+            "focus_17m_targets_geojson_v7_2",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -69,6 +74,32 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             rows = list(csv.DictReader(handle))
         assert rows
         assert rows[0]["band_name"] == "VV_dB"
+
+        pixel_report = run_dir / "full_job" / "focus" / "AI_FOCUS_17M_PIXEL_REPORT_V7_2.csv"
+        target_report = run_dir / "full_job" / "focus" / "AI_FOCUS_17M_TARGETS_V7_2.csv"
+        target_geojson = run_dir / "full_job" / "focus" / "AI_FOCUS_17M_TARGETS_V7_2.geojson"
+        assert pixel_report.is_file()
+        assert target_report.is_file()
+        assert target_geojson.is_file()
+
+        with pixel_report.open("r", encoding="utf-8", newline="") as handle:
+            pixel_rows = list(csv.DictReader(handle))
+        assert len(pixel_rows) == int(mask.sum())
+        assert "ROI_Composite_Score" in pixel_rows[0]
+        assert "Secret_Gold_Halo" in pixel_rows[0]
+        assert "REPORT_640_Mass_Report" in pixel_rows[0]
+
+        with target_report.open("r", encoding="utf-8", newline="") as handle:
+            target_rows = list(csv.DictReader(handle))
+        assert 1 <= len(target_rows) <= 5
+        assert "Classification" in target_rows[0]
+        assert "Confidence" in target_rows[0]
+
+        geojson = json.loads(target_geojson.read_text(encoding="utf-8"))
+        assert geojson["type"] == "FeatureCollection"
+        assert 1 <= len(geojson["features"]) <= 5
+        assert geojson["features"][0]["geometry"]["type"] == "Point"
+
 
 
 def _settings(run_dir: Path):
