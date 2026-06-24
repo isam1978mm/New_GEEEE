@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 19 Tesla v7.2 atomic inference stack implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B2 item 23 ROI-constrained 17m focus analysis implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -33,7 +33,7 @@ Can we make it in app?
 | 18 | DEM-matched S2 masks | 🟨 Partial | Yes | App port implemented for canonical cell 081 AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 19 | Tesla v7.2 inference engines | 🟨 Partial | Yes | App port implemented for canonical cell 095 TESLA_V7_2_ATOMIC_INFERENCE_STACK_640. Other item #19 variants remain separate: cell 100/101 target CSV scan, cell 102/103 geochemical secret layers/monitoring. Frozen notebook numeric parity still pending. |
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 23 | ROI-constrained AI analysis inside 17m focus | 🟥 No | Yes | Use the app focus window, then port the notebook's focus-region analysis logic. |
+| 23 | ROI-constrained AI analysis inside 17m focus | 🟨 Partial | Yes | App port implemented for canonical cell 119 ROI-constrained 17m focus analysis. Pixel CSV, target CSV, and target GeoJSON outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 24 | Hard classifiers / target type rules | 🟥 No | Yes | Need clean rule specification from the final notebook classifier cells. |
 | 25 | Target CSV / TXT / JSON outputs | 🟥 No | Yes | Define final target schema: columns, labels, confidence fields, and local/private policy. |
 | 26 | GeoJSON detected-feature exports | 🟥 No | Yes | Generate after final target schema and detections exist. Should be private/local by default. |
@@ -253,49 +253,12 @@ Implemented app outputs:
   GEOTIFF_RADAR_BANDS/{5 AI_BEH bands}.tif.meta.json
   NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_095
 
-Implemented band order:
-  AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640
-  AI_BEH_Artifacts_Jars_Chests_DOM_lin_640
-  AI_BEH_Mercury_RareChemicals_DOM_lin_640
-  AI_BEH_Gemstones_AncientGlass_DOM_lin_640
-  AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640
-
-Implementation choice:
-  Use cell_095 as the first canonical item #19 port because it is the atomic inference engine with explicit raster outputs.
-  Do not port cell_096 or cell_103 Drive monitoring loops as app logic.
-  Leave cell_100/cell_101 target CSV scan and cell_102 geochemical secret layers for separate follow-up classification/diagnostic items.
-  Extend S2IndicesStage so the Tesla atomic inference stack is generated with the same run/grid contract as existing S2-derived outputs.
-  In real backend mode, build the cell_095 S2 formulas from the 2022-01-01 to 2026-03-01 cloud < 5 notebook rule.
-  In deterministic/injected test mode, use a local deterministic Tesla atomic fetcher and do not call Earth Engine.
-  Preserve the cell_095 alias in FeatureStacksStage so later stack rewrites keep the manifest entry.
-
 Validation done:
   focused S2 indices test passed.
   full-run integration test passed.
   local existing run regenerated and confirmed output files/shapes exist.
   TESLA_V7_2_ATOMIC_INFERENCE stack shape confirmed as (640, 640, 5) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_095 and status implemented.
-
-Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.12 artifacts.
-  Compare against frozen notebook outputs after reference files are selected/generated.
-```
-
-### Next main item scan after B1.12
-
-```text
-Recommended next main item:
-  Move to Plan B item #23: ROI-constrained AI analysis inside 17m focus.
-
-Why:
-  The selected B1 non-ML raster/tensor families and the first Tesla v7.2 atomic inference stack are now app-ported.
-  Remaining item #19 variants overlap later target CSV/report and diagnostic work rather than this raster-stack opening.
-  Frozen notebook numeric parity remains pending for implemented B1 items.
-
-Next action:
-  Inspect exact notebook cell(s) for item #23 ROI-constrained AI analysis inside 17m focus.
-  Compare them against the app focus window and current target/raster outputs.
-  Produce a gap table before coding.
 ```
 
 ### B2 — Focus-analysis and target-output contracts
@@ -309,6 +272,80 @@ Target items:
 
 Outcome:
   the app has a clear target schema and produces classifier-style target outputs.
+```
+
+### B2.1 result — item 23 ROI-constrained AI analysis inside 17m focus
+
+```text
+Status:
+  App port implemented for the selected ROI-constrained 17m focus analysis.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_119 -> ROI-constrained AI analysis inside 17m focus.
+
+Implemented app outputs:
+  full_job/focus/AI_FOCUS_17M_PIXEL_REPORT_V7_2.csv
+  full_job/focus/AI_FOCUS_17M_TARGETS_V7_2.csv
+  full_job/focus/AI_FOCUS_17M_TARGETS_V7_2.geojson
+  Existing focus outputs remain:
+    full_job/focus/focus_zone_17m.tif
+    full_job/focus/focus_zone_17m.npy
+    full_job/focus/focus_zone_ai_ready_window.npy
+    full_job/focus/focus_zone_summary.json
+    full_job/focus/focus_zone_band_summary.csv
+
+Implemented analysis contract:
+  Use the existing app 17m focus mask as the notebook Class_E equivalent.
+  Load six secret layers:
+    Secret_Gold_Halo
+    Secret_Silver_Oxide
+    Secret_Tunnel_Ceiling
+    Secret_Thermal_Inertia
+    Secret_Chemical_Protector
+    Secret_Hidden_Doors
+  Load three REPORT_640 layers:
+    REPORT_640_FINAL_Zero_Point_Targets
+    REPORT_640_Mass_Report
+    REPORT_640_Pottery_Report
+  Compute ROI-only robust-z bands and ROI_Composite_Score with the cell_119 weights.
+  Write all focus pixels to the pixel report CSV.
+  Write top five focus targets to the target report CSV and GeoJSON.
+
+Privacy/artifact policy:
+  All outputs are FILESYSTEM_ONLY and http_servable=False.
+  Keep exact target GeoJSON and coordinate-bearing CSV local/private by default.
+
+Validation done:
+  focused focus-mask unit test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files exist.
+  Focus mask shape confirmed as (640, 640) float32.
+  Focus mask pixel count confirmed as 9.
+  Pixel report rows confirmed as 9.
+  Target report rows confirmed as 5.
+  GeoJSON type confirmed as FeatureCollection with 5 features.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B2.1 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B2.1
+
+```text
+Recommended next main item:
+  Move to Plan B item #24: Hard classifiers / target type rules.
+
+Why:
+  Item #23 now produces the ROI-constrained pixel/target reports inside the 17m focus area.
+  The next B2 contract item is the hard classifier/rule layer used to standardize target labels and outputs.
+  Frozen notebook numeric parity remains pending for implemented B1/B2 items.
+
+Next action:
+  Inspect exact notebook cell(s) for item #24 hard classifiers / target type rules.
+  Compare them against current focus target classifications.
+  Produce a gap table before coding.
 ```
 
 ### B3 — Local/private map and KMZ outputs
