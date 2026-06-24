@@ -27,6 +27,9 @@ FOCUS_TARGET_GEOJSON_NAME = "AI_FOCUS_17M_TARGETS_V7_2.geojson"
 HARD_TYPE_CLASSIFIER_CSV_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.csv"
 HARD_TYPE_CLASSIFIER_TXT_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.txt"
 HARD_TYPE_CLASSIFIER_JSON_NAME = "AI_HARD_TYPE_CLASSIFIER_CORE9.json"
+CORE_RING_SCENE_TARGETS_CSV_NAME = "AI_CORE_RING_SCENE_TARGETS_V7_2C.csv"
+CORE_RING_SCENE_DECISION_TXT_NAME = "AI_CORE_RING_SCENE_DECISION_V7_2C.txt"
+CORE_RING_SCENE_DECISION_JSON_NAME = "AI_CORE_RING_SCENE_DECISION_V7_2C.json"
 FOCUS_DIR_PARTS = ("full_job", "focus")
 FOCUS_SIZE_M = 17.0
 
@@ -790,6 +793,171 @@ def build_hard_type_classifier_products(
         "hard_type_summary_lines": summary_lines,
     }
 
+
+def _decision_grade(detection_confidence: float, interpretation_confidence: float) -> str:
+    if detection_confidence >= 0.75 and interpretation_confidence >= 0.60:
+        return "A_HIGH_CONFIDENCE_REVIEW"
+    if detection_confidence >= 0.60 and interpretation_confidence >= 0.45:
+        return "B_MEDIUM_CONFIDENCE_REVIEW"
+    if detection_confidence >= 0.45:
+        return "C_LOW_CONFIDENCE_REVIEW"
+    return "D_WEAK_OR_UNRESOLVED"
+
+
+def _scenario_from_hard_class(primary_class: str) -> str:
+    return {
+        "MIXED_VOID_METAL": "Mixed void-metal anomaly inside 17m focus",
+        "STRUCTURAL_VOID": "Structural void / chamber anomaly inside 17m focus",
+        "METAL_DENSE": "Dense metal anomaly inside 17m focus",
+        "FILL_OR_POTTERY": "Fill or pottery anomaly inside 17m focus",
+        "UNRESOLVED_ANOMALY": "Unresolved comparative anomaly inside 17m focus",
+    }.get(primary_class, "Unresolved comparative anomaly inside 17m focus")
+
+
+def _burial_style_from_hard_class(primary_class: str, void_type: str) -> str:
+    if primary_class == "MIXED_VOID_METAL":
+        return "Possible chamber or cache with mixed structural/material response"
+    if primary_class == "STRUCTURAL_VOID":
+        return f"Possible structural void pattern: {void_type}"
+    if primary_class == "METAL_DENSE":
+        return "Possible compact high-density material concentration"
+    if primary_class == "FILL_OR_POTTERY":
+        return "Possible fill/pottery/material concentration"
+    return "No hard burial style inferred"
+
+
+def build_core_ring_scene_decision_products(
+    *,
+    hard_type_record: dict[str, object],
+    hard_type_json: dict[str, object],
+    target_records: list[dict[str, object]],
+) -> dict[str, object]:
+    p_void = float(hard_type_record.get("Void_Probability", 0.0))
+    p_entrance = float(hard_type_record.get("Entrance_Probability", 0.0))
+    p_metal = float(hard_type_record.get("Metal_Probability", 0.0))
+    p_pottery = float(hard_type_record.get("Fill_Probability", 0.0))
+    reliability = float(hard_type_record.get("Surface_Exclusion", 0.0))
+    final_confidence = float(hard_type_record.get("Final_Confidence", 0.0))
+
+    detection_confidence = _hard_clip01(max(p_void, p_entrance, p_metal, p_pottery))
+    if detection_confidence > 1e-9:
+        interpretation_confidence = _hard_clip01(final_confidence / detection_confidence)
+    else:
+        interpretation_confidence = 0.0
+    final_confidence = _hard_clip01(0.55 * detection_confidence + 0.45 * interpretation_confidence)
+    decision_grade = _decision_grade(detection_confidence, interpretation_confidence)
+
+    primary_class = str(hard_type_record.get("Primary_Class", "UNRESOLVED_ANOMALY"))
+    void_type = str(hard_type_record.get("Void_Type", "NO_CONFIRMED_VOID"))
+    metal_type = str(hard_type_record.get("Metal_Type", "NO_CONFIRMED_METAL"))
+    content_type = str(hard_type_record.get("Content_Type", "CONTENT_UNRESOLVED"))
+
+    scenario = _scenario_from_hard_class(primary_class)
+    burial_style = _burial_style_from_hard_class(primary_class, void_type)
+    room_count = "NO_ROOM_COUNT_INFERRED"
+    if float(hard_type_record.get("Chamber_Score", 0.0)) >= 0.56:
+        room_count = "POSSIBLE_SINGLE_CHAMBER"
+    if float(hard_type_record.get("Drain_Void_Score", 0.0)) >= 0.60:
+        room_count = "POSSIBLE_VOID_NETWORK"
+
+    resolution_note = "App replacement of cell_121 using local/private focus mask and current hard classifier outputs."
+
+    record = {
+        "Core_Pixels": int(hard_type_record.get("Core_Pixels", 0)),
+        "Near_Ring_Pixels": int(hard_type_record.get("Near_Ring_Pixels", 0)),
+        "Far_Ring_Pixels": int(hard_type_record.get("Far_Ring_Pixels", 0)),
+        "Analysis_Pixel_m": 2.0,
+        "Native_Pixel_m": 10.0,
+        "Is_Super_Resolved": True,
+        "Scenario": scenario,
+        "Burial_Style_Inference": burial_style,
+        "Void_Probability": round(p_void, 4),
+        "Entrance_Probability": round(p_entrance, 4),
+        "Metal_Probability": round(p_metal, 4),
+        "Pottery_Probability": round(p_pottery, 4),
+        "Reliability": round(reliability, 4),
+        "Detection_Confidence": round(detection_confidence, 4),
+        "Interpretation_Confidence": round(interpretation_confidence, 4),
+        "Final_Confidence": round(final_confidence, 4),
+        "Decision_Grade": decision_grade,
+        "Entrance_Type": void_type,
+        "Metal_Type": metal_type,
+        "Room_Count_Inference": room_count,
+        "Content_Inference": content_type,
+        "Dominant_Direction": str(hard_type_record.get("Dominant_Direction", "UNRESOLVED")),
+        "Directionality_Strength": round(float(hard_type_record.get("Directionality_Strength", 0.0)), 4),
+        "Resolution_Note": resolution_note,
+        "Source_Cell": "cell_121",
+    }
+
+    payload = {
+        "source_cell": "cell_121",
+        "source_notebook_family": "AI_CORE_RING_SCENE_DECISION_V7_2C",
+        "status": "implemented",
+        "privacy": "FILESYSTEM_ONLY",
+        "decision": {
+            "scenario": scenario,
+            "burial_style_inference": burial_style,
+            "void_probability": p_void,
+            "entrance_probability": p_entrance,
+            "metal_probability": p_metal,
+            "pottery_probability": p_pottery,
+            "reliability": reliability,
+            "detection_confidence": detection_confidence,
+            "interpretation_confidence": interpretation_confidence,
+            "final_confidence": final_confidence,
+            "decision_grade": decision_grade,
+            "entrance_type": void_type,
+            "metal_type": metal_type,
+            "room_count_inference": room_count,
+            "content_inference": content_type,
+            "dominant_direction": record["Dominant_Direction"],
+            "directionality_strength": float(hard_type_record.get("Directionality_Strength", 0.0)),
+            "resolution_note": resolution_note,
+        },
+        "target_count": len(target_records),
+        "targets": target_records,
+        "hard_classifier": hard_type_json,
+    }
+
+    summary_lines = [
+        "AI CORE-vs-RING-vs-SCENE DECISION",
+        "=" * 78,
+        f"Core target pixels         : {record['Core_Pixels']}",
+        f"Near ring pixels           : {record['Near_Ring_Pixels']}",
+        f"Far ring pixels            : {record['Far_Ring_Pixels']}",
+        f"Analysis pixel size        : {record['Analysis_Pixel_m']} m",
+        f"Native support pixel size  : {record['Native_Pixel_m']} m",
+        f"Super-resolved             : {record['Is_Super_Resolved']}",
+        "-" * 78,
+        f"Scenario                   : {scenario}",
+        f"Burial style inference     : {burial_style}",
+        f"Void probability           : {p_void:.2%}",
+        f"Entrance probability       : {p_entrance:.2%}",
+        f"Metal probability          : {p_metal:.2%}",
+        f"Pottery probability        : {p_pottery:.2%}",
+        f"Reliability                : {reliability:.2%}",
+        f"Detection confidence       : {detection_confidence:.2%}",
+        f"Interpretation confidence  : {interpretation_confidence:.2%}",
+        f"Final confidence           : {final_confidence:.2%}",
+        f"Decision grade             : {decision_grade}",
+        "-" * 78,
+        f"Entrance type              : {void_type}",
+        f"Metal type                 : {metal_type}",
+        f"Room count inference       : {room_count}",
+        f"Content inference          : {content_type}",
+        f"Dominant direction         : {record['Dominant_Direction']}",
+        f"Directionality strength    : {record['Directionality_Strength']:.4f}",
+        "-" * 78,
+        f"Resolution note            : {resolution_note}",
+    ]
+
+    return {
+        "core_ring_scene_record": record,
+        "core_ring_scene_json": payload,
+        "core_ring_scene_summary_lines": summary_lines,
+    }
+
 def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     mask = products["mask"]
     masked_window = products["masked_window"]
@@ -801,6 +969,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     hard_type_record = products["hard_type_record"]
     hard_type_json = products["hard_type_json"]
     hard_type_summary_lines = products["hard_type_summary_lines"]
+    core_ring_scene_record = products["core_ring_scene_record"]
+    core_ring_scene_json = products["core_ring_scene_json"]
+    core_ring_scene_summary_lines = products["core_ring_scene_summary_lines"]
     assert isinstance(mask, np.ndarray)
     assert isinstance(masked_window, np.ndarray)
     assert isinstance(summary, dict)
@@ -811,6 +982,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     assert isinstance(hard_type_record, dict)
     assert isinstance(hard_type_json, dict)
     assert isinstance(hard_type_summary_lines, list)
+    assert isinstance(core_ring_scene_record, dict)
+    assert isinstance(core_ring_scene_json, dict)
+    assert isinstance(core_ring_scene_summary_lines, list)
 
     focus_dir = run_dir.joinpath(*FOCUS_DIR_PARTS)
     focus_dir.mkdir(parents=True, exist_ok=True)
@@ -826,6 +1000,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     hard_type_csv_path = focus_dir / HARD_TYPE_CLASSIFIER_CSV_NAME
     hard_type_txt_path = focus_dir / HARD_TYPE_CLASSIFIER_TXT_NAME
     hard_type_json_path = focus_dir / HARD_TYPE_CLASSIFIER_JSON_NAME
+    core_ring_scene_csv_path = focus_dir / CORE_RING_SCENE_TARGETS_CSV_NAME
+    core_ring_scene_txt_path = focus_dir / CORE_RING_SCENE_DECISION_TXT_NAME
+    core_ring_scene_json_path = focus_dir / CORE_RING_SCENE_DECISION_JSON_NAME
 
     _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
@@ -851,6 +1028,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     _write_csv(hard_type_csv_path, list(hard_type_record.keys()), [hard_type_record])
     hard_type_txt_path.write_text("\n".join(str(line) for line in hard_type_summary_lines), encoding="utf-8")
     hard_type_json_path.write_text(json.dumps(hard_type_json, indent=2, sort_keys=True), encoding="utf-8")
+    _write_csv(core_ring_scene_csv_path, list(core_ring_scene_record.keys()), [core_ring_scene_record])
+    core_ring_scene_txt_path.write_text("\n".join(str(line) for line in core_ring_scene_summary_lines), encoding="utf-8")
+    core_ring_scene_json_path.write_text(json.dumps(core_ring_scene_json, indent=2, sort_keys=True), encoding="utf-8")
 
     write_raster_sidecar(
         mask_tif_path,
@@ -872,6 +1052,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "hard_type_classifier_csv": hard_type_csv_path,
         "hard_type_classifier_txt": hard_type_txt_path,
         "hard_type_classifier_json": hard_type_json_path,
+        "core_ring_scene_targets_csv": core_ring_scene_csv_path,
+        "core_ring_scene_decision_txt": core_ring_scene_txt_path,
+        "core_ring_scene_decision_json": core_ring_scene_json_path,
     }
 
 
@@ -917,6 +1100,13 @@ class FocusMaskStage(Stage):
                 focus_mask=products["mask"],
                 analysis_bands=analysis_bands,
                 grid_spec=self.grid_spec,
+            )
+        )
+        products.update(
+            build_core_ring_scene_decision_products(
+                hard_type_record=products["hard_type_record"],
+                hard_type_json=products["hard_type_json"],
+                target_records=products["target_records"],
             )
         )
         outputs = write_focus_mask_outputs(context.run_dir, self.grid_spec, products)
@@ -998,13 +1188,36 @@ class FocusMaskStage(Stage):
                 size_bytes=outputs["hard_type_classifier_json"].stat().st_size,
                 http_servable=False,
             ),
+            build_stage_artifact(
+                name="core_ring_scene_targets_v7_2c_csv",
+                relative_path=outputs["core_ring_scene_targets_csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["core_ring_scene_targets_csv"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="core_ring_scene_decision_v7_2c_txt",
+                relative_path=outputs["core_ring_scene_decision_txt"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["core_ring_scene_decision_txt"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="core_ring_scene_decision_v7_2c_json",
+                relative_path=outputs["core_ring_scene_decision_json"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["core_ring_scene_decision_json"].stat().st_size,
+                http_servable=False,
+            ),
         ]
         summary = products["summary"]
         assert isinstance(summary, dict)
         target_records = products["target_records"]
         hard_type_record = products["hard_type_record"]
+        core_ring_scene_record = products["core_ring_scene_record"]
         assert isinstance(target_records, list)
         assert isinstance(hard_type_record, dict)
+        assert isinstance(core_ring_scene_record, dict)
         return StageResult(
             artifacts=artifacts,
             metadata={
@@ -1020,5 +1233,10 @@ class FocusMaskStage(Stage):
                 "hard_type_classifier_json": HARD_TYPE_CLASSIFIER_JSON_NAME,
                 "hard_type_primary_class": hard_type_record["Primary_Class"],
                 "hard_type_source_cell": "cell_128",
+                "core_ring_scene_targets_csv": CORE_RING_SCENE_TARGETS_CSV_NAME,
+                "core_ring_scene_decision_txt": CORE_RING_SCENE_DECISION_TXT_NAME,
+                "core_ring_scene_decision_json": CORE_RING_SCENE_DECISION_JSON_NAME,
+                "core_ring_scene_source_cell": "cell_121",
+                "core_ring_scene_decision_grade": core_ring_scene_record["Decision_Grade"],
             },
         )

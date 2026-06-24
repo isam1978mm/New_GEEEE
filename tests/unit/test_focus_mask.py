@@ -50,6 +50,9 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "hard_type_classifier_core9_csv",
             "hard_type_classifier_core9_txt",
             "hard_type_classifier_core9_json",
+            "core_ring_scene_targets_v7_2c_csv",
+            "core_ring_scene_decision_v7_2c_txt",
+            "core_ring_scene_decision_v7_2c_json",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -125,6 +128,30 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert hard_payload["status"] == "implemented"
         assert hard_payload["record"]["Primary_Class"] == hard_rows[0]["Primary_Class"]
         assert "AI HARD TYPE CLASSIFIER" in hard_txt.read_text(encoding="utf-8")
+
+        core_csv = run_dir / "full_job" / "focus" / "AI_CORE_RING_SCENE_TARGETS_V7_2C.csv"
+        core_txt = run_dir / "full_job" / "focus" / "AI_CORE_RING_SCENE_DECISION_V7_2C.txt"
+        core_json = run_dir / "full_job" / "focus" / "AI_CORE_RING_SCENE_DECISION_V7_2C.json"
+        assert core_csv.is_file()
+        assert core_txt.is_file()
+        assert core_json.is_file()
+
+        with core_csv.open("r", encoding="utf-8", newline="") as handle:
+            core_rows = list(csv.DictReader(handle))
+        assert len(core_rows) == 1
+        assert core_rows[0]["Source_Cell"] == "cell_121"
+        assert core_rows[0]["Scenario"]
+        assert core_rows[0]["Decision_Grade"]
+        assert "Detection_Confidence" in core_rows[0]
+        assert "Interpretation_Confidence" in core_rows[0]
+        assert "Final_Confidence" in core_rows[0]
+
+        core_payload = json.loads(core_json.read_text(encoding="utf-8"))
+        assert core_payload["source_cell"] == "cell_121"
+        assert core_payload["status"] == "implemented"
+        assert core_payload["target_count"] == len(target_rows)
+        assert "AI CORE-vs-RING-vs-SCENE DECISION" in core_txt.read_text(encoding="utf-8")
+
 
 
 
