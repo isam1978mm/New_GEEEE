@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B2 item 23 ROI-constrained 17m focus analysis implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B2 item 24 hard type classifier implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -34,7 +34,7 @@ Can we make it in app?
 | 19 | Tesla v7.2 inference engines | 🟨 Partial | Yes | App port implemented for canonical cell 095 TESLA_V7_2_ATOMIC_INFERENCE_STACK_640. Other item #19 variants remain separate: cell 100/101 target CSV scan, cell 102/103 geochemical secret layers/monitoring. Frozen notebook numeric parity still pending. |
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 23 | ROI-constrained AI analysis inside 17m focus | 🟨 Partial | Yes | App port implemented for canonical cell 119 ROI-constrained 17m focus analysis. Pixel CSV, target CSV, and target GeoJSON outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 24 | Hard classifiers / target type rules | 🟥 No | Yes | Need clean rule specification from the final notebook classifier cells. |
+| 24 | Hard classifiers / target type rules | 🟨 Partial | Yes | App port implemented for canonical cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9. CSV, TXT, JSON outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 25 | Target CSV / TXT / JSON outputs | 🟥 No | Yes | Define final target schema: columns, labels, confidence fields, and local/private policy. |
 | 26 | GeoJSON detected-feature exports | 🟥 No | Yes | Generate after final target schema and detections exist. Should be private/local by default. |
 | 27 | KMZ heatmap / 3D target visualization | 🟥 No | Yes | Depends on final target detections. Should be private/local by default. |
@@ -331,20 +331,71 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B2.1
+### B2.2 result — item 24 Hard classifiers / target type rules
+
+```text
+Status:
+  App port implemented for the selected hard type classifier.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_128 -> AI_HARD_TYPE_CLASSIFIER_CORE9.
+
+Implemented app outputs:
+  full_job/focus/AI_HARD_TYPE_CLASSIFIER_CORE9.csv
+  full_job/focus/AI_HARD_TYPE_CLASSIFIER_CORE9.txt
+  full_job/focus/AI_HARD_TYPE_CLASSIFIER_CORE9.json
+
+Implemented classifier contract:
+  Use the existing app 17m focus mask as the Core-9/focus core.
+  Load the same six secret layers and three REPORT_640 layers used by item #23.
+  Build core/ring/scene statistics and hard scores for:
+    Primary_Class
+    Void_Type
+    Metal_Type
+    Metal_Shape
+    Content_Type
+    Estimated_Stacked_Boxes
+    Estimated_Aligned_Jars
+    Final_Confidence
+  Write one canonical classifier record to CSV, a text summary, and a JSON payload with source_cell cell_128.
+
+Privacy/artifact policy:
+  All outputs are FILESYSTEM_ONLY and http_servable=False.
+  Keep coordinate-bearing and target-classifier outputs local/private by default.
+
+Validation done:
+  focused focus-mask unit test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files exist.
+  FocusMaskStage artifact count confirmed as 11.
+  HARD_CLASSIFIER_ROWS confirmed as 1.
+  SOURCE_CELL_CSV confirmed as cell_128.
+  SOURCE_CELL_JSON confirmed as cell_128.
+  STATUS_JSON confirmed as implemented.
+  TXT_HAS_TITLE confirmed as True.
+  Local run example produced Primary_Class UNRESOLVED_ANOMALY with Final_Confidence 0.4827.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B2.2 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B2.2
 
 ```text
 Recommended next main item:
-  Move to Plan B item #24: Hard classifiers / target type rules.
+  Move to Plan B item #25: Target CSV / TXT / JSON outputs.
 
 Why:
-  Item #23 now produces the ROI-constrained pixel/target reports inside the 17m focus area.
-  The next B2 contract item is the hard classifier/rule layer used to standardize target labels and outputs.
+  Item #23 now produces ROI-constrained pixel/target reports inside the 17m focus area.
+  Item #24 now produces the hard type classifier CSV/TXT/JSON record.
+  The next B2 contract item is standardizing/exporting final target CSV/TXT/JSON outputs.
   Frozen notebook numeric parity remains pending for implemented B1/B2 items.
 
 Next action:
-  Inspect exact notebook cell(s) for item #24 hard classifiers / target type rules.
-  Compare them against current focus target classifications.
+  Inspect exact notebook cell(s) for item #25 target CSV / TXT / JSON outputs.
+  Compare them against current focus target and hard-classifier outputs.
   Produce a gap table before coding.
 ```
 
