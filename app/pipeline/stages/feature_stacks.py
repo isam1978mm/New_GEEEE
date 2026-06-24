@@ -67,6 +67,7 @@ NOTEBOOK_AUX_BONUS_FEATURES_STACK_NPY = "AUX_BONUS_FEATURES_STACK_640.npy"
 NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY = "SIM_GEOPHYSICAL_STACK_640.npy"
 NOTEBOOK_AIX_EXTRA_TENSORS_STACK_NPY = "AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640.npy"
 NOTEBOOK_AIX_DEM_MATCHED_MASKS_STACK_NPY = "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy"
+NOTEBOOK_FUSION_INTELLIGENCE_STACK_NPY = "REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy"
 NOTEBOOK_STACK_ALIAS_MANIFEST_JSON = "STACK_ALIAS_MANIFEST.json"
 NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR = "GEOTIFF_RADAR_BANDS"
 NOTEBOOK_SAR_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
@@ -174,6 +175,11 @@ AIX_DEM_MATCHED_MASK_BANDS = (
     "AIX_2022_2026FEB_CLOUDLT3_MaskQuartzBasalt_Norm01",
     "AIX_2022_2026FEB_CLOUDLT3_MaskCarbonate_Norm01",
     "AIX_2022_2026FEB_CLOUDLT3_ThermalTimeSeriesAnomaly_Norm01",
+)
+FUSION_INTELLIGENCE_BANDS = (
+    "REPORT_640_FINAL_Zero_Point_Targets",
+    "REPORT_640_Mass_Report",
+    "REPORT_640_Pottery_Report",
 )
 S2_MASK_SUPPORT_BANDS = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 RADAR_STACK_BANDS = ("VV_dB", "VH_dB", "logRatio_dB", "incidence")
@@ -1180,6 +1186,14 @@ def _build_stack_alias_manifest(
                 "band_names": list(AIX_DEM_MATCHED_MASK_BANDS),
                 "status": "implemented",
                 "source_cell": "cell_081",
+            },
+            {
+                "filename": NOTEBOOK_FUSION_INTELLIGENCE_STACK_NPY,
+                "source_notebook_family": "REPORT_640_FINAL_INTELLIGENCE_STACK_640",
+                "app_artifact": "fusion_intelligence_stack",
+                "band_names": list(FUSION_INTELLIGENCE_BANDS),
+                "status": "implemented",
+                "source_cell": "cell_099",
             },
             {
                 "filename": NOTEBOOK_NANO_GEOPHYSICS_STACK_NPY,

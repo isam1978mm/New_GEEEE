@@ -64,6 +64,12 @@ AIX_DEM_MATCHED_MASK_BANDS = (
     f"AIX_{AIX_DEM_MASK_TIME_TAG}_MaskCarbonate_Norm01",
     f"AIX_{AIX_DEM_MASK_TIME_TAG}_ThermalTimeSeriesAnomaly_Norm01",
 )
+FUSION_INTELLIGENCE_STACK_NPY = "REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy"
+FUSION_INTELLIGENCE_BANDS = (
+    "REPORT_640_FINAL_Zero_Point_Targets",
+    "REPORT_640_Mass_Report",
+    "REPORT_640_Pottery_Report",
+)
 
 
 class S2CubeFetcher(Protocol):
@@ -75,6 +81,10 @@ class AIXExtraTensorFetcher(Protocol):
 
 
 class AIXDemMatchedMaskFetcher(Protocol):
+    def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
+
+
+class FusionIntelligenceFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
 
@@ -267,6 +277,51 @@ def build_aix_dem_matched_mask_image(grid_spec: GridSpec):
     ).rename(list(AIX_DEM_MATCHED_MASK_BANDS))
 
 
+def build_fusion_intelligence_image(grid_spec: GridSpec):
+    region = build_grid_region(grid_spec)
+    s2 = (
+        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-02-28")
+        .select(["B1", "B2", "B3", "B4", "B8", "B8A", "B11", "B12"])
+        .median()
+    )
+    l8 = (
+        ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-02-28")
+        .select(["ST_B10"])
+        .median()
+    )
+    l9 = (
+        ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate("2022-01-01", "2026-02-28")
+        .select(["ST_B10"])
+        .median()
+    )
+
+    tensor_gold_alloy_signal = s2.select("B12").divide(s2.select("B11"))
+    tensor_pottery_jars = s2.select("B11").divide(s2.select("B8A"))
+    mask_carbon_age_indicator = s2.select("B12").subtract(s2.select("B8"))
+    mask_quartz_basalt = s2.select("B12").divide(s2.select("B11"))
+    tensor_mass_volume_shadow = s2.select("B12").multiply(l9.select("ST_B10")).divide(1000)
+
+    gold_signal = tensor_gold_alloy_signal.gt(1.5)
+    void_signal = l8.select("ST_B10").lt(310)
+    hard_target = mask_quartz_basalt.gt(2.0)
+    ancient_signal = mask_carbon_age_indicator.gt(0.4)
+    final_target_map = gold_signal.And(void_signal).And(hard_target).And(ancient_signal)
+
+    return ee.Image.cat(
+        [
+            final_target_map.rename("REPORT_640_FINAL_Zero_Point_Targets"),
+            tensor_mass_volume_shadow.rename("REPORT_640_Mass_Report"),
+            tensor_pottery_jars.rename("REPORT_640_Pottery_Report"),
+        ]
+    ).rename(list(FUSION_INTELLIGENCE_BANDS))
+
+
 def to_grid_s2(image, grid_spec: GridSpec):
     return ee.Image(image).toFloat().reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform)).clip(
         build_grid_region(grid_spec)
@@ -441,6 +496,57 @@ def deterministic_aix_dem_matched_mask_fetcher(*, grid_spec: GridSpec) -> np.nda
     return np.stack(layers, axis=-1).astype(np.float32)
 
 
+def create_ee_fusion_intelligence_fetcher(settings, grid_spec: GridSpec) -> FusionIntelligenceFetcher:
+    initialize_ee_session(settings)
+    final_for_sample = finalize_for_sample(build_fusion_intelligence_image(grid_spec), grid_spec)
+    requests = build_s2_tile_requests(grid_spec)
+
+    def fetch_cube(*, grid_spec: GridSpec) -> np.ndarray:
+        cube = np.full((grid_spec.size, grid_spec.size, len(FUSION_INTELLIGENCE_BANDS)), grid_spec.nodata, dtype=np.float32)
+        for request in requests:
+            tile_geo = ee.Geometry.Rectangle(
+                [request["xmin"], request["ymin"], request["xmax"], request["ymax"]],
+                grid_spec.crs,
+                False,
+            )
+            rect = final_for_sample.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
+            for band_index, band_name in enumerate(FUSION_INTELLIGENCE_BANDS):
+                data = np.array(rect["properties"][band_name], dtype=np.float32)[: DEM_TILE_SIZE, : DEM_TILE_SIZE]
+                row_start = request["tile_row"] * DEM_TILE_SIZE
+                col_start = request["tile_col"] * DEM_TILE_SIZE
+                cube[row_start : row_start + DEM_TILE_SIZE, col_start : col_start + DEM_TILE_SIZE, band_index] = data
+        return cube.astype(np.float32, copy=False)
+
+    return fetch_cube
+
+
+def deterministic_fusion_intelligence_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
+    s2 = deterministic_s2_cube_fetcher(grid_spec=grid_spec)
+    b8 = s2[:, :, 3]
+    b11 = s2[:, :, 4]
+    b12 = s2[:, :, 5]
+
+    rows, cols = np.indices((grid_spec.size, grid_spec.size), dtype=np.float32)
+    row_norm = rows / np.float32(max(grid_spec.size - 1, 1))
+    col_norm = cols / np.float32(max(grid_spec.size - 1, 1))
+    b8a = b8 + np.float32(0.04)
+    l8_st_b10 = np.float32(300.0) + row_norm * np.float32(4.0)
+    l9_st_b10 = np.float32(301.0) + col_norm * np.float32(3.0)
+
+    gold_signal_value = b12 / np.maximum(b11, np.float32(1e-6))
+    pottery_report = b11 / np.maximum(b8a, np.float32(1e-6))
+    mass_report = (b12 * l9_st_b10) / np.float32(1000.0)
+    carbon_age = b12 - b8
+    final_targets = (
+        (gold_signal_value > np.float32(1.5))
+        & (l8_st_b10 < np.float32(310.0))
+        & (gold_signal_value > np.float32(2.0))
+        & (carbon_age > np.float32(0.4))
+    ).astype(np.float32)
+
+    return np.stack([final_targets, mass_report, pottery_report], axis=-1).astype(np.float32)
+
+
 def deterministic_s2_cube_fetcher(*, grid_spec: GridSpec) -> np.ndarray:
     size = grid_spec.size
     rows, cols = np.indices((size, size), dtype=np.float32)
@@ -567,6 +673,17 @@ def _build_aix_dem_matched_masks_alias() -> dict[str, object]:
     }
 
 
+def _build_fusion_intelligence_alias() -> dict[str, object]:
+    return {
+        "filename": FUSION_INTELLIGENCE_STACK_NPY,
+        "source_notebook_family": "REPORT_640_FINAL_INTELLIGENCE_STACK_640",
+        "app_artifact": "fusion_intelligence_stack",
+        "band_names": list(FUSION_INTELLIGENCE_BANDS),
+        "status": "implemented",
+        "source_cell": "cell_099",
+    }
+
+
 def write_aix_extra_tensor_alias_manifest(stack_dir: Path) -> Path:
     stack_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
@@ -584,7 +701,7 @@ def write_aix_extra_tensor_alias_manifest(stack_dir: Path) -> Path:
     manifest.setdefault("deferred_families", [])
     manifest.setdefault("privacy", {"artifact_class": "FILESYSTEM_ONLY", "http_servable": False})
 
-    aliases = [_build_aix_extra_tensor_alias(), _build_aix_dem_matched_masks_alias()]
+    aliases = [_build_aix_extra_tensor_alias(), _build_aix_dem_matched_masks_alias(), _build_fusion_intelligence_alias()]
     filenames = {alias["filename"] for alias in aliases}
     manifest["aliases"] = [entry for entry in manifest.get("aliases", []) if entry.get("filename") not in filenames]
     manifest["aliases"].extend(aliases)
@@ -650,6 +767,45 @@ def write_aix_dem_matched_mask_outputs(run_dir: Path, grid_spec: GridSpec, cube:
     np.save(stack_path, cube)
 
     for band_index, band_name in enumerate(AIX_DEM_MATCHED_MASK_BANDS):
+        band_array = cube[:, :, band_index].astype(np.float32, copy=False)
+        tif_path = tif_dir / f"{band_name}_640.tif"
+        npy_path = npy_dir / f"{band_name}_640.npy"
+        write_georeferenced_raster(tif_path, band_array, grid_spec)
+        write_raster_sidecar(
+            tif_path,
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=band_array.shape,
+        )
+        np.save(npy_path, band_array)
+
+    alias_manifest_path = write_aix_extra_tensor_alias_manifest(stack_dir)
+    return {
+        "stack_npy": stack_path,
+        "alias_manifest_json": alias_manifest_path,
+    }
+
+
+def write_fusion_intelligence_outputs(run_dir: Path, grid_spec: GridSpec, cube: np.ndarray) -> dict[str, Path]:
+    if cube.shape != (grid_spec.size, grid_spec.size, len(FUSION_INTELLIGENCE_BANDS)):
+        raise ValueError(
+            f"Fusion intelligence cube shape {cube.shape} does not match expected "
+            f"{(grid_spec.size, grid_spec.size, len(FUSION_INTELLIGENCE_BANDS))}."
+        )
+
+    stack_dir = run_dir / NOTEBOOK_STACK_OUTPUT_DIR
+    tif_dir = run_dir / NOTEBOOK_SAR_GEOTIFF_OUTPUT_DIR
+    npy_dir = run_dir / NOTEBOOK_SAR_NPY_OUTPUT_DIR
+    stack_dir.mkdir(parents=True, exist_ok=True)
+    tif_dir.mkdir(parents=True, exist_ok=True)
+    npy_dir.mkdir(parents=True, exist_ok=True)
+
+    cube = _finite_or_nodata(cube, nodata=grid_spec.nodata)
+    stack_path = stack_dir / FUSION_INTELLIGENCE_STACK_NPY
+    np.save(stack_path, cube)
+
+    for band_index, band_name in enumerate(FUSION_INTELLIGENCE_BANDS):
         band_array = cube[:, :, band_index].astype(np.float32, copy=False)
         tif_path = tif_dir / f"{band_name}_640.tif"
         npy_path = npy_dir / f"{band_name}_640.npy"
@@ -801,6 +957,7 @@ class S2IndicesStage(Stage):
         s2_cube_fetcher: S2CubeFetcher | None = None,
         aix_extra_tensor_fetcher: AIXExtraTensorFetcher | None = None,
         aix_dem_matched_mask_fetcher: AIXDemMatchedMaskFetcher | None = None,
+        fusion_intelligence_fetcher: FusionIntelligenceFetcher | None = None,
     ) -> None:
         self.grid_spec = grid_spec
         self.start_date = start_date
@@ -809,6 +966,7 @@ class S2IndicesStage(Stage):
         self.s2_cube_fetcher = s2_cube_fetcher
         self.aix_extra_tensor_fetcher = aix_extra_tensor_fetcher
         self.aix_dem_matched_mask_fetcher = aix_dem_matched_mask_fetcher
+        self.fusion_intelligence_fetcher = fusion_intelligence_fetcher
 
     async def run(self, context: StageContext) -> StageResult:
         fetcher = self.s2_cube_fetcher or create_ee_s2_cube_fetcher(
@@ -860,6 +1018,15 @@ class S2IndicesStage(Stage):
             aix_mask_fetcher = create_ee_aix_dem_matched_mask_fetcher(context.settings, self.grid_spec)
         aix_dem_matched_mask_cube = aix_mask_fetcher(grid_spec=self.grid_spec)
         aix_dem_matched_mask_outputs = write_aix_dem_matched_mask_outputs(context.run_dir, self.grid_spec, aix_dem_matched_mask_cube)
+
+        if self.fusion_intelligence_fetcher is not None:
+            fusion_fetcher = self.fusion_intelligence_fetcher
+        elif self.s2_cube_fetcher is not None:
+            fusion_fetcher = deterministic_fusion_intelligence_fetcher
+        else:
+            fusion_fetcher = create_ee_fusion_intelligence_fetcher(context.settings, self.grid_spec)
+        fusion_intelligence_cube = fusion_fetcher(grid_spec=self.grid_spec)
+        fusion_intelligence_outputs = write_fusion_intelligence_outputs(context.run_dir, self.grid_spec, fusion_intelligence_cube)
 
         artifacts = [
             build_stage_artifact(
@@ -930,6 +1097,13 @@ class S2IndicesStage(Stage):
                     http_servable=False,
                 ),
                 build_stage_artifact(
+                    name="notebook_REPORT_640_FINAL_INTELLIGENCE_STACK_640_npy",
+                    relative_path=fusion_intelligence_outputs["stack_npy"].relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                    size_bytes=fusion_intelligence_outputs["stack_npy"].stat().st_size,
+                    http_servable=False,
+                ),
+                build_stage_artifact(
                     name="aix_extra_tensors_stack_alias_manifest",
                     relative_path=aix_dem_matched_mask_outputs["alias_manifest_json"].relative_to(context.run_dir).as_posix(),
                     artifact_class=ArtifactClass.FILESYSTEM_ONLY,
@@ -949,5 +1123,7 @@ class S2IndicesStage(Stage):
                 "aix_extra_tensor_bands": list(AIX_EXTRA_TENSOR_BANDS),
                 "aix_dem_matched_masks_stack": AIX_DEM_MATCHED_MASKS_STACK_NPY,
                 "aix_dem_matched_mask_bands": list(AIX_DEM_MATCHED_MASK_BANDS),
+                "fusion_intelligence_stack": FUSION_INTELLIGENCE_STACK_NPY,
+                "fusion_intelligence_bands": list(FUSION_INTELLIGENCE_BANDS),
             },
         )

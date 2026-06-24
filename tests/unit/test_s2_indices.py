@@ -17,6 +17,8 @@ from app.pipeline.stages.s2_indices import (
     AIX_DEM_MATCHED_MASKS_STACK_NPY,
     AIX_EXTRA_TENSOR_BANDS,
     AIX_EXTRA_TENSORS_STACK_NPY,
+    FUSION_INTELLIGENCE_BANDS,
+    FUSION_INTELLIGENCE_STACK_NPY,
     INDEX_NAMES,
     S2_DEM_MATCHED_MASK_MANIFEST_JSON,
     S2_INDEX_VALID_MASK_TIF,
@@ -183,6 +185,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
             "s2_raw_cube",
             "notebook_AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640_npy",
             "notebook_AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640_npy",
+            "notebook_REPORT_640_FINAL_INTELLIGENCE_STACK_640_npy",
             "aix_extra_tensors_stack_alias_manifest",
         ]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
@@ -196,6 +199,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
             "s2_raw_cube",
             "notebook_AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640_npy",
             "notebook_AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640_npy",
+            "notebook_REPORT_640_FINAL_INTELLIGENCE_STACK_640_npy",
             "aix_extra_tensors_stack_alias_manifest",
         ):
             assert artifact_classes[name] == ArtifactClass.FILESYSTEM_ONLY
@@ -206,6 +210,8 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         assert result.metadata["aix_extra_tensor_bands"] == list(AIX_EXTRA_TENSOR_BANDS)
         assert result.metadata["aix_dem_matched_masks_stack"] == AIX_DEM_MATCHED_MASKS_STACK_NPY
         assert result.metadata["aix_dem_matched_mask_bands"] == list(AIX_DEM_MATCHED_MASK_BANDS)
+        assert result.metadata["fusion_intelligence_stack"] == FUSION_INTELLIGENCE_STACK_NPY
+        assert result.metadata["fusion_intelligence_bands"] == list(FUSION_INTELLIGENCE_BANDS)
 
         for name in INDEX_NAMES:
             sidecar = read_manifest(raster_sidecar_path(run_dir / f"{name}.tif"))
@@ -236,6 +242,23 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         assert aix_masks_alias["band_names"] == list(AIX_DEM_MATCHED_MASK_BANDS)
 
         for band_name in AIX_DEM_MATCHED_MASK_BANDS:
+            assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()
+            tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}_640.tif"
+            assert tif_path.is_file()
+            sidecar = read_manifest(raster_sidecar_path(tif_path))
+            assert sidecar["transform"] == grid_spec.manifest.crs_transform
+            assert sidecar["dtype"] == "float32"
+
+        fusion_stack = np.load(run_dir / "NPY_STACKS" / FUSION_INTELLIGENCE_STACK_NPY)
+        assert fusion_stack.shape == (grid_spec.size, grid_spec.size, len(FUSION_INTELLIGENCE_BANDS))
+        assert fusion_stack.dtype == np.float32
+
+        fusion_alias = next(entry for entry in alias_manifest["aliases"] if entry["filename"] == FUSION_INTELLIGENCE_STACK_NPY)
+        assert fusion_alias["source_cell"] == "cell_099"
+        assert fusion_alias["status"] == "implemented"
+        assert fusion_alias["band_names"] == list(FUSION_INTELLIGENCE_BANDS)
+
+        for band_name in FUSION_INTELLIGENCE_BANDS:
             assert (run_dir / "NPY_RADAR_BANDS" / f"{band_name}_640.npy").is_file()
             tif_path = run_dir / "GEOTIFF_RADAR_BANDS" / f"{band_name}_640.tif"
             assert tif_path.is_file()
