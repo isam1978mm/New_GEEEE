@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B1 item 20 fusion intelligence stack implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B1 item 19 Tesla v7.2 atomic inference stack implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -31,7 +31,7 @@ Can we make it in app?
 | 15 | Bonus / simulator features | 🟨 Partial | Yes | App port implemented for cell 072 AUX_BONUS_FEATURES_STACK_640 and cell 073 SIM_GEOPHYSICAL_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 18 | DEM-matched S2 masks | 🟨 Partial | Yes | App port implemented for canonical cell 081 AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 19 | Tesla v7.2 inference engines | 🟥 No | Yes | Major missing feature. Select one authoritative Tesla cell/version before implementation. |
+| 19 | Tesla v7.2 inference engines | 🟨 Partial | Yes | App port implemented for canonical cell 095 TESLA_V7_2_ATOMIC_INFERENCE_STACK_640. Other item #19 variants remain separate: cell 100/101 target CSV scan, cell 102/103 geochemical secret layers/monitoring. Frozen notebook numeric parity still pending. |
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 23 | ROI-constrained AI analysis inside 17m focus | 🟥 No | Yes | Use the app focus window, then port the notebook's focus-region analysis logic. |
 | 24 | Hard classifiers / target type rules | 🟥 No | Yes | Need clean rule specification from the final notebook classifier cells. |
@@ -61,6 +61,7 @@ Target items:
   17 Extra S2 era pulls / masks
   18 DEM-matched S2 masks
   20 Fusion center / intelligence tensors
+  19 Tesla v7.2 atomic inference stack
 
 Outcome:
   all non-ML tensor/raster inputs required by the late notebook classifier phases exist in the app.
@@ -165,12 +166,6 @@ Implemented app outputs:
   GEOTIFF_RADAR_BANDS/{13 AIX_2022_2026_CLOUDLT3 bands}_640.tif.meta.json
   NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_077
 
-Implementation choice:
-  Extend S2IndicesStage so the AIX stack is generated with the same run/grid contract as existing S2 outputs.
-  In real backend mode, build seasonal S2/Landsat/topography tensors from the 2022-2026 cloud < 3 notebook rule.
-  In deterministic/injected test mode, use a local deterministic AIX fetcher and do not call Earth Engine.
-  Preserve the AIX alias in FeatureStacksStage so later stack rewrites keep the cell_077 manifest entry.
-
 Validation done:
   focused S2 indices test passed.
   full-run integration test passed.
@@ -195,24 +190,6 @@ Implemented app outputs:
   GEOTIFF_RADAR_BANDS/{9 AIX_2022_2026FEB_CLOUDLT3 bands}_640.tif
   GEOTIFF_RADAR_BANDS/{9 AIX_2022_2026FEB_CLOUDLT3 bands}_640.tif.meta.json
   NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_081
-
-Implemented band order:
-  AIX_2022_2026FEB_CLOUDLT3_MaskVegetationRoots_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_MaskWaterMoisture_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_IndexIronOxide_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_IndexFerricIron_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_IndexClayThermal_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_MaskCharcoalLead_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_MaskQuartzBasalt_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_MaskCarbonate_Norm01
-  AIX_2022_2026FEB_CLOUDLT3_ThermalTimeSeriesAnomaly_Norm01
-
-Implementation choice:
-  Extend S2IndicesStage so the DEM-matched mask stack is generated with the same run/grid contract as existing S2 outputs.
-  Keep existing app raw/index valid masks; cell_081 is a separate 9-band AI mask/index stack, not a duplicate of those valid masks.
-  In real backend mode, build the cell_081 S2/Landsat formulas from the 2022-01-01 to 2026-02-28 cloud < 3 notebook rule.
-  In deterministic/injected test mode, use a local deterministic AIX mask fetcher and do not call Earth Engine.
-  Preserve the cell_081 alias in FeatureStacksStage so later stack rewrites keep the manifest entry.
 
 Validation done:
   focused S2 indices test passed.
@@ -243,44 +220,81 @@ Implemented app outputs:
   GEOTIFF_RADAR_BANDS/{3 REPORT_640 bands}_640.tif.meta.json
   NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_099
 
-Implemented band order:
-  REPORT_640_FINAL_Zero_Point_Targets
-  REPORT_640_Mass_Report
-  REPORT_640_Pottery_Report
-
-Implementation choice:
-  Use cell_099 as canonical instead of cell_097 because cell_099 is the DEM-anchored final reprojection variant.
-  Extend S2IndicesStage so the fusion intelligence stack is generated with the same run/grid contract as existing S2 outputs.
-  In real backend mode, build the cell_099 S2/Landsat formulas from the 2022-01-01 to 2026-02-28 notebook rule.
-  In deterministic/injected test mode, use a local deterministic fusion fetcher and do not call Earth Engine.
-  Preserve the cell_099 alias in FeatureStacksStage so later stack rewrites keep the manifest entry.
-
 Validation done:
   focused S2 indices test passed.
   full-run integration test passed.
   local existing run regenerated and confirmed output files/shapes exist.
   REPORT_640 final intelligence stack shape confirmed as (640, 640, 3) float32.
   STACK_ALIAS_MANIFEST records source_cell cell_099 and status implemented.
+```
+
+### B1.12 result — item 19 Tesla v7.2 inference engines, Atomic Inference Engine
+
+```text
+Status:
+  App port implemented for the selected Tesla v7.2 atomic material-signature stack.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_095 -> TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy
+
+Implemented app outputs:
+  NPY_STACKS/TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy
+  NPY_RADAR_BANDS/AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.npy
+  NPY_RADAR_BANDS/AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.npy
+  NPY_RADAR_BANDS/AI_BEH_Mercury_RareChemicals_DOM_lin_640.npy
+  NPY_RADAR_BANDS/AI_BEH_Gemstones_AncientGlass_DOM_lin_640.npy
+  NPY_RADAR_BANDS/AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.npy
+  GEOTIFF_RADAR_BANDS/AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640.tif
+  GEOTIFF_RADAR_BANDS/AI_BEH_Artifacts_Jars_Chests_DOM_lin_640.tif
+  GEOTIFF_RADAR_BANDS/AI_BEH_Mercury_RareChemicals_DOM_lin_640.tif
+  GEOTIFF_RADAR_BANDS/AI_BEH_Gemstones_AncientGlass_DOM_lin_640.tif
+  GEOTIFF_RADAR_BANDS/AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640.tif
+  GEOTIFF_RADAR_BANDS/{5 AI_BEH bands}.tif.meta.json
+  NPY_STACKS/STACK_ALIAS_MANIFEST.json entry for source_cell cell_095
+
+Implemented band order:
+  AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640
+  AI_BEH_Artifacts_Jars_Chests_DOM_lin_640
+  AI_BEH_Mercury_RareChemicals_DOM_lin_640
+  AI_BEH_Gemstones_AncientGlass_DOM_lin_640
+  AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640
+
+Implementation choice:
+  Use cell_095 as the first canonical item #19 port because it is the atomic inference engine with explicit raster outputs.
+  Do not port cell_096 or cell_103 Drive monitoring loops as app logic.
+  Leave cell_100/cell_101 target CSV scan and cell_102 geochemical secret layers for separate follow-up classification/diagnostic items.
+  Extend S2IndicesStage so the Tesla atomic inference stack is generated with the same run/grid contract as existing S2-derived outputs.
+  In real backend mode, build the cell_095 S2 formulas from the 2022-01-01 to 2026-03-01 cloud < 5 notebook rule.
+  In deterministic/injected test mode, use a local deterministic Tesla atomic fetcher and do not call Earth Engine.
+  Preserve the cell_095 alias in FeatureStacksStage so later stack rewrites keep the manifest entry.
+
+Validation done:
+  focused S2 indices test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files/shapes exist.
+  TESLA_V7_2_ATOMIC_INFERENCE stack shape confirmed as (640, 640, 5) float32.
+  STACK_ALIAS_MANIFEST records source_cell cell_095 and status implemented.
 
 Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.11 artifacts.
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B1.12 artifacts.
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B1.11
+### Next main item scan after B1.12
 
 ```text
 Recommended next main item:
-  Move to Plan B item #19: Tesla v7.2 inference engines.
+  Move to Plan B item #23: ROI-constrained AI analysis inside 17m focus.
 
 Why:
-  The selected B1 non-ML raster/tensor families are now app-ported through item #20.
-  Item #19 was intentionally skipped until the raster/tensor inputs were available because it is a major ML/inference item.
+  The selected B1 non-ML raster/tensor families and the first Tesla v7.2 atomic inference stack are now app-ported.
+  Remaining item #19 variants overlap later target CSV/report and diagnostic work rather than this raster-stack opening.
   Frozen notebook numeric parity remains pending for implemented B1 items.
 
 Next action:
-  Inspect exact notebook cell(s) for item #19 Tesla v7.2 inference engines.
-  Select one authoritative Tesla v7.2 cell/version before implementation.
+  Inspect exact notebook cell(s) for item #23 ROI-constrained AI analysis inside 17m focus.
+  Compare them against the app focus window and current target/raster outputs.
   Produce a gap table before coding.
 ```
 
