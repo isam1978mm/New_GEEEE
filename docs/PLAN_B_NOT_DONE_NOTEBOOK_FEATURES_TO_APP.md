@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B2 item 25 target CSV/TXT/JSON outputs implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B2 item 26 WGS84 GeoJSON detected-feature exports implemented; frozen notebook numeric parity still pending.
 
 Goal: after Plan A completes the partial notebook features, implement the notebook capabilities that are not done in the app now. These are real product capabilities from the notebook, not Colab/Drive setup behavior.
 
@@ -36,7 +36,7 @@ Can we make it in app?
 | 23 | ROI-constrained AI analysis inside 17m focus | 🟨 Partial | Yes | App port implemented for canonical cell 119 ROI-constrained 17m focus analysis. Pixel CSV, target CSV, and target GeoJSON outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 24 | Hard classifiers / target type rules | 🟨 Partial | Yes | App port implemented for canonical cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9. CSV, TXT, JSON outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 25 | Target CSV / TXT / JSON outputs | 🟨 Partial | Yes | App port implemented for canonical cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 26 | GeoJSON detected-feature exports | 🟥 No | Yes | Generate after final target schema and detections exist. Should be private/local by default. |
+| 26 | GeoJSON detected-feature exports | 🟨 Partial | Yes | App port implemented for canonical cell 123 AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 27 | KMZ heatmap / 3D target visualization | 🟥 No | Yes | Depends on final target detections. Should be private/local by default. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟥 No | Yes | Planning/inspection feature. Easier than actual inference. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟥 No | Yes | Define input shape, band order, normalization, and saved tensor contract. |
@@ -443,22 +443,68 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
-### Next main item scan after B2.3
+### B2.4 result — item 26 GeoJSON detected-feature exports
+
+```text
+Status:
+  App port implemented for the selected WGS84 detected-feature GeoJSON export.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_123 -> corrected WGS84 GeoJSON detected-feature export.
+
+Implemented app output:
+  full_job/focus/AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+
+Implemented GeoJSON contract:
+  Use item #23 ROI target records as detected features.
+  Reuse item #24 hard classifier fields and item #25 core/ring/scene decision fields as feature properties.
+  Convert native grid UTM coordinates to WGS84 point coordinates.
+  Write valid GeoJSON FeatureCollection with:
+    source_cell: cell_123
+    coordinate_reference_system: EPSG:4326
+    Feature geometry type: Point
+    Lon / Lat properties
+    UTM_E / UTM_N properties
+    Google_Maps_Link property
+    Decision_Grade and Scenario properties
+
+Privacy/artifact policy:
+  Output is FILESYSTEM_ONLY and http_servable=False.
+  Keep coordinate-bearing GeoJSON local/private by default.
+
+Validation done:
+  focused focus-mask unit test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output file exists.
+  FocusMaskStage artifact count confirmed as 15.
+  GEOJSON_TYPE confirmed as FeatureCollection.
+  SOURCE_CELL confirmed as cell_123.
+  CRS confirmed as EPSG:4326.
+  FEATURE_COUNT confirmed as 5.
+  FIRST_GEOMETRY_TYPE confirmed as Point.
+  LON_RANGE_OK and LAT_RANGE_OK confirmed as True without exposing coordinates.
+  Properties confirmed to include UTM_E, UTM_N, Google_Maps_Link, Decision_Grade, and Scenario.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B2.4 artifact.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
+### Next main item scan after B2.4
 
 ```text
 Recommended next main item:
-  Move to Plan B item #26: GeoJSON detected-feature exports.
+  Move to Plan B item #27: KMZ heatmap / 3D target visualization.
 
 Why:
-  Item #23 now produces ROI-constrained pixel/target reports and a focus target GeoJSON.
-  Item #24 now produces the hard type classifier CSV/TXT/JSON record.
-  Item #25 now produces the core/ring/scene target CSV/TXT/JSON outputs.
-  The next B2 contract item is standardizing/exporting detected-feature GeoJSON.
+  Items #23 through #26 now produce ROI target reports, hard classification, final target CSV/TXT/JSON, and WGS84 detected-feature GeoJSON.
+  The next B3 contract item is local/private geospatial visualization output.
   Frozen notebook numeric parity remains pending for implemented B1/B2 items.
 
 Next action:
-  Inspect exact notebook cell(s) for item #26 GeoJSON detected-feature exports.
-  Compare them against current focus target GeoJSON and target output JSON.
+  Inspect exact notebook cell(s) for item #27 KMZ heatmap / 3D target visualization.
+  Compare them against current WGS84 detected-feature GeoJSON and target-output products.
   Produce a gap table before coding.
 ```
 
