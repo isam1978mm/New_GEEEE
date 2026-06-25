@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B3 item 27 KMZ heatmap / 3D visualization implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B3 item 34 field-operation KMZ outputs implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -26,7 +26,7 @@ Last update: 2026-06-22 — B3 item 27 KMZ heatmap / 3D visualization implemente
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟥 No | Yes | Requires selected model, weights policy, dependency plan, and CPU/GPU expectations. |
 | 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
 | 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
-| 34 | Field-operation KMZ outputs | 🟥 No | Yes | Depends on final detections and geospatial output policy. |
+| 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 38 | Live geemap overlays | 🟥 No | Replace | Do not port geemap. Build app-native map/layer UI. |
 | 39 | Final probability map overlay + markers | 🟥 No | Yes | Depends on ML inference probability map output. |
 | 40 | GPS/path tracing from targets | 🟥 No | Yes | Depends on final detector outputs and geometry/privacy policy. |
@@ -50,6 +50,7 @@ B2 focus and target contracts implemented:
 
 B3 local/private visualization contracts implemented:
 - Item 27: cell 155 heatmap PNG, heatmap KMZ, and 3D visualization KMZ.
+- Item 34: cell 200 field-operation GeoJSON and KMZ.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -85,11 +86,45 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B3.2 result — item 34 Field-operation KMZ outputs
+
+```text
+Status:
+  App port implemented for selected field-operation GeoJSON and KMZ outputs.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_200 -> advanced field mapping / TESLA_V7_2_FIELD_OPERATIONS.
+
+Implemented app outputs:
+  full_job/focus/FINAL_ARCHEO_INTELLIGENCE_MAP.geojson
+  full_job/focus/TESLA_V7_2_FIELD_OPERATIONS.kmz
+
+Validation done:
+  focused focus-mask unit test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output files exist.
+  FocusMaskStage artifact count confirmed as 20.
+  FINAL_ARCHEO_INTELLIGENCE_MAP.geojson is a FeatureCollection with source_cell cell_200, CRS EPSG:4326, and 5 Point features.
+  Longitude/latitude ranges were validated without exposing exact coordinates.
+  Feature properties include Source_Cell, Material_Content, Field_Notes, and UTM.
+  TESLA_V7_2_FIELD_OPERATIONS.kmz contains doc.kml.
+  Field KML contains Tesla v7.2 Mission: Advanced Intelligence Assets, source_cell=cell_200, 5 Placemark entries, and Strategic Intelligence Data.
+
+Privacy/artifact policy:
+  All outputs are FILESYSTEM_ONLY and http_servable=False.
+  Keep coordinate-bearing field-operation outputs local/private by default.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B3.2 artifacts.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #34: Field-operation KMZ outputs.
+  Plan B item #38: Live geemap overlays, replaced by app-native map/layer UI.
 ```
 
 ## Rules for Plan B
