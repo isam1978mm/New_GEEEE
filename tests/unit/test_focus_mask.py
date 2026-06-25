@@ -58,6 +58,8 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "ai_heatmap_classification_png",
             "ai_heatmap_classification_kmz",
             "ai_3d_target_visualization_kmz",
+            "final_archeo_intelligence_map_geojson",
+            "tesla_v7_2_field_operations_kmz",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -204,6 +206,38 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "source_cell=cell_155" in target_kml
         assert target_kml.count("<Placemark>") == len(target_rows)
         assert "<altitudeMode>relativeToGround</altitudeMode>" in target_kml
+
+        field_geojson = run_dir / "full_job" / "focus" / "FINAL_ARCHEO_INTELLIGENCE_MAP.geojson"
+        field_kmz = run_dir / "full_job" / "focus" / "TESLA_V7_2_FIELD_OPERATIONS.kmz"
+
+        assert field_geojson.is_file()
+        assert field_kmz.is_file()
+
+        field_payload = json.loads(field_geojson.read_text(encoding="utf-8"))
+        assert field_payload["type"] == "FeatureCollection"
+        assert field_payload["source_cell"] == "cell_200"
+        assert field_payload["coordinate_reference_system"] == "EPSG:4326"
+        assert len(field_payload["features"]) == len(target_rows)
+
+        field_first = field_payload["features"][0]
+        assert field_first["geometry"]["type"] == "Point"
+        field_lon, field_lat = field_first["geometry"]["coordinates"]
+        assert -180.0 <= float(field_lon) <= 180.0
+        assert -90.0 <= float(field_lat) <= 90.0
+        assert field_first["properties"]["Source_Cell"] == "cell_200"
+        assert "Material_Content" in field_first["properties"]
+        assert "Field_Notes" in field_first["properties"]
+        assert "UTM" in field_first["properties"]
+
+        with zipfile.ZipFile(field_kmz, "r") as zf:
+            field_names = set(zf.namelist())
+            assert "doc.kml" in field_names
+            field_kml = zf.read("doc.kml").decode("utf-8")
+
+        assert "Tesla v7.2 Mission: Advanced Intelligence Assets" in field_kml
+        assert "source_cell=cell_200" in field_kml
+        assert field_kml.count("<Placemark>") == len(target_rows)
+        assert "Strategic Intelligence Data" in field_kml
 
 
 

@@ -34,6 +34,8 @@ DETECTED_FEATURES_WGS84_GEOJSON_NAME = "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_
 HEATMAP_CLASSIFICATION_PNG_NAME = "AI_HEATMAP_CLASSIFICATION.png"
 HEATMAP_CLASSIFICATION_KMZ_NAME = "AI_HEATMAP_CLASSIFICATION.kmz"
 TARGET_3D_VISUALIZATION_KMZ_NAME = "AI_3D_TARGET_VISUALIZATION.kmz"
+FIELD_OPERATIONS_GEOJSON_NAME = "FINAL_ARCHEO_INTELLIGENCE_MAP.geojson"
+FIELD_OPERATIONS_KMZ_NAME = "TESLA_V7_2_FIELD_OPERATIONS.kmz"
 FOCUS_DIR_PARTS = ("full_job", "focus")
 FOCUS_SIZE_M = 17.0
 
@@ -1250,6 +1252,122 @@ def build_kmz_visualization_products(
         "heatmap_bounds_wgs84": {"west": west, "south": south, "east": east, "north": north},
     }
 
+def build_field_operations_products(
+    *,
+    target_records: list[dict[str, object]],
+    hard_type_record: dict[str, object],
+    core_ring_scene_record: dict[str, object],
+    grid_spec: GridSpec,
+) -> dict[str, object]:
+    try:
+        from pyproj import Transformer
+    except Exception as exc:
+        raise StageError("Field-operation KMZ export requires pyproj.") from exc
+
+    transformer = Transformer.from_crs(grid_spec.crs, "EPSG:4326", always_xy=True)
+
+    features: list[dict[str, object]] = []
+    placemarks: list[str] = []
+
+    primary_class = str(hard_type_record.get("Primary_Class", "UNRESOLVED_ANOMALY"))
+    content_type = str(hard_type_record.get("Content_Type", "CONTENT_UNRESOLVED"))
+    decision_grade = str(core_ring_scene_record.get("Decision_Grade", ""))
+    scenario = str(core_ring_scene_record.get("Scenario", ""))
+    final_confidence = _kmz_safe_float(core_ring_scene_record.get("Final_Confidence"), default=0.0)
+
+    for row in target_records:
+        utm_e = _kmz_safe_float(row.get("UTM_E"), default=np.nan)
+        utm_n = _kmz_safe_float(row.get("UTM_N"), default=np.nan)
+        if not np.isfinite(utm_e) or not np.isfinite(utm_n):
+            continue
+
+        lon, lat = transformer.transform(utm_e, utm_n)
+        lon = float(lon)
+        lat = float(lat)
+
+        target_id = int(row.get("Target_ID", len(features) + 1))
+        target_class = str(row.get("Classification", "General Anomaly"))
+        confidence = str(row.get("Confidence", "N/A"))
+        field_notes = (
+            f"Decision: {decision_grade} | "
+            f"Scenario: {scenario} | "
+            f"Primary: {primary_class} | "
+            f"Content: {content_type}"
+        )
+
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {
+                "ID": target_id,
+                "Source_Cell": "cell_200",
+                "Classification": target_class,
+                "Material_Content": content_type,
+                "Field_Notes": field_notes,
+                "Confidence": confidence,
+                "Decision_Grade": decision_grade,
+                "Scenario": scenario,
+                "Final_Confidence": round(final_confidence, 4),
+                "UTM_E": round(utm_e, 3),
+                "UTM_N": round(utm_n, 3),
+                "UTM": f"{utm_e:.3f}, {utm_n:.3f}",
+            },
+        })
+
+        placemarks.append("\\n".join([
+            "        <Placemark>",
+            f"            <name>Target {target_id}: {_kmz_xml_text(target_class)}</name>",
+            "            <description><![CDATA[",
+            "                <div style='font-family:Arial; font-size:14px; color:#333;'>",
+            "                    <h3 style='color:#D4AF37;'>Strategic Intelligence Data</h3>",
+            "                    <table border='1' style='border-collapse:collapse; width:100%; text-align:left;'>",
+            "                        <tr style='background-color:#f2f2f2;'><th>Parameter</th><th>Value</th></tr>",
+            f"                        <tr><td><b>Object Type</b></td><td>{_kmz_xml_text(target_class)}</td></tr>",
+            f"                        <tr><td><b>Subtype/Content</b></td><td>{_kmz_xml_text(content_type)}</td></tr>",
+            f"                        <tr><td><b>Confidence</b></td><td>{_kmz_xml_text(confidence)}</td></tr>",
+            f"                        <tr><td><b>Decision Grade</b></td><td>{_kmz_xml_text(decision_grade)}</td></tr>",
+            f"                        <tr><td><b>Scenario</b></td><td>{_kmz_xml_text(scenario)}</td></tr>",
+            f"                        <tr><td><b>Coordinates (UTM)</b></td><td>{utm_e:.3f},{utm_n:.3f}</td></tr>",
+            "                        <tr><td><b>Source Cell</b></td><td>cell_200</td></tr>",
+            "                    </table>",
+            "                    <p style='margin-top:10px;'><i>Local/private field-operation export.</i></p>",
+            "                </div>",
+            "            ]]></description>",
+            "            <Point>",
+            f"                <coordinates>{lon:.8f},{lat:.8f},0</coordinates>",
+            "            </Point>",
+            "        </Placemark>",
+        ]))
+
+    geojson = {
+        "type": "FeatureCollection",
+        "name": "FINAL_ARCHEO_INTELLIGENCE_MAP",
+        "source_cell": "cell_200",
+        "source_notebook_family": "TESLA_V7_2_FIELD_OPERATIONS",
+        "coordinate_reference_system": "EPSG:4326",
+        "privacy": "FILESYSTEM_ONLY",
+        "features": features,
+    }
+
+    kml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<kml xmlns="http://www.opengis.net/kml/2.2">',
+        "<Document>",
+        "    <name>Tesla v7.2 Mission: Advanced Intelligence Assets</name>",
+        "    <description>source_cell=cell_200; privacy=FILESYSTEM_ONLY</description>",
+        *placemarks,
+        "</Document>",
+        "</kml>",
+    ]
+
+    return {
+        "field_operations_geojson": geojson,
+        "field_operations_kml": "\\n".join(kml_lines),
+        "field_operations_feature_count": len(features),
+    }
+
+
+
 def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     mask = products["mask"]
     masked_window = products["masked_window"]
@@ -1268,6 +1386,8 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     heatmap_classification_rgba = products["heatmap_classification_rgba"]
     heatmap_classification_kml = products["heatmap_classification_kml"]
     target_3d_visualization_kml = products["target_3d_visualization_kml"]
+    field_operations_geojson = products["field_operations_geojson"]
+    field_operations_kml = products["field_operations_kml"]
     assert isinstance(mask, np.ndarray)
     assert isinstance(masked_window, np.ndarray)
     assert isinstance(summary, dict)
@@ -1285,6 +1405,8 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     assert isinstance(heatmap_classification_rgba, np.ndarray)
     assert isinstance(heatmap_classification_kml, str)
     assert isinstance(target_3d_visualization_kml, str)
+    assert isinstance(field_operations_geojson, dict)
+    assert isinstance(field_operations_kml, str)
 
     focus_dir = run_dir.joinpath(*FOCUS_DIR_PARTS)
     focus_dir.mkdir(parents=True, exist_ok=True)
@@ -1307,6 +1429,8 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     heatmap_classification_png_path = focus_dir / HEATMAP_CLASSIFICATION_PNG_NAME
     heatmap_classification_kmz_path = focus_dir / HEATMAP_CLASSIFICATION_KMZ_NAME
     target_3d_visualization_kmz_path = focus_dir / TARGET_3D_VISUALIZATION_KMZ_NAME
+    field_operations_geojson_path = focus_dir / FIELD_OPERATIONS_GEOJSON_NAME
+    field_operations_kmz_path = focus_dir / FIELD_OPERATIONS_KMZ_NAME
 
     _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
@@ -1351,6 +1475,13 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     with zipfile.ZipFile(target_3d_visualization_kmz_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("doc.kml", target_3d_visualization_kml)
 
+    field_operations_geojson_path.write_text(
+        json.dumps(field_operations_geojson, indent=2, sort_keys=True, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    with zipfile.ZipFile(field_operations_kmz_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("doc.kml", field_operations_kml)
+
     write_raster_sidecar(
         mask_tif_path,
         grid_manifest=grid_spec.manifest,
@@ -1378,6 +1509,8 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "heatmap_classification_png": heatmap_classification_png_path,
         "heatmap_classification_kmz": heatmap_classification_kmz_path,
         "target_3d_visualization_kmz": target_3d_visualization_kmz_path,
+        "field_operations_geojson": field_operations_geojson_path,
+        "field_operations_kmz": field_operations_kmz_path,
     }
 
 
@@ -1446,6 +1579,14 @@ class FocusMaskStage(Stage):
                 target_records=products["target_records"],
                 core_ring_scene_record=products["core_ring_scene_record"],
                 hard_type_record=products["hard_type_record"],
+                grid_spec=self.grid_spec,
+            )
+        )
+        products.update(
+            build_field_operations_products(
+                target_records=products["target_records"],
+                hard_type_record=products["hard_type_record"],
+                core_ring_scene_record=products["core_ring_scene_record"],
                 grid_spec=self.grid_spec,
             )
         )
@@ -1577,6 +1718,20 @@ class FocusMaskStage(Stage):
                 size_bytes=outputs["target_3d_visualization_kmz"].stat().st_size,
                 http_servable=False,
             ),
+            build_stage_artifact(
+                name="final_archeo_intelligence_map_geojson",
+                relative_path=outputs["field_operations_geojson"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["field_operations_geojson"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="tesla_v7_2_field_operations_kmz",
+                relative_path=outputs["field_operations_kmz"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["field_operations_kmz"].stat().st_size,
+                http_servable=False,
+            ),
         ]
         summary = products["summary"]
         assert isinstance(summary, dict)
@@ -1584,10 +1739,12 @@ class FocusMaskStage(Stage):
         hard_type_record = products["hard_type_record"]
         core_ring_scene_record = products["core_ring_scene_record"]
         target_3d_visualization_count = products["target_3d_visualization_count"]
+        field_operations_feature_count = products["field_operations_feature_count"]
         assert isinstance(target_records, list)
         assert isinstance(hard_type_record, dict)
         assert isinstance(core_ring_scene_record, dict)
         assert isinstance(target_3d_visualization_count, int)
+        assert isinstance(field_operations_feature_count, int)
         return StageResult(
             artifacts=artifacts,
             metadata={
@@ -1616,5 +1773,9 @@ class FocusMaskStage(Stage):
                 "target_3d_visualization_kmz": TARGET_3D_VISUALIZATION_KMZ_NAME,
                 "kmz_visualization_source_cell": "cell_155",
                 "target_3d_visualization_count": target_3d_visualization_count,
+                "field_operations_geojson": FIELD_OPERATIONS_GEOJSON_NAME,
+                "field_operations_kmz": FIELD_OPERATIONS_KMZ_NAME,
+                "field_operations_source_cell": "cell_200",
+                "field_operations_feature_count": field_operations_feature_count,
             },
         )
