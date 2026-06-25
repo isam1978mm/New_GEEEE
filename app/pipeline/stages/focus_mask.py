@@ -31,6 +31,9 @@ CORE_RING_SCENE_TARGETS_CSV_NAME = "AI_CORE_RING_SCENE_TARGETS_V7_2C.csv"
 CORE_RING_SCENE_DECISION_TXT_NAME = "AI_CORE_RING_SCENE_DECISION_V7_2C.txt"
 CORE_RING_SCENE_DECISION_JSON_NAME = "AI_CORE_RING_SCENE_DECISION_V7_2C.json"
 DETECTED_FEATURES_WGS84_GEOJSON_NAME = "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson"
+HEATMAP_CLASSIFICATION_PNG_NAME = "AI_HEATMAP_CLASSIFICATION.png"
+HEATMAP_CLASSIFICATION_KMZ_NAME = "AI_HEATMAP_CLASSIFICATION.kmz"
+TARGET_3D_VISUALIZATION_KMZ_NAME = "AI_3D_TARGET_VISUALIZATION.kmz"
 FOCUS_DIR_PARTS = ("full_job", "focus")
 FOCUS_SIZE_M = 17.0
 
@@ -1026,6 +1029,227 @@ def build_detected_features_wgs84_geojson_products(
         }
     }
 
+
+
+def _write_rgba_png(path: Path, rgba: np.ndarray) -> None:
+    import struct
+    import zlib
+
+    arr = rgba.astype(np.uint8, copy=False)
+    if arr.ndim != 3 or arr.shape[2] != 4:
+        raise StageError("KMZ PNG writer requires an RGBA array.")
+
+    height, width, _channels = arr.shape
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(data))
+            + kind
+            + data
+            + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+        )
+
+    raw = b"".join(b"\\x00" + arr[row].tobytes() for row in range(height))
+    png = (
+        b"\\x89PNG\\r\\n\\x1a\\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw, level=6))
+        + chunk(b"IEND", b"")
+    )
+    path.write_bytes(png)
+
+
+def _kmz_norm(arr: np.ndarray) -> np.ndarray:
+    values = np.asarray(arr, dtype=np.float32)
+    values = np.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0)
+    mn = float(np.min(values))
+    mx = float(np.max(values))
+    if not np.isfinite(mn) or not np.isfinite(mx) or abs(mx - mn) < 1e-9:
+        return np.zeros_like(values, dtype=np.float32)
+    return np.clip((values - mn) / (mx - mn + 1e-9), 0.0, 1.0).astype(np.float32)
+
+
+def _kmz_safe_float(value: object, default: float = 3.0) -> float:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return default
+    if not np.isfinite(out):
+        return default
+    return out
+
+
+def _kmz_xml_text(value: object) -> str:
+    from html import escape
+    return escape(str(value), quote=True)
+
+
+def _kmz_wgs84_bounds(transform: object, crs: str, height: int, width: int) -> tuple[float, float, float, float]:
+    try:
+        from pyproj import Transformer
+    except Exception as exc:  # pragma: no cover
+        raise StageError("KMZ export requires pyproj.") from exc
+
+    affine = transform if isinstance(transform, Affine) else Affine(*transform)
+
+    left = float(affine.c)
+    top = float(affine.f)
+    right = float(affine.c + width * affine.a + height * affine.b)
+    bottom = float(affine.f + width * affine.d + height * affine.e)
+
+    transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    west_1, south_1 = transformer.transform(left, bottom)
+    east_1, north_1 = transformer.transform(right, top)
+
+    return (
+        min(float(west_1), float(east_1)),
+        min(float(south_1), float(north_1)),
+        max(float(west_1), float(east_1)),
+        max(float(south_1), float(north_1)),
+    )
+
+
+def _kmz_google_maps_link(lat: float, lon: float) -> str:
+    return f"https://www.google.com/maps?q={lat:.6f},{lon:.6f}"
+
+
+def build_kmz_visualization_products(
+    *,
+    analysis_bands: dict[str, np.ndarray],
+    target_records: list[dict[str, object]],
+    core_ring_scene_record: dict[str, object],
+    hard_type_record: dict[str, object],
+    grid_spec: GridSpec,
+) -> dict[str, object]:
+    try:
+        from pyproj import Transformer
+    except Exception as exc:  # pragma: no cover
+        raise StageError("KMZ export requires pyproj.") from exc
+
+    required = [
+        "Secret_Gold_Halo",
+        "Secret_Tunnel_Ceiling",
+        "REPORT_640_Mass_Report",
+        "Secret_Hidden_Doors",
+    ]
+    missing = [name for name in required if name not in analysis_bands]
+    if missing:
+        raise StageError(f"Missing KMZ heatmap source bands: {missing}")
+
+    metal = _kmz_norm(analysis_bands["Secret_Gold_Halo"])
+    void = _kmz_norm(analysis_bands["Secret_Tunnel_Ceiling"])
+    rock = _kmz_norm(analysis_bands["REPORT_640_Mass_Report"])
+    doors = _kmz_norm(analysis_bands["Secret_Hidden_Doors"])
+
+    if metal.shape != void.shape or metal.shape != rock.shape or metal.shape != doors.shape:
+        raise StageError("KMZ heatmap source bands must share one shape.")
+
+    height, width = metal.shape
+
+    rgba = np.zeros((height, width, 4), dtype=np.uint8)
+    rgba[:, :, 0] = (metal * 255).astype(np.uint8)
+    rgba[:, :, 3] = (metal * 255).astype(np.uint8)
+
+    mask_black = doors > 0.5
+    rgba[mask_black] = [0, 0, 0, 255]
+
+    mask_blue = (void > 0.5) & (~mask_black)
+    rgba[mask_blue] = [0, 0, 255, 255]
+
+    mask_yellow = (rock > 0.5) & (~mask_black) & (~mask_blue)
+    rgba[mask_yellow] = [255, 255, 0, 255]
+
+    mask_green = rgba[:, :, 3] == 0
+    rgba[mask_green] = [0, 255, 0, 255]
+
+    west, south, east, north = _kmz_wgs84_bounds(grid_spec.transform, grid_spec.crs, height, width)
+
+    heatmap_kml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>AI Heatmap Classification</name>
+    <description>source_cell=cell_155; privacy=FILESYSTEM_ONLY</description>
+    <GroundOverlay>
+      <name>AI Heatmap Classification</name>
+      <Icon><href>heat.png</href></Icon>
+      <LatLonBox>
+        <north>{north:.10f}</north>
+        <south>{south:.10f}</south>
+        <east>{east:.10f}</east>
+        <west>{west:.10f}</west>
+      </LatLonBox>
+    </GroundOverlay>
+  </Document>
+</kml>
+'''
+
+    transformer = Transformer.from_crs(grid_spec.crs, "EPSG:4326", always_xy=True)
+
+    placemarks: list[str] = []
+    for row in target_records:
+        utm_e = _kmz_safe_float(row.get("UTM_E"), default=np.nan)
+        utm_n = _kmz_safe_float(row.get("UTM_N"), default=np.nan)
+        if not np.isfinite(utm_e) or not np.isfinite(utm_n):
+            continue
+
+        lon, lat = transformer.transform(utm_e, utm_n)
+        lon = float(lon)
+        lat = float(lat)
+
+        target_id = int(row.get("Target_ID", len(placemarks) + 1))
+        classification = str(row.get("Classification", "Target"))
+        confidence = str(row.get("Confidence", ""))
+        scenario = str(core_ring_scene_record.get("Scenario", ""))
+        decision_grade = str(core_ring_scene_record.get("Decision_Grade", ""))
+        primary_class = str(hard_type_record.get("Primary_Class", ""))
+        content_type = str(hard_type_record.get("Content_Type", ""))
+        depth = 3.0
+        gmaps = _kmz_google_maps_link(lat, lon)
+
+        placemarks.append(
+            f'''
+    <Placemark>
+      <name>{target_id} - {_kmz_xml_text(classification)}</name>
+      <description><![CDATA[
+      <b>Target ID:</b> {target_id}<br/>
+      <b>Classification:</b> {_kmz_xml_text(classification)}<br/>
+      <b>Confidence:</b> {_kmz_xml_text(confidence)}<br/>
+      <b>Scenario:</b> {_kmz_xml_text(scenario)}<br/>
+      <b>Decision Grade:</b> {_kmz_xml_text(decision_grade)}<br/>
+      <b>Primary Class:</b> {_kmz_xml_text(primary_class)}<br/>
+      <b>Content:</b> {_kmz_xml_text(content_type)}<br/>
+      <b>Depth:</b> {depth:.2f} m<br/>
+      <b>UTM_E:</b> {utm_e:.3f}<br/>
+      <b>UTM_N:</b> {utm_n:.3f}<br/>
+      <b>Google Maps:</b> <a href="{gmaps}">{gmaps}</a><br/>
+      <b>Source Cell:</b> cell_155<br/>
+      ]]></description>
+      <Point>
+        <extrude>1</extrude>
+        <altitudeMode>relativeToGround</altitudeMode>
+        <coordinates>{lon:.8f},{lat:.8f},{-abs(depth):.2f}</coordinates>
+      </Point>
+    </Placemark>'''
+        )
+
+    targets_kml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>AI 3D Target Visualization</name>
+    <description>source_cell=cell_155; privacy=FILESYSTEM_ONLY</description>
+    {''.join(placemarks)}
+  </Document>
+</kml>
+'''
+
+    return {
+        "heatmap_classification_rgba": rgba,
+        "heatmap_classification_kml": heatmap_kml,
+        "target_3d_visualization_kml": targets_kml,
+        "target_3d_visualization_count": len(placemarks),
+        "heatmap_bounds_wgs84": {"west": west, "south": south, "east": east, "north": north},
+    }
+
 def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     mask = products["mask"]
     masked_window = products["masked_window"]
@@ -1041,6 +1265,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     core_ring_scene_json = products["core_ring_scene_json"]
     core_ring_scene_summary_lines = products["core_ring_scene_summary_lines"]
     detected_features_wgs84_geojson = products["detected_features_wgs84_geojson"]
+    heatmap_classification_rgba = products["heatmap_classification_rgba"]
+    heatmap_classification_kml = products["heatmap_classification_kml"]
+    target_3d_visualization_kml = products["target_3d_visualization_kml"]
     assert isinstance(mask, np.ndarray)
     assert isinstance(masked_window, np.ndarray)
     assert isinstance(summary, dict)
@@ -1055,6 +1282,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     assert isinstance(core_ring_scene_json, dict)
     assert isinstance(core_ring_scene_summary_lines, list)
     assert isinstance(detected_features_wgs84_geojson, dict)
+    assert isinstance(heatmap_classification_rgba, np.ndarray)
+    assert isinstance(heatmap_classification_kml, str)
+    assert isinstance(target_3d_visualization_kml, str)
 
     focus_dir = run_dir.joinpath(*FOCUS_DIR_PARTS)
     focus_dir.mkdir(parents=True, exist_ok=True)
@@ -1074,6 +1304,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     core_ring_scene_txt_path = focus_dir / CORE_RING_SCENE_DECISION_TXT_NAME
     core_ring_scene_json_path = focus_dir / CORE_RING_SCENE_DECISION_JSON_NAME
     detected_features_wgs84_geojson_path = focus_dir / DETECTED_FEATURES_WGS84_GEOJSON_NAME
+    heatmap_classification_png_path = focus_dir / HEATMAP_CLASSIFICATION_PNG_NAME
+    heatmap_classification_kmz_path = focus_dir / HEATMAP_CLASSIFICATION_KMZ_NAME
+    target_3d_visualization_kmz_path = focus_dir / TARGET_3D_VISUALIZATION_KMZ_NAME
 
     _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
@@ -1107,6 +1340,17 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         encoding="utf-8",
     )
 
+    import zipfile
+
+    _write_rgba_png(heatmap_classification_png_path, heatmap_classification_rgba)
+
+    with zipfile.ZipFile(heatmap_classification_kmz_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("doc.kml", heatmap_classification_kml)
+        zf.write(heatmap_classification_png_path, "heat.png")
+
+    with zipfile.ZipFile(target_3d_visualization_kmz_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("doc.kml", target_3d_visualization_kml)
+
     write_raster_sidecar(
         mask_tif_path,
         grid_manifest=grid_spec.manifest,
@@ -1131,6 +1375,9 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "core_ring_scene_decision_txt": core_ring_scene_txt_path,
         "core_ring_scene_decision_json": core_ring_scene_json_path,
         "detected_features_wgs84_geojson": detected_features_wgs84_geojson_path,
+        "heatmap_classification_png": heatmap_classification_png_path,
+        "heatmap_classification_kmz": heatmap_classification_kmz_path,
+        "target_3d_visualization_kmz": target_3d_visualization_kmz_path,
     }
 
 
@@ -1190,6 +1437,15 @@ class FocusMaskStage(Stage):
                 target_records=products["target_records"],
                 hard_type_record=products["hard_type_record"],
                 core_ring_scene_record=products["core_ring_scene_record"],
+                grid_spec=self.grid_spec,
+            )
+        )
+        products.update(
+            build_kmz_visualization_products(
+                analysis_bands=analysis_bands,
+                target_records=products["target_records"],
+                core_ring_scene_record=products["core_ring_scene_record"],
+                hard_type_record=products["hard_type_record"],
                 grid_spec=self.grid_spec,
             )
         )
@@ -1300,15 +1556,38 @@ class FocusMaskStage(Stage):
                 size_bytes=outputs["detected_features_wgs84_geojson"].stat().st_size,
                 http_servable=False,
             ),
+            build_stage_artifact(
+                name="ai_heatmap_classification_png",
+                relative_path=outputs["heatmap_classification_png"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["heatmap_classification_png"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="ai_heatmap_classification_kmz",
+                relative_path=outputs["heatmap_classification_kmz"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["heatmap_classification_kmz"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="ai_3d_target_visualization_kmz",
+                relative_path=outputs["target_3d_visualization_kmz"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["target_3d_visualization_kmz"].stat().st_size,
+                http_servable=False,
+            ),
         ]
         summary = products["summary"]
         assert isinstance(summary, dict)
         target_records = products["target_records"]
         hard_type_record = products["hard_type_record"]
         core_ring_scene_record = products["core_ring_scene_record"]
+        target_3d_visualization_count = products["target_3d_visualization_count"]
         assert isinstance(target_records, list)
         assert isinstance(hard_type_record, dict)
         assert isinstance(core_ring_scene_record, dict)
+        assert isinstance(target_3d_visualization_count, int)
         return StageResult(
             artifacts=artifacts,
             metadata={
@@ -1332,5 +1611,10 @@ class FocusMaskStage(Stage):
                 "detected_features_wgs84_geojson": DETECTED_FEATURES_WGS84_GEOJSON_NAME,
                 "detected_features_wgs84_source_cell": "cell_123",
                 "detected_features_wgs84_feature_count": len(target_records),
+                "heatmap_classification_png": HEATMAP_CLASSIFICATION_PNG_NAME,
+                "heatmap_classification_kmz": HEATMAP_CLASSIFICATION_KMZ_NAME,
+                "target_3d_visualization_kmz": TARGET_3D_VISUALIZATION_KMZ_NAME,
+                "kmz_visualization_source_cell": "cell_155",
+                "target_3d_visualization_count": target_3d_visualization_count,
             },
         )

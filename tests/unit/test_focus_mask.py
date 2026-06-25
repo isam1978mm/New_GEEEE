@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import json
+import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -54,6 +55,9 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "core_ring_scene_decision_v7_2c_txt",
             "core_ring_scene_decision_v7_2c_json",
             "detected_features_wgs84_geojson_v7_2",
+            "ai_heatmap_classification_png",
+            "ai_heatmap_classification_kmz",
+            "ai_3d_target_visualization_kmz",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -171,6 +175,35 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "UTM_E" in first_feature["properties"]
         assert "UTM_N" in first_feature["properties"]
         assert "Google_Maps_Link" in first_feature["properties"]
+
+        heatmap_png = run_dir / "full_job" / "focus" / "AI_HEATMAP_CLASSIFICATION.png"
+        heatmap_kmz = run_dir / "full_job" / "focus" / "AI_HEATMAP_CLASSIFICATION.kmz"
+        targets_3d_kmz = run_dir / "full_job" / "focus" / "AI_3D_TARGET_VISUALIZATION.kmz"
+
+        assert heatmap_png.is_file()
+        assert heatmap_kmz.is_file()
+        assert targets_3d_kmz.is_file()
+
+        with zipfile.ZipFile(heatmap_kmz, "r") as zf:
+            heatmap_names = set(zf.namelist())
+            assert "doc.kml" in heatmap_names
+            assert "heat.png" in heatmap_names
+            heatmap_kml = zf.read("doc.kml").decode("utf-8")
+
+        assert "AI Heatmap Classification" in heatmap_kml
+        assert "<GroundOverlay>" in heatmap_kml
+        assert "<LatLonBox>" in heatmap_kml
+        assert "source_cell=cell_155" in heatmap_kml
+
+        with zipfile.ZipFile(targets_3d_kmz, "r") as zf:
+            target_names = set(zf.namelist())
+            assert "doc.kml" in target_names
+            target_kml = zf.read("doc.kml").decode("utf-8")
+
+        assert "AI 3D Target Visualization" in target_kml
+        assert "source_cell=cell_155" in target_kml
+        assert target_kml.count("<Placemark>") == len(target_rows)
+        assert "<altitudeMode>relativeToGround</altitudeMode>" in target_kml
 
 
 
