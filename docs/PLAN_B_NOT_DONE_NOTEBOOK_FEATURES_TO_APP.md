@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B4 item 31 model build policy implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B4 item 32 final inference gate implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -24,7 +24,7 @@ Last update: 2026-06-22 — B4 item 31 model build policy implemented; frozen no
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
-| 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
+| 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
 | 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
@@ -53,11 +53,12 @@ B3 local/private visualization contracts implemented:
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
-B4 AI planning/tensor/training/model-policy contracts implemented:
+B4 AI planning/tensor/training/model/inference-gate contracts implemented:
 - Item 28: cell 140 AI requirements mapper manifest.
 - Item 29: cell 148 AI tensor builder outputs.
 - Item 30: cell 166 AI training workflow boundary manifest.
 - Item 31: cell 232 AI model build policy manifest.
+- Item 32: cell 169 AI final inference gate manifest.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -432,16 +433,90 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B4.5 result — item 32 CNN final target inference
+
+```text
+Status:
+  App port implemented for selected final inference behavior as a gated readiness manifest.
+  Real model inference remains intentionally blocked until dependency/weights/model/privacy/operator gates are approved.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_169 -> MODEL-BASED ARCHEO-INFERENCE with DEM/slope fusion and strict run outputs.
+
+Supporting notebook variants inspected:
+  cell_167 -> early professional scan, not selected.
+  cell_168 -> model inference with DEM/slope fusion, superseded by cell_169.
+  cell_232 -> model build plus immediate inference, handled by item #31 policy and inference remains gated.
+  cell_235 -> ResNet50 fallback plus inference, fallback policy only retained.
+  cell_236 -> final target inference grid-locked, secondary inference reference.
+  cell_237 -> final target map exports, excluded from item #32.
+
+Implemented app output:
+  manifests/AI_FINAL_INFERENCE_GATE_V7_2.json
+
+Implemented replacement contract:
+  Inference gate/readiness manifest only.
+  Do not import torch.
+  Do not load model objects.
+  Do not load or download weights.
+  Do not instantiate models.
+  Do not run forward passes.
+  Do not write probability maps.
+  Do not write target CSV/JSON.
+  Do not write GeoJSON or KMZ.
+  Do not expose exact coordinates.
+  Keep output local/private and filesystem-only.
+
+Future private outputs if later approved:
+  QA/AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.csv
+  QA/AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.json
+  AI_INFERENCE_STAGE5/AI_MODEL_PROBABILITIES_640.npy
+  manifests/AI_FINAL_INFERENCE_REDACTED_SUMMARY_V7_2.json
+
+Validation done:
+  ai final inference gate parity test passed after adding missing pathlib.Path import in the test.
+  ai model build policy parity test passed.
+  ai training workflow boundary parity test passed.
+  ai tensor builder parity test passed.
+  ai requirements mapper parity test passed.
+  local existing run wrote manifests/AI_FINAL_INFERENCE_GATE_V7_2.json.
+  Report name confirmed as AI_FINAL_INFERENCE_GATE_V7_2.json.
+  Schema version confirmed as plan_b32_ai_final_inference_gate_v1.
+  source_cell confirmed as cell_169.
+  status confirmed as implemented_inference_gate_only.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable, frontend_visible, and downloadable_via_api confirmed False.
+  normal_app_runs_must_run_inference, normal_app_runs_must_import_torch, normal_app_runs_must_load_weights, normal_app_runs_must_instantiate_model, normal_app_runs_must_write_coordinate_outputs, normal_app_runs_must_write_probability_maps, and normal_app_runs_must_write_geojson_or_kmz confirmed False.
+  imports_torch, loads_model, loads_weights, runs_forward_pass, creates_probability_map, creates_target_csv, creates_target_json, and exposes_exact_coordinates confirmed False.
+  selected canonical cell confirmed as cell_169.
+  upstream readiness confirmed True for item #29 tensor outputs, item #30 training boundary, and item #31 model build policy.
+  approved_for_real_inference confirmed False.
+  inference gate count confirmed as 11.
+  weights and dependency gates confirmed False.
+  future private CSV path confirmed as QA/AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.csv.
+  future private JSON path confirmed as QA/AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.json.
+  next dependency-unblocking item confirmed as Plan B item #33 or approved continuation of #32 real inference after gates.
+
+Privacy/artifact policy:
+  Output is a local JSON manifest only.
+  No coordinates, raw geometry, model weights, model artifact, model execution, inference result, probability map, target CSV/JSON, GeoJSON, KMZ, public API artifact, or frontend artifact is created.
+
+Remaining validation:
+  Compare against frozen notebook outputs after reference files are selected/generated.
+  Real inference remains blocked until all gates are explicitly approved.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #32: CNN final target inference.
+  Plan B item #33: Metal fingerprint diagnostic.
 
 Why:
-  Item #31 now locks the selected model-build policy/config without running model code.
-  Item #32 should remain gated by dependency/weights/model approval and must not expose exact coordinates or raw geometries publicly.
-  If dependency and weight gates are not approved, implement #32 as an inference-readiness or blocked-gate manifest first.
+  Item #32 now records inference readiness and proves real inference is still blocked by dependency/weights/privacy/operator gates.
+  Item #33 is a private diagnostic feature that can proceed without violating the blocked real-inference gates.
+  Items #39/#40 should wait for approved probability/target outputs or remain manifest-only.
 ```
 
 ## Rules for Plan B
