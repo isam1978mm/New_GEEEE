@@ -14,20 +14,19 @@ from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import build_dem_tile_requests, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.s2_indices import S2_SOURCE_BANDS, S2_RAW_CUBE_NPY_NAME
-from app.pipeline.stages.thermal import (
-    build_notebook_l9_st_b10_image,
-    RAW_ST_B10_NPY_NAME,
-)
+from app.pipeline.stages.thermal import RAW_ST_B10_NPY_NAME, build_notebook_l9_st_b10_image
 from app.services.ee_session import initialize_ee_session
 
 EPS = 1e-10
 REPORT_640_MANIFEST_NAME = "REPORT_640_manifest.json"
+REPORT_640_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
 NOTEBOOK_REPORT_S2_START = "2022-01-01"
 NOTEBOOK_REPORT_S2_END = "2026-03-01"
 NOTEBOOK_REPORT_S2_CLOUD_MAX = 10
 NOTEBOOK_REPORT_S2_SOURCE_BANDS = ("B11", "B12")
 REPORT_POTTERY_NAME = "REPORT_640_Pottery_Report"
 REPORT_MASS_NAME = "REPORT_640_Mass_Report"
+REPORT_ZERO_POINT_NAME = "REPORT_640_FINAL_Zero_Point_Targets"
 
 _S2_BAND_INDEX = {name: index for index, name in enumerate(S2_SOURCE_BANDS)}
 
@@ -55,7 +54,7 @@ def load_st_b10_raw(run_dir: Path) -> np.ndarray:
 
 
 def compute_report_pottery_report(s2_cube: np.ndarray, *, nodata: float) -> np.ndarray:
-    """B12 / B11"""
+    """B12 / B11."""
     b12 = s2_cube[:, :, _S2_BAND_INDEX["B12"]]
     b11 = s2_cube[:, :, _S2_BAND_INDEX["B11"]]
     valid = (b12 != nodata) & (b11 != nodata) & np.isfinite(b12) & np.isfinite(b11) & (b11 != 0.0)
@@ -65,7 +64,7 @@ def compute_report_pottery_report(s2_cube: np.ndarray, *, nodata: float) -> np.n
 
 
 def compute_report_mass_report(s2_cube: np.ndarray, st_b10_raw: np.ndarray, *, nodata: float) -> np.ndarray:
-    """B12 * ST_B10 / 1000"""
+    """B12 * ST_B10 / 1000."""
     b12 = s2_cube[:, :, _S2_BAND_INDEX["B12"]]
     valid = (
         (b12 != nodata)
@@ -87,22 +86,29 @@ def compute_report_zero_point_targets(s2_cube: np.ndarray, *, nodata: float) -> 
     b8 = s2_cube[:, :, _S2_BAND_INDEX["B8"]]
 
     valid = (
-        (b12 != nodata) & (b11 != nodata) & (b4 != nodata) & (b3 != nodata) & (b8 != nodata)
-        & np.isfinite(b12) & np.isfinite(b11) & np.isfinite(b4) & np.isfinite(b3) & np.isfinite(b8)
-        & (b11 != 0.0) & (b3 != 0.0) & ((b8 + b4) != 0.0)
+        (b12 != nodata)
+        & (b11 != nodata)
+        & (b4 != nodata)
+        & (b3 != nodata)
+        & (b8 != nodata)
+        & np.isfinite(b12)
+        & np.isfinite(b11)
+        & np.isfinite(b4)
+        & np.isfinite(b3)
+        & np.isfinite(b8)
+        & (b11 != 0.0)
+        & (b3 != 0.0)
+        & ((b8 + b4) != 0.0)
     )
 
-    # AI_BEH_GoldAlloy_Signal = B12 / B11 > 1.45
     gold_alloy = np.full(b12.shape, 0.0, dtype=np.float32)
     gold_alloy[valid] = (b12[valid] / b11[valid]).astype(np.float32)
     cond1 = (gold_alloy > 1.45) & valid
 
-    # AI_BEH_IronOxide_Hardness = B4 / B3 > 1.25
     iron_oxide = np.full(b12.shape, 0.0, dtype=np.float32)
     iron_oxide[valid] = (b4[valid] / b3[valid]).astype(np.float32)
     cond2 = (iron_oxide > 1.25) & valid
 
-    # AI_BEH_VegRoot_Anomaly = NDVI = (B8 - B4) / (B8 + B4) > 0.35
     ndvi = np.full(b12.shape, 0.0, dtype=np.float32)
     ndvi[valid] = ((b8[valid] - b4[valid]) / (b8[valid] + b4[valid])).astype(np.float32)
     cond3 = (ndvi > 0.35) & valid
@@ -134,10 +140,8 @@ def build_notebook_report_s2_composite(grid_spec: GridSpec):
 def build_notebook_report_pottery_image(grid_spec: GridSpec):
     s2_col = build_notebook_report_s2_composite(grid_spec)
     pottery = s2_col.select("B12").divide(s2_col.select("B11")).rename(REPORT_POTTERY_NAME)
-    return (
-        pottery.toFloat()
-        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
-        .clip(build_grid_region(grid_spec))
+    return pottery.toFloat().reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform)).clip(
+        build_grid_region(grid_spec)
     )
 
 
@@ -145,10 +149,8 @@ def build_notebook_report_mass_image(grid_spec: GridSpec):
     s2_col = build_notebook_report_s2_composite(grid_spec)
     l9_col = build_notebook_l9_st_b10_image(grid_spec)
     mass = s2_col.select("B12").multiply(l9_col.select("ST_B10")).divide(1000).rename(REPORT_MASS_NAME)
-    return (
-        mass.toFloat()
-        .reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform))
-        .clip(build_grid_region(grid_spec))
+    return mass.toFloat().reproject(crs=grid_spec.crs, crsTransform=list(grid_spec.transform)).clip(
+        build_grid_region(grid_spec)
     )
 
 
@@ -200,9 +202,7 @@ def create_ee_notebook_report_mass_fetcher(settings, grid_spec: GridSpec) -> Rep
     return fetch_mass
 
 
-def write_report_640_output(
-    run_dir: Path, grid_spec: GridSpec, name: str, array: np.ndarray
-) -> Path:
+def write_report_640_output(run_dir: Path, grid_spec: GridSpec, name: str, array: np.ndarray) -> Path:
     tif_path = run_dir / f"{name}.tif"
     write_georeferenced_raster(tif_path, array, grid_spec)
     write_raster_sidecar(
@@ -213,6 +213,14 @@ def write_report_640_output(
         shape=array.shape[:2],
     )
     return tif_path
+
+
+def write_report_640_focus_array(run_dir: Path, name: str, array: np.ndarray) -> Path:
+    npy_dir = run_dir / REPORT_640_NPY_OUTPUT_DIR
+    npy_dir.mkdir(parents=True, exist_ok=True)
+    npy_path = npy_dir / f"{name}_640.npy"
+    np.save(npy_path, array.astype(np.float32, copy=False))
+    return npy_path
 
 
 def write_report_640_manifest(
@@ -243,10 +251,7 @@ def write_report_640_manifest(
         "stage": "report_640",
         "reports": reports,
     }
-    manifest_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     return manifest_path
 
 
@@ -275,92 +280,100 @@ class Report640Stage(Stage):
         implemented_specs: list[dict] = []
         artifacts = []
         layer_metadata: dict[str, dict] = {}
-
-        # Pottery_Report
-        array = self.pottery_fetcher(grid_spec=self.grid_spec) if self.pottery_fetcher is not None else compute_report_pottery_report(s2_cube, nodata=nodata)
         expected_shape = (self.grid_spec.size, self.grid_spec.size)
-        if array.shape[:2] != expected_shape:
-            raise StageError(f"REPORT_640_Pottery_Report shape {array.shape[:2]} != expected {expected_shape}")
-        tif_path = write_report_640_output(
-            context.run_dir, self.grid_spec, "REPORT_640_Pottery_Report", array
+
+        pottery = (
+            self.pottery_fetcher(grid_spec=self.grid_spec)
+            if self.pottery_fetcher is not None
+            else compute_report_pottery_report(s2_cube, nodata=nodata)
         )
+        if pottery.shape[:2] != expected_shape:
+            raise StageError(f"REPORT_640_Pottery_Report shape {pottery.shape[:2]} != expected {expected_shape}")
+        tif_path = write_report_640_output(context.run_dir, self.grid_spec, REPORT_POTTERY_NAME, pottery)
+        write_report_640_focus_array(context.run_dir, REPORT_POTTERY_NAME, pottery)
         artifacts.append(
             build_stage_artifact(
-                name="REPORT_640_Pottery_Report",
+                name=REPORT_POTTERY_NAME,
                 relative_path=tif_path.relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=tif_path.stat().st_size,
             )
         )
-        implemented_specs.append({
-            "filename": "REPORT_640_Pottery_Report.tif",
-            "formula": "B12 / B11",
-            "source_equivalent": "notebook_report_s2" if self.pottery_fetcher is not None else "s2_raw_cube.npy",
-            "source_provenance": "notebook_report_s2" if self.pottery_fetcher is not None else "s2_raw",
-        })
-        layer_metadata["REPORT_640_Pottery_Report"] = {
+        implemented_specs.append(
+            {
+                "filename": f"{REPORT_POTTERY_NAME}.tif",
+                "formula": "B12 / B11",
+                "source_equivalent": "notebook_report_s2" if self.pottery_fetcher is not None else "s2_raw_cube.npy",
+                "source_provenance": "notebook_report_s2" if self.pottery_fetcher is not None else "s2_raw",
+            }
+        )
+        layer_metadata[REPORT_POTTERY_NAME] = {
             "status": "implemented",
             "formula": "B12 / B11",
             "source_provenance": "notebook_report_s2" if self.pottery_fetcher is not None else "s2_raw",
         }
 
-        # Mass_Report
-        array = self.mass_fetcher(grid_spec=self.grid_spec) if self.mass_fetcher is not None else compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
-        if array.shape[:2] != expected_shape:
-            raise StageError(f"REPORT_640_Mass_Report shape {array.shape[:2]} != expected {expected_shape}")
-        tif_path = write_report_640_output(
-            context.run_dir, self.grid_spec, "REPORT_640_Mass_Report", array
+        mass = (
+            self.mass_fetcher(grid_spec=self.grid_spec)
+            if self.mass_fetcher is not None
+            else compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
         )
+        if mass.shape[:2] != expected_shape:
+            raise StageError(f"REPORT_640_Mass_Report shape {mass.shape[:2]} != expected {expected_shape}")
+        tif_path = write_report_640_output(context.run_dir, self.grid_spec, REPORT_MASS_NAME, mass)
+        write_report_640_focus_array(context.run_dir, REPORT_MASS_NAME, mass)
         artifacts.append(
             build_stage_artifact(
-                name="REPORT_640_Mass_Report",
+                name=REPORT_MASS_NAME,
                 relative_path=tif_path.relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=tif_path.stat().st_size,
             )
         )
-        implemented_specs.append({
-            "filename": "REPORT_640_Mass_Report.tif",
-            "formula": "B12 * ST_B10 / 1000",
-            "source_equivalent": "notebook_report_s2 + notebook_l9_st_b10" if self.mass_fetcher is not None else f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}",
-            "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
-        })
-        layer_metadata["REPORT_640_Mass_Report"] = {
+        implemented_specs.append(
+            {
+                "filename": f"{REPORT_MASS_NAME}.tif",
+                "formula": "B12 * ST_B10 / 1000",
+                "source_equivalent": (
+                    "notebook_report_s2 + notebook_l9_st_b10"
+                    if self.mass_fetcher is not None
+                    else f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}"
+                ),
+                "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
+            }
+        )
+        layer_metadata[REPORT_MASS_NAME] = {
             "status": "implemented",
             "formula": "B12 * ST_B10 / 1000",
             "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
         }
 
-        # FINAL_Zero_Point_Targets
-        array = compute_report_zero_point_targets(s2_cube, nodata=nodata)
-        if array.shape[:2] != expected_shape:
-            raise StageError(f"REPORT_640_FINAL_Zero_Point_Targets shape {array.shape[:2]} != expected {expected_shape}")
-        tif_path = write_report_640_output(
-            context.run_dir, self.grid_spec, "REPORT_640_FINAL_Zero_Point_Targets", array
-        )
+        zero_point = compute_report_zero_point_targets(s2_cube, nodata=nodata)
+        if zero_point.shape[:2] != expected_shape:
+            raise StageError(f"REPORT_640_FINAL_Zero_Point_Targets shape {zero_point.shape[:2]} != expected {expected_shape}")
+        tif_path = write_report_640_output(context.run_dir, self.grid_spec, REPORT_ZERO_POINT_NAME, zero_point)
+        write_report_640_focus_array(context.run_dir, REPORT_ZERO_POINT_NAME, zero_point)
         artifacts.append(
             build_stage_artifact(
-                name="REPORT_640_FINAL_Zero_Point_Targets",
+                name=REPORT_ZERO_POINT_NAME,
                 relative_path=tif_path.relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=tif_path.stat().st_size,
             )
         )
-        implemented_specs.append({
-            "filename": "REPORT_640_FINAL_Zero_Point_Targets.tif",
-            "formula": "threshold_intersection(GoldAlloy>1.45, IronOxide>1.25, VegRoot>0.35)",
-            "source_equivalent": "s2_raw_cube.npy",
-        })
-        layer_metadata["REPORT_640_FINAL_Zero_Point_Targets"] = {
+        implemented_specs.append(
+            {
+                "filename": f"{REPORT_ZERO_POINT_NAME}.tif",
+                "formula": "threshold_intersection(GoldAlloy>1.45, IronOxide>1.25, VegRoot>0.35)",
+                "source_equivalent": "s2_raw_cube.npy",
+            }
+        )
+        layer_metadata[REPORT_ZERO_POINT_NAME] = {
             "status": "implemented",
             "formula": "threshold_intersection(GoldAlloy>1.45, IronOxide>1.25, VegRoot>0.35)",
         }
 
-        manifest_path = write_report_640_manifest(
-            context.run_dir,
-            implemented=implemented_specs,
-            not_implemented=[],
-        )
+        manifest_path = write_report_640_manifest(context.run_dir, implemented=implemented_specs, not_implemented=[])
         artifacts.append(
             build_stage_artifact(
                 name="REPORT_640_manifest",
