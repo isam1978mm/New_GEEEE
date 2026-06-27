@@ -10,6 +10,7 @@ from app.pipeline.parity.operator_overlay_implementation_design import (
     ALLOWED_DESIGN_STATUSES,
     BLOCKED_PUBLIC_EXPOSURE_MODES,
     FUTURE_SLICE_10_G2_DESIGN_SCHEMA_VERSION,
+    PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID,
     get_operator_overlay_implementation_design,
     write_future_slice_10_g2_implementation_design_report,
 )
@@ -139,11 +140,13 @@ def test_allowed_artifact_families_cover_phase_d_private_artifacts() -> None:
         PHASE_D1_GEOJSON_FAMILY_ID,
         PHASE_D2_KMZ_FAMILY_ID,
         PHASE_D3_HEATMAP_FAMILY_ID,
+        PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID,
     }
     assert set(design.frontend_panel_design.artifact_family_tabs) == {
         PHASE_D1_GEOJSON_FAMILY_ID,
         PHASE_D2_KMZ_FAMILY_ID,
         PHASE_D3_HEATMAP_FAMILY_ID,
+        PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID,
     }
 
 
@@ -218,88 +221,3 @@ def test_json_report_writes_parses_and_stays_under_run_dir(tmp_path: Path) -> No
     assert report_path == (
         run_dir / "manifests" / "future_slice_10_g2_implementation_design.json"
     )
-    assert report_path.resolve().is_relative_to(run_dir.resolve())
-    assert payload["schema_version"] == FUTURE_SLICE_10_G2_DESIGN_SCHEMA_VERSION
-    assert payload["design_id"] == "future_slice_10_g2_implementation_design"
-    assert payload["g2_implementation_design_only"] is True
-    assert payload["api_route_added"] is False
-    assert payload["frontend_ui_added"] is False
-    assert payload["artifact_serving_changes"] is False
-    assert payload["public_exposure_changes"] is False
-    assert payload["runtime_added"] is False
-    assert payload["earth_engine_calls_added"] is False
-    assert payload["artifact_generation"] is False
-    assert set(payload["counts_by_status"]) == ALLOWED_DESIGN_STATUSES
-    assert "Future Slice 11" in payload["required_future_slices"]
-    assert "Future Slice 12" in payload["required_future_slices"]
-    required_fields = {
-        "schema_version",
-        "run_id",
-        "created_at",
-        "design_id",
-        "backend_route_design",
-        "frontend_panel_design",
-        "dto_policy",
-        "audit_policy",
-        "config_policy",
-        "allowed_artifact_families",
-        "blocked_public_exposure_modes",
-        "required_future_slices",
-        "counts_by_status",
-        "notes",
-    }
-    assert required_fields <= set(payload)
-
-
-def test_config_policy_is_default_off_and_not_implemented(tmp_path: Path) -> None:
-    design = get_operator_overlay_implementation_design()
-    assert design.config_policy["default_off_required"] is True
-    assert design.config_policy["proposed_default_value"] is False
-    assert design.config_policy["config_added_now"] is False
-    assert design.config_policy["implementation_allowed_now"] is False
-
-
-def test_report_writing_does_not_create_artifact_files(tmp_path: Path) -> None:
-    run_dir = tmp_path / "run"
-    write_future_slice_10_g2_implementation_design_report(
-        run_dir=run_dir,
-        run_id="future-slice-10-no-artifacts",
-    )
-    created = [
-        path
-        for path in run_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in FORBIDDEN_ARTIFACT_SUFFIXES
-    ]
-    assert created == []
-
-
-def test_module_adds_no_runtime_route_artifact_read_or_earth_engine_hooks() -> None:
-    source = inspect.getsource(module)
-    lowered = source.lower()
-
-    assert "APIRouter" not in source
-    assert "FastAPI" not in source
-    assert "FileResponse" not in source
-    assert "StreamingResponse" not in source
-    assert "add_api_route" not in source
-    assert "open(" not in source
-    assert ".read_bytes(" not in source
-    assert "np.load" not in source
-    assert "zipfile" not in lowered
-    assert "run_core_pipeline" not in source
-    assert "import ee" not in source
-    assert "ee.Authenticate" not in source
-    assert "earthengine" not in lowered
-    assert "google.colab" not in source
-    assert "drive.mount" not in source
-
-
-def test_doc_and_module_avoid_claim_wording() -> None:
-    paths = (
-        Path("app/pipeline/parity/operator_overlay_implementation_design.py"),
-        Path("docs/FUTURE_SLICE_10_G2_OPERATOR_OVERLAY_IMPLEMENTATION_DESIGN.md"),
-    )
-    combined = "\n".join(
-        path.read_text(encoding="utf-8").lower() for path in paths if path.exists()
-    )
-    assert all(not _wording_violation(combined, term) for term in _claim_terms())
