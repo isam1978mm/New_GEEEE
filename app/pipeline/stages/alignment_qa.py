@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Iterable
 
 import numpy as np
+import rasterio
 
 from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError, StageError
@@ -54,6 +55,14 @@ def _safe_artifact_label(run_dir: Path, raster_path: Path) -> str:
         return raster_path.name
 
 
+def _read_alignment_raster(path: Path) -> np.ndarray:
+    """Read a representative 2D band for grid QA, including multiband GeoTIFFs."""
+    with rasterio.open(path) as dataset:
+        if dataset.count < 1:
+            raise StageError(f"Alignment QA raster has no bands: {path.name}")
+        return dataset.read(1).astype(np.float32, copy=False)
+
+
 def _edge_valid_fraction(array: np.ndarray, nodata: float) -> float:
     top = array[0, :]
     bottom = array[-1, :]
@@ -74,13 +83,9 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
     for raster_path, sidecar_path in collect_raster_sidecars(run_dir):
         artifact_label = _safe_artifact_label(run_dir, raster_path)
         sidecar = read_manifest(sidecar_path)
-        array = np.array([])
         try:
-            from PIL import Image
-
-            with Image.open(raster_path) as image:
-                array = np.array(image, dtype=np.float32)
-        except Exception as exc:  # pragma: no cover - defensive
+            array = _read_alignment_raster(raster_path)
+        except Exception as exc:
             raise StageError(f"Failed to inspect raster for alignment QA: {artifact_label}") from exc
 
         raster_transform = tuple(float(value) for value in sidecar["transform"])
