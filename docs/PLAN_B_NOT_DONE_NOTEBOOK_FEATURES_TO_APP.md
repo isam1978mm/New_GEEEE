@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B4 item 29 AI tensor builder implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B4 item 30 training workflow boundary implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -22,7 +22,7 @@ Last update: 2026-06-22 — B4 item 29 AI tensor builder implemented; frozen not
 | 27 | KMZ heatmap / 3D target visualization | 🟨 Partial | Yes | App port implemented for canonical cell 155 AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
-| 30 | Training / learn weights cells | 🟥 No | Yes, separate | Build as a separate training workflow, not a normal app stage. |
+| 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟥 No | Yes | Requires selected model, weights policy, dependency plan, and CPU/GPU expectations. |
 | 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
 | 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
@@ -53,9 +53,10 @@ B3 local/private visualization contracts implemented:
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
-B4 AI planning/tensor contracts implemented:
+B4 AI planning/tensor/training-boundary contracts implemented:
 - Item 28: cell 140 AI requirements mapper manifest.
 - Item 29: cell 148 AI tensor builder outputs.
+- Item 30: cell 166 AI training workflow boundary manifest.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -293,16 +294,77 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B4.3 result — item 30 Training / learn weights cells
+
+```text
+Status:
+  App port implemented for selected training/learn-weights boundary behavior.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_166 -> PROFESSIONAL GLOBAL ARCHEO-TRAINING, low-memory safe 640x640 version.
+
+Supporting notebook variants inspected:
+  cell_150 -> dependency install probe.
+  cell_151 -> expanded dependency install probe.
+  cell_163 -> small 224 training scaffold.
+  cell_164 -> 640 training scaffold memory-optimized 12GB.
+  cell_165 -> high-fidelity 640 training variant.
+  cell_167, cell_168, cell_169 -> model-based inference cells, excluded from item #30.
+
+Implemented app output:
+  manifests/AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json
+
+Implemented replacement contract:
+  Training workflow boundary only.
+  Do not train models inside normal app runs.
+  Do not install ML dependencies inside normal app runs.
+  Do not download model weights.
+  Do not write model artifacts.
+  Do not run inference.
+  Require a separate offline/private training workflow before any model build or inference work.
+
+Validation done:
+  ai training workflow boundary parity test passed.
+  ai tensor builder parity test passed.
+  ai requirements mapper parity test passed.
+  local existing run wrote manifests/AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json.
+  Report name confirmed as AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json.
+  Schema version confirmed as plan_b30_ai_training_workflow_boundary_v1.
+  source_cell confirmed as cell_166.
+  status confirmed as implemented_training_workflow_boundary_only.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable, frontend_visible, and downloadable_via_api confirmed False.
+  normal_app_runs_must_train_models, normal_app_runs_must_install_ml_dependencies, normal_app_runs_must_download_weights, normal_app_runs_must_write_model_artifacts, and normal_app_runs_must_run_inference confirmed False.
+  separate_training_workflow_required confirmed True.
+  selected canonical cell confirmed as cell_166.
+  class count confirmed as 10.
+  approval gate count confirmed as 10.
+  training input dependency confirmed as Plan B item #29 AI_TENSORS_STAGE4 outputs.
+  preferred input confirmed as AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy.
+  input shape confirmed as [3, 640, 640].
+  no_runtime_pip_install confirmed True.
+  must_run_outside_normal_app_pipeline confirmed True.
+  next dependency-unblocking item confirmed as Plan B item #31.
+
+Privacy/artifact policy:
+  Output is a local JSON manifest only.
+  No coordinates, raw geometry, dependency install, model weights, model artifact, training execution, inference result, GeoJSON, KMZ, public API artifact, or frontend artifact is created.
+
+Remaining validation:
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #30: Training / learn weights cells.
+  Plan B item #31: CNN / Unet++ / Swin / SegFormer model build.
 
 Why:
-  Item #29 now provides deterministic model-ready tensor artifacts.
-  Item #30 should define the separate training-workflow boundary and training-data/weights policy before item #31 model build and item #32 inference.
-  Do not train inside normal app runs.
+  Item #30 now locks the separate training-workflow boundary and confirms normal app runs must not train or install ML dependencies.
+  Item #31 should define the model-build policy and lightweight model contract without running inference.
+  Item #32 remains blocked until model/dependency/weights policy is selected.
 ```
 
 ## Rules for Plan B
