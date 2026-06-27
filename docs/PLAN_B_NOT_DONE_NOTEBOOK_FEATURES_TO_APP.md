@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B4 item 30 training workflow boundary implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B4 item 31 model build policy implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -23,7 +23,7 @@ Last update: 2026-06-22 — B4 item 30 training workflow boundary implemented; f
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
-| 31 | CNN / Unet++ / Swin / SegFormer model build | 🟥 No | Yes | Requires selected model, weights policy, dependency plan, and CPU/GPU expectations. |
+| 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
 | 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
 | 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
 | 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
@@ -53,10 +53,11 @@ B3 local/private visualization contracts implemented:
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
-B4 AI planning/tensor/training-boundary contracts implemented:
+B4 AI planning/tensor/training/model-policy contracts implemented:
 - Item 28: cell 140 AI requirements mapper manifest.
 - Item 29: cell 148 AI tensor builder outputs.
 - Item 30: cell 166 AI training workflow boundary manifest.
+- Item 31: cell 232 AI model build policy manifest.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -355,16 +356,92 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B4.4 result — item 31 CNN / Unet++ / Swin / SegFormer model build
+
+```text
+Status:
+  App port implemented for selected model-build policy behavior.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_232 -> UnetPlusPlus with Swin encoder and ResNet50 fallback.
+
+Supporting notebook variants inspected:
+  cell_231 -> RGB-like input preprocessing hint.
+  cell_233 -> experimental custom Swin-L + Unet++ decoder attempt, not selected.
+  cell_234 -> ortho-calibrated inference/postprocess, excluded from item #31.
+  cell_235 -> ResNet50 UnetPlusPlus fallback plus inference; fallback config only retained.
+  cell_236 -> final target inference, excluded from item #31.
+  cell_237 -> target map exports, excluded from item #31.
+
+Implemented app output:
+  manifests/AI_MODEL_BUILD_POLICY_V7_2.json
+
+Implemented replacement contract:
+  Model-build policy/config manifest only.
+  Do not import torch, timm, or segmentation_models_pytorch.
+  Do not instantiate models.
+  Do not load or download weights.
+  Do not run forward passes.
+  Do not train models.
+  Do not run inference.
+  Do not write model artifacts.
+  Keep output local/private and filesystem-only.
+
+Selected model policy:
+  Primary architecture: UnetPlusPlus.
+  Primary encoder: tu-swin_base_patch4_window7_224.
+  Fallback encoder: resnet50.
+  Input channels: 3.
+  Classes: 5.
+  Preferred input: AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy.
+  Optional Swin adapter shape: [3, 224, 224].
+
+Validation done:
+  ai model build policy parity test passed.
+  ai training workflow boundary parity test passed.
+  ai tensor builder parity test passed.
+  ai requirements mapper parity test passed.
+  local existing run wrote manifests/AI_MODEL_BUILD_POLICY_V7_2.json.
+  Report name confirmed as AI_MODEL_BUILD_POLICY_V7_2.json.
+  Schema version confirmed as plan_b31_ai_model_build_policy_v1.
+  source_cell confirmed as cell_232.
+  status confirmed as implemented_model_build_policy_only.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable, frontend_visible, and downloadable_via_api confirmed False.
+  normal_app_runs_must_build_models, normal_app_runs_must_train_models, normal_app_runs_must_install_ml_dependencies, normal_app_runs_must_download_weights, normal_app_runs_must_write_model_artifacts, and normal_app_runs_must_run_inference confirmed False.
+  imports_torch, imports_timm, imports_segmentation_models_pytorch, instantiates_model, loads_weights, and runs_forward_pass confirmed False.
+  selected canonical cell confirmed as cell_232.
+  primary architecture confirmed as UnetPlusPlus.
+  primary encoder confirmed as tu-swin_base_patch4_window7_224.
+  fallback encoder confirmed as resnet50.
+  in_channels confirmed as 3.
+  classes confirmed as 5.
+  app_runtime_weight_download_allowed and app_runtime_model_instantiation_allowed confirmed False.
+  model-build gate count confirmed as 9.
+  preferred input confirmed as AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy.
+  preferred input shape confirmed as [3, 640, 640].
+  optional Swin adapter shape confirmed as [3, 224, 224].
+  next dependency-unblocking item confirmed as Plan B item #32.
+
+Privacy/artifact policy:
+  Output is a local JSON manifest only.
+  No coordinates, raw geometry, dependency install, model weights, model artifact, model execution, inference result, GeoJSON, KMZ, public API artifact, or frontend artifact is created.
+
+Remaining validation:
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #31: CNN / Unet++ / Swin / SegFormer model build.
+  Plan B item #32: CNN final target inference.
 
 Why:
-  Item #30 now locks the separate training-workflow boundary and confirms normal app runs must not train or install ML dependencies.
-  Item #31 should define the model-build policy and lightweight model contract without running inference.
-  Item #32 remains blocked until model/dependency/weights policy is selected.
+  Item #31 now locks the selected model-build policy/config without running model code.
+  Item #32 should remain gated by dependency/weights/model approval and must not expose exact coordinates or raw geometries publicly.
+  If dependency and weight gates are not approved, implement #32 as an inference-readiness or blocked-gate manifest first.
 ```
 
 ## Rules for Plan B
