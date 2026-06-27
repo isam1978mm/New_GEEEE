@@ -60,6 +60,7 @@ B4 AI planning/tensor/training/model/inference/diagnostic contracts implemented:
 - Item 31: cell 232 AI model build policy manifest.
 - Item 32: cell 169 AI final inference gate manifest.
 - Item 33: cell 185 AI metal fingerprint diagnostic CSV/JSON/TXT.
+- Item 39: cell 238 AI final probability overlay gate manifest.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -576,12 +577,11 @@ Remaining validation:
 
 ```text
 Recommended next main item:
-  Plan B item #39: Final probability map overlay + markers.
+  Plan B item #40: GPS/path tracing from targets.
 
 Why:
-  Item #33 now provides the private non-model metal/material diagnostic.
-  Item #39 depends on the probability map from real #32 inference, which remains gated.
-  Unless dependency/weights/privacy/operator gates are approved, implement #39 as a gated overlay/readiness manifest rather than public map output.
+  Item #39 now records probability-overlay readiness and proves real overlay/marker creation is still blocked by real #32 inference outputs.
+  Item #40 should be implemented as a gated/private path-tracing manifest unless final detector geometry/privacy gates are approved.
 ```
 
 ## Rules for Plan B
