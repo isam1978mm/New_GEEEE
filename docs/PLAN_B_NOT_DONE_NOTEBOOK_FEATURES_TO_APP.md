@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B3 item 38 app-native live overlay manifest implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B4 item 28 AI requirements mapper implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -20,7 +20,7 @@ Last update: 2026-06-22 — B3 item 38 app-native live overlay manifest implemen
 | 25 | Target CSV / TXT / JSON outputs | 🟨 Partial | Yes | App port implemented for canonical cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 26 | GeoJSON detected-feature exports | 🟨 Partial | Yes | App port implemented for canonical cell 123 AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 27 | KMZ heatmap / 3D target visualization | 🟨 Partial | Yes | App port implemented for canonical cell 155 AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 28 | AI requirements mapper for YOLO/CNN/Swin | 🟥 No | Yes | Planning/inspection feature. Easier than actual inference. |
+| 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟥 No | Yes | Define input shape, band order, normalization, and saved tensor contract. |
 | 30 | Training / learn weights cells | 🟥 No | Yes, separate | Build as a separate training workflow, not a normal app stage. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟥 No | Yes | Requires selected model, weights policy, dependency plan, and CPU/GPU expectations. |
@@ -52,6 +52,9 @@ B3 local/private visualization contracts implemented:
 - Item 27: cell 155 heatmap PNG, heatmap KMZ, and 3D visualization KMZ.
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
+
+B4 AI planning/requirements contracts implemented:
+- Item 28: cell 140 AI requirements mapper manifest.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -173,16 +176,69 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B4.1 result — item 28 AI requirements mapper for YOLO/CNN/Swin
+
+```text
+Status:
+  App port implemented for selected AI requirements mapper behavior.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_140 -> STAGE 1 — MATRIX AUDIT + AI REQUIREMENTS MAPPER.
+
+Implemented app output:
+  manifests/AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json
+
+Implemented replacement contract:
+  Requirements/planning manifest only.
+  Do not build model tensors yet.
+  Do not train models.
+  Do not run inference.
+  Do not download model weights.
+  Do not add heavy ML dependencies.
+  Do not create model artifacts.
+  Keep output local/private and filesystem-only.
+
+Mapped model families:
+  YOLOv11
+  CNN
+  Swin
+  SegFormer
+  UnetPlusPlus
+
+Validation done:
+  ai requirements mapper parity test passed.
+  classifier model inventory parity test passed.
+  local existing run wrote manifests/AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json.
+  Report name confirmed as AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json.
+  Schema version confirmed as plan_b28_ai_requirements_mapper_v1.
+  source_cell confirmed as cell_140.
+  status confirmed as implemented_requirements_mapper_only.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable, frontend_visible, and downloadable_via_api confirmed False.
+  trains_models, runs_inference, downloads_weights, adds_heavy_ml_dependencies, and creates_model_artifacts confirmed False.
+  Model families confirmed as YOLOv11, CNN, Swin, SegFormer, and UnetPlusPlus.
+  Requirement count confirmed as 5.
+  Next dependency-unblocking item confirmed as Plan B item #29.
+
+Privacy/artifact policy:
+  Output is a local JSON manifest only.
+  No coordinates, geometry, model weights, inference result, raster, NPY, GeoJSON, KMZ, or public API/frontend artifact is created.
+
+Remaining validation:
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #28: AI requirements mapper for YOLO/CNN/Swin.
+  Plan B item #29: AI tensor builder for YOLO/CNN/Swin/SegFormer.
 
 Why:
-  B3 local/private visualization contracts are now implemented through item #38.
-  Item #39 depends on final probability-map output, and item #40 depends on final target/path outputs.
-  The next dependency-unblocking work is B4: item #28 then #29 before CNN/model inference items #31/#32.
+  Item #28 now maps the model-family requirements and blockers.
+  Items #31/#32 depend on a deterministic app tensor contract first.
+  Item #29 should define input tensor shape, band order, normalization, nodata handling, saved manifest, and privacy policy before any model build or inference.
 ```
 
 ## Rules for Plan B
