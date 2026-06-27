@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B3 item 34 field-operation KMZ outputs implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B3 item 38 app-native live overlay manifest implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -27,7 +27,7 @@ Last update: 2026-06-22 — B3 item 34 field-operation KMZ outputs implemented; 
 | 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
 | 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
 | 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 38 | Live geemap overlays | 🟥 No | Replace | Do not port geemap. Build app-native map/layer UI. |
+| 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
 | 39 | Final probability map overlay + markers | 🟥 No | Yes | Depends on ML inference probability map output. |
 | 40 | GPS/path tracing from targets | 🟥 No | Yes | Depends on final detector outputs and geometry/privacy policy. |
 
@@ -51,6 +51,7 @@ B2 focus and target contracts implemented:
 B3 local/private visualization contracts implemented:
 - Item 27: cell 155 heatmap PNG, heatmap KMZ, and 3D visualization KMZ.
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
+- Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -120,11 +121,68 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B3.3 result — item 38 Live geemap overlays, replaced by app-native map/layer UI
+
+```text
+Status:
+  App-native replacement implemented for selected live geemap overlay behavior.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_243 -> live geemap.Map overlay of CNN probability matrix, markers, buffers, and corridor lines.
+
+Implemented app output:
+  full_job/focus/APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json
+
+Implemented operator-only preview family:
+  plan_b38_live_overlay_manifest
+
+Implemented replacement contract:
+  Do not port geemap or create public map tiles.
+  Write a local/private app-native layer manifest with source_cell cell_243.
+  Represent HYBRID basemap, CNN digital matrix, detected markers, detected buffers, field-operation points, corridor candidates, and heatmap image overlay as manifest layers.
+  Mark CNN probability and corridor layers as pending_dependency because they depend on later item #32/#39/#40 outputs.
+  Extend the operator overlay preview service to return a coordinate-free manifest summary only.
+
+Validation done:
+  focused focus-mask unit test passed.
+  operator overlay preview integration test passed.
+  full-run integration test passed.
+  local existing run regenerated and confirmed output file exists.
+  FocusMaskStage artifact count confirmed as 21.
+  Manifest type confirmed as AppNativeLiveOverlayManifest.
+  source_cell confirmed as cell_243.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable and downloadable_via_api confirmed False.
+  basemap confirmed HYBRID.
+  target_count confirmed as 5.
+  layer_count confirmed as 7.
+  exact_coordinates_in_manifest and raw_geometry_in_manifest confirmed False.
+  Required layers confirmed: hybrid_basemap, cnn_digital_matrix, detected_target_markers, detected_target_area_buffers, subterranean_corridor_candidates, heatmap_ground_overlay.
+  Operator-only preview returned status 200 / allowed for plan_b38_live_overlay_manifest.
+  Preview type confirmed as app_native_live_overlay_manifest.
+  Preview response remained filesystem_only True, http_servable False, downloadable False, frontend_visible operator_only.
+  Preview exact_coordinates_in_response and raw_geometry_in_response confirmed False.
+
+Privacy/artifact policy:
+  Output is FILESYSTEM_ONLY and http_servable=False.
+  No public tiles, public download URL, exact-coordinate API payload, or raw geometry API payload is created.
+
+Remaining validation:
+  Run a fresh UI/orchestrator run so DB artifact registration includes the new B3.3 artifact.
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #38: Live geemap overlays, replaced by app-native map/layer UI.
+  Plan B item #28: AI requirements mapper for YOLO/CNN/Swin.
+
+Why:
+  B3 local/private visualization contracts are now implemented through item #38.
+  Item #39 depends on final probability-map output, and item #40 depends on final target/path outputs.
+  The next dependency-unblocking work is B4: item #28 then #29 before CNN/model inference items #31/#32.
 ```
 
 ## Rules for Plan B
