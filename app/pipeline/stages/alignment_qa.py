@@ -63,6 +63,14 @@ def _read_alignment_raster(path: Path) -> np.ndarray:
         return dataset.read(1).astype(np.float32, copy=False)
 
 
+def _sidecar_nodata_matches_alignment_contract(sidecar: dict[str, object], grid_spec: GridSpec) -> bool:
+    """Mask rasters use uint8/0 semantics; analytic rasters use the grid nodata sentinel."""
+    dtype = str(sidecar.get("dtype", "")).casefold()
+    if dtype in {"uint8", "bool", "boolean"}:
+        return True
+    return float(sidecar["nodata"]) == float(grid_spec.nodata)
+
+
 def _edge_valid_fraction(array: np.ndarray, nodata: float) -> float:
     top = array[0, :]
     bottom = array[-1, :]
@@ -95,12 +103,13 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
         row_offset_px = abs(raster_center[1] - expected_center[1]) / max(scale_y, 1e-12)
         col_offset_px = abs(raster_center[0] - expected_center[0]) / max(abs(scale_x), 1e-12)
         center_offset_px = max(row_offset_px, col_offset_px)
+        nodata_matches = _sidecar_nodata_matches_alignment_contract(sidecar, grid_spec)
 
         passes = (
             sidecar["crs"] == grid_spec.crs
             and (int(sidecar["height"]), int(sidecar["width"])) == (grid_spec.size, grid_spec.size)
             and [float(value) for value in sidecar["transform"]] == [float(value) for value in grid_spec.manifest.crs_transform]
-            and float(sidecar["nodata"]) == float(grid_spec.nodata)
+            and nodata_matches
             and center_offset_px <= ALIGNMENT_MAX_CENTER_OFFSET_PX
         )
         if not passes:
