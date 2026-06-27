@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B4 item 32 final inference gate implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B4 item 33 metal fingerprint diagnostic implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -25,10 +25,10 @@ Last update: 2026-06-22 — B4 item 32 final inference gate implemented; frozen 
 | 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
 | 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
-| 33 | Metal fingerprint diagnostic | 🟥 No | Yes | Good candidate for private diagnostic app stage. |
+| 33 | Metal fingerprint diagnostic | 🟨 Partial | Yes | App port implemented for canonical cell 185 AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT as a private local diagnostic. No model inference, torch, GeoJSON/KMZ, or public output. Frozen notebook numeric parity still pending. |
 | 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
-| 39 | Final probability map overlay + markers | 🟥 No | Yes | Depends on ML inference probability map output. |
+| 39 | Final probability map overlay + markers | 🟥 No | Yes | Depends on ML inference probability map output or a gated/manifest-only substitute while #32 inference remains blocked. |
 | 40 | GPS/path tracing from targets | 🟥 No | Yes | Depends on final detector outputs and geometry/privacy policy. |
 
 ## Implemented Plan B results
@@ -53,12 +53,13 @@ B3 local/private visualization contracts implemented:
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
-B4 AI planning/tensor/training/model/inference-gate contracts implemented:
+B4 AI planning/tensor/training/model/inference/diagnostic contracts implemented:
 - Item 28: cell 140 AI requirements mapper manifest.
 - Item 29: cell 148 AI tensor builder outputs.
 - Item 30: cell 166 AI training workflow boundary manifest.
 - Item 31: cell 232 AI model build policy manifest.
 - Item 32: cell 169 AI final inference gate manifest.
+- Item 33: cell 185 AI metal fingerprint diagnostic CSV/JSON/TXT.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -507,16 +508,80 @@ Remaining validation:
   Real inference remains blocked until all gates are explicitly approved.
 ```
 
+### B4.6 result — item 33 Metal fingerprint diagnostic
+
+```text
+Status:
+  App port implemented for selected metal/material fingerprint diagnostic behavior.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_185 -> METAL FINGERPRINT DIAGNOSTIC.
+
+Supporting notebook variants inspected:
+  cell_184 -> metal reclassifier for CNN results, not selected.
+  cell_187 -> strategic target scanner with coordinate/map prints, not selected.
+  cell_177 and cell_178 -> object detector variants, not selected for this diagnostic.
+  cell_180, cell_181, and cell_182 -> torch/model/CNN inference context, excluded from item #33.
+
+Implemented app outputs:
+  full_job/focus/AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.csv
+  full_job/focus/AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.json
+  full_job/focus/AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.txt
+
+Implemented replacement contract:
+  Private local diagnostic only.
+  Read AI_FOCUS_17M_TARGETS_V7_2.csv and AI_FOCUS_17M_PIXEL_REPORT_V7_2.csv.
+  Match each target to the nearest focus pixel fingerprint.
+  Compute the canonical cell_185 score family for Gold, Silver, Copper, Ingots, Coins, Mixed_Metals, Pottery, Glass, Stone_Block, and Pure_Void.
+  Do not import torch.
+  Do not use model inference.
+  Do not load weights.
+  Do not run forward passes.
+  Do not create GeoJSON or KMZ.
+  Keep outputs local/private and filesystem-only.
+
+Validation done:
+  metal fingerprint diagnostic parity test passed.
+  ai final inference gate parity test passed.
+  ai model build policy parity test passed.
+  local existing run wrote CSV, JSON, and TXT outputs.
+  CSV name confirmed as AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.csv.
+  JSON name confirmed as AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.json.
+  TXT name confirmed as AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.txt.
+  Schema version confirmed as plan_b33_metal_fingerprint_diagnostic_v1.
+  source_cell confirmed as cell_185.
+  status confirmed as implemented_private_diagnostic.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable, frontend_visible, and downloadable_via_api confirmed False.
+  uses_model_inference, imports_torch, loads_weights, and runs_forward_pass confirmed False.
+  creates_geojson and creates_kmz confirmed False.
+  target_count confirmed as 5.
+  CSV row count confirmed as 5.
+  score label count confirmed as 10.
+  CSV fields confirmed to include Target_ID, Classification, Source_Cell, nearest pixel row/col, Best_Material, Best_Score, all score columns, UTM_E, and UTM_N.
+  First row Best_Material confirmed as Pottery on the local existing run.
+  TXT title and source_cell marker confirmed present.
+
+Privacy/artifact policy:
+  Outputs are local diagnostic files only.
+  UTM fields remain filesystem-only/private.
+  No public API artifact, frontend artifact, raw geometry, GeoJSON, KMZ, model artifact, weights, model execution, or probability map is created.
+
+Remaining validation:
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #33: Metal fingerprint diagnostic.
+  Plan B item #39: Final probability map overlay + markers.
 
 Why:
-  Item #32 now records inference readiness and proves real inference is still blocked by dependency/weights/privacy/operator gates.
-  Item #33 is a private diagnostic feature that can proceed without violating the blocked real-inference gates.
-  Items #39/#40 should wait for approved probability/target outputs or remain manifest-only.
+  Item #33 now provides the private non-model metal/material diagnostic.
+  Item #39 depends on the probability map from real #32 inference, which remains gated.
+  Unless dependency/weights/privacy/operator gates are approved, implement #39 as a gated overlay/readiness manifest rather than public map output.
 ```
 
 ## Rules for Plan B
