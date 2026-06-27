@@ -60,6 +60,7 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "ai_3d_target_visualization_kmz",
             "final_archeo_intelligence_map_geojson",
             "tesla_v7_2_field_operations_kmz",
+            "app_native_live_overlay_manifest_v7_2",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -238,6 +239,29 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "source_cell=cell_200" in field_kml
         assert field_kml.count("<Placemark>") == len(target_rows)
         assert "Strategic Intelligence Data" in field_kml
+
+        live_manifest = run_dir / "full_job" / "focus" / "APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json"
+
+        assert live_manifest.is_file()
+        live_payload = json.loads(live_manifest.read_text(encoding="utf-8"))
+
+        assert live_payload["type"] == "AppNativeLiveOverlayManifest"
+        assert live_payload["source_cell"] == "cell_243"
+        assert live_payload["privacy"] == "FILESYSTEM_ONLY"
+        assert live_payload["http_servable"] is False
+        assert live_payload["downloadable_via_api"] is False
+        assert live_payload["basemap"] == "HYBRID"
+        assert live_payload["target_count"] == len(target_rows)
+        assert live_payload["exact_coordinates_in_manifest"] is False
+        assert live_payload["raw_geometry_in_manifest"] is False
+
+        live_layers = live_payload["layers"]
+        layer_ids = {layer["id"] for layer in live_layers}
+        assert "cnn_digital_matrix" in layer_ids
+        assert "detected_target_markers" in layer_ids
+        assert "detected_target_area_buffers" in layer_ids
+        assert "subterranean_corridor_candidates" in layer_ids
+        assert any(layer["status"] == "pending_dependency" for layer in live_layers)
 
 
 

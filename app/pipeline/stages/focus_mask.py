@@ -36,6 +36,7 @@ HEATMAP_CLASSIFICATION_KMZ_NAME = "AI_HEATMAP_CLASSIFICATION.kmz"
 TARGET_3D_VISUALIZATION_KMZ_NAME = "AI_3D_TARGET_VISUALIZATION.kmz"
 FIELD_OPERATIONS_GEOJSON_NAME = "FINAL_ARCHEO_INTELLIGENCE_MAP.geojson"
 FIELD_OPERATIONS_KMZ_NAME = "TESLA_V7_2_FIELD_OPERATIONS.kmz"
+LIVE_OVERLAY_MANIFEST_NAME = "APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json"
 FOCUS_DIR_PARTS = ("full_job", "focus")
 FOCUS_SIZE_M = 17.0
 
@@ -1368,6 +1369,99 @@ def build_field_operations_products(
 
 
 
+
+def build_live_overlay_manifest_products(
+    *,
+    target_records: list[dict[str, object]],
+    field_operations_feature_count: int,
+) -> dict[str, object]:
+    layers = [
+        {
+            "id": "hybrid_basemap",
+            "type": "basemap",
+            "title": "HYBRID",
+            "source_cell": "cell_243",
+            "status": "app_native_replacement",
+            "notebook_equivalent": "Map.add_basemap('HYBRID')",
+        },
+        {
+            "id": "cnn_digital_matrix",
+            "type": "raster_probability_overlay",
+            "title": "CNN Digital Matrix",
+            "source_cell": "cell_243",
+            "status": "pending_dependency",
+            "blocked_by": ["Plan B item #32 CNN final target inference", "Plan B item #39 probability map overlay"],
+            "visualization": {"min": 0.1, "max": 0.9, "palette": ["black", "yellow", "red"]},
+            "note": "Notebook used probabilities[1]. App probability raster is pending later ML work.",
+        },
+        {
+            "id": "detected_target_markers",
+            "type": "vector_markers",
+            "title": "Detected target markers",
+            "source_cell": "cell_243",
+            "status": "available_private_filesystem",
+            "feature_count": len(target_records),
+            "private_source_artifact": DETECTED_FEATURES_WGS84_GEOJSON_NAME,
+        },
+        {
+            "id": "detected_target_area_buffers",
+            "type": "vector_buffers",
+            "title": "Detected target area buffers",
+            "source_cell": "cell_243",
+            "status": "available_private_filesystem",
+            "feature_count": len(target_records),
+            "private_source_artifact": FIELD_OPERATIONS_GEOJSON_NAME,
+        },
+        {
+            "id": "field_operations_targets",
+            "type": "field_operation_points",
+            "title": "Field operations targets",
+            "source_cell": "cell_200",
+            "status": "available_private_filesystem",
+            "feature_count": field_operations_feature_count,
+            "private_source_artifact": FIELD_OPERATIONS_GEOJSON_NAME,
+        },
+        {
+            "id": "subterranean_corridor_candidates",
+            "type": "vector_linestring_candidates",
+            "title": "Subterranean Corridor",
+            "source_cell": "cell_243",
+            "status": "pending_dependency",
+            "blocked_by": ["Plan B item #32 final target tags", "Plan B item #40 GPS/path tracing from targets"],
+            "feature_count": 0,
+        },
+        {
+            "id": "heatmap_ground_overlay",
+            "type": "image_overlay",
+            "title": "AI Heatmap Classification",
+            "source_cell": "cell_155",
+            "status": "available_private_filesystem",
+            "private_source_artifact": HEATMAP_CLASSIFICATION_PNG_NAME,
+        },
+    ]
+
+    manifest = {
+        "type": "AppNativeLiveOverlayManifest",
+        "source_cell": "cell_243",
+        "source_notebook_family": "LIVE_GEEMAP_OVERLAY_REPLACEMENT",
+        "status": "implemented_as_app_native_manifest",
+        "privacy": "FILESYSTEM_ONLY",
+        "http_servable": False,
+        "downloadable_via_api": False,
+        "basemap": "HYBRID",
+        "target_count": len(target_records),
+        "layer_count": len(layers),
+        "exact_coordinates_in_manifest": False,
+        "raw_geometry_in_manifest": False,
+        "implementation_note": "Replaces geemap.Map live display with an app-native private layer manifest.",
+        "layers": layers,
+    }
+    return {
+        "live_overlay_manifest": manifest,
+        "live_overlay_manifest_layer_count": len(layers),
+    }
+
+
 def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[str, object]) -> dict[str, Path]:
     mask = products["mask"]
     masked_window = products["masked_window"]
@@ -1388,6 +1482,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     target_3d_visualization_kml = products["target_3d_visualization_kml"]
     field_operations_geojson = products["field_operations_geojson"]
     field_operations_kml = products["field_operations_kml"]
+    live_overlay_manifest = products["live_overlay_manifest"]
     assert isinstance(mask, np.ndarray)
     assert isinstance(masked_window, np.ndarray)
     assert isinstance(summary, dict)
@@ -1407,6 +1502,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     assert isinstance(target_3d_visualization_kml, str)
     assert isinstance(field_operations_geojson, dict)
     assert isinstance(field_operations_kml, str)
+    assert isinstance(live_overlay_manifest, dict)
 
     focus_dir = run_dir.joinpath(*FOCUS_DIR_PARTS)
     focus_dir.mkdir(parents=True, exist_ok=True)
@@ -1431,6 +1527,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     target_3d_visualization_kmz_path = focus_dir / TARGET_3D_VISUALIZATION_KMZ_NAME
     field_operations_geojson_path = focus_dir / FIELD_OPERATIONS_GEOJSON_NAME
     field_operations_kmz_path = focus_dir / FIELD_OPERATIONS_KMZ_NAME
+    live_overlay_manifest_path = focus_dir / LIVE_OVERLAY_MANIFEST_NAME
 
     _write_focus_mask_tif(mask_tif_path, mask, grid_spec)
     np.save(mask_npy_path, mask.astype(np.float32))
@@ -1482,6 +1579,11 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     with zipfile.ZipFile(field_operations_kmz_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("doc.kml", field_operations_kml)
 
+    live_overlay_manifest_path.write_text(
+        json.dumps(live_overlay_manifest, indent=2, sort_keys=True, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
     write_raster_sidecar(
         mask_tif_path,
         grid_manifest=grid_spec.manifest,
@@ -1511,6 +1613,7 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
         "target_3d_visualization_kmz": target_3d_visualization_kmz_path,
         "field_operations_geojson": field_operations_geojson_path,
         "field_operations_kmz": field_operations_kmz_path,
+        "live_overlay_manifest": live_overlay_manifest_path,
     }
 
 
@@ -1588,6 +1691,12 @@ class FocusMaskStage(Stage):
                 hard_type_record=products["hard_type_record"],
                 core_ring_scene_record=products["core_ring_scene_record"],
                 grid_spec=self.grid_spec,
+            )
+        )
+        products.update(
+            build_live_overlay_manifest_products(
+                target_records=products["target_records"],
+                field_operations_feature_count=products["field_operations_feature_count"],
             )
         )
         outputs = write_focus_mask_outputs(context.run_dir, self.grid_spec, products)
@@ -1732,6 +1841,13 @@ class FocusMaskStage(Stage):
                 size_bytes=outputs["field_operations_kmz"].stat().st_size,
                 http_servable=False,
             ),
+            build_stage_artifact(
+                name="app_native_live_overlay_manifest_v7_2",
+                relative_path=outputs["live_overlay_manifest"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=outputs["live_overlay_manifest"].stat().st_size,
+                http_servable=False,
+            ),
         ]
         summary = products["summary"]
         assert isinstance(summary, dict)
@@ -1740,11 +1856,13 @@ class FocusMaskStage(Stage):
         core_ring_scene_record = products["core_ring_scene_record"]
         target_3d_visualization_count = products["target_3d_visualization_count"]
         field_operations_feature_count = products["field_operations_feature_count"]
+        live_overlay_manifest_layer_count = products["live_overlay_manifest_layer_count"]
         assert isinstance(target_records, list)
         assert isinstance(hard_type_record, dict)
         assert isinstance(core_ring_scene_record, dict)
         assert isinstance(target_3d_visualization_count, int)
         assert isinstance(field_operations_feature_count, int)
+        assert isinstance(live_overlay_manifest_layer_count, int)
         return StageResult(
             artifacts=artifacts,
             metadata={
@@ -1777,5 +1895,8 @@ class FocusMaskStage(Stage):
                 "field_operations_kmz": FIELD_OPERATIONS_KMZ_NAME,
                 "field_operations_source_cell": "cell_200",
                 "field_operations_feature_count": field_operations_feature_count,
+                "live_overlay_manifest": LIVE_OVERLAY_MANIFEST_NAME,
+                "live_overlay_manifest_source_cell": "cell_243",
+                "live_overlay_manifest_layer_count": live_overlay_manifest_layer_count,
             },
         )

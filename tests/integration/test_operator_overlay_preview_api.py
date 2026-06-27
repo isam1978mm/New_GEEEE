@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -15,6 +16,9 @@ from app.pipeline.parity.private_map_artifact_comparator import (
     PHASE_D1_GEOJSON_FAMILY_ID,
     PHASE_D2_KMZ_FAMILY_ID,
     PHASE_D3_HEATMAP_FAMILY_ID,
+)
+from app.pipeline.parity.operator_overlay_implementation_design import (
+    PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID,
 )
 from app.pipeline.parity.private_map_artifact_writers import (
     write_private_geojson_feature_collection,
@@ -80,6 +84,23 @@ def _write_artifacts(settings: Settings, run_id: str = _RUN_ID) -> None:
     write_private_heatmap_json(
         run_dir=run_dir,
         points=[{"id": "h1", "latitude": 35.2, "longitude": 36.1, "weight": 0.5}],
+    )
+    live_dir = Path(run_dir) / "full_job" / "focus"
+    live_dir.mkdir(parents=True, exist_ok=True)
+    (live_dir / "APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json").write_text(
+        json.dumps(
+            {
+                "type": "AppNativeLiveOverlayManifest",
+                "source_cell": "cell_243",
+                "privacy": "FILESYSTEM_ONLY",
+                "target_count": 1,
+                "layers": [
+                    {"id": "hybrid_basemap", "type": "basemap", "status": "app_native_replacement"},
+                    {"id": "cnn_digital_matrix", "type": "raster_probability_overlay", "status": "pending_dependency"},
+                ],
+            }
+        ),
+        encoding="utf-8",
     )
 
 
@@ -248,6 +269,7 @@ def test_valid_operator_preview_allowed_for_each_family() -> None:
                 (PHASE_D1_GEOJSON_FAMILY_ID, "geojson_feature_collection"),
                 (PHASE_D2_KMZ_FAMILY_ID, "kmz_placemarks"),
                 (PHASE_D3_HEATMAP_FAMILY_ID, "heatmap_points"),
+                (PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID, "app_native_live_overlay_manifest"),
             ):
                 response = client.get(
                     _PATH,

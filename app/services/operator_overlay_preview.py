@@ -17,7 +17,10 @@ from app.pipeline.parity.operator_overlay_access_foundation import (
     build_redacted_denial_response,
     evaluate_overlay_access,
 )
-from app.pipeline.parity.operator_overlay_implementation_design import ALLOWED_ACCESS_MODE
+from app.pipeline.parity.operator_overlay_implementation_design import (
+    ALLOWED_ACCESS_MODE,
+    PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID,
+)
 from app.pipeline.parity.private_map_artifact_comparator import (
     PHASE_D1_GEOJSON_FAMILY_ID,
     PHASE_D2_KMZ_FAMILY_ID,
@@ -42,11 +45,13 @@ _FAMILY_RELATIVE_PATHS: dict[str, str] = {
     PHASE_D1_GEOJSON_FAMILY_ID: f"{PRIVATE_GEOJSON_DEFAULT_OUTPUT_DIR}/{PRIVATE_GEOJSON_DEFAULT_FILENAME}",
     PHASE_D2_KMZ_FAMILY_ID: f"{PRIVATE_KMZ_DEFAULT_OUTPUT_DIR}/{PRIVATE_KMZ_DEFAULT_FILENAME}",
     PHASE_D3_HEATMAP_FAMILY_ID: f"{PRIVATE_HEATMAP_DEFAULT_OUTPUT_DIR}/{PRIVATE_HEATMAP_DEFAULT_FILENAME}",
+    PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID: "full_job/focus/APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json",
 }
 _FAMILY_PREVIEW_TYPES: dict[str, str] = {
     PHASE_D1_GEOJSON_FAMILY_ID: "geojson_feature_collection",
     PHASE_D2_KMZ_FAMILY_ID: "kmz_placemarks",
     PHASE_D3_HEATMAP_FAMILY_ID: "heatmap_points",
+    PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID: "app_native_live_overlay_manifest",
 }
 
 _HEATMAP_NUMERIC_KEYS = ("weight", "score", "probability")
@@ -212,6 +217,8 @@ def _load_preview(
         return _load_geojson_preview(artifact_path)
     if artifact_family == PHASE_D2_KMZ_FAMILY_ID:
         return _load_kmz_preview(artifact_path)
+    if artifact_family == PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID:
+        return _load_live_overlay_manifest_preview(artifact_path)
     return _load_heatmap_preview(artifact_path)
 
 
@@ -248,6 +255,50 @@ def _load_kmz_preview(path: Path) -> tuple[int, dict[str, Any]] | None:
         return None
     placemark_count = sum(1 for element in root.iter() if _local_name(element.tag) == "Placemark")
     return placemark_count, {"placemark_count": placemark_count}
+
+
+
+def _load_live_overlay_manifest_preview(path: Path) -> tuple[int, dict[str, Any]] | None:
+    document = _load_json(path)
+    if not isinstance(document, Mapping):
+        return None
+    if document.get("type") != "AppNativeLiveOverlayManifest":
+        return None
+
+    layers = document.get("layers")
+    if not isinstance(layers, list):
+        return None
+
+    layer_types: set[str] = set()
+    layer_statuses: set[str] = set()
+    layer_ids: list[str] = []
+
+    for layer in layers:
+        if not isinstance(layer, Mapping):
+            continue
+        layer_id = layer.get("id")
+        layer_type = layer.get("type")
+        layer_status = layer.get("status")
+        if isinstance(layer_id, str) and layer_id:
+            layer_ids.append(layer_id)
+        if isinstance(layer_type, str) and layer_type:
+            layer_types.add(layer_type)
+        if isinstance(layer_status, str) and layer_status:
+            layer_statuses.add(layer_status)
+
+    target_count = document.get("target_count")
+    target_count_value = int(target_count) if isinstance(target_count, int) else None
+
+    return len(layers), {
+        "layer_count": len(layers),
+        "layer_ids": sorted(layer_ids),
+        "layer_types": sorted(layer_types),
+        "layer_statuses": sorted(layer_statuses),
+        "target_count": target_count_value,
+        "source_cell": document.get("source_cell"),
+        "exact_coordinates_in_response": False,
+        "raw_geometry_in_response": False,
+    }
 
 
 def _load_heatmap_preview(path: Path) -> tuple[int, dict[str, Any]] | None:

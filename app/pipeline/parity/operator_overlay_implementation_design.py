@@ -25,8 +25,12 @@ FUTURE_SLICE_10_DESIGN_ID = "future_slice_10_g2_implementation_design"
 # artifacts exist; it is operator-only and never public.
 ALLOWED_ACCESS_MODE = "operator_only_preview"
 BLOCKED_PUBLIC_EXPOSURE_MODES = ("redacted_public", "public_exact_coordinate")
+PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID = "plan_b38_live_overlay_manifest"
 
-ALLOWED_ARTIFACT_FAMILIES = PHASE_D_PRIVATE_MAP_ARTIFACT_FAMILIES
+ALLOWED_ARTIFACT_FAMILIES = (
+    *PHASE_D_PRIVATE_MAP_ARTIFACT_FAMILIES,
+    PLAN_B38_LIVE_OVERLAY_MANIFEST_FAMILY_ID,
+)
 FORBIDDEN_ARTIFACT_FAMILIES = (
     "public_overlay_any",
     "redacted_public_overlay",
