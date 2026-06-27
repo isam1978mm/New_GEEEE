@@ -1205,7 +1205,7 @@ def _build_stack_alias_manifest(
             },
             {
                 "filename": NOTEBOOK_TESLA_ATOMIC_INFERENCE_STACK_NPY,
-                "source_notebook_family": "TESLA_V7_2_ATOMIC_INFERENCE_ENGINE_640",
+                "source_notebook_family": "PLAN_B19_CELL_095_MATERIAL_STACK_640",
                 "app_artifact": "tesla_atomic_inference_stack",
                 "band_names": list(TESLA_ATOMIC_INFERENCE_BANDS),
                 "status": "implemented",
