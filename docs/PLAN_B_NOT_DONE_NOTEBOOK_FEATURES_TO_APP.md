@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B4 item 28 AI requirements mapper implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-22 — B4 item 29 AI tensor builder implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -21,7 +21,7 @@ Last update: 2026-06-22 — B4 item 28 AI requirements mapper implemented; froze
 | 26 | GeoJSON detected-feature exports | 🟨 Partial | Yes | App port implemented for canonical cell 123 AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 27 | KMZ heatmap / 3D target visualization | 🟨 Partial | Yes | App port implemented for canonical cell 155 AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
-| 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟥 No | Yes | Define input shape, band order, normalization, and saved tensor contract. |
+| 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟥 No | Yes, separate | Build as a separate training workflow, not a normal app stage. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟥 No | Yes | Requires selected model, weights policy, dependency plan, and CPU/GPU expectations. |
 | 32 | CNN final target inference | 🟥 No | Yes | Requires AI tensor builder and selected model first. |
@@ -53,8 +53,9 @@ B3 local/private visualization contracts implemented:
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
-B4 AI planning/requirements contracts implemented:
+B4 AI planning/tensor contracts implemented:
 - Item 28: cell 140 AI requirements mapper manifest.
+- Item 29: cell 148 AI tensor builder outputs.
 
 ### B3.1 result — item 27 KMZ heatmap / 3D target visualization
 
@@ -229,16 +230,79 @@ Remaining validation:
   Compare against frozen notebook outputs after reference files are selected/generated.
 ```
 
+### B4.2 result — item 29 AI tensor builder for YOLO/CNN/Swin/SegFormer
+
+```text
+Status:
+  App port implemented for selected Stage 4 AI tensor-builder behavior.
+  Frozen notebook numeric parity is still pending.
+
+Canonical notebook variant selected:
+  cell_148 -> STAGE 4 — AI TENSOR BUILDER for YOLOv11 / CNN / Swin / SegFormer.
+
+Supporting notebook variants inspected:
+  cell_147 -> normalized input/context builder.
+  cell_231 -> later 3-layer RGB-like CNN input hint.
+
+Implemented app outputs:
+  AI_TENSORS_STAGE4/AI_FULL_52B_FLOAT32_640.npy
+  AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy
+  AI_TENSORS_STAGE4/YOLOV11_RGB_VISUAL.tif
+  AI_TENSORS_STAGE4/CNN_MULTI_24B_640.npy
+  AI_TENSORS_STAGE4/SWINSEGFORMER_16B_640.npy
+  AI_TENSORS_STAGE4/PCA_RGB_640.npy
+  AI_TENSORS_STAGE4/AI_NEGATIVE_MASK_640.npy
+  QA/STAGE4_AI_TENSOR_BUILDER.json
+  QA/STAGE4_AI_TENSOR_BANDS.csv
+
+Implemented replacement contract:
+  Tensor builder only.
+  Do not train models.
+  Do not run inference.
+  Do not download model weights.
+  Do not add heavy ML dependencies.
+  Do not create model artifacts.
+  Keep outputs local/private and filesystem-only.
+  Use deterministic band order, robust p2-p98 per-channel normalization, non-finite/nodata-to-0 handling, and zero-fill reporting for missing source bands.
+
+Validation done:
+  ai tensor builder parity test passed after fixing ensure_run_qa_dir import to app.pipeline.qa_paths.
+  ai requirements mapper parity test passed.
+  local existing run wrote all Stage 4 tensor outputs.
+  Report, CSV, full tensor, YOLO RGB, YOLO visual TIF, CNN tensor, Swin tensor, PCA RGB, and negative mask outputs were confirmed present.
+  source_cell confirmed as cell_148.
+  status confirmed as implemented_tensor_builder_only.
+  privacy confirmed as FILESYSTEM_ONLY.
+  http_servable, frontend_visible, and downloadable_via_api confirmed False.
+  trains_models, runs_inference, downloads_weights, adds_heavy_ml_dependencies, and creates_model_artifacts confirmed False.
+  Full tensor shape confirmed as (52, 640, 640) float32.
+  YOLO tensor shape confirmed as (3, 640, 640) float32.
+  CNN tensor shape confirmed as (24, 640, 640) float32.
+  Swin/SegFormer tensor shape confirmed as (16, 640, 640) float32.
+  PCA RGB shape confirmed as (3, 640, 640) float32.
+  Negative mask shape confirmed as (640, 640) float32.
+  YOLO, CNN, Swin, and PCA ranges confirmed within 0-1.
+  Negative mask binary check passed.
+  Missing zero-filled source band count confirmed as 0 on the local existing run.
+
+Privacy/artifact policy:
+  Outputs are local tensor/report files only.
+  No coordinates, raw geometry, model weights, inference result, GeoJSON, KMZ, public API artifact, or frontend artifact is created.
+
+Remaining validation:
+  Compare against frozen notebook outputs after reference files are selected/generated.
+```
+
 ## Next main item
 
 ```text
 Recommended next main item:
-  Plan B item #29: AI tensor builder for YOLO/CNN/Swin/SegFormer.
+  Plan B item #30: Training / learn weights cells.
 
 Why:
-  Item #28 now maps the model-family requirements and blockers.
-  Items #31/#32 depend on a deterministic app tensor contract first.
-  Item #29 should define input tensor shape, band order, normalization, nodata handling, saved manifest, and privacy policy before any model build or inference.
+  Item #29 now provides deterministic model-ready tensor artifacts.
+  Item #30 should define the separate training-workflow boundary and training-data/weights policy before item #31 model build and item #32 inference.
+  Do not train inside normal app runs.
 ```
 
 ## Rules for Plan B
