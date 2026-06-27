@@ -2,7 +2,7 @@
 
 Status: active implementation document.
 
-Last update: 2026-06-22 — B4 item 33 metal fingerprint diagnostic implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-27 ? B4 item 39 final probability overlay gate implemented; frozen notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
@@ -28,7 +28,7 @@ Last update: 2026-06-22 — B4 item 33 metal fingerprint diagnostic implemented;
 | 33 | Metal fingerprint diagnostic | 🟨 Partial | Yes | App port implemented for canonical cell 185 AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT as a private local diagnostic. No model inference, torch, GeoJSON/KMZ, or public output. Frozen notebook numeric parity still pending. |
 | 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
-| 39 | Final probability map overlay + markers | 🟥 No | Yes | Depends on ML inference probability map output or a gated/manifest-only substitute while #32 inference remains blocked. |
+| 39 | Final probability map overlay + markers | ?? Partial | Yes | App port implemented for canonical cell 238 AI_FINAL_PROBABILITY_OVERLAY_GATE_V7_2.json as a gated probability-overlay readiness manifest. No geemap, torch, inference, probability map, tiles, markers, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 40 | GPS/path tracing from targets | 🟥 No | Yes | Depends on final detector outputs and geometry/privacy policy. |
 
 ## Implemented Plan B results
