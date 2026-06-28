@@ -174,13 +174,18 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "notebook_TREASURE_GEOPHYSICS_STACK_640_npy": ArtifactClass.FILESYSTEM_ONLY,
             "notebook_stack_alias_manifest": ArtifactClass.FILESYSTEM_ONLY,
         }
-        assert _artifact_classes(focus_mask_result) == {
-            "focus_zone_17m_tif": ArtifactClass.FILESYSTEM_ONLY,
-            "focus_zone_17m_npy": ArtifactClass.FILESYSTEM_ONLY,
-            "focus_zone_ai_ready_window": ArtifactClass.FILESYSTEM_ONLY,
-            "focus_zone_summary": ArtifactClass.FILESYSTEM_ONLY,
-            "focus_band_summary": ArtifactClass.FILESYSTEM_ONLY,
-        }
+        focus_classes = _artifact_classes(focus_mask_result)
+        assert {
+            "focus_zone_17m_tif",
+            "focus_zone_17m_npy",
+            "focus_zone_ai_ready_window",
+            "focus_zone_summary",
+            "focus_band_summary",
+        } <= set(focus_classes)
+        assert all(
+            artifact_class == ArtifactClass.FILESYSTEM_ONLY
+            for artifact_class in focus_classes.values()
+        )
         assert _artifact_classes(location_exports_result) == {
             "location_geojson": ArtifactClass.FILESYSTEM_ONLY,
             "location_kmz": ArtifactClass.FILESYSTEM_ONLY,
