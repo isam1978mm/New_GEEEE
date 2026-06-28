@@ -100,8 +100,16 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         }
         assert _artifact_classes(s2_result) == {
             **{name: ArtifactClass.LOCAL_SENSITIVE for name in INDEX_NAMES},
+            "s2_raw_valid_mask_640": ArtifactClass.FILESYSTEM_ONLY,
+            "s2_index_valid_mask_640": ArtifactClass.FILESYSTEM_ONLY,
+            "s2_dem_matched_masks_manifest": ArtifactClass.FILESYSTEM_ONLY,
             "s2_indices_summary": ArtifactClass.FILESYSTEM_ONLY,
             "s2_raw_cube": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640_npy": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640_npy": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_REPORT_640_FINAL_INTELLIGENCE_STACK_640_npy": ArtifactClass.FILESYSTEM_ONLY,
+            "notebook_TESLA_V7_2_ATOMIC_INFERENCE_STACK_640_npy": ArtifactClass.FILESYSTEM_ONLY,
+            "aix_extra_tensors_stack_alias_manifest": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(dem_derivatives_result) == {
             **{name: ArtifactClass.LOCAL_SENSITIVE for name in DEM_DERIVATIVE_NAMES},
@@ -344,6 +352,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "post_rtc/final_angle.npy": f"{SAR_NPY_OUTPUT_DIR}/incidence.npy",
         }
         assert isinstance(sar_manifest["stages"]["post_rtc"]["source_description"], str)
+
 
 def _artifact_classes(result) -> dict[str, ArtifactClass]:
     return {artifact.name: artifact.artifact_class for artifact in result.artifacts}
