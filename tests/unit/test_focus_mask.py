@@ -61,6 +61,9 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "final_archeo_intelligence_map_geojson",
             "tesla_v7_2_field_operations_kmz",
             "app_native_live_overlay_manifest_v7_2",
+            "metal_fingerprint_diagnostic_csv",
+            "metal_fingerprint_diagnostic_json",
+            "metal_fingerprint_diagnostic_txt",
         ]
         assert all(artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
         assert all(artifact.http_servable is False for artifact in result.artifacts)
@@ -262,6 +265,29 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "detected_target_area_buffers" in layer_ids
         assert "subterranean_corridor_candidates" in layer_ids
         assert any(layer["status"] == "pending_dependency" for layer in live_layers)
+
+        metal_csv = run_dir / "full_job" / "focus" / "AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.csv"
+        metal_json = run_dir / "full_job" / "focus" / "AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.json"
+        metal_txt = run_dir / "full_job" / "focus" / "AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.txt"
+
+        assert metal_csv.is_file()
+        assert metal_json.is_file()
+        assert metal_txt.is_file()
+
+        metal_payload = json.loads(metal_json.read_text(encoding="utf-8"))
+        assert metal_payload["schema_version"] == "plan_b33_metal_fingerprint_diagnostic_v1"
+        assert metal_payload["source_cell"] == "cell_185"
+        assert metal_payload["privacy"] == "FILESYSTEM_ONLY"
+        assert metal_payload["http_servable"] is False
+        assert metal_payload["downloadable_via_api"] is False
+        assert metal_payload["uses_model_inference"] is False
+        assert metal_payload["imports_torch"] is False
+        assert metal_payload["loads_weights"] is False
+        assert metal_payload["runs_forward_pass"] is False
+        assert metal_payload["creates_geojson"] is False
+        assert metal_payload["creates_kmz"] is False
+        assert metal_payload["target_count"] == len(target_rows)
+        assert "AI METAL FINGERPRINT DIAGNOSTIC V7.2" in metal_txt.read_text(encoding="utf-8")
 
 
 

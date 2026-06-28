@@ -12,6 +12,7 @@ from rasterio.transform import Affine
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.parity.metal_fingerprint_diagnostic import write_plan_b33_metal_fingerprint_diagnostic_outputs
 from app.pipeline.stages.dem import write_raster_sidecar
 from app.pipeline.stages.feature_stacks import SCIENCE_CORE_BANDS
 from app.pipeline.stages.grid import GridSpec
@@ -1700,6 +1701,7 @@ class FocusMaskStage(Stage):
             )
         )
         outputs = write_focus_mask_outputs(context.run_dir, self.grid_spec, products)
+        metal_fingerprint_outputs = write_plan_b33_metal_fingerprint_diagnostic_outputs(context.run_dir, context.run_id)
         artifacts = [
             build_stage_artifact(
                 name="focus_zone_17m_tif",
@@ -1846,6 +1848,27 @@ class FocusMaskStage(Stage):
                 relative_path=outputs["live_overlay_manifest"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.FILESYSTEM_ONLY,
                 size_bytes=outputs["live_overlay_manifest"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="metal_fingerprint_diagnostic_csv",
+                relative_path=metal_fingerprint_outputs["csv"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=metal_fingerprint_outputs["csv"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="metal_fingerprint_diagnostic_json",
+                relative_path=metal_fingerprint_outputs["json"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=metal_fingerprint_outputs["json"].stat().st_size,
+                http_servable=False,
+            ),
+            build_stage_artifact(
+                name="metal_fingerprint_diagnostic_txt",
+                relative_path=metal_fingerprint_outputs["txt"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+                size_bytes=metal_fingerprint_outputs["txt"].stat().st_size,
                 http_servable=False,
             ),
         ]
