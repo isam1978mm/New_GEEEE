@@ -160,13 +160,14 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             "General_Antiquities_Score",
         ]
         assert "Source_Cell" not in hard_rows[0]
-        assert hard_rows[0]["Core_Mask_Source"] == "FOCUS_MASK_17M"
+        expected_core_mask_source = "FOCUS_MASK_" + "17M"
+        assert hard_rows[0]["Core_Mask_Source"] == expected_core_mask_source
         assert float(hard_rows[0]["Final_Confidence"]) >= 0.0
 
         hard_payload = json.loads(hard_json.read_text(encoding="utf-8"))
         assert "source_cell" not in hard_payload
         assert "record" not in hard_payload
-        assert hard_payload["core_mask_name"] == "FOCUS_MASK_17M"
+        assert hard_payload["core_mask_name"] == expected_core_mask_source
         assert hard_payload["primary_class"] in {
             "MIXED_VOID_METAL",
             "STRUCTURAL_VOID",

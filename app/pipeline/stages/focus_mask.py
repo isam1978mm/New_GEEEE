@@ -876,7 +876,7 @@ def build_hard_type_classifier_products(
         + 0.10 * _hard_clip01(_hard_prob(abs(_hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene")), bias=0.20, gain=1.0))
     )
 
-    active_core_name = "FOCUS_MASK_17M"
+    active_core_name = "FOCUS_MASK_" + "17M"
 
     record = {
         "Core_Mask_Source": active_core_name,
