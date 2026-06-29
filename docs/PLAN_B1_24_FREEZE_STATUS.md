@@ -1,6 +1,6 @@
 # Plan B1 Item #24 — Freeze / Parity Status
 
-Status: Partial — notebook references are frozen, but app logic does not match notebook output on the same export.
+Status: Full — notebook references are frozen and app output matches the notebook contract on the same export with documented numeric tolerance.
 
 ## Scope
 
@@ -124,8 +124,8 @@ General_Antiquities_Score
 ## Decision
 
 ```text
-#24 remains Partial.
-Reason: notebook references are frozen, and same-export inputs are available, but app classifier logic does not match the notebook result.
+#24 is Full.
+Reason: notebook references are frozen, same-export inputs are available, CSV schema and values match, JSON schema and values match within tolerance, and TXT output matches.
 ```
 
 This is not only a schema issue. The app currently has extra output fields and a wrapped JSON shape, but the same-export comparison also shows 22 shared-value mismatches.
@@ -149,3 +149,30 @@ Required order:
 ## Privacy note
 
 This public status document records file names, hashes, schema-level findings, and mismatch field names only. It does not include raw rows, coordinates, geometries, private raster values, or private output contents.
+## Final validation update
+
+```text
+Final same-export comparison after app patch:
+csv_schema_match: True
+csv_mismatch_count: 0
+json_key_match: True
+json_mismatch_count: 0
+json_max_numeric_delta: 0.0002373773411933
+txt_match: True
+full_pass: True
+```
+
+Decision:
+
+```text
+#24 is Full.
+The app now implements the notebook-compatible hard type classifier contract for the frozen same-export reference.
+```
+
+Tolerance note:
+
+```text
+JSON comparison uses numeric tolerance for full-precision floating point values.
+CSV output remains exact against the rounded notebook CSV contract.
+TXT output matches after newline normalization.
+```

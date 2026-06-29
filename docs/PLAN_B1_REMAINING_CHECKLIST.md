@@ -1,4 +1,4 @@
-﻿# Plan B1 Remaining Work Checklist
+# Plan B1 Remaining Work Checklist
 
 Rule: Do not mark any item Full unless the app output is compared against frozen notebook reference output from the same export/run, or the item is explicitly documented as notebook-no-export.
 
@@ -12,7 +12,7 @@ Rule: Do not use different run/grid outputs for parity decisions.
 
 ### #24 — AI_HARD_TYPE_CLASSIFIER_CORE9
 
-Status: Near Full, not committed yet.
+Status: Full — committed and pushed in acca221.
 
 Completed:
 - [x] Notebook files frozen:
@@ -32,11 +32,11 @@ Completed:
   - json_max_numeric_delta: 0.0002373773411933
 
 Remaining:
-- [ ] Run focused tests after final mask-source label patch.
-- [ ] Run same-export comparison one final time if tests change anything.
-- [ ] Update docs/PLAN_B1_24_FREEZE_STATUS.md from Partial to Full.
-- [ ] Commit #24 code/test/doc changes.
-- [ ] Push #24 commit.
+- [x] Run focused tests after final mask-source label patch.
+- [x] Run same-export comparison one final time.
+- [x] Update docs/PLAN_B1_24_FREEZE_STATUS.md from Partial to Full.
+- [x] Commit #24 code/test/checklist changes.
+- [x] Push #24 commit.
 - [ ] Confirm CI result.
 
 ---
@@ -113,7 +113,7 @@ Remaining:
 ## Final Plan B1 closure checklist
 
 Remaining:
-- [ ] #24 committed and pushed.
+- [x] #24 committed and pushed.
 - [ ] #23 completed or explicitly documented as blocked.
 - [ ] #25 completed or explicitly documented as blocked.
 - [ ] #33 documented as notebook-no-export / app-port-only unless new export exists.
