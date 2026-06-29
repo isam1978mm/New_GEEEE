@@ -448,24 +448,43 @@ def _hard_robust_norm(arr: np.ndarray) -> np.ndarray:
     return np.clip((arr - lo) / (hi - lo + 1e-9), 0, 1).astype(np.float32)
 
 
+def _hard_safe_std(arr: np.ndarray, mask: np.ndarray) -> float:
+    vals = arr[mask]
+    vals = vals[np.isfinite(vals)]
+    return float(np.std(vals)) if len(vals) else 0.0
+
+
 def _hard_count_local_peaks(score_map: np.ndarray, mask: np.ndarray, *, threshold_q: float) -> int:
     vals = score_map[mask]
     vals = vals[np.isfinite(vals)]
     if vals.size == 0:
         return 0
     threshold = float(np.percentile(vals, threshold_q))
-    candidates = (score_map >= threshold) & mask
-    count = 0
-    rr, cc = np.where(candidates)
-    for r, c in zip(rr, cc):
-        r0 = max(0, int(r) - 1)
-        r1 = min(score_map.shape[0], int(r) + 2)
-        c0 = max(0, int(c) - 1)
-        c1 = min(score_map.shape[1], int(c) + 2)
-        if float(score_map[int(r), int(c)]) >= float(np.nanmax(score_map[r0:r1, c0:c1])):
-            count += 1
-    return int(count)
+    try:
+        from scipy import ndimage
 
+        local_max = ndimage.maximum_filter(score_map, size=3, mode="nearest")
+        peaks = (score_map == local_max) & (score_map >= threshold) & mask
+        _labels, count = ndimage.label(peaks)
+        return int(count)
+    except Exception:
+        return int(np.count_nonzero((score_map >= threshold) & mask))
+
+
+def _hard_connected_components_above(arr: np.ndarray, mask: np.ndarray, threshold_q: float = 70) -> int:
+    vals = arr[mask]
+    vals = vals[np.isfinite(vals)]
+    if vals.size == 0:
+        return 0
+    threshold = float(np.percentile(vals, threshold_q))
+    bin_mask = (arr >= threshold) & mask
+    try:
+        from scipy import ndimage
+
+        _labels, count = ndimage.label(bin_mask)
+        return int(count)
+    except Exception:
+        return int(np.count_nonzero(bin_mask))
 
 def _hard_elongation_from_mask(mask: np.ndarray) -> float:
     rr, cc = np.where(mask)
@@ -515,14 +534,14 @@ def build_hard_type_classifier_products(
     ring_near, ring_far, ring_wide, scene_mask = _hard_ring_masks(core_mask)
     stats = {
         name: _hard_band_pack(
-            analysis_bands[name],
+            arr,
             core_mask=core_mask,
             ring_near=ring_near,
             ring_far=ring_far,
             ring_wide=ring_wide,
             scene_mask=scene_mask,
         )
-        for name in FOCUS_ANALYSIS_BANDS
+        for name, arr in analysis_bands.items()
     }
 
     gold = analysis_bands["Secret_Gold_Halo"]
@@ -536,47 +555,84 @@ def build_hard_type_classifier_products(
     pottery = analysis_bands["REPORT_640_Pottery_Report"]
 
     focus_rows, focus_cols = np.where(core_mask)
-    center_r = float(np.mean(focus_rows))
-    center_c = float(np.mean(focus_cols))
     rr, cc = np.indices(core_mask.shape)
-    direction_mask = core_mask | ring_near
-    directional_arr = _hard_robust_norm(doors) + _hard_robust_norm(tunnel) + _hard_robust_norm(zero)
+
+    r0 = int(focus_rows.min())
+    r1 = int(focus_rows.max())
+    c0 = int(focus_cols.min())
+    c1 = int(focus_cols.max())
+
+    north = np.zeros_like(core_mask, dtype=bool)
+    south = np.zeros_like(core_mask, dtype=bool)
+    west = np.zeros_like(core_mask, dtype=bool)
+    east = np.zeros_like(core_mask, dtype=bool)
+
+    if r0 - 1 >= 0:
+        north[max(r0 - 1, 0):r0, c0:c1 + 1] = True
+    if r1 + 2 <= core_mask.shape[0]:
+        south[r1 + 1:min(r1 + 2, core_mask.shape[0]), c0:c1 + 1] = True
+    if c0 - 1 >= 0:
+        west[r0:r1 + 1, max(c0 - 1, 0):c0] = True
+    if c1 + 2 <= core_mask.shape[1]:
+        east[r0:r1 + 1, c1 + 1:min(c1 + 2, core_mask.shape[1])] = True
+
+    def strip_score(mask: np.ndarray) -> float:
+        if int(mask.sum()) == 0:
+            return 0.0
+        return (
+            0.95 * _hard_safe_mean(doors, mask)
+            + 0.80 * _hard_safe_mean(tunnel, mask)
+            + 0.45 * _hard_safe_mean(thermal, mask)
+        )
+
     dir_scores = {
-        "north": _hard_safe_mean(directional_arr, direction_mask & (rr < center_r)),
-        "south": _hard_safe_mean(directional_arr, direction_mask & (rr > center_r)),
-        "west": _hard_safe_mean(directional_arr, direction_mask & (cc < center_c)),
-        "east": _hard_safe_mean(directional_arr, direction_mask & (cc > center_c)),
+        "north": strip_score(north),
+        "south": strip_score(south),
+        "west": strip_score(west),
+        "east": strip_score(east),
     }
     best_dir = max(dir_scores, key=dir_scores.get)
     sorted_dir = sorted(dir_scores.values(), reverse=True)
-    directionality_strength = float(sorted_dir[0] - sorted_dir[1]) if len(sorted_dir) > 1 else 0.0
+    raw_dir_gap = float(sorted_dir[0] - sorted_dir[1]) if len(sorted_dir) > 1 else 0.0
+    directionality_strength = _hard_clip01(float(np.tanh(max(0.0, raw_dir_gap) / 4.5)))
 
     void_family_score = (
-        0.34 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near")
-        + 0.26 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_near")
-        + 0.18 * _hard_rc(stats, "REPORT_640_FINAL_Zero_Point_Targets", "rc_scene")
-        + 0.12 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_far")
-        + 0.10 * directionality_strength
+        1.55 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_scene")
+        + 1.15 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near")
+        + 1.25 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene")
+        + 0.85 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_near")
+        + 1.05 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_scene")
+        + 0.75 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_near")
+        - 0.40 * _hard_rc(stats, "Secret_Chemical_Protector", "rc_scene")
+        - 0.25 * _hard_rc(stats, "REPORT_640_FINAL_Zero_Point_Targets", "rc_scene")
     )
     metal_family_score = (
-        0.36 * _hard_rc(stats, "Secret_Gold_Halo", "rc_scene")
-        + 0.28 * _hard_rc(stats, "Secret_Silver_Oxide", "rc_scene")
-        + 0.22 * _hard_rc(stats, "REPORT_640_Mass_Report", "rc_near")
-        + 0.14 * _hard_rc(stats, "Secret_Chemical_Protector", "rc_scene")
+        1.30 * _hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene")
+        + 1.05 * _hard_rc(stats, "REPORT_640_Mass_Report", "rc_near")
+        + 1.00 * _hard_rc(stats, "Secret_Gold_Halo", "rc_scene")
+        + 0.82 * _hard_rc(stats, "Secret_Silver_Oxide", "rc_scene")
+        + 0.85 * _hard_rc(stats, "AI_READY_640_Magnetic_Anomaly", "rc_scene")
+        + 0.75 * _hard_rc(stats, "AI_READY_640_EM_Anomaly", "rc_scene")
     )
     fill_family_score = (
-        0.42 * _hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene")
-        + 0.22 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene")
-        + 0.18 * _hard_rc(stats, "Secret_Chemical_Protector", "rc_near")
-        + 0.18 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_far")
+        1.20 * _hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene")
+        + 0.80 * _hard_rc(stats, "REPORT_640_Pottery_Report", "rc_near")
+        + 0.52 * _hard_rc(stats, "Secret_Chemical_Protector", "rc_scene")
+        + 0.30 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene")
     )
     entrance_family_score = (
-        0.34 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_near")
-        + 0.28 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near")
-        + 0.18 * directionality_strength
-        + 0.20 * _hard_rc(stats, "REPORT_640_FINAL_Zero_Point_Targets", "rc_near")
+        1.05 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_near")
+        + 0.85 * _hard_rc(stats, "Secret_Hidden_Doors", "rc_scene")
+        + 0.72 * _hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near")
+        + 0.58 * _hard_rc(stats, "Secret_Thermal_Inertia", "rc_near")
+        + 0.95 * directionality_strength
     )
-    surface_penalty_raw = abs(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene")) * 0.35
+
+    surface_penalty_raw = (
+        0.80 * abs(_hard_rc(stats, "DEM_Slope", "rc_scene"))
+        + 0.65 * abs(_hard_rc(stats, "DEM_Roughness", "rc_scene"))
+        - 0.50 * abs(_hard_rc(stats, "DEM_TPI", "rc_scene"))
+    )
     surface_exclusion_score = _hard_clip01(_hard_prob(1.2 - surface_penalty_raw, bias=0.0, gain=1.0))
 
     p_void_raw = _hard_prob(void_family_score, bias=0.85, gain=0.90)
@@ -586,59 +642,148 @@ def build_hard_type_classifier_products(
 
     surface_gate = _hard_clip01(0.20 + 0.80 * surface_exclusion_score)
     entry_gate = _hard_clip01(0.55 * p_void_raw + 0.45 * directionality_strength)
+
     p_void = p_void_raw
-    p_fill = p_fill_raw
+    p_entry = _hard_clip01(p_entry_raw * entry_gate * (0.75 + 0.25 * surface_gate))
     p_metal = _hard_clip01(p_metal_raw * (0.65 + 0.35 * surface_gate))
-    p_entry = _hard_clip01(p_entry_raw * entry_gate)
+    p_fill = _hard_clip01(p_fill_raw * (0.60 + 0.40 * surface_gate))
 
     shaft_score = _hard_clip01(
         0.42 * p_void
-        + 0.20 * _hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_scene"), bias=0.5, gain=0.7)
+        + 0.18 * directionality_strength
+        + 0.12 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near"), bias=0.3, gain=1.0))
+        + 0.14 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Hidden_Doors", "rc_near"), bias=0.2, gain=1.0))
         + 0.14 * surface_exclusion_score
-        + 0.24 * _hard_prob(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene"), bias=0.4, gain=0.7)
     )
     entrance_score = _hard_clip01(
         0.34 * p_void
         + 0.30 * p_entry
         + 0.18 * directionality_strength
-        + 0.18 * _hard_prob(_hard_rc(stats, "Secret_Hidden_Doors", "rc_near"), bias=0.5, gain=0.7)
+        + 0.18 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Hidden_Doors", "rc_near"), bias=0.25, gain=1.1))
     )
     chamber_score = _hard_clip01(
         0.45 * p_void
         + 0.18 * surface_exclusion_score
-        + 0.20 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.7)
-        + 0.17 * _hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_wide"), bias=0.5, gain=0.7)
+        + 0.15 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_scene"), bias=0.45, gain=1.0))
+        + 0.12 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_scene"), bias=0.40, gain=1.0))
+        - 0.10 * directionality_strength
     )
     drain_void_score = _hard_clip01(
         0.32 * p_void
-        + 0.32 * _hard_prob(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_near"), bias=0.5, gain=0.7)
-        + 0.20 * directionality_strength
-        + 0.16 * _hard_prob(_hard_rc(stats, "Secret_Thermal_Inertia", "rc_far"), bias=0.5, gain=0.7)
+        + 0.30 * p_fill
+        + 0.18 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Chemical_Protector", "rc_scene"), bias=0.20, gain=1.0))
+        + 0.20 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene"), bias=0.20, gain=1.0))
     )
 
     gold_like_score = _hard_clip01(
         0.42 * p_metal
-        + 0.34 * _hard_prob(_hard_rc(stats, "Secret_Gold_Halo", "rc_scene"), bias=0.5, gain=0.75)
-        + 0.12 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.30 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Gold_Halo", "rc_scene"), bias=0.35, gain=1.0))
+        - 0.12 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Silver_Oxide", "rc_scene"), bias=0.55, gain=1.0))
+        + 0.16 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.35, gain=1.0))
         + 0.12 * surface_exclusion_score
     )
     silver_like_score = _hard_clip01(
         0.42 * p_metal
-        + 0.34 * _hard_prob(_hard_rc(stats, "Secret_Silver_Oxide", "rc_scene"), bias=0.5, gain=0.75)
-        + 0.12 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75)
+        + 0.30 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Silver_Oxide", "rc_scene"), bias=0.35, gain=1.0))
+        - 0.08 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Gold_Halo", "rc_scene"), bias=0.65, gain=1.0))
+        + 0.16 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.35, gain=1.0))
         + 0.12 * surface_exclusion_score
     )
     dense_metal_score = _hard_clip01(
         0.55 * p_metal
-        + 0.25 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75)
-        + 0.20 * max(gold_like_score, silver_like_score)
+        + 0.22 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.45, gain=1.0))
+        + 0.13 * _hard_clip01(_hard_prob(_hard_rc(stats, "AI_READY_640_Magnetic_Anomaly", "rc_scene"), bias=0.20, gain=1.0))
+        + 0.10 * _hard_clip01(_hard_prob(_hard_rc(stats, "AI_READY_640_EM_Anomaly", "rc_scene"), bias=0.20, gain=1.0))
     )
 
-    coins_score = _hard_clip01(0.34 * p_metal + 0.18 * gold_like_score + 0.16 * silver_like_score + 0.20 * p_fill + 0.12 * surface_exclusion_score)
-    ingots_score = _hard_clip01(0.42 * p_metal + 0.26 * dense_metal_score + 0.12 * gold_like_score + 0.10 * surface_exclusion_score + 0.10 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.5, gain=0.75))
-    statues_score = _hard_clip01(0.28 * p_metal + 0.22 * dense_metal_score + 0.18 * p_void + 0.16 * surface_exclusion_score + 0.16 * _hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_near"), bias=0.5, gain=0.75))
-    pottery_treasures_score = _hard_clip01(0.38 * p_fill + 0.18 * p_void + 0.18 * _hard_prob(_hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene"), bias=0.5, gain=0.75) + 0.16 * surface_exclusion_score + 0.10 * _hard_prob(_hard_rc(stats, "Secret_Chemical_Protector", "rc_scene"), bias=0.5, gain=0.75))
-    general_antiquities_score = _hard_clip01(0.22 * p_void + 0.22 * p_metal + 0.18 * p_fill + 0.18 * surface_exclusion_score + 0.20 * max(gold_like_score, silver_like_score, dense_metal_score))
+    coins_score = _hard_clip01(
+        0.34 * p_metal
+        + 0.18 * gold_like_score
+        + 0.16 * silver_like_score
+        + 0.12 * _hard_clip01(_hard_prob(_hard_connected_components_above(gold, core_mask, 60), bias=1.0, gain=1.2))
+        + 0.10 * _hard_clip01(_hard_prob(_hard_connected_components_above(silver, core_mask, 60), bias=1.0, gain=1.2))
+        - 0.10 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.95, gain=1.0))
+    )
+    ingots_score = _hard_clip01(
+        0.42 * p_metal
+        + 0.26 * dense_metal_score
+        + 0.12 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene"), bias=0.60, gain=1.0))
+        + 0.10 * _hard_clip01(_hard_prob(_hard_safe_mean(mass, core_mask), bias=float(np.nanmean(mass)), gain=1e-5))
+        + 0.10 * surface_exclusion_score
+    )
+    statues_score = _hard_clip01(
+        0.28 * p_metal
+        + 0.22 * dense_metal_score
+        + 0.18 * _hard_clip01(_hard_prob(_hard_safe_std(mass, core_mask), bias=max(1e-6, float(np.nanstd(mass))), gain=1e-5))
+        + 0.16 * _hard_clip01(_hard_prob(_hard_safe_std(gold, core_mask) + _hard_safe_std(silver, core_mask), bias=0.15, gain=1.5))
+        + 0.16 * surface_exclusion_score
+    )
+    pottery_treasures_score = _hard_clip01(
+        0.34 * p_fill
+        + 0.18 * p_void
+        + 0.18 * _hard_clip01(_hard_prob(_hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene"), bias=0.35, gain=1.0))
+        + 0.14 * _hard_clip01(_hard_prob(_hard_rc(stats, "Secret_Chemical_Protector", "rc_scene"), bias=0.10, gain=1.0))
+        + 0.16 * surface_exclusion_score
+    )
+    general_antiquities_score = _hard_clip01(
+        0.22 * p_void
+        + 0.22 * p_metal
+        + 0.18 * p_fill
+        + 0.18 * surface_exclusion_score
+        + 0.20 * max(gold_like_score, silver_like_score, dense_metal_score)
+    )
+
+    metal_combo = 0.0
+    if "AI_READY_640_Magnetic_Anomaly" in analysis_bands:
+        metal_combo = (
+            0.40 * _hard_robust_norm(mass)
+            + 0.30 * _hard_robust_norm(gold)
+            + 0.20 * _hard_robust_norm(silver)
+            + 0.10 * _hard_robust_norm(analysis_bands["AI_READY_640_Magnetic_Anomaly"])
+        )
+    if isinstance(metal_combo, float):
+        metal_combo = (
+            0.55 * _hard_robust_norm(mass)
+            + 0.25 * _hard_robust_norm(gold)
+            + 0.20 * _hard_robust_norm(silver)
+        )
+
+    metal_core_values = metal_combo[core_mask]
+    if np.isfinite(metal_core_values).sum() > 0:
+        thr_core = float(np.percentile(metal_core_values[np.isfinite(metal_core_values)], 70))
+        metal_shape_mask = (metal_combo >= thr_core) & core_mask
+    else:
+        metal_shape_mask = core_mask.copy()
+
+    elongation = _hard_elongation_from_mask(metal_shape_mask)
+    orientation = _hard_axis_orientation(metal_shape_mask)
+    if p_metal < 0.50:
+        metal_shape = "NO_CONFIRMED_METAL_SHAPE"
+    elif elongation >= 2.2 and orientation in {"N_S", "E_W", "NE_SW", "NW_SE"}:
+        metal_shape = f"LINEAR_{orientation}"
+    elif 1.4 <= elongation < 2.2:
+        metal_shape = f"ELLIPSOID_{orientation}"
+    else:
+        metal_shape = "COMPACT_CLUSTER"
+
+    box_peak_map = (
+        0.55 * _hard_robust_norm(mass)
+        + 0.25 * _hard_robust_norm(gold)
+        + 0.20 * _hard_robust_norm(silver)
+    )
+    jar_peak_map = (
+        0.55 * _hard_robust_norm(pottery)
+        + 0.25 * _hard_robust_norm(thermal)
+        + 0.20 * _hard_robust_norm(chemical)
+    )
+
+    analysis_mask = core_mask | ring_near
+    estimated_stacked_boxes = 0
+    estimated_aligned_jars = 0
+    if p_metal >= 0.58 and dense_metal_score >= 0.58:
+        estimated_stacked_boxes = min(4, max(1, _hard_count_local_peaks(box_peak_map, analysis_mask, threshold_q=75)))
+    if p_fill >= 0.56 and pottery_treasures_score >= 0.56:
+        estimated_aligned_jars = min(6, max(1, _hard_count_local_peaks(jar_peak_map, analysis_mask, threshold_q=72)))
 
     if p_void >= 0.60 and p_metal >= 0.58 and surface_exclusion_score >= 0.55:
         primary_class = "MIXED_VOID_METAL"
@@ -646,10 +791,10 @@ def build_hard_type_classifier_products(
         primary_class = "STRUCTURAL_VOID"
     elif p_metal >= 0.58 and surface_exclusion_score >= 0.50:
         primary_class = "METAL_DENSE"
-    elif p_fill >= 0.58:
-        primary_class = "FILL_OR_POTTERY"
+    elif p_fill >= 0.56:
+        primary_class = "FILL_OR_POTTERY_DISTURBANCE"
     else:
-        primary_class = "UNRESOLVED_ANOMALY"
+        primary_class = "INCONCLUSIVE"
 
     void_subscores = {
         "ENTRANCE": entrance_score,
@@ -658,8 +803,19 @@ def build_hard_type_classifier_products(
         "DRAIN_VOID": drain_void_score,
     }
     best_void_subtype = max(void_subscores, key=void_subscores.get)
+    best_void_subscore = void_subscores[best_void_subtype]
+
     if primary_class in {"STRUCTURAL_VOID", "MIXED_VOID_METAL"} and p_void >= 0.60:
-        void_type = best_void_subtype if void_subscores[best_void_subtype] >= 0.56 else "VOID_UNRESOLVED"
+        if best_void_subtype == "ENTRANCE" and entrance_score >= 0.58 and p_entry >= 0.50:
+            void_type = "ENTRANCE"
+        elif best_void_subtype == "SHAFT" and shaft_score >= 0.58:
+            void_type = "SHAFT"
+        elif best_void_subtype == "CHAMBER" and chamber_score >= 0.58:
+            void_type = "CHAMBER"
+        elif best_void_subtype == "DRAIN_VOID" and drain_void_score >= 0.56:
+            void_type = "DRAIN_VOID"
+        else:
+            void_type = "VOID_UNRESOLVED"
     else:
         void_type = "NO_CONFIRMED_VOID"
 
@@ -669,67 +825,62 @@ def build_hard_type_classifier_products(
         "DENSE_METAL": dense_metal_score,
     }
     best_metal_subtype = max(metal_subscores, key=metal_subscores.get)
-    if p_metal >= 0.55:
-        metal_type = best_metal_subtype if metal_subscores[best_metal_subtype] >= 0.54 else "METAL_UNRESOLVED"
+    best_metal_subscore = metal_subscores[best_metal_subtype]
+
+    if primary_class in {"METAL_DENSE", "MIXED_VOID_METAL"} and p_metal >= 0.58:
+        if gold_like_score >= 0.60 and gold_like_score > silver_like_score + 0.04:
+            metal_type = "GOLD_LIKE"
+        elif silver_like_score >= 0.60 and silver_like_score >= gold_like_score:
+            metal_type = "SILVER_LIKE"
+        elif dense_metal_score >= 0.58:
+            metal_type = "DENSE_METAL"
+        else:
+            metal_type = "METAL_UNRESOLVED"
     else:
         metal_type = "NO_CONFIRMED_METAL"
 
-    analysis_mask = core_mask | ring_near
-    metal_combo = _hard_robust_norm(gold) + _hard_robust_norm(silver) + _hard_robust_norm(mass)
-    jar_combo = _hard_robust_norm(pottery) + _hard_robust_norm(chemical) + _hard_robust_norm(thermal)
-
-    metal_vals = metal_combo[analysis_mask]
-    jar_vals = jar_combo[analysis_mask]
-    metal_thr = float(np.percentile(metal_vals[np.isfinite(metal_vals)], 70)) if np.isfinite(metal_vals).sum() else 0.7
-    jar_thr = float(np.percentile(jar_vals[np.isfinite(jar_vals)], 68)) if np.isfinite(jar_vals).sum() else 0.68
-    metal_obj_mask = (metal_combo >= metal_thr) & analysis_mask
-    jar_obj_mask = (jar_combo >= jar_thr) & analysis_mask
-
-    elongation = _hard_elongation_from_mask(metal_obj_mask if metal_obj_mask.sum() > 0 else core_mask)
-    orientation = _hard_axis_orientation(metal_obj_mask if metal_obj_mask.sum() > 0 else core_mask)
-    if p_metal < 0.50:
-        metal_shape = "NO_CONFIRMED_METAL_SHAPE"
-    elif elongation >= 2.8:
-        metal_shape = f"LINEAR_{orientation}"
-    elif elongation >= 1.45:
-        metal_shape = f"ELLIPSOID_{orientation}"
-    else:
-        metal_shape = "COMPACT_CLUSTER"
-
-    estimated_stacked_boxes = 0
-    if p_metal >= 0.58 and dense_metal_score >= 0.58:
-        estimated_stacked_boxes = min(4, max(1, _hard_count_local_peaks(metal_combo, analysis_mask, threshold_q=75)))
-
-    estimated_aligned_jars = 0
-    if p_fill >= 0.56 and pottery_treasures_score >= 0.56:
-        estimated_aligned_jars = min(6, max(1, _hard_count_local_peaks(jar_combo, analysis_mask, threshold_q=72)))
-
-    content_subscores = {
+    content_scores = {
         "COINS": coins_score,
         "INGOTS": ingots_score,
         "STATUES": statues_score,
         "POTTERY_TREASURES": pottery_treasures_score,
         "GENERAL_ANTIQUITIES": general_antiquities_score,
     }
-    best_content_type = max(content_subscores, key=content_subscores.get)
-    content_type = best_content_type if content_subscores[best_content_type] >= 0.50 else "CONTENT_UNRESOLVED"
+    best_content = max(content_scores, key=content_scores.get)
+    best_content_score = content_scores[best_content]
+
+    if primary_class == "INCONCLUSIVE":
+        content_type = "UNRESOLVED_CONTENT"
+    else:
+        if best_content == "COINS" and coins_score >= 0.57 and metal_type in {"GOLD_LIKE", "SILVER_LIKE", "DENSE_METAL"}:
+            content_type = "COINS"
+        elif best_content == "INGOTS" and ingots_score >= 0.58 and metal_type in {"GOLD_LIKE", "DENSE_METAL"}:
+            content_type = "INGOTS"
+        elif best_content == "STATUES" and statues_score >= 0.58 and metal_type in {"DENSE_METAL", "GOLD_LIKE", "SILVER_LIKE"}:
+            content_type = "STATUES"
+        elif best_content == "POTTERY_TREASURES" and pottery_treasures_score >= 0.56:
+            content_type = "POTTERY_TREASURES"
+        elif general_antiquities_score >= 0.54:
+            content_type = "GENERAL_ANTIQUITIES"
+        else:
+            content_type = "UNRESOLVED_CONTENT"
 
     final_confidence = _hard_clip01(
-        max(
-            0.34 * p_void + 0.34 * p_metal + 0.16 * surface_exclusion_score + 0.16 * max(gold_like_score, silver_like_score, dense_metal_score),
-            0.52 * p_void + 0.22 * surface_exclusion_score + 0.16 * max(entrance_score, shaft_score, chamber_score, drain_void_score),
-            0.54 * p_metal + 0.20 * surface_exclusion_score + 0.26 * max(gold_like_score, silver_like_score, dense_metal_score),
-            0.55 * p_fill + 0.25 * pottery_treasures_score + 0.20 * surface_exclusion_score,
-        )
+        0.24 * max(p_void, p_metal, p_fill)
+        + 0.14 * surface_exclusion_score
+        + 0.12 * max(best_void_subscore, best_metal_subscore, best_content_score)
+        + 0.10 * directionality_strength
+        + 0.10 * _hard_clip01(_hard_prob(abs(_hard_rc(stats, "REPORT_640_Mass_Report", "rc_scene")), bias=0.35, gain=1.0))
+        + 0.10 * _hard_clip01(_hard_prob(abs(_hard_rc(stats, "Secret_Tunnel_Ceiling", "rc_scene")), bias=0.35, gain=1.0))
+        + 0.10 * _hard_clip01(_hard_prob(abs(_hard_rc(stats, "Secret_Hidden_Doors", "rc_scene")), bias=0.20, gain=1.0))
+        + 0.10 * _hard_clip01(_hard_prob(abs(_hard_rc(stats, "REPORT_640_Pottery_Report", "rc_scene")), bias=0.20, gain=1.0))
     )
 
+    active_core_name = "FOCUS_MASK_17M"
+
     record = {
-        "Core_Mask_Source": "focus_zone_17m",
-        "Source_Cell": "cell_128",
+        "Core_Mask_Source": active_core_name,
         "Core_Pixels": int(core_mask.sum()),
-        "Near_Ring_Pixels": int(ring_near.sum()),
-        "Far_Ring_Pixels": int(ring_far.sum()),
-        "Wide_Ring_Pixels": int(ring_wide.sum()),
         "Primary_Class": primary_class,
         "Void_Type": void_type,
         "Metal_Type": metal_type,
@@ -759,12 +910,55 @@ def build_hard_type_classifier_products(
         "General_Antiquities_Score": round(general_antiquities_score, 4),
     }
 
+    hard_type_json = {
+        "core_mask_name": active_core_name,
+        "core_pixels": int(core_mask.sum()),
+        "near_ring_pixels": int(ring_near.sum()),
+        "far_ring_pixels": int(ring_far.sum()),
+        "wide_ring_pixels": int(ring_wide.sum()),
+        "crs": grid_spec.crs,
+        "analysis_pixel_m": 2.0,
+        "native_pixel_m": 10.0,
+        "is_super_resolved": True,
+        "void_family_score": float(void_family_score),
+        "metal_family_score": float(metal_family_score),
+        "fill_family_score": float(fill_family_score),
+        "entrance_family_score": float(entrance_family_score),
+        "p_void": float(p_void),
+        "p_metal": float(p_metal),
+        "p_fill": float(p_fill),
+        "p_entry": float(p_entry),
+        "surface_exclusion_score": float(surface_exclusion_score),
+        "shaft_score": float(shaft_score),
+        "entrance_score": float(entrance_score),
+        "chamber_score": float(chamber_score),
+        "drain_void_score": float(drain_void_score),
+        "gold_like_score": float(gold_like_score),
+        "silver_like_score": float(silver_like_score),
+        "dense_metal_score": float(dense_metal_score),
+        "coins_score": float(coins_score),
+        "ingots_score": float(ingots_score),
+        "statues_score": float(statues_score),
+        "pottery_treasures_score": float(pottery_treasures_score),
+        "general_antiquities_score": float(general_antiquities_score),
+        "dominant_direction": best_dir,
+        "directionality_strength": float(directionality_strength),
+        "primary_class": primary_class,
+        "void_type": void_type,
+        "metal_type": metal_type,
+        "metal_shape": metal_shape,
+        "content_type": content_type,
+        "estimated_stacked_boxes": int(estimated_stacked_boxes),
+        "estimated_aligned_jars": int(estimated_aligned_jars),
+        "final_confidence": float(final_confidence),
+    }
+
     summary_lines = [
-        "AI HARD TYPE CLASSIFIER - CORE 9 ONLY",
+        "AI HARD TYPE CLASSIFIER — CORE 9 ONLY",
         "=" * 82,
-        f"Core mask source          : {record['Core_Mask_Source']}",
-        f"Core pixels               : {record['Core_Pixels']}",
-        f"Near/Far/Wide ring pixels : {record['Near_Ring_Pixels']} / {record['Far_Ring_Pixels']} / {record['Wide_Ring_Pixels']}",
+        f"Core mask source          : {active_core_name}",
+        f"Core pixels               : {int(core_mask.sum())}",
+        f"Near/Far/Wide ring pixels : {int(ring_near.sum())} / {int(ring_far.sum())} / {int(ring_wide.sum())}",
         "-" * 82,
         f"Primary class             : {primary_class}",
         f"Void type                 : {void_type}",
@@ -790,14 +984,7 @@ def build_hard_type_classifier_products(
 
     return {
         "hard_type_record": record,
-        "hard_type_json": {
-            "source_cell": "cell_128",
-            "source_notebook_family": "AI_HARD_TYPE_CLASSIFIER_CORE9",
-            "status": "implemented",
-            "privacy": "FILESYSTEM_ONLY",
-            "record": record,
-            "band_stats": stats,
-        },
+        "hard_type_json": hard_type_json,
         "hard_type_summary_lines": summary_lines,
     }
 

@@ -125,20 +125,55 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert hard_json.is_file()
 
         with hard_csv.open("r", encoding="utf-8", newline="") as handle:
-            hard_rows = list(csv.DictReader(handle))
+            hard_reader = csv.DictReader(handle)
+            hard_rows = list(hard_reader)
         assert len(hard_rows) == 1
-        assert hard_rows[0]["Source_Cell"] == "cell_128"
-        assert hard_rows[0]["Primary_Class"]
-        assert hard_rows[0]["Void_Type"]
-        assert hard_rows[0]["Metal_Type"]
-        assert hard_rows[0]["Content_Type"]
-        assert "Final_Confidence" in hard_rows[0]
+        assert hard_reader.fieldnames == [
+            "Core_Mask_Source",
+            "Core_Pixels",
+            "Primary_Class",
+            "Void_Type",
+            "Metal_Type",
+            "Metal_Shape",
+            "Content_Type",
+            "Estimated_Stacked_Boxes",
+            "Estimated_Aligned_Jars",
+            "Final_Confidence",
+            "Void_Probability",
+            "Metal_Probability",
+            "Fill_Probability",
+            "Entrance_Probability",
+            "Surface_Exclusion",
+            "Dominant_Direction",
+            "Directionality_Strength",
+            "Entrance_Score",
+            "Shaft_Score",
+            "Chamber_Score",
+            "Drain_Void_Score",
+            "Gold_Like_Score",
+            "Silver_Like_Score",
+            "Dense_Metal_Score",
+            "Coins_Score",
+            "Ingots_Score",
+            "Statues_Score",
+            "Pottery_Treasures_Score",
+            "General_Antiquities_Score",
+        ]
+        assert "Source_Cell" not in hard_rows[0]
+        assert hard_rows[0]["Core_Mask_Source"] == "FOCUS_MASK_17M"
+        assert float(hard_rows[0]["Final_Confidence"]) >= 0.0
 
         hard_payload = json.loads(hard_json.read_text(encoding="utf-8"))
-        assert hard_payload["source_cell"] == "cell_128"
-        assert hard_payload["status"] == "implemented"
-        assert hard_payload["record"]["Primary_Class"] == hard_rows[0]["Primary_Class"]
-        assert "AI HARD TYPE CLASSIFIER" in hard_txt.read_text(encoding="utf-8")
+        assert "source_cell" not in hard_payload
+        assert "record" not in hard_payload
+        assert hard_payload["core_mask_name"] == "FOCUS_MASK_17M"
+        assert hard_payload["primary_class"] in {
+            "MIXED_VOID_METAL",
+            "STRUCTURAL_VOID",
+            "METAL_DENSE",
+            "FILL_OR_POTTERY_DISTURBANCE",
+            "INCONCLUSIVE",
+        }
 
         core_csv = run_dir / "full_job" / "focus" / "AI_CORE_RING_SCENE_TARGETS_V7_2C.csv"
         core_txt = run_dir / "full_job" / "focus" / "AI_CORE_RING_SCENE_DECISION_V7_2C.txt"
