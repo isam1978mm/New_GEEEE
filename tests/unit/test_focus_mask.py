@@ -236,10 +236,25 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         lon, lat = first_feature["geometry"]["coordinates"]
         assert -180.0 <= float(lon) <= 180.0
         assert -90.0 <= float(lat) <= 90.0
+        assert detected_payload["app_output_contract"] == "app_enhanced_local_v1"
+        assert detected_payload["production_redaction_required"] is True
+        assert detected_payload["parity_status"] == "app_enhanced_local_contract_not_exact_file_parity"
         assert first_feature["properties"]["Source_Cell"] == "cell_123"
+        assert first_feature["properties"]["App_Output_Contract"] == "app_enhanced_local_v1"
+        assert first_feature["properties"]["Production_Redaction_Required"] is True
+        assert first_feature["properties"]["Notebook_Semantic_Source"] == "cell_123_AI_FOCUS_17M_TARGETS_V7_2"
         assert "UTM_E" in first_feature["properties"]
         assert "UTM_N" in first_feature["properties"]
         assert "Google_Maps_Link" in first_feature["properties"]
+        assert "Classification" in first_feature["properties"]
+        assert "Hard_Primary_Class" in first_feature["properties"]
+        assert "Decision_Grade" in first_feature["properties"]
+        assert "الهدف_المرجح" in first_feature["properties"]
+        assert "المحتوى_المرجح" in first_feature["properties"]
+        assert "نظام_الدفن_او_الحقبة_المرجحة" in first_feature["properties"]
+        assert "تحذير_الفخاخ" in first_feature["properties"]
+        assert "الثقة_النهائية_%" in first_feature["properties"]
+        assert "تفسير_الذكاء" in first_feature["properties"]
 
         heatmap_png = run_dir / "full_job" / "focus" / "AI_HEATMAP_CLASSIFICATION.png"
         heatmap_kmz = run_dir / "full_job" / "focus" / "AI_HEATMAP_CLASSIFICATION.kmz"

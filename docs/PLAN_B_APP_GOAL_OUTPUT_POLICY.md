@@ -88,3 +88,25 @@ Then:
   Phase 2 tensor/raster parity/app-goal review
   Phase 3 gated/replacement parity/app-goal review
 ```
+
+## #26 app-enhanced local contract example
+
+#26 is the reference example for the app-goal policy.
+
+```text
+Output:
+AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+
+Classification:
+App-enhanced local contract
+Blocked for Full exact-file parity
+Production-redaction required
+```
+
+Reason:
+
+```text
+The app output is richer than the closest notebook GeoJSON contract and is better for local detection/operator workflow.
+It keeps app metadata/classifier context and adds notebook semantic fields where available.
+It must not be presented as Full same-export parity because no exact notebook export exists for the app filename.
+```

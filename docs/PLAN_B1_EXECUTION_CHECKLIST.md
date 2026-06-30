@@ -19,7 +19,7 @@ Blocked/documented in this B1 closure pass:
   Do not mark Full unless a real notebook export appears or explicit no-export acceptance is approved.
 
 Not closed by this B1 closure pass:
-- #26 detected-feature GeoJSON.
+- #26 detected-feature GeoJSON: app-enhanced local contract; blocked for Full exact-file parity.
 - #27 heatmap PNG/KMZ and 3D target KMZ.
 - #34 field-operation GeoJSON/KMZ.
 - Phase 2 tensor/raster parity items.
@@ -29,8 +29,8 @@ Not closed by this B1 closure pass:
 Next pass order:
 
 ```text
-1. B1-Followup concrete output parity:
-   #26, then #27, then #34.
+1. B1-Followup concrete outputs:
+   #26 is app-enhanced local / blocked for Full exact-file parity; then close #27, then #34.
 
 2. Phase 2 tensor/raster parity:
    #8, #9, #15, #17, #18, #19, #20, #29.
@@ -264,14 +264,17 @@ These are the next concrete output families to close before Phase 2 tensor/raste
 
 ```text
 #26 — AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+Status:
+- App-enhanced local contract.
+- Blocked for Full exact-file parity because no exact notebook export/writer exists.
+- Production-redaction required before public/API exposure.
+
 Plan:
-- freeze notebook GeoJSON privately
-- hash reference
-- compare feature count
-- compare geometry privately without public coordinate exposure
-- compare key properties
-- patch only if same-export mismatch proves an app gap
-- document, test, commit, push
+- keep app-enhanced local output
+- retain app classifier/core-ring-scene metadata
+- add notebook cell 123 semantic fields when available
+- document status in docs/PLAN_B1_26_APP_ENHANCED_STATUS.md
+- test, commit, push
 
 #27 — AI_HEATMAP_CLASSIFICATION.png / .kmz and AI_3D_TARGET_VISUALIZATION.kmz
 Plan:
@@ -368,7 +371,7 @@ Current state:
 - #33 is documented as app-port / notebook-current-no-export.
 
 Next technical pass:
-1. #26 detected-feature GeoJSON.
+1. #26 detected-feature GeoJSON: app-enhanced local contract / blocked for Full parity.
 2. #27 heatmap/3D visualization files.
 3. #34 field-operation GeoJSON/KMZ.
 
@@ -380,12 +383,50 @@ Then:
 ## Immediate next task
 
 ```text
-#26 freeze task:
-[ ] locate notebook-generated AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
-[ ] copy ref into private folder
-[ ] hash ref
-[ ] generate comparable same-export app output
-[ ] compare feature count, geometry privately, and key properties
-[ ] write redacted comparison report
-[ ] patch only if mismatch proves app gap
+#26 app-enhanced local contract task:
+[x] confirm app-generated AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson exists
+[x] confirm exact notebook export is absent in the downloaded export
+[x] inspect notebook candidate cells and closest cell 123 target contract
+[x] keep app-enhanced local contract instead of blind parity patch
+[x] add notebook semantic fields when available
+[x] mark production-redaction required
+[ ] commit and push #26 app-enhanced code/test/docs
+```
+
+## #26 app-enhanced local contract decision
+
+```text
+Status: App-enhanced local contract; blocked for Full exact-file parity.
+Output: AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+App owner stage: FocusMaskStage
+Privacy: FILESYSTEM_ONLY / production-redaction required
+Status doc: docs/PLAN_B1_26_APP_ENHANCED_STATUS.md
+```
+
+Decision:
+
+```text
+Keep the richer app-local #26 output because it is better for local operator use than forcing exact notebook parity.
+Do not mark this item Full same-export parity unless a real notebook export for the exact app filename appears later.
+```
+
+Current app-enhanced behavior:
+
+```text
+[x] app emits the #26 GeoJSON output
+[x] top-level metadata remains app-oriented: source cell/family, CRS, privacy
+[x] geometry remains WGS84 Point for local/private operator use
+[x] app classifier/core-ring-scene fields are retained
+[x] notebook cell 123 semantic target fields are added when available
+[x] production redaction is required before public/API exposure
+```
+
+Notebook evidence:
+
+```text
+[x] exact notebook export searched in downloaded export
+[x] exact filename was not found
+[x] notebook candidate cells inspected
+[x] cell 123 writes AI_FOCUS_17M_TARGETS_V7_2.geojson, not the app #26 filename
+[x] current app contract is intentionally app-enhanced, not exact parity
 ```

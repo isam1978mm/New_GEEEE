@@ -18,7 +18,7 @@ Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #33 document
 | 23 | ROI-constrained AI analysis inside 17m focus | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 123 contract. Pixel CSV, target CSV, and GeoJSON matched; committed in 8ab7f0b. |
 | 24 | Hard classifiers / target type rules | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9 CSV/TXT/JSON; committed in acca221 and documented in bb10358. |
 | 25 | Target CSV / TXT / JSON outputs | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C CSV/TXT/JSON; committed in 5f7cf9c. |
-| 26 | GeoJSON detected-feature exports | 🟨 Partial | Yes | App port implemented for canonical cell 123 AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson. Outputs and tests pass. Frozen notebook numeric parity still pending. |
+| 26 | GeoJSON detected-feature exports | 🟦 App-enhanced local | Yes | App output AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson is intentionally richer than notebook cell 123 target GeoJSON: app metadata/classifier context plus notebook semantic fields when available. Full exact-file parity is blocked because no exact notebook export/writer exists. Production-redaction required. |
 | 27 | KMZ heatmap / 3D target visualization | 🟨 Partial | Yes | App port implemented for canonical cell 155 AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
@@ -80,7 +80,7 @@ B2 focus and target contracts implemented:
 - Item 23: cell 123 focus pixel CSV, target CSV, and focus GeoJSON — Full same-export parity.
 - Item 24: cell 128 hard type classifier CSV/TXT/JSON — Full same-export parity.
 - Item 25: cell 121 core/ring/scene CSV/TXT/JSON — Full same-export parity.
-- Item 26: cell 123 WGS84 detected-feature GeoJSON.
+- Item 26: app-enhanced local WGS84 detected-feature GeoJSON; Full exact-file parity blocked; production-redaction required.
 
 B3 local/private visualization contracts implemented:
 - Item 27: cell 155 heatmap PNG, heatmap KMZ, and 3D visualization KMZ.
@@ -639,3 +639,15 @@ All not-done-now items can be made in the app.
 They are not blocked by impossibility.
 They require implementation, contract selection, and validation against frozen notebook outputs.
 ```
+
+## B1 #26 app-enhanced local decision
+
+```text
+#26 AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+Status: App-enhanced local contract
+Full exact-file parity: blocked
+Production-redaction required: yes
+Status doc: docs/PLAN_B1_26_APP_ENHANCED_STATUS.md
+```
+
+The app keeps the richer local/private GeoJSON contract for operator workflow. It includes app metadata/classifier context and notebook semantic fields where available. This is not marked Full same-export parity because no notebook output with the exact app filename was found.

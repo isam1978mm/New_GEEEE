@@ -1624,22 +1624,43 @@ def build_detected_features_wgs84_geojson_products(
     for row in target_records:
         utm_e = float(row["UTM_E"])
         utm_n = float(row["UTM_N"])
-        lon, lat = transformer.transform(utm_e, utm_n)
+        fallback_lon, fallback_lat = transformer.transform(utm_e, utm_n)
+        lon = float(row.get("Lon", fallback_lon))
+        lat = float(row.get("Lat", fallback_lat))
+        google_maps_link = str(
+            row.get("Google_Maps_Link")
+            or f"https://www.google.com/maps?q={float(lat):.8f},{float(lon):.8f}"
+        )
+
+        target_label = str(row.get("الهدف_المرجح", row.get("Classification", "")))
+        target_confidence = row.get("الثقة_النهائية_%", row.get("Confidence", ""))
 
         props = {
             "Target_ID": int(row["Target_ID"]),
             "Source_Cell": "cell_123",
             "Source_Notebook_Family": "AI_FOCUS_17M_TARGETS_WGS84_V7_2",
+            "App_Output_Contract": "app_enhanced_local_v1",
+            "Notebook_Semantic_Source": "cell_123_AI_FOCUS_17M_TARGETS_V7_2",
+            "Production_Redaction_Required": True,
             "row": int(row["row"]),
             "col": int(row["col"]),
             "UTM_E": round(utm_e, 3),
             "UTM_N": round(utm_n, 3),
             "Lon": round(float(lon), 8),
             "Lat": round(float(lat), 8),
-            "Google_Maps_Link": f"https://www.google.com/maps?q={float(lat):.8f},{float(lon):.8f}",
-            "Classification": str(row.get("Classification", "")),
-            "Confidence": str(row.get("Confidence", "")),
-            "ROI_Composite_Score": float(row.get("ROI_Composite_Score", 0.0)),
+            "Google_Maps_Link": google_maps_link,
+            "Classification": target_label,
+            "Confidence": str(target_confidence),
+            "ROI_Composite_Score": float(row.get("ROI_Composite_Score", row.get("درجة_مركبة", 0.0))),
+            "الهدف_المرجح": str(row.get("الهدف_المرجح", "")),
+            "المحتوى_المرجح": str(row.get("المحتوى_المرجح", "")),
+            "نظام_الدفن_او_الحقبة_المرجحة": str(row.get("نظام_الدفن_او_الحقبة_المرجحة", "")),
+            "تحذير_الفخاخ": str(row.get("تحذير_الفخاخ", "")),
+            "ثقة_الشكل_%": row.get("ثقة_الشكل_%", ""),
+            "ثقة_المحتوى_%": row.get("ثقة_المحتوى_%", ""),
+            "ثقة_الحقبة_%": row.get("ثقة_الحقبة_%", ""),
+            "الثقة_النهائية_%": row.get("الثقة_النهائية_%", ""),
+            "تفسير_الذكاء": str(row.get("تفسير_الذكاء", "")),
             "Hard_Primary_Class": str(hard_type_record.get("Primary_Class", "")),
             "Hard_Void_Type": str(hard_type_record.get("Void_Type", "")),
             "Hard_Metal_Type": str(hard_type_record.get("Metal_Type", "")),
@@ -1666,6 +1687,10 @@ def build_detected_features_wgs84_geojson_products(
             "name": "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2",
             "source_cell": "cell_123",
             "source_notebook_family": "AI_FOCUS_17M_TARGETS_WGS84_V7_2",
+            "app_output_contract": "app_enhanced_local_v1",
+            "notebook_semantic_source": "cell_123_AI_FOCUS_17M_TARGETS_V7_2",
+            "parity_status": "app_enhanced_local_contract_not_exact_file_parity",
+            "production_redaction_required": True,
             "coordinate_reference_system": "EPSG:4326",
             "privacy": "FILESYSTEM_ONLY",
             "features": features,
