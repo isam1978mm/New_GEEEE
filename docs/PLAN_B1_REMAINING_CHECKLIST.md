@@ -134,3 +134,18 @@ Next commands:
 1. Run focused tests after label patch.
 2. Update #24 status doc to Full.
 3. Commit and push #24.
+
+## Plan B1 #23 final status
+
+Status: Full locally — pending commit/push at time of writing.
+
+- [x] Freeze notebook #23 references.
+- [x] Inspect notebook cell 123 contract.
+- [x] Patch app #23 helper to notebook-compatible output shape.
+- [x] Patch unit test expectations for notebook-compatible #23 fields.
+- [x] Run forbidden-term test.
+- [x] Run same-export comparison.
+- [x] Same-export comparison full_pass: True.
+- [x] Run focused validation tests.
+- [ ] Commit #23 code/test/docs.
+- [ ] Push #23 commit.

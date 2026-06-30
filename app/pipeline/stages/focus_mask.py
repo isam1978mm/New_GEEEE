@@ -235,12 +235,158 @@ def _classify_target(row: dict[str, object], medians: dict[str, float]) -> str:
     return "Priority E ? Comparative anomaly inside 17m"
 
 
+def _focus_softmax_dict(score_dict: dict[str, float]) -> dict[str, float]:
+    keys = list(score_dict.keys())
+    vals = np.array([score_dict[k] for k in keys], dtype=np.float64)
+
+    if np.all(~np.isfinite(vals)):
+        return {k: 1.0 / len(keys) for k in keys}
+
+    vals[~np.isfinite(vals)] = -9999.0
+    vals = vals - np.nanmax(vals)
+    ex = np.exp(vals)
+    den = ex.sum()
+    if den <= 0 or not np.isfinite(den):
+        return {k: 1.0 / len(keys) for k in keys}
+    probs = ex / den
+    return {k: float(v) for k, v in zip(keys, probs)}
+
+
+def _focus_google_maps_link(lat: float, lon: float) -> str:
+    return f"https://www.google.com/maps?q={lat:.6f},{lon:.6f}"
+
+
+def _infer_focus_ai_target(row: dict[str, object]) -> dict[str, object]:
+    metal = float(row["محور_معدني"])
+    void = float(row["محور_فراغ"])
+    struct = float(row["محور_بنيوي"])
+
+    gold = float(row["z_Gold"])
+    silver = float(row["z_Silver"])
+    tunnel = float(row["z_Tunnel"])
+    thermal = float(row["z_Thermal"])
+    doors = float(row["z_Doors"])
+    mass = float(row["z_Mass"])
+    pottery = float(row["z_Pottery"])
+    zero = float(row["z_Zero"])
+    chem = float(row["z_Chemical"])
+
+    form_scores = {
+        "ناووس": 1.35 * struct + 1.10 * mass + 0.25 * metal - 0.15 * void,
+        "تابوت": 1.20 * struct + 0.95 * mass + 0.35 * metal,
+        "ران": 1.30 * metal + 1.00 * mass + 0.30 * struct,
+        "صندوق": 1.35 * metal + 0.95 * mass + 0.20 * doors,
+        "صناديق متراكبة عمودية": 1.20 * metal + 1.10 * mass + 0.65 * struct,
+        "صناديق متراكبة أفقية": 1.15 * metal + 1.05 * mass + 0.60 * struct,
+        "جرة فخارية": 1.20 * pottery + 0.55 * metal + 0.20 * thermal,
+        "جرار فخارية": 1.25 * pottery + 0.65 * mass + 0.20 * struct,
+        "غرفة": 1.20 * void + 1.10 * struct + 0.55 * mass,
+        "غرفة تكنيزية": 1.10 * void + 1.15 * struct + 0.95 * metal + 0.75 * mass,
+        "غرفة بقايا عضوية": 1.00 * void + 0.75 * thermal + 0.55 * pottery + 0.35 * chem,
+        "سرداب": 1.35 * void + 1.10 * tunnel + 0.55 * struct,
+        "ممر": 1.20 * void + 1.15 * tunnel + 0.45 * doors,
+        "مدخل": 1.30 * struct + 1.15 * doors + 0.55 * void,
+        "باب": 1.25 * struct + 1.20 * doors + 0.35 * mass,
+        "باب سري": 1.35 * doors + 1.10 * struct + 0.40 * void,
+        "جب": 1.30 * void + 0.85 * thermal + 0.35 * doors,
+        "بئر جانبي سفلي": 1.35 * void + 0.90 * thermal + 0.45 * tunnel,
+        "درج مستقيم": 1.20 * struct + 0.95 * void + 0.40 * thermal,
+        "درج لولبي": 1.30 * struct + 1.00 * void + 0.55 * thermal + 0.20 * doors,
+        "قبر شمسي": 1.10 * struct + 0.95 * mass + 0.45 * thermal,
+        "قبر ملكي": 1.25 * struct + 1.05 * mass + 0.75 * metal + 0.35 * void,
+        "قبر روماني": 1.15 * struct + 0.95 * mass + 0.40 * pottery,
+        "قبر بيزنطي": 1.10 * struct + 0.90 * mass + 0.45 * thermal + 0.30 * pottery,
+        "دفين يوناني": 1.10 * metal + 0.85 * mass + 0.35 * pottery,
+        "دفين عثماني": 1.20 * metal + 0.80 * silver + 0.35 * mass,
+        "دفين غرفة": 1.05 * void + 1.00 * struct + 0.90 * metal + 0.70 * mass,
+        "تمثال": 1.10 * mass + 0.85 * metal + 0.30 * struct,
+        "سبائك": 1.35 * metal + 1.05 * gold + 0.65 * mass,
+        "عملات": 1.15 * metal + 1.00 * silver + 0.35 * pottery,
+        "زجاج": 0.95 * pottery + 0.35 * thermal + 0.15 * metal,
+        "أحجار كريمة": 1.05 * gold + 0.65 * chem + 0.25 * metal,
+        "زئبق أحمر": 1.15 * chem + 0.85 * thermal + 0.35 * metal,
+        "زئبق أسود": 1.20 * chem + 0.95 * void + 0.20 * thermal,
+        "أسلحة أثرية": 1.15 * metal + 0.95 * mass + 0.30 * struct,
+        "سيف": 1.10 * metal + 0.85 * mass + 0.20 * struct,
+        "درع": 1.05 * metal + 0.95 * mass + 0.25 * struct,
+        "خوذة": 1.00 * metal + 0.85 * mass + 0.20 * thermal,
+        "ترس": 1.00 * metal + 0.90 * mass + 0.20 * struct,
+        "مسدس عثماني": 1.20 * metal + 0.80 * silver + 0.45 * mass,
+        "فخ سلك معدني": 1.10 * metal + 0.95 * struct + 0.25 * doors,
+        "بلاطة منزلقة": 1.25 * struct + 0.85 * doors + 0.35 * mass,
+        "فخ غير محدد": 1.00 * struct + 0.90 * void + 0.35 * doors,
+    }
+
+    content_scores = {
+        "ذهب": 1.35 * gold + 0.55 * metal,
+        "فضة": 1.25 * silver + 0.45 * metal,
+        "نحاس": 0.95 * metal + 0.35 * silver + 0.15 * mass,
+        "معادن مختلطة": 1.00 * metal + 0.45 * silver + 0.35 * mass,
+        "فخار": 1.30 * pottery + 0.20 * thermal,
+        "زجاج": 1.10 * pottery + 0.30 * thermal,
+        "أحجار كريمة": 1.10 * chem + 0.55 * gold,
+        "زئبق أحمر": 1.25 * chem + 0.85 * thermal,
+        "زئبق أسود": 1.20 * chem + 0.90 * void,
+        "كتلة حجرية": 1.15 * mass + 0.75 * struct,
+        "بقايا عضوية": 0.95 * thermal + 0.75 * pottery + 0.35 * chem,
+        "فراغ صرف": 1.30 * void + 0.25 * tunnel,
+        "محتوى غير محسوم": 0.20,
+    }
+
+    burial_scores = {
+        "دفن روماني": 1.10 * struct + 0.85 * mass + 0.35 * pottery,
+        "دفن بيزنطي": 1.05 * struct + 0.80 * mass + 0.35 * thermal,
+        "دفن عثماني": 1.00 * metal + 0.75 * silver + 0.30 * mass,
+        "دفن يوناني": 0.95 * metal + 0.70 * pottery + 0.30 * mass,
+        "دفن أيّوبي": 0.95 * struct + 0.70 * mass + 0.25 * thermal,
+        "دفن آشوري": 1.05 * struct + 0.85 * mass + 0.20 * metal,
+        "دفن يهودي": 0.90 * struct + 0.70 * mass + 0.20 * thermal,
+        "غير محسوم": 0.25,
+    }
+
+    form_probs = _focus_softmax_dict(form_scores)
+    content_probs = _focus_softmax_dict(content_scores)
+    burial_probs = _focus_softmax_dict(burial_scores)
+
+    best_form = max(form_probs, key=form_probs.get)
+    best_content = max(content_probs, key=content_probs.get)
+    best_burial = max(burial_probs, key=burial_probs.get)
+
+    conf_form = form_probs[best_form] * 100.0
+    conf_content = content_probs[best_content] * 100.0
+    conf_burial = burial_probs[best_burial] * 100.0
+    final_conf = (0.55 * conf_form) + (0.25 * conf_content) + (0.20 * conf_burial)
+
+    trap_score = max(form_scores["فخ سلك معدني"], form_scores["بلاطة منزلقة"], form_scores["فخ غير محدد"])
+    trap_flag = "تحذير فخ" if trap_score > np.percentile(list(form_scores.values()), 75) else "لا يوجد تحذير فخ واضح"
+
+    interpretation = (
+        f"محور معدني={metal:.2f} | محور فراغ={void:.2f} | محور بنيوي={struct:.2f} | "
+        f"الشكل المرجح={best_form} | المحتوى المرجح={best_content} | "
+        f"نظام الدفن/الحقبة المرجحة={best_burial} | {trap_flag}"
+    )
+
+    return {
+        "الهدف_المرجح": best_form,
+        "المحتوى_المرجح": best_content,
+        "نظام_الدفن_او_الحقبة_المرجحة": best_burial,
+        "تحذير_الفخاخ": trap_flag,
+        "ثقة_الشكل_%": round(conf_form, 1),
+        "ثقة_المحتوى_%": round(conf_content, 1),
+        "ثقة_الحقبة_%": round(conf_burial, 1),
+        "الثقة_النهائية_%": round(final_conf, 1),
+        "تفسير_الذكاء": interpretation,
+    }
+
+
 def build_focus_roi_analysis_products(
     *,
     focus_mask: np.ndarray,
     analysis_bands: dict[str, np.ndarray],
     grid_spec: GridSpec,
 ) -> dict[str, object]:
+    from pyproj import Transformer
+
     mask_bool = focus_mask.astype(bool)
     rows, cols = np.where(mask_bool)
     if rows.size == 0:
@@ -259,67 +405,132 @@ def build_focus_roi_analysis_products(
         tmp[mask_bool] = zvals
         z_bands[name] = tmp
 
-    score = (
-        1.20 * np.nan_to_num(z_bands["Secret_Gold_Halo"], nan=0.0)
-        + 1.00 * np.nan_to_num(z_bands["Secret_Silver_Oxide"], nan=0.0)
-        + 0.90 * np.nan_to_num(z_bands["Secret_Hidden_Doors"], nan=0.0)
-        + 0.90 * np.nan_to_num(z_bands["Secret_Tunnel_Ceiling"], nan=0.0)
-        + 0.80 * np.nan_to_num(z_bands["Secret_Thermal_Inertia"], nan=0.0)
-        + 0.60 * np.nan_to_num(z_bands["Secret_Chemical_Protector"], nan=0.0)
-        + 0.80 * np.nan_to_num(z_bands["REPORT_640_Mass_Report"], nan=0.0)
-        + 0.60 * np.nan_to_num(z_bands["REPORT_640_Pottery_Report"], nan=0.0)
-        + 0.50 * np.nan_to_num(z_bands["REPORT_640_FINAL_Zero_Point_Targets"], nan=0.0)
-    )
-    score[~mask_bool] = np.nan
-
+    to_wgs84 = Transformer.from_crs(grid_spec.crs, "EPSG:4326", always_xy=True)
     affine = Affine(*grid_spec.transform)
+
     pixel_records: list[dict[str, object]] = []
     for r, c in zip(rows, cols):
         x, y = rasterio.transform.xy(affine, int(r), int(c), offset="center")
+        lon, lat = to_wgs84.transform(float(x), float(y))
+
         record: dict[str, object] = {
             "row": int(r),
             "col": int(c),
+            "X_native": round(float(x), 3),
+            "Y_native": round(float(y), 3),
             "UTM_E": round(float(x), 3),
             "UTM_N": round(float(y), 3),
+            "Lon": round(float(lon), 8),
+            "Lat": round(float(lat), 8),
+            "Google_Maps_Link": _focus_google_maps_link(float(lat), float(lon)),
+            "Secret_Gold_Halo": float(analysis_bands["Secret_Gold_Halo"][r, c]),
+            "Secret_Silver_Oxide": float(analysis_bands["Secret_Silver_Oxide"][r, c]),
+            "Secret_Tunnel_Ceiling": float(analysis_bands["Secret_Tunnel_Ceiling"][r, c]),
+            "Secret_Thermal_Inertia": float(analysis_bands["Secret_Thermal_Inertia"][r, c]),
+            "Secret_Chemical_Protector": float(analysis_bands["Secret_Chemical_Protector"][r, c]),
+            "Secret_Hidden_Doors": float(analysis_bands["Secret_Hidden_Doors"][r, c]),
+            "REPORT_640_FINAL_Zero_Point_Targets": float(analysis_bands["REPORT_640_FINAL_Zero_Point_Targets"][r, c]),
+            "REPORT_640_Mass_Report": float(analysis_bands["REPORT_640_Mass_Report"][r, c]),
+            "REPORT_640_Pottery_Report": float(analysis_bands["REPORT_640_Pottery_Report"][r, c]),
+            "z_Gold": float(z_bands["Secret_Gold_Halo"][r, c]),
+            "z_Silver": float(z_bands["Secret_Silver_Oxide"][r, c]),
+            "z_Tunnel": float(z_bands["Secret_Tunnel_Ceiling"][r, c]),
+            "z_Thermal": float(z_bands["Secret_Thermal_Inertia"][r, c]),
+            "z_Chemical": float(z_bands["Secret_Chemical_Protector"][r, c]),
+            "z_Doors": float(z_bands["Secret_Hidden_Doors"][r, c]),
+            "z_Zero": float(z_bands["REPORT_640_FINAL_Zero_Point_Targets"][r, c]),
+            "z_Mass": float(z_bands["REPORT_640_Mass_Report"][r, c]),
+            "z_Pottery": float(z_bands["REPORT_640_Pottery_Report"][r, c]),
         }
-        for name in FOCUS_ANALYSIS_BANDS:
-            record[name] = float(analysis_bands[name][r, c])
-        record["ROI_Composite_Score"] = float(score[r, c])
+
+        record["محور_معدني"] = (
+            1.30 * float(record["z_Gold"])
+            + 1.10 * float(record["z_Silver"])
+            + 0.90 * float(record["z_Mass"])
+            + 0.40 * float(record["z_Chemical"])
+        )
+        record["محور_فراغ"] = (
+            1.20 * float(record["z_Tunnel"])
+            + 1.00 * float(record["z_Thermal"])
+            + 0.70 * float(record["z_Doors"])
+            + 0.30 * float(record["z_Zero"])
+        )
+        record["محور_بنيوي"] = (
+            1.25 * float(record["z_Doors"])
+            + 1.00 * float(record["z_Tunnel"])
+            + 0.85 * float(record["z_Mass"])
+            + 0.35 * float(record["z_Thermal"])
+        )
+        record["درجة_مركبة"] = (
+            1.00 * float(record["محور_معدني"])
+            + 0.90 * float(record["محور_فراغ"])
+            + 0.95 * float(record["محور_بنيوي"])
+            + 0.40 * float(record["z_Pottery"])
+        )
+
         pixel_records.append(record)
 
-    pixel_records.sort(key=lambda item: float(item["ROI_Composite_Score"]), reverse=True)
+    pixel_records.sort(key=lambda item: float(item["درجة_مركبة"]), reverse=True)
+
     target_source = pixel_records[: min(5, len(pixel_records))]
-    medians = {
-        name: float(np.nanmedian([float(row[name]) for row in target_source])) if target_source else 0.0
-        for name in FOCUS_ANALYSIS_BANDS
-    }
-    scores = [float(row["ROI_Composite_Score"]) for row in target_source]
+    target_fields = [
+        "Target_ID",
+        "الهدف_المرجح",
+        "المحتوى_المرجح",
+        "نظام_الدفن_او_الحقبة_المرجحة",
+        "تحذير_الفخاخ",
+        "ثقة_الشكل_%",
+        "ثقة_المحتوى_%",
+        "ثقة_الحقبة_%",
+        "الثقة_النهائية_%",
+        "تفسير_الذكاء",
+        "X_native",
+        "Y_native",
+        "UTM_E",
+        "UTM_N",
+        "Lon",
+        "Lat",
+        "Google_Maps_Link",
+        "row",
+        "col",
+        "محور_معدني",
+        "محور_فراغ",
+        "محور_بنيوي",
+        "درجة_مركبة",
+        "Secret_Gold_Halo",
+        "Secret_Silver_Oxide",
+        "Secret_Tunnel_Ceiling",
+        "Secret_Thermal_Inertia",
+        "Secret_Chemical_Protector",
+        "Secret_Hidden_Doors",
+        "REPORT_640_FINAL_Zero_Point_Targets",
+        "REPORT_640_Mass_Report",
+        "REPORT_640_Pottery_Report",
+    ]
 
     target_records: list[dict[str, object]] = []
     for index, source in enumerate(target_source, start=1):
-        target = {
-            "Target_ID": index,
-            "row": source["row"],
-            "col": source["col"],
-            "UTM_E": source["UTM_E"],
-            "UTM_N": source["UTM_N"],
-            "Classification": _classify_target(source, medians),
-            "Confidence": _score_confidence(float(source["ROI_Composite_Score"]), scores),
-            "ROI_Composite_Score": source["ROI_Composite_Score"],
-        }
-        for name in FOCUS_ANALYSIS_BANDS:
-            target[name] = source[name]
-        target_records.append(target)
+        inferred = _infer_focus_ai_target(source)
+        merged = dict(source)
+        merged.update(inferred)
+        merged["Target_ID"] = int(index)
+        target_records.append({field: merged[field] for field in target_fields})
 
     features = [
         {
             "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [float(row["UTM_E"]), float(row["UTM_N"])]},
+            "geometry": {"type": "Point", "coordinates": [float(row["Lon"]), float(row["Lat"])]},
             "properties": {
                 "Target_ID": int(row["Target_ID"]),
-                "Classification": row["Classification"],
-                "Confidence": row["Confidence"],
-                "ROI_Composite_Score": float(row["ROI_Composite_Score"]),
+                "الهدف_المرجح": row["الهدف_المرجح"],
+                "المحتوى_المرجح": row["المحتوى_المرجح"],
+                "نظام_الدفن_او_الحقبة_المرجحة": row["نظام_الدفن_او_الحقبة_المرجحة"],
+                "تحذير_الفخاخ": row["تحذير_الفخاخ"],
+                "الثقة_النهائية_%": float(row["الثقة_النهائية_%"]),
+                "UTM_E": float(row["UTM_E"]),
+                "UTM_N": float(row["UTM_N"]),
+                "Google_Maps_Link": row["Google_Maps_Link"],
+                "تفسير_الذكاء": row["تفسير_الذكاء"],
             },
         }
         for row in target_records
@@ -330,8 +541,6 @@ def build_focus_roi_analysis_products(
         "target_records": target_records,
         "target_geojson": {"type": "FeatureCollection", "features": features},
     }
-
-
 
 def _hard_get_vals(arr: np.ndarray, mask: np.ndarray) -> np.ndarray:
     vals = arr[mask].astype(np.float64)
@@ -1723,16 +1932,55 @@ def write_focus_mask_outputs(run_dir: Path, grid_spec: GridSpec, products: dict[
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     _write_csv(band_summary_path, ["band_index", "band_name", "focus_mean", "focus_min", "focus_max"], band_summary_rows)
 
-    pixel_fields = ["row", "col", "UTM_E", "UTM_N", *FOCUS_ANALYSIS_BANDS, "ROI_Composite_Score"]
-    target_fields = [
-        "Target_ID",
+    pixel_fields = [
         "row",
         "col",
+        "X_native",
+        "Y_native",
         "UTM_E",
         "UTM_N",
-        "Classification",
-        "Confidence",
-        "ROI_Composite_Score",
+        "Lon",
+        "Lat",
+        "Google_Maps_Link",
+        *FOCUS_ANALYSIS_BANDS,
+        "z_Gold",
+        "z_Silver",
+        "z_Tunnel",
+        "z_Thermal",
+        "z_Chemical",
+        "z_Doors",
+        "z_Zero",
+        "z_Mass",
+        "z_Pottery",
+        "محور_معدني",
+        "محور_فراغ",
+        "محور_بنيوي",
+        "درجة_مركبة",
+    ]
+    target_fields = [
+        "Target_ID",
+        "الهدف_المرجح",
+        "المحتوى_المرجح",
+        "نظام_الدفن_او_الحقبة_المرجحة",
+        "تحذير_الفخاخ",
+        "ثقة_الشكل_%",
+        "ثقة_المحتوى_%",
+        "ثقة_الحقبة_%",
+        "الثقة_النهائية_%",
+        "تفسير_الذكاء",
+        "X_native",
+        "Y_native",
+        "UTM_E",
+        "UTM_N",
+        "Lon",
+        "Lat",
+        "Google_Maps_Link",
+        "row",
+        "col",
+        "محور_معدني",
+        "محور_فراغ",
+        "محور_بنيوي",
+        "درجة_مركبة",
         *FOCUS_ANALYSIS_BANDS,
     ]
     _write_csv(pixel_report_path, pixel_fields, pixel_records)

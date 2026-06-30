@@ -102,20 +102,38 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         with pixel_report.open("r", encoding="utf-8", newline="") as handle:
             pixel_rows = list(csv.DictReader(handle))
         assert len(pixel_rows) == int(mask.sum())
-        assert "ROI_Composite_Score" in pixel_rows[0]
+        assert "X_native" in pixel_rows[0]
+        assert "Y_native" in pixel_rows[0]
+        assert "Lon" in pixel_rows[0]
+        assert "Lat" in pixel_rows[0]
+        assert "Google_Maps_Link" in pixel_rows[0]
+        assert "z_Gold" in pixel_rows[0]
+        assert "z_Mass" in pixel_rows[0]
+        assert "محور_معدني" in pixel_rows[0]
+        assert "محور_فراغ" in pixel_rows[0]
+        assert "محور_بنيوي" in pixel_rows[0]
+        assert "درجة_مركبة" in pixel_rows[0]
         assert "Secret_Gold_Halo" in pixel_rows[0]
         assert "REPORT_640_Mass_Report" in pixel_rows[0]
 
         with target_report.open("r", encoding="utf-8", newline="") as handle:
             target_rows = list(csv.DictReader(handle))
         assert 1 <= len(target_rows) <= 5
-        assert "Classification" in target_rows[0]
-        assert "Confidence" in target_rows[0]
+        assert "الهدف_المرجح" in target_rows[0]
+        assert "المحتوى_المرجح" in target_rows[0]
+        assert "نظام_الدفن_او_الحقبة_المرجحة" in target_rows[0]
+        assert "تحذير_الفخاخ" in target_rows[0]
+        assert "الثقة_النهائية_%" in target_rows[0]
+        assert "تفسير_الذكاء" in target_rows[0]
+        assert "Google_Maps_Link" in target_rows[0]
 
         geojson = json.loads(target_geojson.read_text(encoding="utf-8"))
         assert geojson["type"] == "FeatureCollection"
         assert 1 <= len(geojson["features"]) <= 5
         assert geojson["features"][0]["geometry"]["type"] == "Point"
+        assert "الهدف_المرجح" in geojson["features"][0]["properties"]
+        assert "الثقة_النهائية_%" in geojson["features"][0]["properties"]
+        assert "Google_Maps_Link" in geojson["features"][0]["properties"]
 
         hard_csv = run_dir / "full_job" / "focus" / "AI_HARD_TYPE_CLASSIFIER_CORE9.csv"
         hard_txt = run_dir / "full_job" / "focus" / "AI_HARD_TYPE_CLASSIFIER_CORE9.txt"
