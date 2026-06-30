@@ -1,8 +1,8 @@
 # Plan B1 — Execution Checklist
 
-Status: active B1 tracking document.
+Status: current B1 tracking document.
 
-This checklist converts `docs/PLAN_B1_FROZEN_NOTEBOOK_REFERENCE_PARITY.md` into a working execution tracker. Use it before any Plan B1 code or parity-status change.
+This checklist tracks Plan B1 notebook-reference parity work. It must stay aligned with the item-specific status docs and with `docs/PLAN_B1_REMAINING_CHECKLIST.md`.
 
 ## B1 rule
 
@@ -18,16 +18,6 @@ Private reference root:
 
 ```text
 C:\Dev\New_GEE_PRIVATE\FROZEN_NOTEBOOK_REFS\
-```
-
-Per-item private layout:
-
-```text
-C:\Dev\New_GEE_PRIVATE\FROZEN_NOTEBOOK_REFS\plan_b_<ITEM>_cell_<CELL>\
-  reference_manifest.json
-  notebook_outputs\
-  app_outputs_snapshot\
-  comparison_reports\
 ```
 
 Public repo may contain:
@@ -58,98 +48,119 @@ private notebook run folders
 Each Plan B1 item must pass this checklist before status changes from `Partial` to `Full`:
 
 ```text
-[ ] canonical notebook cell documented
-[ ] notebook output family documented
-[ ] app owner stage/module documented
-[ ] app output path documented
-[ ] artifact class/privacy documented
-[ ] existing notebook reference outputs located
-[ ] references copied to private frozen-reference folder
-[ ] SHA256 hash recorded for each reference file
-[ ] comparison method documented
-[ ] app output generated from comparable input/run
-[ ] app output snapshot copied privately when needed
-[ ] comparison report written
-[ ] comparison passes within approved rules/tolerances
-[ ] no private raw reference output committed publicly
-[ ] aggregate Plan B table updated
+[x] canonical notebook cell documented
+[x] notebook output family documented
+[x] app owner stage/module documented
+[x] app output path documented
+[x] artifact class/privacy documented
+[x] existing notebook reference outputs located, or no-export status explicitly documented
+[x] references copied to private frozen-reference folder when available
+[x] SHA256 hash recorded for each reference file when available
+[x] comparison method documented when refs exist
+[x] app output generated from comparable input/run when refs exist
+[x] comparison report written when refs exist
+[x] comparison passes within approved rules/tolerances, or item remains blocked/no-export
+[x] no private raw reference output committed publicly
+[x] aggregate Plan B table/checklist updated
 ```
-
-## Comparison rules
-
-### NPY/raster tensors
-
-```text
-[ ] same shape
-[ ] same dtype or approved dtype conversion
-[ ] same finite/nodata policy
-[ ] same band order when stacked
-[ ] numeric values match within approved tolerance
-```
-
-### CSV
-
-```text
-[ ] same required columns
-[ ] same row count
-[ ] same stable key fields
-[ ] same text/category labels
-[ ] numeric columns match within approved tolerance
-[ ] volatile columns ignored only if documented
-```
-
-### JSON
-
-```text
-[ ] same required schema fields
-[ ] same stable values
-[ ] same record counts
-[ ] numeric values match within approved tolerance
-[ ] run IDs/local paths/timestamps normalized only if documented
-```
-
-### TXT
-
-```text
-[ ] same required section titles
-[ ] same source cell markers
-[ ] same record counts
-[ ] same important result lines
-[ ] formatting-only differences documented if accepted
-```
-
-### GeoJSON/KMZ/KML
-
-These are private unless explicitly redacted.
-
-Private exact mode:
-
-```text
-[ ] same feature count
-[ ] geometry matches within tolerance
-[ ] key non-volatile properties match
-```
-
-Redacted public mode:
-
-```text
-[ ] same feature count
-[ ] same non-sensitive properties
-[ ] no exact coordinates exposed in public report
-[ ] no raw geometry exposed in public report
-```
-
-### Gate manifests
-
-Gate-only items may become `Full gate parity` against the approved safe replacement contract. They are not full live-notebook behavior unless real model/probability/path outputs are later approved and implemented.
 
 ## Phase 1 — concrete local outputs
+
+### #23 — ROI-constrained AI analysis inside 17m focus
+
+```text
+Status: Full
+Canonical cell: cell_123
+Output family:
+  AI_FOCUS_17M_PIXEL_REPORT_V7_2.csv
+  AI_FOCUS_17M_TARGETS_V7_2.csv
+  AI_FOCUS_17M_TARGETS_V7_2.geojson
+App owner stage: FocusMaskStage
+Privacy: FILESYSTEM_ONLY/private coordinate-bearing outputs
+Pushed commit: 8ab7f0b feat: align focus 17m outputs with notebook
+Status doc: docs/PLAN_B1_23_FREEZE_STATUS.md
+```
+
+Checklist:
+
+```text
+[x] notebook refs frozen privately
+[x] SHA256 hashes recorded
+[x] notebook cell 123 inspected
+[x] same-export app harness built
+[x] pixel CSV schema/row count/values matched
+[x] target CSV schema/row count/values matched
+[x] GeoJSON structure/properties/coordinates matched privately
+[x] app helper patched to notebook-compatible output shape
+[x] unit tests updated
+[x] focused tests passed
+[x] committed and pushed
+```
+
+### #24 — Hard classifier
+
+```text
+Status: Full
+Canonical cell: cell_128
+Output family:
+  AI_HARD_TYPE_CLASSIFIER_CORE9.csv
+  AI_HARD_TYPE_CLASSIFIER_CORE9.txt
+  AI_HARD_TYPE_CLASSIFIER_CORE9.json
+App owner stage: FocusMaskStage
+Privacy: FILESYSTEM_ONLY
+Pushed commit: acca221 feat: align hard type classifier with notebook
+Status doc: docs/PLAN_B1_24_FREEZE_STATUS.md
+```
+
+Checklist:
+
+```text
+[x] notebook refs frozen privately
+[x] SHA256 hashes recorded
+[x] same-export raster inputs found
+[x] same-export raster grids verified
+[x] algorithm parity patch applied
+[x] CSV schema and row count matched
+[x] JSON comparison passed within approved tolerance
+[x] TXT comparison passed
+[x] focused tests passed
+[x] committed and pushed
+```
+
+### #25 — Core-vs-ring-vs-scene decision
+
+```text
+Status: Full
+Canonical cell: cell_121
+Output family:
+  AI_CORE_RING_SCENE_TARGETS_V7_2C.csv
+  AI_CORE_RING_SCENE_DECISION_V7_2C.txt
+  AI_CORE_RING_SCENE_DECISION_V7_2C.json
+App owner stage: FocusMaskStage
+Privacy: FILESYSTEM_ONLY
+Pushed commit: 5f7cf9c feat: align core ring scene decision with notebook
+Status doc: docs/PLAN_B1_25_FREEZE_STATUS.md
+```
+
+Checklist:
+
+```text
+[x] notebook refs frozen privately
+[x] SHA256 hashes recorded
+[x] notebook cell 121 inspected
+[x] app gap proven by same-export comparison
+[x] app helper patched to direct cell-121 logic
+[x] CSV schema/row count/values matched
+[x] TXT output matched
+[x] JSON flat key set and values matched
+[x] focused tests passed
+[x] committed and pushed
+```
 
 ### #33 — Metal fingerprint diagnostic
 
 ```text
-Status: app-owned output now implemented and pushed
-Current app commit: fbccd02 feat: emit metal fingerprint diagnostic from focus stage
+Status: app-port / notebook-current-no-export
 Canonical cell: cell_185
 Notebook family: AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2
 App owner stage: FocusMaskStage
@@ -158,90 +169,36 @@ App outputs:
   full_job/focus/AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.json
   full_job/focus/AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2.txt
 Privacy: FILESYSTEM_ONLY
+Pushed commit: fbccd02 feat: emit metal fingerprint diagnostic from focus stage
+Status doc: docs/PLAN_B1_33_FREEZE_STATUS.md
 ```
 
 Checklist:
 
 ```text
-[x] app parity module exists
 [x] app owner stage emits outputs
 [x] outputs registered as FILESYSTEM_ONLY artifacts
 [x] focused parity/unit/inventory tests passed locally
 [x] app-owned output patch pushed to main
-[ ] existing notebook CSV/JSON/TXT located
-[ ] notebook refs copied privately
-[ ] SHA256 hashes recorded
-[ ] app output snapshot copied privately
-[ ] CSV comparison report written
-[ ] JSON comparison report written
-[ ] TXT comparison report written
-[ ] status updated from Partial to Full if comparisons pass
+[x] notebook cell inspected
+[x] current notebook cell does not export #33 CSV/JSON/TXT files
+[x] status documented as app-port / notebook-current-no-export
+[ ] do not mark Full unless a real notebook export appears or no-export status is explicitly accepted as final
 ```
 
-### #24 — Hard classifier
-
-```text
-Status: Partial
-Canonical cell: cell_128
-Output family:
-  AI_HARD_TYPE_CLASSIFIER_CORE9.csv
-  AI_HARD_TYPE_CLASSIFIER_CORE9.txt
-  AI_HARD_TYPE_CLASSIFIER_CORE9.json
-Privacy: FILESYSTEM_ONLY
-```
-
-Checklist:
-
-```text
-[ ] confirm app owner stage emits files in full run
-[ ] freeze notebook refs privately
-[ ] hash refs
-[ ] compare CSV required columns/row count/stable values
-[ ] compare JSON schema/stable values
-[ ] compare TXT title/source markers/record count
-[ ] write comparison report
-[ ] mark Full or document mismatch
-```
-
-### #25 — Target CSV/TXT/JSON outputs
-
-```text
-Status: Partial
-Canonical cell: cell_121
-Output family:
-  AI_CORE_RING_SCENE_TARGETS_V7_2C.csv
-  AI_CORE_RING_SCENE_DECISION_V7_2C.txt
-  AI_CORE_RING_SCENE_DECISION_V7_2C.json
-Privacy: FILESYSTEM_ONLY
-```
-
-Checklist:
-
-```text
-[ ] confirm app-owned output paths
-[ ] freeze notebook refs privately
-[ ] hash refs
-[ ] compare CSV row count/stable fields/numeric tolerances
-[ ] compare JSON stable schema and values
-[ ] compare TXT sections/source markers
-[ ] write comparison report
-[ ] mark Full or document mismatch
-```
+## Remaining concrete output families not closed by this Plan B1 pass
 
 ### #26 — GeoJSON detected-feature exports
 
 ```text
-Status: Partial
+Status: Pending
 Canonical cell: cell_123
 Output:
   AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
 Privacy: private exact or redacted public summary only
 ```
 
-Checklist:
-
 ```text
-[ ] confirm app output exists
 [ ] freeze notebook GeoJSON privately
 [ ] hash ref
 [ ] compare feature count
@@ -251,35 +208,10 @@ Checklist:
 [ ] mark Full or document mismatch
 ```
 
-### #23 — ROI-constrained AI analysis inside 17m focus
-
-```text
-Status: Partial
-Canonical cell: cell_119
-Output family:
-  AI_FOCUS_17M_PIXEL_REPORT_V7_2.csv
-  AI_FOCUS_17M_TARGETS_V7_2.csv
-  AI_FOCUS_17M_TARGETS_V7_2.geojson
-Privacy: FILESYSTEM_ONLY/private coordinate-bearing outputs
-```
-
-Checklist:
-
-```text
-[ ] confirm app output files
-[ ] freeze notebook refs privately
-[ ] hash refs
-[ ] compare pixel CSV schema/row count/numeric values
-[ ] compare target CSV stable fields
-[ ] compare GeoJSON privately or redacted
-[ ] write comparison report
-[ ] mark Full or document mismatch
-```
-
 ### #27 — KMZ heatmap / 3D target visualization
 
 ```text
-Status: Partial
+Status: Pending
 Canonical cell: cell_155
 Outputs:
   AI_HEATMAP_CLASSIFICATION.png
@@ -288,10 +220,7 @@ Outputs:
 Privacy: FILESYSTEM_ONLY/private exact or redacted summary
 ```
 
-Checklist:
-
 ```text
-[ ] confirm app output files
 [ ] freeze notebook refs privately
 [ ] hash refs
 [ ] compare PNG dimensions/hash or approved visual metric
@@ -304,7 +233,7 @@ Checklist:
 ### #34 — Field-operation KMZ outputs
 
 ```text
-Status: Partial
+Status: Pending
 Canonical cell: cell_200
 Outputs:
   FINAL_ARCHEO_INTELLIGENCE_MAP.geojson
@@ -312,10 +241,7 @@ Outputs:
 Privacy: FILESYSTEM_ONLY/private exact or redacted summary
 ```
 
-Checklist:
-
 ```text
-[ ] confirm app output files
 [ ] freeze notebook refs privately
 [ ] hash refs
 [ ] compare GeoJSON privately
@@ -416,20 +342,15 @@ Checklist:
 ## Working order
 
 ```text
-1. Finish #33 frozen-reference comparison.
-2. Continue #24, #25, #26, #23, #27, #34.
-3. Then tensor/raster items #8, #9, #15, #17, #18, #19, #20, #29.
-4. Finish gated/replacement items #28, #30, #31, #32, #39, #40.
+1. #23, #24, and #25 are complete/full for same-export parity.
+2. #33 remains app-port / notebook-current-no-export unless a real notebook export appears.
+3. Next concrete parity candidates: #26, #27, #34.
+4. Then tensor/raster items #8, #9, #15, #17, #18, #19, #20, #29.
+5. Finish gated/replacement items #28, #30, #31, #32, #39, #40.
 ```
 
 ## Immediate next task
 
 ```text
-#33 freeze task:
-[ ] locate notebook-generated AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT
-[ ] copy refs into private folder
-[ ] hash refs
-[ ] generate comparable app outputs
-[ ] compare app outputs to refs
-[ ] write comparison report
+Choose next item from #26, #27, or #34. Do not continue #33 unless a real notebook export is produced or no-export status is explicitly accepted as final.
 ```
