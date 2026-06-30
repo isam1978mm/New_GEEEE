@@ -1,8 +1,8 @@
 # Plan B — Implement Not-Done Notebook Features In The App
 
-Status: active implementation document.
+Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-27 ? B4 item 40 GPS/path tracing gate implemented; frozen notebook numeric parity still pending.
+Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #33 documented as notebook-current-no-export/app-port only.
 
 ## Plan B scope: not-done-now items
 
@@ -15,9 +15,9 @@ Last update: 2026-06-27 ? B4 item 40 GPS/path tracing gate implemented; frozen n
 | 18 | DEM-matched S2 masks | 🟨 Partial | Yes | App port implemented for canonical cell 081 AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 19 | Tesla v7.2 inference engines | 🟨 Partial | Yes | App port implemented for canonical cell 095 TESLA_V7_2_ATOMIC_INFERENCE_STACK_640. Frozen notebook numeric parity still pending. |
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 23 | ROI-constrained AI analysis inside 17m focus | 🟨 Partial | Yes | App port implemented for canonical cell 119. Pixel CSV, target CSV, and GeoJSON outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 24 | Hard classifiers / target type rules | 🟨 Partial | Yes | App port implemented for canonical cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9. CSV, TXT, JSON outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 25 | Target CSV / TXT / JSON outputs | 🟨 Partial | Yes | App port implemented for canonical cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C. Outputs and tests pass. Frozen notebook numeric parity still pending. |
+| 23 | ROI-constrained AI analysis inside 17m focus | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 123 contract. Pixel CSV, target CSV, and GeoJSON matched; committed in 8ab7f0b. |
+| 24 | Hard classifiers / target type rules | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9 CSV/TXT/JSON; committed in acca221 and documented in bb10358. |
+| 25 | Target CSV / TXT / JSON outputs | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C CSV/TXT/JSON; committed in 5f7cf9c. |
 | 26 | GeoJSON detected-feature exports | 🟨 Partial | Yes | App port implemented for canonical cell 123 AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 27 | KMZ heatmap / 3D target visualization | 🟨 Partial | Yes | App port implemented for canonical cell 155 AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
@@ -25,11 +25,39 @@ Last update: 2026-06-27 ? B4 item 40 GPS/path tracing gate implemented; frozen n
 | 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
 | 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
-| 33 | Metal fingerprint diagnostic | 🟨 Partial | Yes | App port implemented for canonical cell 185 AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT as a private local diagnostic. No model inference, torch, GeoJSON/KMZ, or public output. Frozen notebook numeric parity still pending. |
+| 33 | Metal fingerprint diagnostic | 🟦 App-port / no notebook export | Yes | App emits AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT and docs record current notebook has no #33 file export. Do not mark Full unless a real notebook export is added later. |
 | 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
 | 39 | Final probability map overlay + markers | ?? Partial | Yes | App port implemented for canonical cell 238 AI_FINAL_PROBABILITY_OVERLAY_GATE_V7_2.json as a gated probability-overlay readiness manifest. No geemap, torch, inference, probability map, tiles, markers, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 40 | GPS/path tracing from targets | ?? Partial | Yes | App port implemented for canonical cell 242 AI_GPS_PATH_TRACING_GATE_V7_2.json as a gated GPS/path-tracing readiness manifest. No geemap, Earth Engine import, torch, inference, probability-map read, path trace, route GeoJSON/KMZ, public route, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
+
+## B1 same-export parity closure
+
+```text
+#23 AI_FOCUS_17M outputs
+Status: Full same-export parity
+Canonical notebook cell used for frozen reference: cell 123
+Evidence: pixel CSV, target CSV, and GeoJSON matched frozen notebook outputs from the same downloaded export.
+Commit: 8ab7f0b feat: align focus 17m outputs with notebook
+
+#24 AI_HARD_TYPE_CLASSIFIER_CORE9
+Status: Full same-export parity
+Canonical notebook cell used for frozen reference: cell 128
+Evidence: CSV and TXT matched; JSON matched under approved numeric tolerance.
+Commits: acca221 feat: align hard type classifier with notebook; bb10358 docs: mark hard type classifier parity complete
+
+#25 AI_CORE_RING_SCENE_*_V7_2C
+Status: Full same-export parity
+Canonical notebook cell used for frozen reference: cell 121
+Evidence: CSV, TXT, and JSON matched frozen notebook outputs from the same downloaded export.
+Commit: 5f7cf9c feat: align core ring scene decision with notebook
+
+#33 AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2
+Status: app-port / notebook-current-no-export
+Evidence: app emits CSV/JSON/TXT, but current notebook cell does not write/export #33 files.
+Rule: do not mark Full unless a real notebook export is added later or explicit no-export acceptance is approved.
+Commit: fbccd02 feat: emit metal fingerprint diagnostic from focus stage
+```
 
 ## Implemented Plan B results
 
@@ -43,9 +71,9 @@ B1 raster/tensor families implemented:
 - Item 19: cell 095.
 
 B2 focus and target contracts implemented:
-- Item 23: cell 119 focus pixel CSV, target CSV, and focus GeoJSON.
-- Item 24: cell 128 hard type classifier CSV/TXT/JSON.
-- Item 25: cell 121 core/ring/scene CSV/TXT/JSON.
+- Item 23: cell 123 focus pixel CSV, target CSV, and focus GeoJSON — Full same-export parity.
+- Item 24: cell 128 hard type classifier CSV/TXT/JSON — Full same-export parity.
+- Item 25: cell 121 core/ring/scene CSV/TXT/JSON — Full same-export parity.
 - Item 26: cell 123 WGS84 detected-feature GeoJSON.
 
 B3 local/private visualization contracts implemented:
@@ -59,7 +87,7 @@ B4 AI planning/tensor/training/model/inference/diagnostic contracts implemented:
 - Item 30: cell 166 AI training workflow boundary manifest.
 - Item 31: cell 232 AI model build policy manifest.
 - Item 32: cell 169 AI final inference gate manifest.
-- Item 33: cell 185 AI metal fingerprint diagnostic CSV/JSON/TXT.
+- Item 33: cell 185 AI metal fingerprint diagnostic CSV/JSON/TXT — app-port only; current notebook has no #33 file export.
 - Item 39: cell 238 AI final probability overlay gate manifest.
 - Item 40: cell 242 AI GPS/path tracing gate manifest.
 
