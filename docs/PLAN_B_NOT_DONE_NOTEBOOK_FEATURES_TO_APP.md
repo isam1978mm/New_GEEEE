@@ -31,6 +31,12 @@ Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #33 document
 | 39 | Final probability map overlay + markers | ?? Partial | Yes | App port implemented for canonical cell 238 AI_FINAL_PROBABILITY_OVERLAY_GATE_V7_2.json as a gated probability-overlay readiness manifest. No geemap, torch, inference, probability map, tiles, markers, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 40 | GPS/path tracing from targets | ?? Partial | Yes | App port implemented for canonical cell 242 AI_GPS_PATH_TRACING_GATE_V7_2.json as a gated GPS/path-tracing readiness manifest. No geemap, Earth Engine import, torch, inference, probability-map read, path trace, route GeoJSON/KMZ, public route, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 
+## App-goal output policy note
+
+Plan B follow-up work is no longer blind parity-only patching. The active policy is documented in `docs/PLAN_B_APP_GOAL_OUTPUT_POLICY.md`.
+
+Notebook parity remains evidence. The local app contract may intentionally be richer when it improves detection, provenance, privacy labeling, or local operator workflow. Sensitive/local outputs must be marked for production redaction before public/API exposure.
+
 ## B1 same-export parity closure
 
 ```text

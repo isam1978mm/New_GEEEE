@@ -225,6 +225,39 @@ Checklist:
 [ ] do not mark Full unless a real notebook export appears or no-export status is explicitly accepted as final
 ```
 
+## App-goal output policy update
+
+Plan B follow-up work now uses the app-goal policy in `docs/PLAN_B_APP_GOAL_OUTPUT_POLICY.md`.
+
+Important rule:
+
+```text
+Do not patch blindly for parity.
+Use notebook cells as evidence, but keep the best local/private app contract when it is better for the app goal.
+```
+
+For remaining concrete output families, each item must be classified as one of:
+
+```text
+Full same-export parity
+App-port / notebook-current-no-export
+App-enhanced local contract
+Production-redaction required
+Blocked for Full parity
+```
+
+#26 current decision gate:
+
+```text
+AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+App output exists.
+Exact notebook export was not found in the downloaded notebook export.
+Exact notebook writer cell for that filename was not found.
+Notebook cell 123 writes AI_FOCUS_17M_TARGETS_V7_2.geojson instead.
+Current app #26 output does not match the cell 123 GeoJSON contract exactly.
+Next #26 step is app-goal schema design, not blind parity patching.
+```
+
 ## Remaining concrete output families not closed by this Plan B1 pass
 
 These are the next concrete output families to close before Phase 2 tensor/raster work.
