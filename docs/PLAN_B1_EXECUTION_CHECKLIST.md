@@ -1,8 +1,47 @@
 # Plan B1 — Execution Checklist
 
-Status: current B1 tracking document.
+Status: active roadmap/tracking document after B1 closure pass.
 
 This checklist tracks Plan B1 notebook-reference parity work. It must stay aligned with the item-specific status docs and with `docs/PLAN_B1_REMAINING_CHECKLIST.md`.
+
+## Current Plan B roadmap after B1 closure
+
+Plain-English status:
+
+```text
+Closed in this B1 closure pass:
+- #23 AI_FOCUS_17M outputs: Full same-export parity.
+- #24 AI_HARD_TYPE_CLASSIFIER_CORE9: Full same-export parity.
+- #25 AI_CORE_RING_SCENE_*_V7_2C: Full same-export parity.
+
+Blocked/documented in this B1 closure pass:
+- #33 AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2: app-port only / notebook-current-no-export.
+  Do not mark Full unless a real notebook export appears or explicit no-export acceptance is approved.
+
+Not closed by this B1 closure pass:
+- #26 detected-feature GeoJSON.
+- #27 heatmap PNG/KMZ and 3D target KMZ.
+- #34 field-operation GeoJSON/KMZ.
+- Phase 2 tensor/raster parity items.
+- Phase 3 gated/replacement parity items.
+```
+
+Next pass order:
+
+```text
+1. B1-Followup concrete output parity:
+   #26, then #27, then #34.
+
+2. Phase 2 tensor/raster parity:
+   #8, #9, #15, #17, #18, #19, #20, #29.
+
+3. Phase 3 gated/replacement parity:
+   #28, #30, #31, #32, #39, #40.
+```
+
+Rule: remaining `Partial` items stay Partial until same-export frozen-reference proof, approved gate parity proof, or explicit blocked/no-export documentation exists.
+
+---
 
 ## B1 rule
 
@@ -188,169 +227,132 @@ Checklist:
 
 ## Remaining concrete output families not closed by this Plan B1 pass
 
-### #26 — GeoJSON detected-feature exports
+These are the next concrete output families to close before Phase 2 tensor/raster work.
 
 ```text
-Status: Pending
-Canonical cell: cell_123
-Output:
-  AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
-Privacy: private exact or redacted public summary only
+#26 — AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+Plan:
+- freeze notebook GeoJSON privately
+- hash reference
+- compare feature count
+- compare geometry privately without public coordinate exposure
+- compare key properties
+- patch only if same-export mismatch proves an app gap
+- document, test, commit, push
+
+#27 — AI_HEATMAP_CLASSIFICATION.png / .kmz and AI_3D_TARGET_VISUALIZATION.kmz
+Plan:
+- freeze notebook PNG/KMZ refs privately
+- hash refs
+- compare PNG dimensions/hash or approved visual metric
+- compare KMZ package contents
+- compare KML feature count/properties privately
+- document, test, commit, push
+
+#34 — FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz
+Plan:
+- freeze notebook GeoJSON/KMZ refs privately
+- hash refs
+- compare GeoJSON privately
+- compare KMZ/KML privately
+- document, test, commit, push
 ```
 
-```text
-[ ] freeze notebook GeoJSON privately
-[ ] hash ref
-[ ] compare feature count
-[ ] compare geometry privately within tolerance
-[ ] compare key properties
-[ ] write redacted public summary only
-[ ] mark Full or document mismatch
-```
+Do #26 first because it depends directly on the #23 target/GeoJSON contract that is now Full.
 
-### #27 — KMZ heatmap / 3D target visualization
-
-```text
-Status: Pending
-Canonical cell: cell_155
-Outputs:
-  AI_HEATMAP_CLASSIFICATION.png
-  AI_HEATMAP_CLASSIFICATION.kmz
-  AI_3D_TARGET_VISUALIZATION.kmz
-Privacy: FILESYSTEM_ONLY/private exact or redacted summary
-```
-
-```text
-[ ] freeze notebook refs privately
-[ ] hash refs
-[ ] compare PNG dimensions/hash or approved visual metric
-[ ] compare KMZ package contents
-[ ] compare KML feature count/properties privately
-[ ] write redacted public comparison summary
-[ ] mark Full or document mismatch
-```
-
-### #34 — Field-operation KMZ outputs
-
-```text
-Status: Pending
-Canonical cell: cell_200
-Outputs:
-  FINAL_ARCHEO_INTELLIGENCE_MAP.geojson
-  TESLA_V7_2_FIELD_OPERATIONS.kmz
-Privacy: FILESYSTEM_ONLY/private exact or redacted summary
-```
-
-```text
-[ ] freeze notebook refs privately
-[ ] hash refs
-[ ] compare GeoJSON privately
-[ ] compare KMZ/KML privately
-[ ] write redacted public comparison summary
-[ ] mark Full or document mismatch
-```
+---
 
 ## Phase 2 — tensor/raster parity
 
+Start Phase 2 only after the remaining concrete output families (#26, #27, #34) are closed or explicitly blocked.
+
+Work order:
+
 ```text
-#8 Nano / treasure / geophysics stacks
-[ ] cells 037 and 039 documented
-[ ] refs frozen
-[ ] shape/dtype/band-order/nodata/value comparison complete
-[ ] status updated
+1. #8 Nano / treasure / geophysics stacks
+2. #9 More feature stacks / rename layers
+3. #15 Bonus / simulator features
+4. #17 Extra S2 era pulls / masks
+5. #18 DEM-matched S2 masks
+6. #19 Tesla v7.2 inference engines
+7. #20 Fusion center / intelligence tensors
+8. #29 AI tensor builder
+```
 
-#9 More feature stacks / rename layers
-[ ] cells 050, 053, 051, 047, 052, 054 documented
-[ ] refs frozen
-[ ] stack names/band order/shape/dtype/value comparison complete
-[ ] status updated
+Definition of done for each Phase 2 item:
 
-#15 Bonus / simulator features
-[ ] cells 072 and 073 documented
-[ ] refs frozen
-[ ] comparison complete
-[ ] status updated
-
-#17 Extra S2 era pulls / masks
-[ ] cell 077 documented
-[ ] refs frozen
-[ ] mask/tensor comparison complete
-[ ] status updated
-
-#18 DEM-matched S2 masks
-[ ] cell 081 documented
-[ ] refs frozen
-[ ] mask shape/dtype/nodata/value comparison complete
-[ ] status updated
-
-#19 Tesla v7.2 inference engines
-[ ] cell 095 documented
-[ ] refs frozen
-[ ] implemented app stack compared to notebook stack
-[ ] status updated
-
-#20 Fusion center / intelligence tensors
-[ ] cell 099 documented
-[ ] refs frozen
-[ ] tensor comparison complete
-[ ] status updated
-
-#29 AI tensor builder
-[ ] cell 148 documented
-[ ] refs frozen
-[ ] tensor families/manifests compared
-[ ] status updated
+```text
+[ ] canonical notebook cell documented
+[ ] notebook raster/tensor output family documented
+[ ] private frozen refs copied
+[ ] SHA256 hashes recorded
+[ ] app output generated from comparable same export/run
+[ ] shape comparison passed
+[ ] dtype / nodata / finite policy comparison passed
+[ ] band order comparison passed
+[ ] numeric comparison passed within approved tolerance
+[ ] private comparison report written
+[ ] public status doc updated without raw private arrays/coordinates
+[ ] tests passed
+[ ] commit pushed
 ```
 
 ## Phase 3 — gated/replacement parity
 
+Start Phase 3 after Phase 2, unless a specific gate is needed earlier for safety or planning.
+
+Work order:
+
 ```text
-#28 AI requirements mapper
-[ ] cell 140 documented
-[ ] replacement manifest compared
-[ ] Full gate parity or mismatch documented
-
-#30 Training workflow boundary
-[ ] cell 166 documented
-[ ] boundary manifest compared
-[ ] Full gate parity or mismatch documented
-
-#31 Model build policy
-[ ] cell 232 documented
-[ ] policy manifest compared
-[ ] Full gate parity or mismatch documented
-
-#32 Final inference gate
-[ ] cell 169 documented
-[ ] inference-readiness gate compared
-[ ] no real inference executed
-[ ] Full gate parity or mismatch documented
-
-#39 Probability overlay gate
-[ ] cell 238 documented
-[ ] probability-overlay gate compared
-[ ] no real probability map/overlay created
-[ ] Full gate parity or mismatch documented
-
-#40 GPS/path tracing gate
-[ ] cell 242 documented
-[ ] GPS/path-tracing gate compared
-[ ] no real path trace created unless approved
-[ ] Full gate parity or mismatch documented
+1. #28 AI requirements mapper
+2. #30 Training workflow boundary
+3. #31 Model build policy
+4. #32 Final inference gate
+5. #39 Probability overlay gate
+6. #40 GPS/path tracing gate
 ```
+
+Definition of done for each Phase 3 item:
+
+```text
+[ ] canonical notebook cell documented
+[ ] replacement/gate contract documented
+[ ] proof that no forbidden live behavior is executed unless explicitly approved
+[ ] manifest/schema comparison completed
+[ ] privacy boundary verified
+[ ] tests passed
+[ ] status doc updated
+[ ] commit pushed
+```
+
+Phase 3 items should not be marked as normal numeric Full parity unless they have real frozen notebook outputs and an approved direct comparison path. Otherwise, use `Full gate parity` or `replacement parity` wording.
 
 ## Working order
 
 ```text
-1. #23, #24, and #25 are complete/full for same-export parity.
-2. #33 remains app-port / notebook-current-no-export unless a real notebook export appears.
-3. Next concrete parity candidates: #26, #27, #34.
-4. Then tensor/raster items #8, #9, #15, #17, #18, #19, #20, #29.
-5. Finish gated/replacement items #28, #30, #31, #32, #39, #40.
+Current state:
+- B1 closure pass is done for #23/#24/#25.
+- #33 is documented as app-port / notebook-current-no-export.
+
+Next technical pass:
+1. #26 detected-feature GeoJSON.
+2. #27 heatmap/3D visualization files.
+3. #34 field-operation GeoJSON/KMZ.
+
+Then:
+4. Phase 2 tensor/raster parity.
+5. Phase 3 gated/replacement parity.
 ```
 
 ## Immediate next task
 
 ```text
-Choose next item from #26, #27, or #34. Do not continue #33 unless a real notebook export is produced or no-export status is explicitly accepted as final.
+#26 freeze task:
+[ ] locate notebook-generated AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
+[ ] copy ref into private folder
+[ ] hash ref
+[ ] generate comparable same-export app output
+[ ] compare feature count, geometry privately, and key properties
+[ ] write redacted comparison report
+[ ] patch only if mismatch proves app gap
 ```
