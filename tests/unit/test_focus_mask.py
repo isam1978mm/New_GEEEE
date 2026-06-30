@@ -204,17 +204,22 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         with core_csv.open("r", encoding="utf-8", newline="") as handle:
             core_rows = list(csv.DictReader(handle))
         assert len(core_rows) == 1
-        assert core_rows[0]["Source_Cell"] == "cell_121"
+        assert "Source_Cell" not in core_rows[0]
         assert core_rows[0]["Scenario"]
         assert core_rows[0]["Decision_Grade"]
         assert "Detection_Confidence" in core_rows[0]
         assert "Interpretation_Confidence" in core_rows[0]
         assert "Final_Confidence" in core_rows[0]
+        assert "Resolution_Note" in core_rows[0]
 
         core_payload = json.loads(core_json.read_text(encoding="utf-8"))
-        assert core_payload["source_cell"] == "cell_121"
-        assert core_payload["status"] == "implemented"
-        assert core_payload["target_count"] == len(target_rows)
+        assert "source_cell" not in core_payload
+        assert "status" not in core_payload
+        assert "target_count" not in core_payload
+        assert core_payload["core_pixel_count"] == int(mask.sum())
+        assert core_payload["ring_near_pixel_count"] >= int(mask.sum())
+        assert "band_analysis" in core_payload
+        assert "Secret_Gold_Halo" in core_payload["band_analysis"]
         assert "AI CORE-vs-RING-vs-SCENE DECISION" in core_txt.read_text(encoding="utf-8")
 
         detected_geojson = run_dir / "full_job" / "focus" / "AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson"

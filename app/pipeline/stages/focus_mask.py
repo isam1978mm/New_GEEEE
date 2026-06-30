@@ -1232,47 +1232,322 @@ def _burial_style_from_hard_class(primary_class: str, void_type: str) -> str:
 
 def build_core_ring_scene_decision_products(
     *,
-    hard_type_record: dict[str, object],
-    hard_type_json: dict[str, object],
-    target_records: list[dict[str, object]],
+    focus_mask: np.ndarray,
+    analysis_bands: dict[str, np.ndarray],
+    grid_spec: GridSpec,
 ) -> dict[str, object]:
-    p_void = float(hard_type_record.get("Void_Probability", 0.0))
-    p_entrance = float(hard_type_record.get("Entrance_Probability", 0.0))
-    p_metal = float(hard_type_record.get("Metal_Probability", 0.0))
-    p_pottery = float(hard_type_record.get("Fill_Probability", 0.0))
-    reliability = float(hard_type_record.get("Surface_Exclusion", 0.0))
-    final_confidence = float(hard_type_record.get("Final_Confidence", 0.0))
+    core_mask = focus_mask.astype(bool)
+    if int(core_mask.sum()) == 0:
+        raise StageError("Core-vs-ring-vs-scene decision requires a non-empty focus/core mask.")
 
-    detection_confidence = _hard_clip01(max(p_void, p_entrance, p_metal, p_pottery))
-    if detection_confidence > 1e-9:
-        interpretation_confidence = _hard_clip01(final_confidence / detection_confidence)
-    else:
-        interpretation_confidence = 0.0
+    missing = [name for name in FOCUS_ANALYSIS_BANDS if name not in analysis_bands]
+    if missing:
+        raise StageError(f"Core-vs-ring-vs-scene decision is missing required bands: {', '.join(missing)}")
+
+    pixel_size_analysis = 2.0
+    pixel_size_native = 10.0
+    is_super_resolved = True
+    resolution_gain = max(1.0, float(pixel_size_native / pixel_size_analysis))
+
+    # Notebook cell 121 uses an 8-connected structure with dilation iterations 2/4.
+    dil2 = _hard_dilate(core_mask, 2)
+    dil4 = _hard_dilate(core_mask, 4)
+    ring_near = dil2 & (~core_mask)
+    ring_far = dil4 & (~dil2)
+    if int(ring_near.sum()) < max(8, int(core_mask.sum())):
+        dil3 = _hard_dilate(core_mask, 3)
+        ring_near = dil3 & (~core_mask)
+    scene_mask = np.ones_like(core_mask, dtype=bool)
+
+    def robust_stats(vals: np.ndarray) -> dict[str, float]:
+        vals = np.asarray(vals, dtype=np.float64)
+        vals = vals[np.isfinite(vals)]
+        if len(vals) == 0:
+            return {
+                "mean": 0.0,
+                "median": 0.0,
+                "std": 0.0,
+                "mad": 0.0,
+                "p10": 0.0,
+                "p25": 0.0,
+                "p75": 0.0,
+                "p90": 0.0,
+                "max": 0.0,
+            }
+        med = np.nanmedian(vals)
+        mad = np.nanmedian(np.abs(vals - med))
+        return {
+            "mean": float(np.nanmean(vals)),
+            "median": float(med),
+            "std": float(np.nanstd(vals)),
+            "mad": float(mad),
+            "p10": float(np.nanpercentile(vals, 10)),
+            "p25": float(np.nanpercentile(vals, 25)),
+            "p75": float(np.nanpercentile(vals, 75)),
+            "p90": float(np.nanpercentile(vals, 90)),
+            "max": float(np.nanmax(vals)),
+        }
+
+    def score_to_prob(x: float, *, bias: float = 0.0, gain: float = 1.0) -> float:
+        return _hard_clip01(1.0 / (1.0 + np.exp(-(gain * (x - bias)))))
+
+    def nanmean_mask(arr: np.ndarray, mask: np.ndarray) -> float:
+        vals = arr[mask]
+        vals = vals[np.isfinite(vals)]
+        return float(np.mean(vals)) if len(vals) else 0.0
+
+    band_analysis: dict[str, dict[str, object]] = {}
+    for name, arr in analysis_bands.items():
+        arr_for_analysis = np.asarray(arr, dtype=np.float32)
+        if name == "Secret_Hidden_Doors":
+            # Notebook cell 121 reads this band from the hypercube where missing scene pixels
+            # are preserved as -9999-like sentinel values. The downloaded single-band export
+            # materializes those pixels as NaN, so restore the sentinel for #25 parity only.
+            arr_for_analysis = np.where(
+                np.isfinite(arr_for_analysis),
+                arr_for_analysis,
+                -9999.0,
+            ).astype(np.float32)
+
+        core_vals = _hard_get_vals(arr_for_analysis, core_mask)
+        near_vals = _hard_get_vals(arr_for_analysis, ring_near)
+        far_vals = _hard_get_vals(arr_for_analysis, ring_far)
+        scene_vals = _hard_get_vals(arr_for_analysis, scene_mask)
+        band_analysis[name] = {
+            "core_n": int(len(core_vals)),
+            "near_n": int(len(near_vals)),
+            "far_n": int(len(far_vals)),
+            "scene_n": int(len(scene_vals)),
+            "core_stats": robust_stats(core_vals),
+            "near_stats": robust_stats(near_vals),
+            "far_stats": robust_stats(far_vals),
+            "scene_stats": robust_stats(scene_vals),
+            "core_vs_near_es": _hard_effect_size(core_vals, near_vals),
+            "core_vs_scene_es": _hard_effect_size(core_vals, scene_vals),
+            "core_vs_far_es": _hard_effect_size(core_vals, far_vals),
+            "core_vs_near_rc": _hard_robust_contrast(core_vals, near_vals),
+            "core_vs_scene_rc": _hard_robust_contrast(core_vals, scene_vals),
+            "core_vs_far_rc": _hard_robust_contrast(core_vals, far_vals),
+        }
+
+    def B(name: str, key: str) -> float:
+        return float(band_analysis[name][key]) if name in band_analysis else 0.0
+
+    gold_scene = B("Secret_Gold_Halo", "core_vs_scene_rc")
+    silver_scene = B("Secret_Silver_Oxide", "core_vs_scene_rc")
+    tunnel_scene = B("Secret_Tunnel_Ceiling", "core_vs_scene_rc")
+    thermal_scene = B("Secret_Thermal_Inertia", "core_vs_scene_rc")
+    chem_scene = B("Secret_Chemical_Protector", "core_vs_scene_rc")
+    doors_scene = B("Secret_Hidden_Doors", "core_vs_scene_rc")
+    zero_scene = B("REPORT_640_FINAL_Zero_Point_Targets", "core_vs_scene_rc")
+    mass_scene = B("REPORT_640_Mass_Report", "core_vs_scene_rc")
+    pottery_scene = B("REPORT_640_Pottery_Report", "core_vs_scene_rc")
+
+    gold_near = B("Secret_Gold_Halo", "core_vs_near_rc")
+    silver_near = B("Secret_Silver_Oxide", "core_vs_near_rc")
+    tunnel_near = B("Secret_Tunnel_Ceiling", "core_vs_near_rc")
+    thermal_near = B("Secret_Thermal_Inertia", "core_vs_near_rc")
+    doors_near = B("Secret_Hidden_Doors", "core_vs_near_rc")
+    mass_near = B("REPORT_640_Mass_Report", "core_vs_near_rc")
+    pottery_near = B("REPORT_640_Pottery_Report", "core_vs_near_rc")
+
+    mag_scene = B("AI_READY_640_Magnetic_Anomaly", "core_vs_scene_rc") if "AI_READY_640_Magnetic_Anomaly" in band_analysis else 0.0
+    em_scene = B("AI_READY_640_EM_Anomaly", "core_vs_scene_rc") if "AI_READY_640_EM_Anomaly" in band_analysis else 0.0
+
+    void_score = (
+        1.30 * tunnel_scene
+        + 1.10 * doors_scene
+        + 0.90 * thermal_scene
+        + 1.00 * tunnel_near
+        + 0.80 * doors_near
+        + 0.70 * thermal_near
+        - 0.35 * chem_scene
+        - 0.20 * zero_scene
+    )
+    entrance_score = 1.40 * doors_near + 1.10 * doors_scene + 0.90 * tunnel_near + 0.60 * thermal_near
+    metal_score = (
+        1.20 * mass_scene
+        + 1.00 * mass_near
+        + 1.00 * gold_scene
+        + 0.90 * silver_scene
+        + 0.80 * mag_scene
+        + 0.70 * em_scene
+        + 0.60 * gold_near
+        + 0.50 * silver_near
+    )
+    pottery_score = 1.30 * pottery_scene + 0.90 * pottery_near + 0.50 * chem_scene + 0.40 * thermal_scene
+
+    rr, cc = np.where(core_mask)
+    r0, r1 = int(rr.min()), int(rr.max())
+    c0, c1 = int(cc.min()), int(cc.max())
+
+    arr_doors = analysis_bands["Secret_Hidden_Doors"]
+    arr_tunnel = analysis_bands["Secret_Tunnel_Ceiling"]
+
+    north = np.zeros_like(core_mask, dtype=bool)
+    south = np.zeros_like(core_mask, dtype=bool)
+    west = np.zeros_like(core_mask, dtype=bool)
+    east = np.zeros_like(core_mask, dtype=bool)
+
+    if r0 - 1 >= 0:
+        north[max(r0 - 1, 0):r0, c0:c1 + 1] = True
+    if r1 + 2 <= core_mask.shape[0]:
+        south[r1 + 1:min(r1 + 2, core_mask.shape[0]), c0:c1 + 1] = True
+    if c0 - 1 >= 0:
+        west[r0:r1 + 1, max(c0 - 1, 0):c0] = True
+    if c1 + 2 <= core_mask.shape[1]:
+        east[r0:r1 + 1, c1 + 1:min(c1 + 2, core_mask.shape[1])] = True
+
+    dir_scores = {
+        "north": nanmean_mask(arr_doors + arr_tunnel, north),
+        "south": nanmean_mask(arr_doors + arr_tunnel, south),
+        "west": nanmean_mask(arr_doors + arr_tunnel, west),
+        "east": nanmean_mask(arr_doors + arr_tunnel, east),
+    }
+    best_dir = max(dir_scores, key=dir_scores.get)
+    dir_sorted = sorted(dir_scores.values(), reverse=True)
+    directionality_strength = float((dir_sorted[0] - dir_sorted[1]) if len(dir_sorted) >= 2 else 0.0)
+
+    p_void = score_to_prob(void_score, bias=0.8, gain=0.85)
+    p_entrance = score_to_prob(entrance_score + 0.6 * directionality_strength, bias=0.7, gain=0.90)
+    p_metal = score_to_prob(metal_score, bias=0.7, gain=0.85)
+    p_pottery = score_to_prob(pottery_score, bias=0.7, gain=0.85)
+
+    agreement = np.mean([
+        float(p_void > 0.55),
+        float(p_entrance > 0.55),
+        float(p_metal > 0.55),
+        float(p_pottery > 0.55),
+    ])
+    core_n = int(core_mask.sum())
+    scene_separation = np.mean([
+        abs(gold_scene),
+        abs(silver_scene),
+        abs(tunnel_scene),
+        abs(thermal_scene),
+        abs(mass_scene),
+        abs(pottery_scene),
+    ]) / 3.0
+    scene_separation = _hard_clip01(scene_separation)
+    reliability = _hard_clip01(0.45 * float(agreement) + 0.35 * scene_separation + 0.20 * min(1.0, core_n / 9.0))
+
+    detection_confidence = _hard_clip01(0.40 * p_void + 0.25 * p_metal + 0.15 * p_pottery + 0.20 * reliability)
+    interpretation_penalty = 0.82 if is_super_resolved else 1.00
+    interpretation_confidence = _hard_clip01(detection_confidence * interpretation_penalty * (0.55 + 0.45 * p_entrance))
     final_confidence = _hard_clip01(0.55 * detection_confidence + 0.45 * interpretation_confidence)
-    decision_grade = _decision_grade(detection_confidence, interpretation_confidence)
 
-    primary_class = str(hard_type_record.get("Primary_Class", "UNRESOLVED_ANOMALY"))
-    void_type = str(hard_type_record.get("Void_Type", "NO_CONFIRMED_VOID"))
-    metal_type = str(hard_type_record.get("Metal_Type", "NO_CONFIRMED_METAL"))
-    content_type = str(hard_type_record.get("Content_Type", "CONTENT_UNRESOLVED"))
+    if detection_confidence >= 0.75 and interpretation_confidence >= 0.60:
+        decision_grade = "قرار قوي"
+    elif detection_confidence >= 0.60 and interpretation_confidence >= 0.45:
+        decision_grade = "قرار متوسط داعم"
+    else:
+        decision_grade = "قرار أولي غير حاسم"
 
-    scenario = _scenario_from_hard_class(primary_class)
-    burial_style = _burial_style_from_hard_class(primary_class, void_type)
-    room_count = "NO_ROOM_COUNT_INFERRED"
-    if float(hard_type_record.get("Chamber_Score", 0.0)) >= 0.56:
-        room_count = "POSSIBLE_SINGLE_CHAMBER"
-    if float(hard_type_record.get("Drain_Void_Score", 0.0)) >= 0.60:
-        room_count = "POSSIBLE_VOID_NETWORK"
+    if p_void >= 0.68 and p_entrance >= 0.62:
+        scenario = "هدف بنيوي-فراغي مرجح مع مؤشر دخول"
+    elif p_void >= 0.68 and p_metal >= 0.60:
+        scenario = "فراغ مرجح مع استجابة معدنية/كثافية مرافقة"
+    elif p_metal >= 0.70 and p_void < 0.55:
+        scenario = "شذوذ معدني/كثافي أقوى من فرضية الفراغ"
+    elif p_pottery >= 0.65:
+        scenario = "مواد فخارية/ردمية مرجحة"
+    elif p_void >= 0.55:
+        scenario = "شذوذ فراغي متوسط"
+    else:
+        scenario = "لا يوجد حسم كافٍ"
 
-    resolution_note = "App replacement of cell_121 using local/private focus mask and current hard classifier outputs."
+    if p_entrance >= 0.68:
+        if directionality_strength > 0.15:
+            entrance_type = f"مدخل مرجح باتجاه {best_dir}"
+        else:
+            entrance_type = "فتحة/باب محتمل دون اتجاه حاسم"
+    else:
+        entrance_type = "لا يوجد دليل مدخل كافٍ"
+
+    if p_metal >= 0.62:
+        if gold_scene > silver_scene and gold_scene > 0.5:
+            metal_type = "معدن عالي الكثافة أقرب لاستجابة ذهبية"
+        elif silver_scene >= gold_scene and silver_scene > 0.5:
+            metal_type = "معدن أقرب لاستجابة فضية/أكسيدية"
+        elif mag_scene > 0.6:
+            metal_type = "معدن/كتلة ذات سلوك مغناطيسي"
+        else:
+            metal_type = "كتلة معدنية غير محسومة النوع"
+    else:
+        metal_type = "لا يوجد دليل معدني كافٍ"
+
+    if p_void >= 0.70 and core_n == 9:
+        room_count = "يوجد نواة هدف فراغي قوية، لكن عدد الغرف غير قابل للحسم من 9 بكسلات"
+    elif p_void >= 0.55:
+        room_count = "فراغ محتمل، لكن عدد الغرف غير محسوم"
+    else:
+        room_count = "لا يوجد دليل كافٍ على الغرف"
+
+    if p_void >= 0.60 and p_metal >= 0.60 and p_pottery >= 0.45:
+        content = "محتوى محتمل مختلط: فراغ + كتلة معدنية + مواد ردم/فخار"
+    elif p_void >= 0.60 and p_metal >= 0.60:
+        content = "محتوى معدني محتمل داخل/قرب فراغ"
+    elif p_pottery >= 0.60:
+        content = "مواد فخارية/ردمية مرجحة"
+    else:
+        content = "المحتوى غير محسوم"
+
+    if p_void >= 0.68 and p_entrance >= 0.62 and p_metal < 0.50:
+        burial_style = "بنية فراغية/حجرية مع مدخل مرجح أكثر من كونها كتلة معدنية صلبة"
+    elif p_void >= 0.68 and p_metal >= 0.60:
+        burial_style = "دفن أو حيز مغلق محتمل مع محتوى كثافي"
+    elif p_metal >= 0.70 and p_void < 0.55:
+        burial_style = "كتلة معدنية/كثافية دون إثبات بنية دفن"
+    else:
+        burial_style = "نمط الهدف غير محسوم"
+
+    resolution_note = (
+        "شبكة التحليل 2م ناتجة عن Super-Resolution فوق مصدر أصلي 10م؛ لذلك ثقة الكشف أعلى من ثقة التفسير النوعي."
+        if is_super_resolved
+        else "شبكة التحليل مبنية على دقة أصلية مباشرة."
+    )
+
+    payload = {
+        "core_pixel_count": core_n,
+        "ring_near_pixel_count": int(ring_near.sum()),
+        "ring_far_pixel_count": int(ring_far.sum()),
+        "crs": grid_spec.crs,
+        "pixel_size_analysis_m": pixel_size_analysis,
+        "pixel_size_native_m": pixel_size_native,
+        "is_super_resolved": is_super_resolved,
+        "resolution_gain": resolution_gain,
+        "void_score": float(void_score),
+        "entrance_score": float(entrance_score),
+        "metal_score": float(metal_score),
+        "pottery_score": float(pottery_score),
+        "void_probability": float(p_void),
+        "entrance_probability": float(p_entrance),
+        "metal_probability": float(p_metal),
+        "pottery_probability": float(p_pottery),
+        "reliability": float(reliability),
+        "detection_confidence": float(detection_confidence),
+        "interpretation_confidence": float(interpretation_confidence),
+        "final_confidence": float(final_confidence),
+        "decision_grade": decision_grade,
+        "scenario": scenario,
+        "entrance_type": entrance_type,
+        "metal_type": metal_type,
+        "room_count_inference": room_count,
+        "content_inference": content,
+        "burial_style_inference": burial_style,
+        "dominant_direction": best_dir,
+        "directionality_strength": float(directionality_strength),
+        "resolution_note": resolution_note,
+        "band_analysis": band_analysis,
+    }
 
     record = {
-        "Core_Pixels": int(hard_type_record.get("Core_Pixels", 0)),
-        "Near_Ring_Pixels": int(hard_type_record.get("Near_Ring_Pixels", 0)),
-        "Far_Ring_Pixels": int(hard_type_record.get("Far_Ring_Pixels", 0)),
-        "Analysis_Pixel_m": 2.0,
-        "Native_Pixel_m": 10.0,
-        "Is_Super_Resolved": True,
+        "Core_Pixels": core_n,
+        "Near_Ring_Pixels": int(ring_near.sum()),
+        "Far_Ring_Pixels": int(ring_far.sum()),
+        "Analysis_Pixel_m": pixel_size_analysis,
+        "Native_Pixel_m": pixel_size_native,
+        "Is_Super_Resolved": is_super_resolved,
         "Scenario": scenario,
         "Burial_Style_Inference": burial_style,
         "Void_Probability": round(p_void, 4),
@@ -1284,55 +1559,24 @@ def build_core_ring_scene_decision_products(
         "Interpretation_Confidence": round(interpretation_confidence, 4),
         "Final_Confidence": round(final_confidence, 4),
         "Decision_Grade": decision_grade,
-        "Entrance_Type": void_type,
+        "Entrance_Type": entrance_type,
         "Metal_Type": metal_type,
         "Room_Count_Inference": room_count,
-        "Content_Inference": content_type,
-        "Dominant_Direction": str(hard_type_record.get("Dominant_Direction", "UNRESOLVED")),
-        "Directionality_Strength": round(float(hard_type_record.get("Directionality_Strength", 0.0)), 4),
+        "Content_Inference": content,
+        "Dominant_Direction": best_dir,
+        "Directionality_Strength": round(directionality_strength, 4),
         "Resolution_Note": resolution_note,
-        "Source_Cell": "cell_121",
-    }
-
-    payload = {
-        "source_cell": "cell_121",
-        "source_notebook_family": "AI_CORE_RING_SCENE_DECISION_V7_2C",
-        "status": "implemented",
-        "privacy": "FILESYSTEM_ONLY",
-        "decision": {
-            "scenario": scenario,
-            "burial_style_inference": burial_style,
-            "void_probability": p_void,
-            "entrance_probability": p_entrance,
-            "metal_probability": p_metal,
-            "pottery_probability": p_pottery,
-            "reliability": reliability,
-            "detection_confidence": detection_confidence,
-            "interpretation_confidence": interpretation_confidence,
-            "final_confidence": final_confidence,
-            "decision_grade": decision_grade,
-            "entrance_type": void_type,
-            "metal_type": metal_type,
-            "room_count_inference": room_count,
-            "content_inference": content_type,
-            "dominant_direction": record["Dominant_Direction"],
-            "directionality_strength": float(hard_type_record.get("Directionality_Strength", 0.0)),
-            "resolution_note": resolution_note,
-        },
-        "target_count": len(target_records),
-        "targets": target_records,
-        "hard_classifier": hard_type_json,
     }
 
     summary_lines = [
         "AI CORE-vs-RING-vs-SCENE DECISION",
         "=" * 78,
-        f"Core target pixels         : {record['Core_Pixels']}",
-        f"Near ring pixels           : {record['Near_Ring_Pixels']}",
-        f"Far ring pixels            : {record['Far_Ring_Pixels']}",
-        f"Analysis pixel size        : {record['Analysis_Pixel_m']} m",
-        f"Native support pixel size  : {record['Native_Pixel_m']} m",
-        f"Super-resolved             : {record['Is_Super_Resolved']}",
+        f"Core target pixels         : {core_n}",
+        f"Near ring pixels           : {int(ring_near.sum())}",
+        f"Far ring pixels            : {int(ring_far.sum())}",
+        f"Analysis pixel size        : {pixel_size_analysis} m",
+        f"Native support pixel size  : {pixel_size_native} m",
+        f"Super-resolved             : {is_super_resolved}",
         "-" * 78,
         f"Scenario                   : {scenario}",
         f"Burial style inference     : {burial_style}",
@@ -1346,12 +1590,12 @@ def build_core_ring_scene_decision_products(
         f"Final confidence           : {final_confidence:.2%}",
         f"Decision grade             : {decision_grade}",
         "-" * 78,
-        f"Entrance type              : {void_type}",
+        f"Entrance type              : {entrance_type}",
         f"Metal type                 : {metal_type}",
         f"Room count inference       : {room_count}",
-        f"Content inference          : {content_type}",
-        f"Dominant direction         : {record['Dominant_Direction']}",
-        f"Directionality strength    : {record['Directionality_Strength']:.4f}",
+        f"Content inference          : {content}",
+        f"Dominant direction         : {best_dir}",
+        f"Directionality strength    : {directionality_strength:.4f}",
         "-" * 78,
         f"Resolution note            : {resolution_note}",
     ]
@@ -1361,7 +1605,6 @@ def build_core_ring_scene_decision_products(
         "core_ring_scene_json": payload,
         "core_ring_scene_summary_lines": summary_lines,
     }
-
 
 def build_detected_features_wgs84_geojson_products(
     *,
@@ -2099,9 +2342,9 @@ class FocusMaskStage(Stage):
         )
         products.update(
             build_core_ring_scene_decision_products(
-                hard_type_record=products["hard_type_record"],
-                hard_type_json=products["hard_type_json"],
-                target_records=products["target_records"],
+                focus_mask=products["mask"],
+                analysis_bands=analysis_bands,
+                grid_spec=self.grid_spec,
             )
         )
         products.update(

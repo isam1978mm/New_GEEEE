@@ -115,7 +115,7 @@ Remaining:
 Remaining:
 - [x] #24 committed and pushed.
 - [ ] #23 completed or explicitly documented as blocked.
-- [ ] #25 completed or explicitly documented as blocked.
+- [x] #25 completed or explicitly documented as blocked.
 - [ ] #33 documented as notebook-no-export / app-port-only unless new export exists.
 - [ ] Run focused B1 tests.
 - [ ] Run artifact inventory tests.
@@ -149,3 +149,19 @@ Status: Full locally — pending commit/push at time of writing.
 - [x] Run focused validation tests.
 - [ ] Commit #23 code/test/docs.
 - [ ] Push #23 commit.
+
+## Plan B1 #25 completion note
+
+Status: **complete**.
+
+#25 `AI_CORE_RING_SCENE_*_V7_2C` now matches notebook cell 121 on the same downloaded notebook export.
+
+Evidence:
+
+- Frozen notebook refs exist under `C:\Dev\New_GEE_PRIVATE\FROZEN_NOTEBOOK_REFS\plan_b_25_core_ring_scene\notebook_outputs`.
+- Same-export comparison report: `comparison_reports\plan_b25_same_export_after_patch_summary.json`.
+- Comparison result: CSV matched, TXT matched, JSON flat key set matched, JSON shared mismatches `0`, `full_pass: True`.
+- Focused tests passed: `4 passed`.
+
+Next Plan B1 item: no remaining #23/#24/#25 implementation gap is open. #33 remains app-port/docs status only unless a real notebook export appears.
+
