@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Phase 2 item #18 inspected; app DEM-matched S2 mask stack structure/order validated, exact notebook exports missing.
+Last update: 2026-06-29 - Phase 2 item #19 inspected; app Tesla v7.2 atomic inference stack structure/order validated, exact notebook stack exports missing.
 
 ## Plan B scope: not-done-now items
 
@@ -13,7 +13,7 @@ Last update: 2026-06-29 - Phase 2 item #18 inspected; app DEM-matched S2 mask st
 | 15 | Bonus / simulator features | 🟨 Partial | Yes | App port implemented for cell 072 AUX_BONUS_FEATURES_STACK_640 and cell 073 SIM_GEOPHYSICAL_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 18 | DEM-matched S2 masks | 🟦 App-port / no exact notebook export | Yes | Canonical cell 081 inspected. App emits AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy plus per-band TIF/NPY outputs. App structure/order validation passed: stack shape 640x640x9, dtype float32, all per-band NPY/TIF present, stack-vs-band max delta 0.0. Exact notebook stack refs were missing from the downloaded export, so Full exact-file parity is blocked. |
-| 19 | Tesla v7.2 inference engines | 🟨 Partial | Yes | App port implemented for canonical cell 095 TESLA_V7_2_ATOMIC_INFERENCE_STACK_640. Frozen notebook numeric parity still pending. |
+| 19 | Tesla v7.2 inference engines | 🟦 App-port / no exact notebook export | Yes | Canonical cell 095 inspected. App emits TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy plus per-band TIF/NPY outputs for the five AI_BEH_* inference bands. App structure/order validation passed: stack shape 640x640x5, dtype float32, all per-band NPY/TIF present, stack-vs-band max delta 0.0. Exact notebook stack refs were missing from the downloaded export, so Full exact-file parity is blocked. |
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 23 | ROI-constrained AI analysis inside 17m focus | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 123 contract. Pixel CSV, target CSV, and GeoJSON matched; committed in 8ab7f0b. |
 | 24 | Hard classifiers / target type rules | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9 CSV/TXT/JSON; committed in acca221 and documented in bb10358. |
@@ -742,5 +742,44 @@ App validation:
 
 Decision:
   No code patch.
+  Do not mark Full exact-file parity unless exact notebook stack refs are added and a private comparison passes.
+```
+
+## Phase 2 item #19 status
+
+```text
+Status:
+  App-port / no exact notebook export.
+
+Notebook evidence:
+  cell 095 builds the Tesla v7.2 atomic/treasure inference image from Sentinel-2 SR Harmonized.
+  time range: 2022-01-01 to 2026-03-01.
+  cloud threshold: CLOUDY_PIXEL_PERCENTAGE < 5.
+  selected S2 bands:
+    B1, B2, B3, B4, B8, B8A, B11, B12.
+  notebook band/order from treasure_arsenal:
+    AI_BEH_Gold_Pure_Density_19_3_DOM_lin_640
+    AI_BEH_Artifacts_Jars_Chests_DOM_lin_640
+    AI_BEH_Mercury_RareChemicals_DOM_lin_640
+    AI_BEH_Gemstones_AncientGlass_DOM_lin_640
+    AI_BEH_Alloys_Statues_REL_ND_DOM_lin_640
+
+Downloaded export evidence:
+  exact stack refs were not present:
+    TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy
+    TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.tif
+  related per-band exported TIF candidates were present, but no exact stack export was found.
+
+App validation:
+  TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy exists.
+  shape: 640x640x5.
+  dtype: float32.
+  all five per-band NPY outputs exist.
+  all five per-band TIF outputs exist.
+  stack-vs-band max delta: 0.0.
+
+Decision:
+  No code patch.
+  The first validator failure was caused by a bad filename assumption: cell 095 band names already end in _640.
   Do not mark Full exact-file parity unless exact notebook stack refs are added and a private comparison passes.
 ```
