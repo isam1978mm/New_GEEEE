@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #26/#27/#34 closed as app-enhanced local contracts; #33 documented as notebook-current-no-export/app-port only.
+Last update: 2026-06-29 - Phase 2 item #8 inspected; app formulas/order/structure validated, exact notebook exports missing.
 
 ## Plan B scope: not-done-now items
 
@@ -670,3 +670,44 @@ Status doc: docs/PLAN_B1_26_APP_ENHANCED_STATUS.md
 ```
 
 The app keeps the richer local/private GeoJSON contract for operator workflow. It includes app metadata/classifier context and notebook semantic fields where available. This is not marked Full same-export parity because no notebook output with the exact app filename was found.
+
+
+## Phase 2 item #8 status
+
+```text
+Status:
+  App-port / no exact notebook export.
+
+Notebook evidence:
+  cell 037 writes:
+    NANO_Depth_Penetration
+    NANO_Human_Geometry_Detector
+    NANO_Mass_Anomaly
+    NANO_RVI_Clean
+    NANO_GEOPHYSICS_STACK_640.npy
+  cell 039 writes:
+    NANO_Metal_Signal_Pulse
+    GEOPHYS_Sirdab_Cavity_Void
+    GEOLOGIC_Chamber_Entry_Proxy
+    TREASURE_GEOPHYSICS_STACK_640.npy
+
+Downloaded export evidence:
+  exact stack refs were not present:
+    NANO_GEOPHYSICS_STACK_640.npy
+    TREASURE_GEOPHYSICS_STACK_640.npy
+  only REPORT_640_Mass_Report.tif was found by the loose #8 candidate scan.
+
+App validation:
+  NANO_GEOPHYSICS_STACK_640.npy exists, shape 640x640x4, dtype float32.
+  TREASURE_GEOPHYSICS_STACK_640.npy exists, shape 640x640x3, dtype float32.
+  per-band NPY/TIF outputs exist.
+  NANO stack-vs-band NPY max delta: 0.0.
+  TREASURE stack-vs-band NPY max delta: 0.0 when using notebook/app order:
+    NANO_Metal_Signal_Pulse
+    GEOPHYS_Sirdab_Cavity_Void
+    GEOLOGIC_Chamber_Entry_Proxy
+
+Decision:
+  No code patch.
+  Do not mark Full exact-file parity unless exact notebook stack refs are added and a private comparison passes.
+```
