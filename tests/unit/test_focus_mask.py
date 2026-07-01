@@ -9,6 +9,8 @@ from tempfile import TemporaryDirectory
 
 import numpy as np
 
+PNG_SIGNATURE = bytes.fromhex("89504E470D0A1A0A")
+
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
@@ -261,6 +263,7 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         targets_3d_kmz = run_dir / "full_job" / "focus" / "AI_3D_TARGET_VISUALIZATION.kmz"
 
         assert heatmap_png.is_file()
+        assert heatmap_png.read_bytes().startswith(PNG_SIGNATURE)
         assert heatmap_kmz.is_file()
         assert targets_3d_kmz.is_file()
 
@@ -268,6 +271,7 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
             heatmap_names = set(zf.namelist())
             assert "doc.kml" in heatmap_names
             assert "heat.png" in heatmap_names
+            assert zf.read("heat.png").startswith(PNG_SIGNATURE)
             heatmap_kml = zf.read("doc.kml").decode("utf-8")
 
         assert "AI Heatmap Classification" in heatmap_kml

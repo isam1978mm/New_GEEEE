@@ -80,8 +80,8 @@ Closed in B1:
   #33 app-port / notebook-current-no-export
 
 Next concrete local-app pass:
-  #26 app-enhanced local contract design and optional approved patch
-  #27 visualization KMZ/PNG app-goal review
+  #26 app-enhanced local contract: closed
+  #27 visualization KMZ/PNG app-enhanced local contract: closed
   #34 field-operation GeoJSON/KMZ app-goal review
 
 Then:
@@ -110,3 +110,19 @@ The app output is richer than the closest notebook GeoJSON contract and is bette
 It keeps app metadata/classifier context and adds notebook semantic fields where available.
 It must not be presented as Full same-export parity because no exact notebook export exists for the app filename.
 ```
+
+
+## #27 visualization app-enhanced local contract
+
+For `AI_HEATMAP_CLASSIFICATION.png`, `AI_HEATMAP_CLASSIFICATION.kmz`, and `AI_3D_TARGET_VISUALIZATION.kmz`:
+
+```text
+Current app outputs: exist.
+Exact notebook exports: not found in the downloaded notebook export.
+Notebook writer candidates: cell 139, cell 155, cell 156.
+Selected app-goal contract: keep local/private visualization package, validate real PNG/KMZ structure, and keep source/provenance markers.
+Full exact-file parity: blocked unless exact notebook refs appear and a private comparison passes.
+Production-redaction required: yes, because KML/KMZ visualization outputs are coordinate-bearing.
+```
+
+Rule: a `.png` output must be real PNG bytes, not escaped text. KMZ-embedded PNG entries must also start with the PNG signature.

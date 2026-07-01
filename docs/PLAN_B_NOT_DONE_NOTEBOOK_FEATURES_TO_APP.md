@@ -1,8 +1,8 @@
 # Plan B — Implement Not-Done Notebook Features In The App
 
-Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #33 is app-port / notebook-current-no-export.
+Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #33 documented as notebook-current-no-export/app-port only.
+Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #26/#27 closed as app-enhanced local contracts; #33 documented as notebook-current-no-export/app-port only.
 
 ## Plan B scope: not-done-now items
 
@@ -19,7 +19,7 @@ Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #33 document
 | 24 | Hard classifiers / target type rules | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9 CSV/TXT/JSON; committed in acca221 and documented in bb10358. |
 | 25 | Target CSV / TXT / JSON outputs | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C CSV/TXT/JSON; committed in 5f7cf9c. |
 | 26 | GeoJSON detected-feature exports | 🟦 App-enhanced local | Yes | App output AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson is intentionally richer than notebook cell 123 target GeoJSON: app metadata/classifier context plus notebook semantic fields when available. Full exact-file parity is blocked because no exact notebook export/writer exists. Production-redaction required. |
-| 27 | KMZ heatmap / 3D target visualization | 🟨 Partial | Yes | App port implemented for canonical cell 155 AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
+| 27 | KMZ heatmap / 3D target visualization | 🟦 App-enhanced local | Yes | App emits AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer candidates exist at cells 139/155/156. Real PNG signature and KMZ package validation now pass. Full exact-file parity remains blocked; production-redaction required. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
@@ -83,7 +83,7 @@ B2 focus and target contracts implemented:
 - Item 26: app-enhanced local WGS84 detected-feature GeoJSON; Full exact-file parity blocked; production-redaction required.
 
 B3 local/private visualization contracts implemented:
-- Item 27: cell 155 heatmap PNG, heatmap KMZ, and 3D visualization KMZ.
+- Item 27: app-enhanced local heatmap PNG, heatmap KMZ, and 3D visualization KMZ; real PNG/KMZ validation passed; Full exact-file parity blocked.
 - Item 34: cell 200 field-operation GeoJSON and KMZ.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
@@ -101,11 +101,23 @@ B4 AI planning/tensor/training/model/inference/diagnostic contracts implemented:
 
 ```text
 Status:
-  App port implemented for selected KMZ heatmap + 3D visualization outputs.
-  Frozen notebook numeric parity is still pending.
+  App-enhanced local visualization contract.
+  Full exact-file parity is blocked because the downloaded notebook export does not contain:
+    AI_HEATMAP_CLASSIFICATION.png
+    AI_HEATMAP_CLASSIFICATION.kmz
+    AI_3D_TARGET_VISUALIZATION.kmz
 
-Canonical notebook variant selected:
-  cell_155 -> FINAL KMZ heatmap + 3D targets, fixed depth safe.
+Notebook evidence:
+  Candidate writer cells were found:
+    cell 139: exact hits for all three output names, files/AI_HEATMAP_CLASSIFICATION.png inside KMZ.
+    cell 155: exact hits for all three output names, heat.png inside KMZ.
+    cell 156: exact hits for all three output names, simplekml/temp-file implementation.
+
+Selected app-goal contract:
+  Keep the app local/private visualization package.
+  Follow the cell-155-style package shape where AI_HEATMAP_CLASSIFICATION.kmz contains doc.kml and heat.png.
+  Keep source_cell markers and local/private FILESYSTEM_ONLY behavior.
+  Do not mark Full unless exact notebook refs appear and a private comparison passes.
 
 Implemented app outputs:
   full_job/focus/AI_HEATMAP_CLASSIFICATION.png
@@ -113,22 +125,23 @@ Implemented app outputs:
   full_job/focus/AI_3D_TARGET_VISUALIZATION.kmz
 
 Validation done:
-  focused focus-mask unit test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files exist.
-  FocusMaskStage artifact count confirmed as 18.
-  Heatmap KMZ contains doc.kml and heat.png.
-  Heatmap KML contains AI Heatmap Classification, GroundOverlay, LatLonBox, and source_cell=cell_155.
-  3D visualization KMZ contains doc.kml.
-  3D KML contains AI 3D Target Visualization, source_cell=cell_155, 5 Placemark entries, and relativeToGround altitude mode.
+  focused tests passed.
+  old/fresh app package inspection proved the previous heatmap PNG bytes were escaped text, not real PNG bytes.
+  PNG writer fixed to emit real PNG byte signatures.
+  unit tests now assert standalone PNG signature and inner heat.png signature inside KMZ.
+  fresh output after fix passed:
+    PASS_PNG_SIGNATURE=True
+    PASS_KMZ_SIGNATURE=True
+    PASS_KMZ_INNER_PNG_SIGNATURE=True
+    PASS_3D_KMZ_SIGNATURE=True
+  fresh heatmap PNG is 640x640 RGBA.
+  heatmap KMZ contains doc.kml and heat.png.
+  3D target KMZ contains doc.kml and 5 Placemarks with relativeToGround altitude mode.
 
 Privacy/artifact policy:
   All outputs are FILESYSTEM_ONLY and http_servable=False.
-  Keep coordinate-bearing visualization outputs local/private by default.
-
-Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B3.1 artifacts.
-  Compare against frozen notebook outputs after reference files are selected/generated.
+  Coordinate-bearing KML/KMZ outputs remain local/private.
+  Production-redaction review is required before public/API exposure.
 ```
 
 ### B3.2 result — item 34 Field-operation KMZ outputs

@@ -1717,9 +1717,9 @@ def _write_rgba_png(path: Path, rgba: np.ndarray) -> None:
             + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
         )
 
-    raw = b"".join(b"\\x00" + arr[row].tobytes() for row in range(height))
+    raw = b"".join(b"\x00" + arr[row].tobytes() for row in range(height))
     png = (
-        b"\\x89PNG\\r\\n\\x1a\\n"
+        b"\x89PNG\r\n\x1a\n"
         + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
         + chunk(b"IDAT", zlib.compress(raw, level=6))
         + chunk(b"IEND", b"")

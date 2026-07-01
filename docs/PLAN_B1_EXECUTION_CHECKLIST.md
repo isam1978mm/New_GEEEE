@@ -20,7 +20,6 @@ Blocked/documented in this B1 closure pass:
 
 Not closed by this B1 closure pass:
 - #26 detected-feature GeoJSON: app-enhanced local contract; blocked for Full exact-file parity.
-- #27 heatmap PNG/KMZ and 3D target KMZ.
 - #34 field-operation GeoJSON/KMZ.
 - Phase 2 tensor/raster parity items.
 - Phase 3 gated/replacement parity items.
@@ -258,6 +257,19 @@ Current app #26 output does not match the cell 123 GeoJSON contract exactly.
 Next #26 step is app-goal schema design, not blind parity patching.
 ```
 
+
+## #27 app-enhanced local visualization decision
+
+```text
+AI_HEATMAP_CLASSIFICATION.png
+AI_HEATMAP_CLASSIFICATION.kmz
+AI_3D_TARGET_VISUALIZATION.kmz
+Status: app-enhanced local visualization contract.
+Full exact-file parity is blocked because exact notebook exports are missing.
+Real PNG/KMZ package validation passed after the writer fix.
+Production-redaction required.
+```
+
 ## Remaining concrete output families not closed by this Plan B1 pass
 
 These are the next concrete output families to close before Phase 2 tensor/raster work.
@@ -277,13 +289,13 @@ Plan:
 - test, commit, push
 
 #27 — AI_HEATMAP_CLASSIFICATION.png / .kmz and AI_3D_TARGET_VISUALIZATION.kmz
-Plan:
-- freeze notebook PNG/KMZ refs privately
-- hash refs
-- compare PNG dimensions/hash or approved visual metric
-- compare KMZ package contents
-- compare KML feature count/properties privately
-- document, test, commit, push
+Status:
+- app-enhanced local visualization contract
+- downloaded notebook export does not contain exact PNG/KMZ refs
+- notebook writer candidates exist: cell 139, cell 155, cell 156
+- app follows the cell-155-style local package shape with heat.png inside KMZ
+- real PNG signature and KMZ package validation passed after #27 writer fix
+- production-redaction required for coordinate-bearing KML/KMZ
 
 #34 — FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz
 Plan:
