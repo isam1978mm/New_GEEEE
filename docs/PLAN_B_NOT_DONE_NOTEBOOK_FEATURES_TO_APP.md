@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Phase 2 item #8 inspected; app formulas/order/structure validated, exact notebook exports missing.
+Last update: 2026-06-29 - Phase 2 item #18 inspected; app DEM-matched S2 mask stack structure/order validated, exact notebook exports missing.
 
 ## Plan B scope: not-done-now items
 
@@ -12,7 +12,7 @@ Last update: 2026-06-29 - Phase 2 item #8 inspected; app formulas/order/structur
 | 9 | More feature stacks / rename layers | 🟨 Partial | Yes | App port implemented for selected stack families: cell 050, 053, 051, 047, 052, and 054. Frozen notebook numeric parity still pending. |
 | 15 | Bonus / simulator features | 🟨 Partial | Yes | App port implemented for cell 072 AUX_BONUS_FEATURES_STACK_640 and cell 073 SIM_GEOPHYSICAL_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 18 | DEM-matched S2 masks | 🟨 Partial | Yes | App port implemented for canonical cell 081 AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
+| 18 | DEM-matched S2 masks | 🟦 App-port / no exact notebook export | Yes | Canonical cell 081 inspected. App emits AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy plus per-band TIF/NPY outputs. App structure/order validation passed: stack shape 640x640x9, dtype float32, all per-band NPY/TIF present, stack-vs-band max delta 0.0. Exact notebook stack refs were missing from the downloaded export, so Full exact-file parity is blocked. |
 | 19 | Tesla v7.2 inference engines | 🟨 Partial | Yes | App port implemented for canonical cell 095 TESLA_V7_2_ATOMIC_INFERENCE_STACK_640. Frozen notebook numeric parity still pending. |
 | 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 23 | ROI-constrained AI analysis inside 17m focus | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 123 contract. Pixel CSV, target CSV, and GeoJSON matched; committed in 8ab7f0b. |
@@ -706,6 +706,39 @@ App validation:
     NANO_Metal_Signal_Pulse
     GEOPHYS_Sirdab_Cavity_Void
     GEOLOGIC_Chamber_Entry_Proxy
+
+Decision:
+  No code patch.
+  Do not mark Full exact-file parity unless exact notebook stack refs are added and a private comparison passes.
+```
+
+## Phase 2 item #18 status
+
+```text
+Status:
+  App-port / no exact notebook export.
+
+Notebook evidence:
+  cell 081 writes DEM-matched S2 masks for 2022-01-01 to 2026-02-28 with cloud threshold < 3.
+  selected S2 bands:
+    B1, B2, B3, B4, B5, B8, B11, B12
+  output family:
+    AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy
+    per-band {band}_640.tif
+    per-band {band}_640.npy
+
+Downloaded export evidence:
+  exact stack refs were not present:
+    AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy
+    AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.tif
+
+App validation:
+  AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy exists.
+  shape: 640x640x9.
+  dtype: float32.
+  all per-band NPY outputs exist.
+  all per-band TIF outputs exist.
+  stack-vs-band max delta: 0.0.
 
 Decision:
   No code patch.
