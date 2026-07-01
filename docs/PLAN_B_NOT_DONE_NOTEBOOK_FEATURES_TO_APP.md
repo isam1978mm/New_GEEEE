@@ -1,8 +1,8 @@
 # Plan B — Implement Not-Done Notebook Features In The App
 
-Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
+Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #26/#27 closed as app-enhanced local contracts; #33 documented as notebook-current-no-export/app-port only.
+Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #26/#27/#34 closed as app-enhanced local contracts; #33 documented as notebook-current-no-export/app-port only.
 
 ## Plan B scope: not-done-now items
 
@@ -26,7 +26,7 @@ Last update: 2026-06-29 - B1 #23/#24/#25 same-export parity closed; #26/#27 clos
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
 | 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 33 | Metal fingerprint diagnostic | 🟦 App-port / no notebook export | Yes | App emits AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT and docs record current notebook has no #33 file export. Do not mark Full unless a real notebook export is added later. |
-| 34 | Field-operation KMZ outputs | 🟨 Partial | Yes | App port implemented for canonical cell 200 FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Outputs and tests pass. Frozen notebook numeric parity still pending. |
+| 34 | Field-operation KMZ outputs | 🟦 App-enhanced local | Yes | App emits FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer cells 191/200 write the exact output names. App GeoJSON/KMZ structure is valid and aligned with notebook intent. Full exact-file parity remains blocked; production-redaction required. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
 | 39 | Final probability map overlay + markers | ?? Partial | Yes | App port implemented for canonical cell 238 AI_FINAL_PROBABILITY_OVERLAY_GATE_V7_2.json as a gated probability-overlay readiness manifest. No geemap, torch, inference, probability map, tiles, markers, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 40 | GPS/path tracing from targets | ?? Partial | Yes | App port implemented for canonical cell 242 AI_GPS_PATH_TRACING_GATE_V7_2.json as a gated GPS/path-tracing readiness manifest. No geemap, Earth Engine import, torch, inference, probability-map read, path trace, route GeoJSON/KMZ, public route, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
@@ -84,7 +84,7 @@ B2 focus and target contracts implemented:
 
 B3 local/private visualization contracts implemented:
 - Item 27: app-enhanced local heatmap PNG, heatmap KMZ, and 3D visualization KMZ; real PNG/KMZ validation passed; Full exact-file parity blocked.
-- Item 34: cell 200 field-operation GeoJSON and KMZ.
+- Item 34: app-enhanced local field-operation GeoJSON and KMZ; Full exact-file parity blocked.
 - Item 38: cell 243 app-native live overlay manifest and operator-only preview family.
 
 B4 AI planning/tensor/training/model/inference/diagnostic contracts implemented:
@@ -148,35 +148,41 @@ Privacy/artifact policy:
 
 ```text
 Status:
-  App port implemented for selected field-operation GeoJSON and KMZ outputs.
-  Frozen notebook numeric parity is still pending.
+  App-enhanced local field-operations contract.
+  Full exact-file parity is blocked because the downloaded notebook export does not contain:
+    FINAL_ARCHEO_INTELLIGENCE_MAP.geojson
+    TESLA_V7_2_FIELD_OPERATIONS.kmz
 
-Canonical notebook variant selected:
-  cell_200 -> advanced field mapping / TESLA_V7_2_FIELD_OPERATIONS.
+Notebook evidence:
+  Candidate writer cells were found:
+    cell 191: writes FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz.
+    cell 200: writes FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz.
+    cell 202: checks whether those two outputs exist.
+
+Selected app-goal contract:
+  Keep the app local/private field-operations package.
+  Keep FeatureCollection GeoJSON with Point features and app metadata.
+  Keep KMZ with doc.kml, field mission title, source_cell marker, and Placemarks.
+  Do not mark Full unless exact notebook refs appear and a private comparison passes.
 
 Implemented app outputs:
   full_job/focus/FINAL_ARCHEO_INTELLIGENCE_MAP.geojson
   full_job/focus/TESLA_V7_2_FIELD_OPERATIONS.kmz
 
 Validation done:
-  focused focus-mask unit test passed.
-  full-run integration test passed.
-  local existing run regenerated and confirmed output files exist.
-  FocusMaskStage artifact count confirmed as 20.
-  FINAL_ARCHEO_INTELLIGENCE_MAP.geojson is a FeatureCollection with source_cell cell_200, CRS EPSG:4326, and 5 Point features.
-  Longitude/latitude ranges were validated without exposing exact coordinates.
-  Feature properties include Source_Cell, Material_Content, Field_Notes, and UTM.
-  TESLA_V7_2_FIELD_OPERATIONS.kmz contains doc.kml.
-  Field KML contains Tesla v7.2 Mission: Advanced Intelligence Assets, source_cell=cell_200, 5 Placemark entries, and Strategic Intelligence Data.
+  exact notebook exports checked and not found in the downloaded export.
+  notebook writer cells inspected.
+  app GeoJSON structure inspected without printing coordinates.
+  app KMZ structure inspected without printing coordinates.
+  GeoJSON is FeatureCollection / EPSG:4326 / FILESYSTEM_ONLY / 5 Point features.
+  KMZ is valid ZIP/KMZ with doc.kml, 5 Placemarks, source_cell marker, and field-operations title.
 
 Privacy/artifact policy:
   All outputs are FILESYSTEM_ONLY and http_servable=False.
-  Keep coordinate-bearing field-operation outputs local/private by default.
-
-Remaining validation:
-  Run a fresh UI/orchestrator run so DB artifact registration includes the new B3.2 artifacts.
-  Compare against frozen notebook outputs after reference files are selected/generated.
+  Coordinate-bearing GeoJSON/KMZ outputs remain local/private.
+  Production-redaction review is required before public/API exposure.
 ```
+
 
 ### B3.3 result — item 38 Live geemap overlays, replaced by app-native map/layer UI
 

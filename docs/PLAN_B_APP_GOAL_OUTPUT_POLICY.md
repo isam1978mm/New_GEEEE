@@ -82,7 +82,7 @@ Closed in B1:
 Next concrete local-app pass:
   #26 app-enhanced local contract: closed
   #27 visualization KMZ/PNG app-enhanced local contract: closed
-  #34 field-operation GeoJSON/KMZ app-goal review
+  #34 field-operation GeoJSON/KMZ app-enhanced local contract: closed
 
 Then:
   Phase 2 tensor/raster parity/app-goal review
@@ -126,3 +126,16 @@ Production-redaction required: yes, because KML/KMZ visualization outputs are co
 ```
 
 Rule: a `.png` output must be real PNG bytes, not escaped text. KMZ-embedded PNG entries must also start with the PNG signature.
+
+## #34 field-operations app-enhanced local contract
+
+For `FINAL_ARCHEO_INTELLIGENCE_MAP.geojson` and `TESLA_V7_2_FIELD_OPERATIONS.kmz`:
+
+```text
+Current app outputs: exist.
+Exact notebook exports: not found in the downloaded notebook export.
+Notebook writer candidates: cell 191 and cell 200 write the exact output names.
+Selected app-goal contract: keep local/private field-operations package, validate GeoJSON/KMZ structure, and keep source/provenance markers.
+Full exact-file parity: blocked unless exact notebook refs appear and a private comparison passes.
+Production-redaction required: yes, because GeoJSON/KML/KMZ field-operation outputs are coordinate-bearing.
+```

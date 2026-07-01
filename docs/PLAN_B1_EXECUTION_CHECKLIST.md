@@ -20,7 +20,6 @@ Blocked/documented in this B1 closure pass:
 
 Not closed by this B1 closure pass:
 - #26 detected-feature GeoJSON: app-enhanced local contract; blocked for Full exact-file parity.
-- #34 field-operation GeoJSON/KMZ.
 - Phase 2 tensor/raster parity items.
 - Phase 3 gated/replacement parity items.
 ```
@@ -270,9 +269,9 @@ Real PNG/KMZ package validation passed after the writer fix.
 Production-redaction required.
 ```
 
-## Remaining concrete output families not closed by this Plan B1 pass
+## Concrete output follow-up closure status
 
-These are the next concrete output families to close before Phase 2 tensor/raster work.
+The concrete output follow-up families are now closed or blocked under the app-goal policy. Phase 2 tensor/raster work is next.
 
 ```text
 #26 — AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson
@@ -298,21 +297,22 @@ Status:
 - production-redaction required for coordinate-bearing KML/KMZ
 
 #34 — FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz
-Plan:
-- freeze notebook GeoJSON/KMZ refs privately
-- hash refs
-- compare GeoJSON privately
-- compare KMZ/KML privately
-- document, test, commit, push
+Status:
+- app-enhanced local field-operations contract
+- exact notebook exports missing from downloaded export
+- notebook writer cells 191/200 write exact output names
+- app GeoJSON/KMZ structure validated privately
+- Full exact-file parity blocked
+- production-redaction required
 ```
 
-Do #26 first because it depends directly on the #23 target/GeoJSON contract that is now Full.
+Concrete output follow-up items #26, #27, and #34 are now closed under the app-goal policy. Start Phase 2 next.
 
 ---
 
 ## Phase 2 — tensor/raster parity
 
-Start Phase 2 only after the remaining concrete output families (#26, #27, #34) are closed or explicitly blocked.
+Start Phase 2 now. The concrete output families #26, #27, and #34 are closed or explicitly blocked for Full exact-file parity under the app-goal policy.
 
 Work order:
 
