@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Phase 2 item #19 inspected; app Tesla v7.2 atomic inference stack structure/order validated, exact notebook stack exports missing.
+Last update: 2026-06-29 - Phase 2 item #20 inspected; stack structure validated but Mass/Pottery numeric parity blocked by source-data/provenance mismatch.
 
 ## Plan B scope: not-done-now items
 
@@ -14,7 +14,7 @@ Last update: 2026-06-29 - Phase 2 item #19 inspected; app Tesla v7.2 atomic infe
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 18 | DEM-matched S2 masks | 🟦 App-port / no exact notebook export | Yes | Canonical cell 081 inspected. App emits AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy plus per-band TIF/NPY outputs. App structure/order validation passed: stack shape 640x640x9, dtype float32, all per-band NPY/TIF present, stack-vs-band max delta 0.0. Exact notebook stack refs were missing from the downloaded export, so Full exact-file parity is blocked. |
 | 19 | Tesla v7.2 inference engines | 🟦 App-port / no exact notebook export | Yes | Canonical cell 095 inspected. App emits TESLA_V7_2_ATOMIC_INFERENCE_STACK_640.npy plus per-band TIF/NPY outputs for the five AI_BEH_* inference bands. App structure/order validation passed: stack shape 640x640x5, dtype float32, all per-band NPY/TIF present, stack-vs-band max delta 0.0. Exact notebook stack refs were missing from the downloaded export, so Full exact-file parity is blocked. |
-| 20 | Fusion center / intelligence tensors | 🟨 Partial | Yes | App port implemented for canonical cell 099 REPORT_640_FINAL_INTELLIGENCE_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
+| 20 | Fusion center / intelligence tensors | 🟨 Partial / numeric parity blocked | Yes | Canonical cell 099 inspected. App emits REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy plus per-band TIF/NPY outputs; stack shape/order and stack-vs-band validation pass with max delta 0.0. Frozen notebook per-band TIF refs exist. Zero_Point matched exactly, but Mass_Report and Pottery_Report do not match because local source data/provenance differs: local s2_raw_cube lacks B8A and uses scaled reflectance-like values, while notebook cell 099 uses direct EE S2/L9 values. No patch until notebook-equivalent local B8A/S2/L9 inputs are available or an app-goal exception is approved. |
 | 23 | ROI-constrained AI analysis inside 17m focus | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 123 contract. Pixel CSV, target CSV, and GeoJSON matched; committed in 8ab7f0b. |
 | 24 | Hard classifiers / target type rules | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 128 AI_HARD_TYPE_CLASSIFIER_CORE9 CSV/TXT/JSON; committed in acca221 and documented in bb10358. |
 | 25 | Target CSV / TXT / JSON outputs | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C CSV/TXT/JSON; committed in 5f7cf9c. |
@@ -782,4 +782,64 @@ Decision:
   No code patch.
   The first validator failure was caused by a bad filename assumption: cell 095 band names already end in _640.
   Do not mark Full exact-file parity unless exact notebook stack refs are added and a private comparison passes.
+```
+
+## Phase 2 item #20 status
+
+```text
+Status:
+  Partial / numeric parity blocked.
+
+Notebook evidence:
+  Canonical cell 099 exports:
+    REPORT_640_FINAL_Zero_Point_Targets.tif
+    REPORT_640_Mass_Report.tif
+    REPORT_640_Pottery_Report.tif
+
+  Formulas:
+    Zero_Point     = boolean intersection from gold/void/hard/ancient signals
+    Mass_Report    = B12 * L9 ST_B10 / 1000
+    Pottery_Report = B11 / B8A
+
+Downloaded export evidence:
+  Exact stack refs were not present:
+    REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy
+    REPORT_640_FINAL_INTELLIGENCE_STACK_640.tif
+
+  Exact per-band notebook TIF refs were present and frozen privately:
+    REPORT_640_FINAL_Zero_Point_Targets.tif
+    REPORT_640_Mass_Report.tif
+    REPORT_640_Pottery_Report.tif
+
+App validation:
+  REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy exists.
+  shape: 640x640x3.
+  dtype: float32.
+  per-band NPY/TIF outputs exist.
+  stack-vs-band max delta: 0.0.
+
+Notebook TIF comparison:
+  REPORT_640_FINAL_Zero_Point_Targets.tif:
+    exact match: true
+    max_abs_delta: 0.0
+
+  REPORT_640_Mass_Report.tif:
+    exact match: false
+    max_abs_delta observed: 143227.79296875 / 200614.40906223655 depending app candidate
+
+  REPORT_640_Pottery_Report.tif:
+    exact match: false
+    max_abs_delta observed: 0.43912768363952637 / 0.39577358961105347 depending app candidate
+
+Root cause:
+  s2_indices.py EE builder matches canonical cell 099 formulas.
+  Current local run source data does not provide notebook-equivalent inputs:
+    local s2_raw_cube.npy has 7 bands and no B8A.
+    local s2_raw_cube.npy uses scaled reflectance-like values.
+    notebook cell 099 uses direct EE S2 bands including B8A and direct L9 ST_B10 values.
+
+Decision:
+  Do not mark Full.
+  Do not patch formulas blindly.
+  Keep as Partial / numeric parity blocked until notebook-equivalent local B8A/S2/L9 inputs exist or an app-goal exception is explicitly approved.
 ```
