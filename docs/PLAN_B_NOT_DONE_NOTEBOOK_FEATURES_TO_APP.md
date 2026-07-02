@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Plan B item #28 inspected; app-goal/private requirements manifest validated, exact notebook export missing.
+Last update: 2026-06-29 - Plan B item #30 inspected; app training-boundary manifest validated, exact notebook boundary export missing.
 
 ## Plan B scope: not-done-now items
 
@@ -22,7 +22,7 @@ Last update: 2026-06-29 - Plan B item #28 inspected; app-goal/private requiremen
 | 27 | KMZ heatmap / 3D target visualization | 🟦 App-enhanced local | Yes | App emits AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer candidates exist at cells 139/155/156. Real PNG signature and KMZ package validation now pass. Full exact-file parity remains blocked; production-redaction required. |
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟦 App-goal / no exact notebook export | Yes | Canonical cell 140 inspected. Notebook writes timestamped STAGE1 audit CSV/JSON outputs, not AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json, and the downloaded export contains no exact #28 ref. App emits manifests/AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. Corrected app-goal validation passed: YOLOv11, CNN, Swin, SegFormer, and UnetPlusPlus terms present; no torch/model/weights/runtime terms; safe flags for inference/training/downloads/heavy dependencies/model artifacts/http/frontend/download are false. No model training/inference/weights/dependency changes. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
-| 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
+| 30 | Training / learn weights cells | 🟦 App-goal / training-boundary no exact notebook export | Yes, separate | Canonical cell 166 inspected. Notebook cell is real Torch/SMP training code: imports torch/torch.nn/torch.optim/segmentation_models_pytorch, creates UnetPlusPlus with imagenet encoder weights, uses CUDA/AMP if available, defines and calls train_pro_intelligence(...), and writes no boundary JSON. Downloaded export has no exact AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json; only AI_TRAIN_LABELS.csv was found as a candidate. App emits manifests/AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a safe boundary-only manifest. Corrected validation passed: schema/status/source_cell match, normal app train/install/download/write-model/run-inference/http/frontend/download flags are false, separate_training_workflow_required is true, and required policy keys are present. No normal app training, dependency install, weight download, inference, or model artifacts. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
 | 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 33 | Metal fingerprint diagnostic | 🟦 App-port / no notebook export | Yes | App emits AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT and docs record current notebook has no #33 file export. Do not mark Full unless a real notebook export is added later. |
@@ -901,4 +901,58 @@ Decision:
   Keep app-goal/private manifest.
   Do not mark exact-file parity because the notebook export is missing and cell 140 writes timestamped STAGE1 audit outputs, not the app manifest filename.
   No code patch.
+```
+
+## Plan B item #30 status
+
+```text
+Status:
+  App-goal / training-boundary no exact notebook export.
+
+Notebook evidence:
+  canonical cell 166 is actual training code:
+    imports torch / torch.nn / torch.optim / segmentation_models_pytorch
+    creates Professional_Target_Model = smp.UnetPlusPlus(..., encoder_weights="imagenet")
+    uses CUDA/AMP if available
+    defines train_pro_intelligence(...)
+    calls train_pro_intelligence(...)
+    writes no AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json
+
+Downloaded export evidence:
+  exact boundary manifest not found:
+    AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json FOUND: 0
+  candidate found:
+    AI_TRAIN_LABELS.csv
+
+App validation:
+  manifest exists:
+    manifests/AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json
+  schema_version:
+    plan_b30_ai_training_workflow_boundary_v1
+  status:
+    implemented_training_workflow_boundary_only
+  source_cell:
+    cell_166
+
+Safety gates validated:
+  normal_app_runs_must_train_models: false
+  normal_app_runs_must_install_ml_dependencies: false
+  normal_app_runs_must_download_weights: false
+  normal_app_runs_must_write_model_artifacts: false
+  normal_app_runs_must_run_inference: false
+  http_servable: false
+  frontend_visible: false
+  downloadable_via_api: false
+  separate_training_workflow_required: true
+
+Required policy keys present:
+  dependency_policy
+  training_input_contract
+  training_output_contract_when_later_approved
+  required_approval_gates
+
+Decision:
+  Do not port notebook training into normal app runtime.
+  Keep as boundary-only/private planning manifest.
+  Do not mark exact-file parity unless the notebook later emits an equivalent boundary JSON and private comparison passes.
 ```
