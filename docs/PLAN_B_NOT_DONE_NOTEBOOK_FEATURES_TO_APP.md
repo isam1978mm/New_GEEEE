@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Phase 2 item #20 inspected; stack structure validated but Mass/Pottery numeric parity blocked by source-data/provenance mismatch.
+Last update: 2026-06-29 - Plan B item #28 inspected; app-goal/private requirements manifest validated, exact notebook export missing.
 
 ## Plan B scope: not-done-now items
 
@@ -20,7 +20,7 @@ Last update: 2026-06-29 - Phase 2 item #20 inspected; stack structure validated 
 | 25 | Target CSV / TXT / JSON outputs | ✅ Full | Yes | Same-export parity complete against frozen notebook cell 121 AI_CORE_RING_SCENE_TARGETS_V7_2C and AI_CORE_RING_SCENE_DECISION_V7_2C CSV/TXT/JSON; committed in 5f7cf9c. |
 | 26 | GeoJSON detected-feature exports | 🟦 App-enhanced local | Yes | App output AI_FOCUS_17M_DETECTED_FEATURES_WGS84_V7_2.geojson is intentionally richer than notebook cell 123 target GeoJSON: app metadata/classifier context plus notebook semantic fields when available. Full exact-file parity is blocked because no exact notebook export/writer exists. Production-redaction required. |
 | 27 | KMZ heatmap / 3D target visualization | 🟦 App-enhanced local | Yes | App emits AI_HEATMAP_CLASSIFICATION.png, AI_HEATMAP_CLASSIFICATION.kmz, and AI_3D_TARGET_VISUALIZATION.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer candidates exist at cells 139/155/156. Real PNG signature and KMZ package validation now pass. Full exact-file parity remains blocked; production-redaction required. |
-| 28 | AI requirements mapper for YOLO/CNN/Swin | 🟨 Partial | Yes | App port implemented for canonical cell 140 AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
+| 28 | AI requirements mapper for YOLO/CNN/Swin | 🟦 App-goal / no exact notebook export | Yes | Canonical cell 140 inspected. Notebook writes timestamped STAGE1 audit CSV/JSON outputs, not AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json, and the downloaded export contains no exact #28 ref. App emits manifests/AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. Corrected app-goal validation passed: YOLOv11, CNN, Swin, SegFormer, and UnetPlusPlus terms present; no torch/model/weights/runtime terms; safe flags for inference/training/downloads/heavy dependencies/model artifacts/http/frontend/download are false. No model training/inference/weights/dependency changes. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟨 Partial | Yes, separate | App port implemented for canonical cell 166 AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a separate-training-workflow boundary. No normal app training, dependency install, weight download, inference, or model artifacts. Frozen notebook numeric parity still pending. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
@@ -842,4 +842,63 @@ Decision:
   Do not mark Full.
   Do not patch formulas blindly.
   Keep as Partial / numeric parity blocked until notebook-equivalent local B8A/S2/L9 inputs exist or an app-goal exception is explicitly approved.
+```
+
+## Plan B item #28 status
+
+```text
+Status:
+  App-goal / no exact notebook export.
+
+Notebook evidence:
+  Canonical cell 140 is STAGE 1 matrix audit + AI requirements mapper.
+  It mentions/outputs timestamped audit files:
+    STAGE1_MATRIX_BANDS_AUDIT_{audit_stamp}.csv
+    STAGE1_SEMANTIC_REQUIREMENTS_{audit_stamp}.csv
+    STAGE1_AI_MODEL_READINESS_{audit_stamp}.csv
+    STAGE1_GEOMETRY_AUDIT_{audit_stamp}.csv
+    STAGE1_MATRIX_AUDIT_FULL_{audit_stamp}.json
+
+  Cell 140 model-family mentions include:
+    YOLOv3, YOLOv4, YOLOv5, YOLOv6, YOLOv7, YOLOv8, YOLOv9, YOLOv10, YOLOv11
+    CNN
+    Swin/SegFormer
+    Swin
+    SegFormer
+
+Downloaded export evidence:
+  AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json was not present.
+  Candidate scan found no notebook #28 export files.
+
+App validation:
+  manifests/AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json exists.
+  Required app-goal terms are present:
+    YOLOv11
+    CNN
+    Swin
+    SegFormer
+    UnetPlusPlus
+
+  Runtime/model-build forbidden terms are absent:
+    torch.load
+    model.forward
+    download_weights
+    pip install
+    cuda
+    checkpoint_url
+
+  Safety flags are false:
+    runs_inference
+    trains_models
+    downloads_weights
+    adds_heavy_ml_dependencies
+    creates_model_artifacts
+    http_servable
+    frontend_visible
+    downloadable_via_api
+
+Decision:
+  Keep app-goal/private manifest.
+  Do not mark exact-file parity because the notebook export is missing and cell 140 writes timestamped STAGE1 audit outputs, not the app manifest filename.
+  No code patch.
 ```
