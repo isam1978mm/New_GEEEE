@@ -2,14 +2,14 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Plan B #39/#40 gate manifests validated as Full gate parity; live notebook parity remains blocked.
+Last update: 2026-07-03 - Plan B #9 internal stack/order validation passed; Full notebook numeric parity still pending.
 
 ## Plan B scope: not-done-now items
 
 | # | Not-done-now notebook item | Is it done now? | Can we make it in app? | Plan B note |
 |---:|---|---|---:|---|
 | 8 | Nano / treasure / geophysics stacks | 🟨 Partial | Yes | App port implemented for canonical cell 037 Nano stack and cell 039 Treasure/Geophysics stack. Outputs and tests pass. Frozen notebook numeric parity still pending. |
-| 9 | More feature stacks / rename layers | 🟨 Partial | Yes | App port implemented for selected stack families: cell 050, 053, 051, 047, 052, and 054. Frozen notebook numeric parity still pending. |
+| 9 | More feature stacks / rename layers | ðŸŸ¨ Partial / internal stack-order proof clean | Yes | App port implemented for selected stack families: cell 050 RAD_S0_MASTER_STACK_640, cell 053 RAD_MASTER_CUBE_640, cell 051 GPHYS_MASTER_STACK_640, cell 047 MASTER_RTC_REFINED_STACK_640, cell 052 ARCH_TARGETS_STACK_640, and cell 054 ULTIMATE_GPHYS_SCAN_640. Corrected B1 validation used exact app constants and confirmed every stack matches its per-band NPYs with max delta 0.0. Frozen notebook numeric parity still pending; do not mark Full until exact frozen notebook stack refs are compared. |
 | 15 | Bonus / simulator features | 🟨 Partial | Yes | App port implemented for cell 072 AUX_BONUS_FEATURES_STACK_640 and cell 073 SIM_GEOPHYSICAL_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 17 | Extra S2 era pulls / masks | 🟨 Partial | Yes | App port implemented for canonical cell 077 AIX_2022_2026_CLOUDLT3_EXTRA_TENSORS_STACK_640. Outputs and tests pass. Frozen notebook numeric parity still pending. |
 | 18 | DEM-matched S2 masks | 🟦 App-port / no exact notebook export | Yes | Canonical cell 081 inspected. App emits AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy plus per-band TIF/NPY outputs. App structure/order validation passed: stack shape 640x640x9, dtype float32, all per-band NPY/TIF present, stack-vs-band max delta 0.0. Exact notebook stack refs were missing from the downloaded export, so Full exact-file parity is blocked. |
