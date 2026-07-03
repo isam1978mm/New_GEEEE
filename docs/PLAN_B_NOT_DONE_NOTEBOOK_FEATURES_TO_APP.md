@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Plan B item #30 inspected; app training-boundary manifest validated, exact notebook boundary export missing.
+Last update: 2026-06-29 - Plan B #31 inspected; model-build policy manifest validated as app-goal/no exact notebook export.
 
 ## Plan B scope: not-done-now items
 
@@ -23,7 +23,7 @@ Last update: 2026-06-29 - Plan B item #30 inspected; app training-boundary manif
 | 28 | AI requirements mapper for YOLO/CNN/Swin | 🟦 App-goal / no exact notebook export | Yes | Canonical cell 140 inspected. Notebook writes timestamped STAGE1 audit CSV/JSON outputs, not AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json, and the downloaded export contains no exact #28 ref. App emits manifests/AI_MODEL_REQUIREMENTS_MAPPER_V7_2.json as a private planning manifest. Corrected app-goal validation passed: YOLOv11, CNN, Swin, SegFormer, and UnetPlusPlus terms present; no torch/model/weights/runtime terms; safe flags for inference/training/downloads/heavy dependencies/model artifacts/http/frontend/download are false. No model training/inference/weights/dependency changes. |
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟦 App-goal / training-boundary no exact notebook export | Yes, separate | Canonical cell 166 inspected. Notebook cell is real Torch/SMP training code: imports torch/torch.nn/torch.optim/segmentation_models_pytorch, creates UnetPlusPlus with imagenet encoder weights, uses CUDA/AMP if available, defines and calls train_pro_intelligence(...), and writes no boundary JSON. Downloaded export has no exact AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json; only AI_TRAIN_LABELS.csv was found as a candidate. App emits manifests/AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a safe boundary-only manifest. Corrected validation passed: schema/status/source_cell match, normal app train/install/download/write-model/run-inference/http/frontend/download flags are false, separate_training_workflow_required is true, and required policy keys are present. No normal app training, dependency install, weight download, inference, or model artifacts. |
-| 31 | CNN / Unet++ / Swin / SegFormer model build | 🟨 Partial | Yes | App port implemented for canonical cell 232 AI_MODEL_BUILD_POLICY_V7_2.json as a model-build policy/config manifest. No model instantiation, torch/timm/SMP imports, weight download, inference, training, or model artifacts. Frozen notebook numeric parity still pending. |
+| 31 | CNN / Unet++ / Swin / SegFormer model build | 🟦 App-goal / model-build policy no exact notebook export | Yes | Canonical cell 232 inspected. Notebook cell is real Torch/timm/SMP model-build code: imports segmentation_models_pytorch, torch, and timm; lists pretrained Swin models; builds smp.UnetPlusPlus with tu-swin_base_patch4_window7_224 and imagenet encoder weights; executes eval/no_grad forward pass and softmax; includes resnet50 fallback. Downloaded export has no exact AI_MODEL_BUILD_POLICY_V7_2.json. App emits manifests/AI_MODEL_BUILD_POLICY_V7_2.json as a safe model-build policy manifest. Validation passed: UnetPlusPlus, tu-swin_base_patch4_window7_224, and AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy terms present; normal app build/train/install/download/write-model/run-inference flags are false; imports_torch/imports_timm/imports_segmentation_models_pytorch/instantiates_model/loads_weights/runs_forward_pass are false; http/frontend/download flags are false. No model instantiation, torch/timm/SMP import, weight download, inference, training, or model artifacts. |
 | 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
 | 33 | Metal fingerprint diagnostic | 🟦 App-port / no notebook export | Yes | App emits AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT and docs record current notebook has no #33 file export. Do not mark Full unless a real notebook export is added later. |
 | 34 | Field-operation KMZ outputs | 🟦 App-enhanced local | Yes | App emits FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer cells 191/200 write the exact output names. App GeoJSON/KMZ structure is valid and aligned with notebook intent. Full exact-file parity remains blocked; production-redaction required. |
@@ -955,4 +955,64 @@ Decision:
   Do not port notebook training into normal app runtime.
   Keep as boundary-only/private planning manifest.
   Do not mark exact-file parity unless the notebook later emits an equivalent boundary JSON and private comparison passes.
+```
+
+## Plan B item #31 status
+
+```text
+Status:
+  App-goal / model-build policy no exact notebook export.
+
+Notebook evidence:
+  Canonical cell 232 is executable model-build/inference-style notebook code:
+    imports segmentation_models_pytorch as smp
+    imports torch
+    imports timm
+    lists pretrained Swin models
+    selects tu-swin_base_patch4_window7_224
+    builds smp.UnetPlusPlus with imagenet encoder weights
+    calls model.eval()
+    runs torch.no_grad() forward pass
+    applies torch.softmax
+    includes resnet50 fallback
+
+Downloaded export evidence:
+  AI_MODEL_BUILD_POLICY_V7_2.json was not present.
+  No #31 exact notebook export candidates were found.
+
+App output:
+  manifests/AI_MODEL_BUILD_POLICY_V7_2.json exists.
+
+Validation:
+  manifest filename matches AI_MODEL_BUILD_POLICY_V7_2.json.
+  schema_version: plan_b31_ai_model_build_policy_v1.
+  status: implemented_model_build_policy_only.
+  source_cell: cell_232.
+  Required planning terms present:
+    UnetPlusPlus
+    tu-swin_base_patch4_window7_224
+    AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy
+  Normal app flags confirmed false:
+    normal_app_runs_must_build_models
+    normal_app_runs_must_train_models
+    normal_app_runs_must_install_ml_dependencies
+    normal_app_runs_must_download_weights
+    normal_app_runs_must_write_model_artifacts
+    normal_app_runs_must_run_inference
+  Runtime/model flags confirmed false:
+    imports_torch
+    imports_timm
+    imports_segmentation_models_pytorch
+    instantiates_model
+    loads_weights
+    runs_forward_pass
+  Public exposure flags confirmed false:
+    http_servable
+    frontend_visible
+    downloadable_via_api
+
+Decision:
+  No code patch.
+  Keep app behavior as a safe policy/config manifest only.
+  Do not mark notebook execution parity because the notebook builds/runs a model and the app intentionally does not.
 ```
