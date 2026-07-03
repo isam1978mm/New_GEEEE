@@ -85,3 +85,17 @@ Plan C should focus on production/local app quality:
 Do not reopen B1 parity work unless exact reference files are present.
 
 When reopened, start with inventory first, then compare, then document. No guessing.
+
+<!-- PLAN_C_INVENTORY_RESULT_START -->
+## App hardening inventory result ??? 2026-07-03
+
+The read-only Option C inventory is complete.
+
+```text id="bj22q8"
+selected_first_item: C1 ??? Redaction risk allowlist/denylist test
+redaction_risk_file_count: 115
+artifact_families_with_private_or_redaction_required_outputs: 9
+```
+
+Frozen-reference parity remains deferred. Plan C now proceeds with C1, using a docs/test-first approach and no app behavior change until the public/private safety contract is clear.
+<!-- PLAN_C_INVENTORY_RESULT_END -->

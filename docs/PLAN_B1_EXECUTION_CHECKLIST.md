@@ -493,3 +493,17 @@ Future return condition for frozen-reference parity:
 Only reopen if exact notebook reference exports are supplied, generated, or recovered.
 ```
 <!-- OPTION_C_ACTIVE_CHECKLIST_END -->
+
+<!-- PLAN_C_C1_SELECTED_START -->
+## Plan C C1 selected ??? 2026-07-03
+
+```text id="wav7np"
+[x] Option C inventory completed
+[x] C1 selected: Redaction risk allowlist/denylist test
+[ ] C1 existing safety-test inspection
+[ ] C1 minimal test/contract implementation
+[ ] C1 docs update and focused tests
+```
+
+C1 must not expose raw coordinates, raw arrays, private target geometry, or private run contents.
+<!-- PLAN_C_C1_SELECTED_END -->
