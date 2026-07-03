@@ -507,3 +507,26 @@ Only reopen if exact notebook reference exports are supplied, generated, or reco
 
 C1 must not expose raw coordinates, raw arrays, private target geometry, or private run contents.
 <!-- PLAN_C_C1_SELECTED_END -->
+
+<!-- PLAN_C_C1_IMPLEMENTED_START -->
+## Plan C C1 implementation ??? 2026-07-03
+
+```text id="hdodae"
+[x] C1 existing safety-test inspection
+[x] C1 minimal test/contract implementation
+[ ] C1 focused test validation and docs commit
+```
+
+Implemented guard:
+
+```text id="ez608q"
+tests/unit/test_plan_c_redaction_risk_allowlist.py
+tests/fixtures/plan_c_c1_redaction_risk_allowlist.json
+```
+
+Purpose:
+
+```text id="f1zeep"
+Freeze current docs/app/scripts redaction-risk baseline and fail future unapproved private-path or coordinate-like risk additions.
+```
+<!-- PLAN_C_C1_IMPLEMENTED_END -->

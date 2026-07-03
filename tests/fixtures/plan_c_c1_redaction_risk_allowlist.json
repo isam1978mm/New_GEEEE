@@ -1,0 +1,241 @@
+{
+  "allowed_risks": {
+    "app/services/h5_operator_summary.py": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C05_ACTUAL_NEGATIVE_BACKGROUND_REVIEW_KICKOFF.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C05_PHASE_A_SOURCE_VERSION_CONFIRMATION.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C05_PHASE_B_SAMPLING_POLICY_DESIGN.md": {
+      "possible_absolute_private_root": 3
+    },
+    "docs/C05_PHASE_C_PRIVATE_ROW_WRITER_DESIGN.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C05_PRIVATE_I1_ROW_WRITER_DRY_RUN_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C05_PRIVATE_I1_ROW_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C05_PRIVATE_NEGATIVE_BACKGROUND_I1_ROW_CREATION_PLAN.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C05_SAMPLE_MANIFEST_GENERATOR_DRY_RUN_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C05_SAMPLE_MANIFEST_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C06_ACTUAL_HARD_NEGATIVE_REVIEW_KICKOFF.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C06_PHASE_A_SOURCE_VERSION_CONFIRMATION.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C06_PHASE_B_SAMPLING_POLICY_DESIGN.md": {
+      "possible_absolute_private_root": 3
+    },
+    "docs/C06_PHASE_C_PRIVATE_ROW_WRITER_DESIGN.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C06_PRIVATE_HARD_NEGATIVE_I1_ROW_CREATION_PLAN.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C06_PRIVATE_I1_ROW_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C06_SAMPLE_MANIFEST_GENERATOR_DRY_RUN_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C06_SAMPLE_MANIFEST_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C07_ACTUAL_HARD_NEGATIVE_REVIEW_KICKOFF.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C07_PHASE_A_SOURCE_VERSION_CONFIRMATION.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/C07_PHASE_B_SAMPLING_POLICY_DESIGN.md": {
+      "possible_absolute_private_root": 3
+    },
+    "docs/C07_PHASE_C_PRIVATE_ROW_WRITER_DESIGN.md": {
+      "possible_absolute_private_root": 5
+    },
+    "docs/C07_PRIVATE_HARD_NEGATIVE_I1_ROW_CREATION_PLAN.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C07_PRIVATE_I1_ROW_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C07_SAMPLE_MANIFEST_GENERATOR_DRY_RUN_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/C07_SAMPLE_MANIFEST_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/DATASET_READINESS_VALIDATOR_DESIGN_CHECK.md": {
+      "possible_absolute_private_root": 6
+    },
+    "docs/H3_BASELINE_TRAINING_DESIGN.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H3_FEATURE_MATRIX_BUILD_PLAN.md": {
+      "possible_absolute_private_root": 7
+    },
+    "docs/H3_REAL_FEATURE_MATRIX_PLAN.md": {
+      "possible_absolute_private_root": 6
+    },
+    "docs/H3_REAL_FEATURE_MATRIX_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H3_REAL_FEATURE_SOURCE_INVENTORY_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H3_SCIENTIFIC_TRAINING_DESIGN.md": {
+      "possible_absolute_private_root": 4
+    },
+    "docs/H3_SCIENTIFIC_TRAINING_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H3_TRAINING_KICKOFF.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H4_AGGREGATE_PREDICTION_REVIEW.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H4_INFERENCE_INPUT_CONTRACT.md": {
+      "possible_absolute_private_root": 5
+    },
+    "docs/H4_PRIVATE_OFFLINE_INFERENCE_DESIGN.md": {
+      "possible_absolute_private_root": 4
+    },
+    "docs/H4_PRIVATE_PREDICTION_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H4_PRIVATE_WRITE_APPROVAL_GATE.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/H5_SCORE_BAND_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/Notebook_Cells_E.md": {
+      "possible_coordinate_pair": 1
+    },
+    "docs/PLAN_B1_23_FREEZE_STATUS.md": {
+      "possible_absolute_private_root": 5
+    },
+    "docs/PLAN_B1_25_FREEZE_STATUS.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/PLAN_B1_33_FREEZE_STATUS.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/PLAN_B1_EXECUTION_CHECKLIST.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/PLAN_B1_FROZEN_NOTEBOOK_REFERENCE_PARITY.md": {
+      "possible_absolute_private_root": 2
+    },
+    "docs/PLAN_B1_RAW_NOTEBOOK_EXPORT_SOURCE_RECOVERY_SCAN.md": {
+      "possible_absolute_private_root": 2,
+      "possible_windows_private_path": 2
+    },
+    "docs/PLAN_B1_STRICT_FROZEN_REFERENCE_AUDIT_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/POS01_PRIVATE_I1_ROW_CREATION_PLAN.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/POS01_PRIVATE_I1_ROW_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/PRIVATE_I2_ASSEMBLY_PLAN.md": {
+      "possible_absolute_private_root": 7
+    },
+    "docs/PRIVATE_I2_ASSEMBLY_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/PRIVATE_SPLIT_ASSIGNMENT_SCRIPT_DESIGN.md": {
+      "possible_absolute_private_root": 5
+    },
+    "docs/PRIVATE_SPLIT_ASSIGNMENT_WRITE_RESULT.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/PRIVATE_SPLIT_GROUP_LEAKAGE_RULES.md": {
+      "possible_absolute_private_root": 1
+    },
+    "docs/PRIVATE_SPLIT_TRAIN_VAL_TEST_HOLDOUT_POLICY.md": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/assemble_private_i2_pack.py": {
+      "possible_absolute_private_root": 8
+    },
+    "scripts/assign_private_splits.py": {
+      "possible_absolute_private_root": 5
+    },
+    "scripts/c05_generate_private_sample_manifest.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/c05_write_private_i1_rows.py": {
+      "possible_absolute_private_root": 2
+    },
+    "scripts/c06_generate_private_sample_manifest.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/c06_write_private_i1_rows.py": {
+      "possible_absolute_private_root": 2
+    },
+    "scripts/c07_generate_private_sample_manifest.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/c07_write_private_i1_rows.py": {
+      "possible_absolute_private_root": 2
+    },
+    "scripts/h3_build_feature_matrix.py": {
+      "possible_absolute_private_root": 2
+    },
+    "scripts/h3_build_real_feature_matrix.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/h3_check_feature_matrix_readiness.py": {
+      "possible_absolute_private_root": 2
+    },
+    "scripts/h3_inventory_real_feature_sources.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/h3_train_baseline.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/h3_train_scientific.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/h4_run_private_offline_inference.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/h5_review_score_bands.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/pos01_write_private_i1_rows.py": {
+      "possible_absolute_private_root": 2
+    },
+    "scripts/r1_locate_report640_reference_root.py": {
+      "possible_absolute_private_root": 1
+    },
+    "scripts/validate_private_i2_readiness.py": {
+      "possible_absolute_private_root": 1
+    }
+  },
+  "policy": {
+    "decreased_or_removed_risk": "allowed",
+    "increased_risk_count_in_existing_file": "fail",
+    "new_risk_file": "fail",
+    "new_risk_type_in_existing_file": "fail"
+  },
+  "schema": "plan_c_c1_redaction_risk_allowlist_v1",
+  "scope": "Current approved redaction-risk baseline for docs/app/scripts only. Tests are excluded because they intentionally contain fixtures."
+}
