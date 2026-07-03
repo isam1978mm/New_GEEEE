@@ -355,21 +355,21 @@ Work order:
 1. [x] #28 AI requirements mapper — app-goal/private manifest validated; exact notebook export missing
 2. [x] #30 Training workflow boundary — app-goal boundary manifest validated; exact notebook boundary export missing.
 3. [x] #31 Model build policy — app-goal/model-build policy manifest validated; no exact notebook export.
-4. #32 Final inference gate — closed as app-goal/final-inference gate manifest; no exact notebook gate export.
-5. #39 Probability overlay gate
-6. #40 GPS/path tracing gate
+4. [x] #32 Final inference gate — closed as app-goal/final-inference gate manifest; no exact notebook gate export.
+5. [x] #39 Probability overlay gate — validated as Full gate parity / blocked from live notebook parity.
+6. [x] #40 GPS/path tracing gate — validated as Full gate parity / blocked from live notebook parity.
 ```
 
 Definition of done for each Phase 3 item:
 
 ```text
-[ ] canonical notebook cell documented
-[ ] replacement/gate contract documented
-[ ] proof that no forbidden live behavior is executed unless explicitly approved
-[ ] manifest/schema comparison completed
-[ ] privacy boundary verified
-[ ] tests passed
-[ ] status doc updated
+[x] canonical notebook cell documented
+[x] replacement/gate contract documented
+[x] proof that no forbidden live behavior is executed unless explicitly approved
+[x] manifest/schema comparison completed
+[x] privacy boundary verified
+[x] tests passed
+[x] status doc updated
 [ ] commit pushed
 ```
 

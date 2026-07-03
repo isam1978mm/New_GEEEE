@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Plan B #32 inspected and documented as app-goal final inference gate.
+Last update: 2026-06-29 - Plan B #39/#40 gate manifests validated as Full gate parity; live notebook parity remains blocked.
 
 ## Plan B scope: not-done-now items
 
@@ -28,8 +28,8 @@ Last update: 2026-06-29 - Plan B #32 inspected and documented as app-goal final 
 | 33 | Metal fingerprint diagnostic | 🟦 App-port / no notebook export | Yes | App emits AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT and docs record current notebook has no #33 file export. Do not mark Full unless a real notebook export is added later. |
 | 34 | Field-operation KMZ outputs | 🟦 App-enhanced local | Yes | App emits FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer cells 191/200 write the exact output names. App GeoJSON/KMZ structure is valid and aligned with notebook intent. Full exact-file parity remains blocked; production-redaction required. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
-| 39 | Final probability map overlay + markers | ?? Partial | Yes | App port implemented for canonical cell 238 AI_FINAL_PROBABILITY_OVERLAY_GATE_V7_2.json as a gated probability-overlay readiness manifest. No geemap, torch, inference, probability map, tiles, markers, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
-| 40 | GPS/path tracing from targets | ?? Partial | Yes | App port implemented for canonical cell 242 AI_GPS_PATH_TRACING_GATE_V7_2.json as a gated GPS/path-tracing readiness manifest. No geemap, Earth Engine import, torch, inference, probability-map read, path trace, route GeoJSON/KMZ, public route, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
+| 39 | Final probability map overlay + markers | 🟦 Full gate parity / blocked from live notebook parity | Yes, gated | App emits `manifests/AI_FINAL_PROBABILITY_OVERLAY_GATE_V7_2.json` as a safe probability-overlay readiness gate for canonical cell 238. Gate validation passed: schema/status/source_cell match; no geemap, Earth Engine, torch, model inference, probability map, overlay tiles, markers, GeoJSON/KMZ, exact-coordinate exposure, HTTP/frontend/download exposure. Exact notebook overlay refs were missing, so this is Full gate parity only, not live notebook parity. |
+| 40 | GPS/path tracing from targets | 🟦 Full gate parity / blocked from live notebook parity | Yes, gated | App emits `manifests/AI_GPS_PATH_TRACING_GATE_V7_2.json` as a safe GPS/path-tracing readiness gate for canonical cell 242. Gate validation passed: schema/status/source_cell match; no geemap, Earth Engine, torch, model inference, probability-map read, path trace, route GeoJSON/KMZ, public route, exact-coordinate exposure, HTTP/frontend/download exposure. Exact notebook path-tracing refs were missing, so this is Full gate parity only, not live notebook parity. |
 
 ## App-goal output policy note
 
