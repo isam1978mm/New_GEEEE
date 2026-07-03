@@ -87,3 +87,29 @@ Final decision for this pass:
 Frozen-reference parity is blocked by missing notebook reference files. No further B1 promotion is possible without supplying or generating exact notebook exports.
 ```
 <!-- B1_RAW_SOURCE_RECOVERY_FINAL_END -->
+
+<!-- OPTION_C_APP_HARDENING_TRANSITION_START -->
+## Option C transition ??? 2026-07-03
+
+Option C is now the active track: app hardening.
+
+Frozen-reference notebook numeric parity is deferred, not abandoned. It remains possible later only if exact notebook reference exports are supplied, generated, or recovered.
+
+Current blocked parity items:
+
+```text id="wtj5cc"
+#8
+#9
+#15
+#17
+#29
+```
+
+Special case:
+
+```text id="vmb4yj"
+#20 remains blocked by source-provenance mismatch and needs notebook-equivalent local S2/L9 inputs before a fair parity comparison.
+```
+
+No B1 item should be promoted to Full notebook numeric parity without exact references and a successful comparison.
+<!-- OPTION_C_APP_HARDENING_TRANSITION_END -->

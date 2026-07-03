@@ -475,3 +475,21 @@ Current queue result:
 No additional current B1 closeout item is open in this late Phase 2 queue.
 ```
 <!-- B1_PHASE2_LATE_CLOSEOUT_END -->
+
+<!-- OPTION_C_ACTIVE_CHECKLIST_START -->
+## Option C active track update ??? 2026-07-03
+
+```text id="uif8mj"
+[x] B1 late Phase 2 closeout complete
+[x] Strict frozen-reference audit documented
+[x] Raw notebook/export source-recovery scan documented
+[x] Frozen-reference parity deferred as possible future work
+[x] Option C app hardening selected as active next track
+```
+
+Future return condition for frozen-reference parity:
+
+```text id="o5vai6"
+Only reopen if exact notebook reference exports are supplied, generated, or recovered.
+```
+<!-- OPTION_C_ACTIVE_CHECKLIST_END -->
