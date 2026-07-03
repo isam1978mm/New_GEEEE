@@ -51,3 +51,23 @@ The live geemap behavior is intentionally replaced by APP_NATIVE_LIVE_OVERLAY_MA
 No additional current B1 closeout item is open in this late Phase 2 queue.
 
 Items still marked Partial or blocked are not failed app ports. They are waiting for exact frozen notebook reference comparison, notebook-equivalent source inputs, or explicit app-goal replacement acceptance.
+
+<!-- B1_STRICT_FROZEN_REFERENCE_AUDIT_START -->
+## Strict frozen-reference audit update ??? 2026-07-03
+
+A strict notebook-reference-only audit was run for #8, #9, #15, #17, and #29.
+
+Result:
+
+```text id="m5qfnh"
+expected_outputs: 18
+outputs_with_strict_notebook_refs: 0
+```
+
+Decision:
+
+```text id="jv2r6i"
+No item can be promoted to Full notebook numeric parity.
+Keep #8, #9, #15, #17, and #29 Partial / blocked for Full parity until exact frozen notebook references are available.
+```
+<!-- B1_STRICT_FROZEN_REFERENCE_AUDIT_END -->
