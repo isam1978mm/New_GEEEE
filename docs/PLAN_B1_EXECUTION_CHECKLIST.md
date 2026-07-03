@@ -453,3 +453,25 @@ App manifest validation passed for manifests/AI_FINAL_INFERENCE_GATE_V7_2.json.
 All inference/model/weights/probability/coordinate/GeoJSON/KMZ/http/frontend/download flags are false.
 No normal app model execution or coordinate-bearing inference output is created.
 ```
+
+<!-- B1_PHASE2_LATE_CLOSEOUT_START -->
+## B1 Phase 2 late closeout update ??? 2026-07-03
+
+Closed or documented in this late pass:
+
+```text id="7qbih3"
+[x] #8  Nano / treasure / geophysics stacks ??? internal stack/order proof clean; Full notebook numeric parity pending.
+[x] #9  More feature stacks / rename layers ??? internal stack/order proof clean; Full notebook numeric parity pending.
+[x] #15 Bonus / simulator features ??? internal stack/order proof clean; Full notebook numeric parity pending.
+[x] #17 Extra S2 era pulls / masks ??? internal stack/order proof clean; Full notebook numeric parity pending.
+[x] #20 Fusion center / intelligence tensors ??? Partial / numeric parity blocked by source-data provenance mismatch.
+[x] #29 AI tensor builder ??? app-output proof clean; Full notebook numeric parity pending.
+[x] #38 Live geemap overlays ??? app-native replacement / output proof clean; Full live notebook parity blocked.
+```
+
+Current queue result:
+
+```text id="gxw25l"
+No additional current B1 closeout item is open in this late Phase 2 queue.
+```
+<!-- B1_PHASE2_LATE_CLOSEOUT_END -->
