@@ -71,3 +71,19 @@ No item can be promoted to Full notebook numeric parity.
 Keep #8, #9, #15, #17, and #29 Partial / blocked for Full parity until exact frozen notebook references are available.
 ```
 <!-- B1_STRICT_FROZEN_REFERENCE_AUDIT_END -->
+
+<!-- B1_RAW_SOURCE_RECOVERY_FINAL_START -->
+## Raw source-recovery final update ??? 2026-07-03
+
+The broader raw notebook/export scan found no exact reference files for #8, #9, #15, #17, or #29.
+
+```text id="4wq90h"
+total_hits: 0
+```
+
+Final decision for this pass:
+
+```text id="how7w7"
+Frozen-reference parity is blocked by missing notebook reference files. No further B1 promotion is possible without supplying or generating exact notebook exports.
+```
+<!-- B1_RAW_SOURCE_RECOVERY_FINAL_END -->

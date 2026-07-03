@@ -62,3 +62,21 @@ This is not an app failure. The app outputs exist and prior output-proof validat
 ```text id="8kehss"
 C:\Dev\New_GEE_PRIVATE\FROZEN_NOTEBOOK_REFS\b1_frozen_reference_pass\comparison_reports\b1_strict_notebook_reference_inventory.json
 ```
+
+<!-- B1_RAW_EXPORT_SOURCE_RECOVERY_SCAN_START -->
+## Raw notebook/export source-recovery scan update ??? 2026-07-03
+
+A broader scan was run over Downloads, Downloads/Compressed, and New_GEE_PRIVATE for the missing #8/#9/#15/#17/#29 exact reference filenames.
+
+Result:
+
+```text id="nxp83r"
+total_hits: 0
+```
+
+Decision:
+
+```text id="kd10oz"
+No raw notebook/export refs were found. Keep #8, #9, #15, #17, and #29 Partial / blocked for Full parity until exact frozen notebook exports are supplied or generated.
+```
+<!-- B1_RAW_EXPORT_SOURCE_RECOVERY_SCAN_END -->
