@@ -355,7 +355,7 @@ Work order:
 1. [x] #28 AI requirements mapper — app-goal/private manifest validated; exact notebook export missing
 2. [x] #30 Training workflow boundary — app-goal boundary manifest validated; exact notebook boundary export missing.
 3. [x] #31 Model build policy — app-goal/model-build policy manifest validated; no exact notebook export.
-4. #32 Final inference gate
+4. #32 Final inference gate — closed as app-goal/final-inference gate manifest; no exact notebook gate export.
 5. #39 Probability overlay gate
 6. #40 GPS/path tracing gate
 ```
@@ -441,4 +441,15 @@ Notebook evidence:
 [x] notebook candidate cells inspected
 [x] cell 123 writes AI_FOCUS_17M_TARGETS_V7_2.geojson, not the app #26 filename
 [x] current app contract is intentionally app-enhanced, not exact parity
+```
+
+## Plan B #32 — Final inference gate app-goal status
+
+```text
+Status: app-goal / final inference gate no exact notebook export.
+
+Notebook cell 169 is real Torch inference and writes private CSV/JSON results.
+App manifest validation passed for manifests/AI_FINAL_INFERENCE_GATE_V7_2.json.
+All inference/model/weights/probability/coordinate/GeoJSON/KMZ/http/frontend/download flags are false.
+No normal app model execution or coordinate-bearing inference output is created.
 ```

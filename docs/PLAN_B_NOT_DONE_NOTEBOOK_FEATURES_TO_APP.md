@@ -2,7 +2,7 @@
 
 Status: active implementation document. B1 #23/#24/#25 are Full same-export parity; #26/#27/#34 are app-enhanced local contracts; #33 is app-port / notebook-current-no-export.
 
-Last update: 2026-06-29 - Plan B #31 inspected; model-build policy manifest validated as app-goal/no exact notebook export.
+Last update: 2026-06-29 - Plan B #32 inspected and documented as app-goal final inference gate.
 
 ## Plan B scope: not-done-now items
 
@@ -24,7 +24,7 @@ Last update: 2026-06-29 - Plan B #31 inspected; model-build policy manifest vali
 | 29 | AI tensor builder for YOLO/CNN/Swin/SegFormer | 🟨 Partial | Yes | App port implemented for canonical cell 148 AI_TENSORS_STAGE4 outputs: full 52-band tensor, YOLO RGB, CNN tensor, Swin/SegFormer tensor, PCA RGB, negative mask, CSV, and JSON. No model training/inference/weights/dependency changes. Frozen notebook numeric parity still pending. |
 | 30 | Training / learn weights cells | 🟦 App-goal / training-boundary no exact notebook export | Yes, separate | Canonical cell 166 inspected. Notebook cell is real Torch/SMP training code: imports torch/torch.nn/torch.optim/segmentation_models_pytorch, creates UnetPlusPlus with imagenet encoder weights, uses CUDA/AMP if available, defines and calls train_pro_intelligence(...), and writes no boundary JSON. Downloaded export has no exact AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json; only AI_TRAIN_LABELS.csv was found as a candidate. App emits manifests/AI_TRAINING_WORKFLOW_BOUNDARY_V7_2.json as a safe boundary-only manifest. Corrected validation passed: schema/status/source_cell match, normal app train/install/download/write-model/run-inference/http/frontend/download flags are false, separate_training_workflow_required is true, and required policy keys are present. No normal app training, dependency install, weight download, inference, or model artifacts. |
 | 31 | CNN / Unet++ / Swin / SegFormer model build | 🟦 App-goal / model-build policy no exact notebook export | Yes | Canonical cell 232 inspected. Notebook cell is real Torch/timm/SMP model-build code: imports segmentation_models_pytorch, torch, and timm; lists pretrained Swin models; builds smp.UnetPlusPlus with tu-swin_base_patch4_window7_224 and imagenet encoder weights; executes eval/no_grad forward pass and softmax; includes resnet50 fallback. Downloaded export has no exact AI_MODEL_BUILD_POLICY_V7_2.json. App emits manifests/AI_MODEL_BUILD_POLICY_V7_2.json as a safe model-build policy manifest. Validation passed: UnetPlusPlus, tu-swin_base_patch4_window7_224, and AI_TENSORS_STAGE4/YOLOV11_RGB_640.npy terms present; normal app build/train/install/download/write-model/run-inference flags are false; imports_torch/imports_timm/imports_segmentation_models_pytorch/instantiates_model/loads_weights/runs_forward_pass are false; http/frontend/download flags are false. No model instantiation, torch/timm/SMP import, weight download, inference, training, or model artifacts. |
-| 32 | CNN final target inference | 🟨 Partial | Yes | App port implemented for canonical cell 169 AI_FINAL_INFERENCE_GATE_V7_2.json as a gated inference-readiness manifest. No torch/model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, or exact-coordinate exposure. Frozen notebook numeric parity still pending. |
+| 32 | CNN final target inference | 🟦 App-goal / final inference gate no exact notebook export | Yes, gated | Canonical cell 169 inspected. Notebook cell is real Torch inference: imports torch/rasterio, searches for a valid model object, reads FINAL_TESLA_V7_2_HYPERCUBE.tif, runs model forward pass/softmax/probability interpolation, converts row/col to lon/lat, and writes AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.csv/json. Downloaded export has no exact AI_FINAL_INFERENCE_GATE_V7_2.json; related notebook candidates are other target/focus outputs. App emits manifests/AI_FINAL_INFERENCE_GATE_V7_2.json as a safe inference-gate manifest. Corrected validation passed: schema/status/source_cell match, upstream #29/#30/#31 terms present, approved_for_real_inference is false, and all normal app inference/torch/model/weight/coordinate/probability/GeoJSON/KMZ/http/frontend/download flags are false. No model execution, weights, probability maps, target CSV/JSON, GeoJSON/KMZ, exact-coordinate exposure, public API artifact, or frontend artifact. |
 | 33 | Metal fingerprint diagnostic | 🟦 App-port / no notebook export | Yes | App emits AI_METAL_FINGERPRINT_DIAGNOSTIC_V7_2 CSV/JSON/TXT and docs record current notebook has no #33 file export. Do not mark Full unless a real notebook export is added later. |
 | 34 | Field-operation KMZ outputs | 🟦 App-enhanced local | Yes | App emits FINAL_ARCHEO_INTELLIGENCE_MAP.geojson and TESLA_V7_2_FIELD_OPERATIONS.kmz. Exact notebook exports were missing from the downloaded export, but notebook writer cells 191/200 write the exact output names. App GeoJSON/KMZ structure is valid and aligned with notebook intent. Full exact-file parity remains blocked; production-redaction required. |
 | 38 | Live geemap overlays | 🟨 Partial | Replace | App-native replacement implemented for canonical cell 243 as APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json plus operator-only coordinate-free preview family. No geemap port and no public tiles/coordinates. Frozen notebook numeric parity still pending. |
@@ -1015,4 +1015,82 @@ Decision:
   No code patch.
   Keep app behavior as a safe policy/config manifest only.
   Do not mark notebook execution parity because the notebook builds/runs a model and the app intentionally does not.
+```
+
+## Plan B #32 status
+
+```text
+Status:
+  App-goal / final inference gate no exact notebook export.
+
+Canonical notebook cell:
+  cell_169.
+
+Notebook behavior inspected:
+  Real Torch inference cell.
+  Imports torch and torch.nn.functional.
+  Imports rasterio and reads FINAL_TESLA_V7_2_HYPERCUBE.tif.
+  Searches for a valid trained/final model object in session.
+  Converts model inputs to tensors.
+  Runs model forward pass under torch.no_grad().
+  Applies torch.softmax to logits.
+  Interpolates probability maps.
+  Finds high-score candidate peaks.
+  Converts row/col to lon/lat and UTM-like map coordinates.
+  Writes:
+    AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.csv
+    AI_MODEL_ARCHAEO_INFERENCE_17M_V7_2.json
+
+Downloaded export evidence:
+  No exact AI_FINAL_INFERENCE_GATE_V7_2.json was found.
+  Candidate scan found other target/focus outputs, not the #32 gate manifest.
+
+App behavior validated:
+  App emits:
+    manifests/AI_FINAL_INFERENCE_GATE_V7_2.json
+
+  Corrected validation passed:
+    schema_version = plan_b32_ai_final_inference_gate_v1
+    status = implemented_inference_gate_only
+    source_cell = cell_169
+    selected_canonical_inference_cell = cell_169
+    AI_TENSORS_STAGE4 term present
+    AI_TRAINING_WORKFLOW_BOUNDARY_V7_2 term present
+    AI_MODEL_BUILD_POLICY_V7_2 term present
+
+  Gate state:
+    approved_for_real_inference = false
+    item_29_tensor_outputs_exist = true
+    item_30_training_workflow_boundary_exists = true
+    item_31_model_build_policy_exists = true
+    ML/runtime/weights/operator/privacy approvals remain false.
+
+  Normal app blocked flags confirmed false:
+    normal_app_runs_must_run_inference
+    normal_app_runs_must_import_torch
+    normal_app_runs_must_load_weights
+    normal_app_runs_must_instantiate_model
+    normal_app_runs_must_write_coordinate_outputs
+    normal_app_runs_must_write_probability_maps
+    normal_app_runs_must_write_geojson_or_kmz
+
+  Runtime/output flags confirmed false:
+    imports_torch
+    loads_model
+    loads_weights
+    runs_forward_pass
+    creates_probability_map
+    creates_target_csv
+    creates_target_json
+    creates_geojson
+    creates_kmz
+    exposes_exact_coordinates
+    http_servable
+    frontend_visible
+    downloadable_via_api
+
+Decision:
+  Do not port notebook execution into the normal app.
+  Keep #32 as a gated manifest until model/runtime/weights/privacy/operator approvals exist.
+  Do not mark notebook numeric parity because the exact notebook gate export is absent and the notebook cell writes real inference CSV/JSON instead.
 ```
