@@ -10,6 +10,12 @@ For the detailed remaining checklist, see:
 docs/REMAINING_WORK_CHECKLIST.md
 ```
 
+For the Plan C UI closeout note, see:
+
+```text
+docs/PLAN_C_UI_CLOSEOUT.md
+```
+
 ## Green baseline
 
 ```text
@@ -25,6 +31,7 @@ Paid Imagery Request Package: implemented
 H4 private offline inference: complete
 H5 operator-only aggregate summary: implemented
 H5 score-band aggregate review: complete outside Git
+Plan C UI safety/clarity pass: complete
 ```
 
 ### Paid Imagery Request Package
@@ -108,6 +115,38 @@ model files
 raw CSV downloads
 map overlays
 public serving
+```
+
+### Plan C UI safety/clarity pass
+
+Current result:
+
+```text
+status: complete
+scope: frontend UI text, static UI tests, docs closeout
+backend_changed: false
+api_changed: false
+parity_changed: false
+artifact_contract_changed: false
+```
+
+Completed slices:
+
+```text
+C-UI-1 settings and operator private overlay safety clarity
+C-UI-2 run workflow empty/error-state clarity
+C-UI-3 guarded exports empty-state clarity
+C-UI-4 run archive empty/filter-state clarity
+C-UI-5 key downloads empty/footer guidance
+C-UI-6 status history and diagnostics empty-state clarity
+C-UI-7 final docs closeout
+```
+
+Boundary:
+
+```text
+No browser exposure of exact coordinates, private geometry, KMZ contents, raw payloads, filesystem paths, service-account material, private hashes, row-level classifier output, or private source references.
+No claim that the browser creates operator identity, role headers, run authorization, backend preview access, or private-output authorization.
 ```
 
 ## Parity track status
@@ -236,182 +275,4 @@ max_abs_diff: 0.0
 mean_abs_diff: 0.0
 runtime_output_verified: true
 notebook_value_parity_verified: true
-```
-
-### PAN/optical safe result
-
-```text
-components:
-  overall_status: passed
-  expected_count: 4
-  compared_count: 4
-  counts_by_status:
-    passed: 4
-  raster_value_comparison_available: true
-  npy_outputs_passed: true
-
-stack:
-  overall_status: passed
-  status: passed
-  output_name: PAN_LAYERS_STACK_640.npy
-  shape_match: true
-  dtype_match: true
-  hash_match: false
-  count_compared_values: 819200
-  count_nan_or_nodata_values: 0
-  max_abs_diff: 5.960464477539063e-08
-  mean_abs_diff: 9.302630132879131e-10
-```
-
-PAN canonical-reference note:
-
-```text
-The D1C bundle contains duplicate PAN component filenames.
-The canonical component references are the OPT/PAN_TIFS_640 and OPT/PAN_NPY_640 copies.
-The legacy/misplaced GEOTIFF_RADAR_BANDS and NPY_RADAR_BANDS copies are not used for PAN parity.
-PAN_LAYERS_STACK_640.npy bands match the OPT/PAN_NPY_640 components.
-```
-
-### AI_READY support stack safe result
-
-```text
-artifact: ai_ready_support_stack.npy
-matching_app_run: a11309bf-ed47-4bf5-bbf4-f755b904065c
-reference_shape: [640, 640, 19]
-app_shape: [640, 640, 19]
-reference_dtype: float32
-app_dtype: float32
-hash_match: true
-same_values_exact: true
-compared_count: 7782400
-nan_count_ref: 0
-nan_count_app: 0
-max_abs_diff: 0.0
-mean_abs_diff: 0.0
-```
-
-Standalone AI_READY Fraction/MH/AN note:
-
-```text
-The exact standalone planned filenames were searched but are not the support-stack parity target.
-They are not channels in the 19-band ai_ready_support_stack.npy.
-No standalone Fraction/MH/AN verifier pass is claimed.
-```
-
-### D1D object-table safe result
-
-The D1C bundle did not contain the object tables, but the wider D1 reference root did.
-
-```text
-reference_root_name: D1_NEW_IPYNB_REFERENCE_2026_06_10
-matching_app_run: e11d3280-a7b7-4c7c-a761-8b08ac9452f2
-overall_status: passed
-expected_count: 2
-passed_count: 2
-```
-
-Outputs:
-
-```text
-objects_index.csv:
-  hash_match: true
-  schema_match: true
-  row_count_match: true
-  row_count: 816
-  column_count: 11
-
-clusters_summary.csv:
-  hash_match: true
-  schema_match: true
-  row_count_match: true
-  row_count: 454
-  column_count: 5
-```
-
-D1D safety note:
-
-```text
-No CSV rows were committed.
-Only file identity, hashes, row counts, column names, and pass/fail status were recorded.
-No object patch or object mask payloads were committed.
-```
-
-## Safety boundary
-
-```text
-no verifier tolerance relaxation
-no nonmatching app run treated as passing
-no standalone AI_READY Fraction/MH/AN filenames aliased to ai_ready_support_stack.npy
-no focus_zone_ai_ready_window.npy aliasing as a standalone Fraction/MH/AN output
-no AI_BEH_* rasters treated as AI_READY remaining support-family equivalents
-no legacy/misplaced RADAR_BANDS PAN copies treated as canonical
-no final RTC or SAR/RADAR aliases treated as PAN equivalents
-no private raster/NPY payloads committed
-no CSV rows or object patch payloads committed
-no public downloads, HTTP raster/table/array serving, or map overlays enabled
-```
-
-If the private D1/D1C files are missing locally, stop and reconcile the docs before proceeding.
-
-## Active real app-vs-reference parity
-
-```text
-No active verifier gate selected yet after D1D object-table parity closeout.
-```
-
-## Source-recovery items
-
-These need explicit recovery/build work before verification:
-
-```text
-SAR/S1 support, intermediate, and QA/provenance outputs outside S1-1 and the filtered stack
-Standalone AI_READY Fraction/MH/AN files only if the operator supplies real notebook/source evidence later
-```
-
-Do not fabricate outputs. Do not treat renamed app-native equivalents as notebook parity.
-
-## Parked / future tracks
-
-### External V6 notebook/source-lock track
-
-```text
-parked separate external notebook/package track
-```
-
-The external V6 track can restart only if the operator supplies:
-
-```text
-real external V6 notebook/export source
-or
-real frozen V6 package proving the workflow
-```
-
-### Real auth provider integration
-
-```text
-later / deployment work
-```
-
-### Public overlays / coordinate-bearing downloads
-
-```text
-future only / blocked for public or shared mode
-```
-
-## Recommended next choices
-
-Choose one, not all at once:
-
-```text
-A. SAR/S1 remaining support, intermediate, and QA/provenance outputs
-   Continue SAR/S1 work outside S1-1 and the filtered stack.
-
-B. Real auth provider integration plan
-   Only if VPS/deployment becomes the priority.
-```
-
-## Current recommendation
-
-```text
-Next: choose SAR/S1 remaining support/QA explicitly.
 ```
