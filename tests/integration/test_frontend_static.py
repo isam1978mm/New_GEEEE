@@ -149,6 +149,9 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Guarded exports appear only after a run produces public-safe deliverables." in bundle_text
     assert "No guarded exports are available for this run yet." in bundle_text
     assert "exports may appear after completion" in bundle_text
+    assert "No key downloads are available yet. They appear after a completed run exposes REDACTED_PUBLIC deliverables." in bundle_text
+    assert "Only REDACTED_PUBLIC deliverables appear here." in bundle_text
+    assert "Full export tree and unavailable-output status are available" in bundle_text
     assert "H5 operator aggregate summary" in bundle_text
     assert "Aggregate prediction summary" in bundle_text
     assert "No row-level output" in bundle_text
