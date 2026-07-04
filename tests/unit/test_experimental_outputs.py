@@ -18,11 +18,7 @@ PACKAGE_NAME = "app.pipeline.stages_experimental"
 
 
 @pytest.mark.asyncio
-async def test_write_experimental_outputs_stays_under_run_experimental_and_marks_filesystem_only(
-    tmp_path,
-    monkeypatch,
-) -> None:
-    monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
+async def test_write_experimental_outputs_stays_under_run_experimental_and_marks_redacted_public(tmp_path) -> None:
     outputs_module = _load_outputs_module()
 
     data_dir = tmp_path / "data"
@@ -92,8 +88,8 @@ async def test_write_experimental_outputs_stays_under_run_experimental_and_marks
     indexed = {artifact.name: artifact for artifact in artifacts if artifact.name.startswith("experimental_")}
     assert set(indexed) == {"experimental_classifications", "experimental_neutral_labels", "experimental_summary"}
     for artifact in indexed.values():
-        assert artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY
-        assert artifact.http_servable is False
+        assert artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
+        assert artifact.http_servable is True
         assert artifact.relative_path.startswith("experimental/")
 
     await engine.dispose()

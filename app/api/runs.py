@@ -16,6 +16,7 @@ from app.errors import ActiveRunConflictError, AppError
 from app.pipeline.manifest import save_grid_manifest
 from app.pipeline.orchestrator import Orchestrator
 from app.pipeline.stages.alignment_qa import AlignmentQaStage
+from app.pipeline.stages.classifier import ClassifierStage
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.dem import DemStage
 from app.pipeline.stages.field_ops_exports import FieldOpsExportsStage
@@ -84,6 +85,7 @@ SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("hypercube", "Hypercube"),
     ("pca_anomaly", "PCA anomaly"),
     ("object_extract", "Object extraction"),
+    ("classifier", "Classifier"),
     ("alignment_qa", "Alignment QA"),
 )
 SAFE_STAGE_STATUSES = {"pending", "running", "done", "failed", "skipped"}
@@ -406,6 +408,7 @@ async def run_core_pipeline_for_run(
                     HypercubeStage(grid_spec=grid_spec),
                     PcaAnomalyStage(grid_spec=grid_spec),
                     ObjectExtractStage(grid_spec=grid_spec),
+                    ClassifierStage(),
                     AlignmentQaStage(grid_spec=grid_spec),
                 ],
             )
@@ -640,9 +643,5 @@ def _is_publicly_listable_artifact(artifact: Artifact) -> bool:
     if artifact.artifact_class not in {ArtifactClass.REDACTED_PUBLIC, ArtifactClass.PREVIEW_ONLY}:
         return False
     if artifact.artifact_class == ArtifactClass.FILESYSTEM_ONLY:
-        return False
-    if artifact.name.startswith("experimental_"):
-        return False
-    if artifact.relative_path.startswith("experimental/"):
         return False
     return True

@@ -27,6 +27,7 @@ SAFE_STAGE_LABELS: dict[str, str] = {
     "hypercube": "Hypercube",
     "pca_anomaly": "PCA anomaly",
     "object_extract": "Object extraction",
+    "classifier": "Classifier",
     "alignment_qa": "Alignment QA",
 }
 

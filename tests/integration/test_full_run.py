@@ -15,6 +15,7 @@ from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
 from app.pipeline.orchestrator import Orchestrator
 from app.pipeline.stages.alignment_qa import AlignmentQaStage
+from app.pipeline.stages.classifier import ClassifierStage
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
@@ -61,7 +62,13 @@ def test_full_core_run_completes_and_app_serves_safe_outputs(monkeypatch) -> Non
         assert len(runs.json()) == 1
         assert run_detail.status_code == 200
         assert run_detail.json()["status"] == "done"
-        assert {artifact["name"] for artifact in run_detail.json()["artifacts"]} >= {"objects_index", "alignment_qa"}
+        assert {artifact["name"] for artifact in run_detail.json()["artifacts"]} >= {
+            "objects_index",
+            "alignment_qa",
+            "experimental_classifications",
+            "experimental_summary",
+            "experimental_neutral_labels",
+        }
         assert root.status_code == 200
         assert "GEE Screening Dashboard Design" in root.text
         assert health.status_code == 200
@@ -126,23 +133,28 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             HypercubeStage(grid_spec=grid_spec),
             PcaAnomalyStage(grid_spec=grid_spec),
             ObjectExtractStage(grid_spec=grid_spec),
+            ClassifierStage(),
             AlignmentQaStage(grid_spec=grid_spec),
         ],
     )
     records = await orchestrator.run_run(run_id)
 
-    assert len(records) == 18
+    assert len(records) == 19
 
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))
         artifact_count = await session.scalar(select(func.count(Artifact.id)).where(Artifact.run_id == run_id))
         objects_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "objects_index"))
         alignment_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "alignment_qa"))
+        classifier_artifact = await session.scalar(
+            select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "experimental_summary")
+        )
 
     assert run is not None
     assert run.status == RunStatus.DONE
     assert artifact_count is not None and artifact_count > 20
     assert objects_artifact is not None and objects_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
     assert alignment_artifact is not None and alignment_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
+    assert classifier_artifact is not None and classifier_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
 
     await engine.dispose()

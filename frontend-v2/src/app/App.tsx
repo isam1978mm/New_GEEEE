@@ -36,6 +36,7 @@ import { DiagnosticsTab } from "./components/DiagnosticsTab";
 import { RunArchivePage } from "./components/RunArchivePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { OperatorPrivateOverlayPanel } from "./components/OperatorPrivateOverlayPanel";
+import { ClassifierResultsPanel } from "./components/ClassifierResultsPanel";
 
 type NavTab = "dashboard" | "archive" | "exports" | "settings";
 type RunTab = "overview" | "exports" | "status-history" | "diagnostics";
@@ -576,13 +577,16 @@ export default function App() {
                 </div>
 
                 {activeRunTab === "overview" && (
-                  <OverviewTab
-                    selectedRun={selectedRun}
-                    recentRuns={runs}
-                    keyDownloads={outputTree.keyDownloads}
-                    loadingOutputs={outputsLoading}
-                    onSelectRun={handleSelectRun}
-                  />
+                  <div className="flex flex-col gap-3">
+                    <OverviewTab
+                      selectedRun={selectedRun}
+                      recentRuns={runs}
+                      keyDownloads={outputTree.keyDownloads}
+                      loadingOutputs={outputsLoading}
+                      onSelectRun={handleSelectRun}
+                    />
+                    <ClassifierResultsPanel runId={selectedRun.id} />
+                  </div>
                 )}
                 {activeRunTab === "exports" && (
                   <ExportsTab

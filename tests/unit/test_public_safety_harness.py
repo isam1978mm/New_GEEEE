@@ -299,18 +299,18 @@ def test_filesystem_only_artifact_is_not_listable() -> None:
     assert _is_publicly_listable_artifact(artifact) is False
 
 
-def test_experimental_named_artifact_is_not_listable() -> None:
+def test_experimental_named_redacted_public_artifact_is_listable() -> None:
     from app.api.runs import _is_publicly_listable_artifact
 
     artifact = _artifact("experimental_summary", "summary.json", ArtifactClass.REDACTED_PUBLIC)
-    assert _is_publicly_listable_artifact(artifact) is False
+    assert _is_publicly_listable_artifact(artifact) is True
 
 
-def test_experimental_relative_path_artifact_is_not_listable() -> None:
+def test_experimental_relative_path_redacted_public_artifact_is_listable() -> None:
     from app.api.runs import _is_publicly_listable_artifact
 
     artifact = _artifact("summary", "experimental/summary.json", ArtifactClass.REDACTED_PUBLIC)
-    assert _is_publicly_listable_artifact(artifact) is False
+    assert _is_publicly_listable_artifact(artifact) is True
 
 
 # --- 4. Artifact download route safety (static / AST) ------------------------

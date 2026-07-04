@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -65,11 +64,6 @@ def test_orchestrator_persists_stage_status_and_artifacts() -> None:
 def test_orchestrator_persists_safe_failed_stage_manifest() -> None:
     with TemporaryDirectory() as temp_dir:
         asyncio.run(_run_orchestrator_failure_test(Path(temp_dir)))
-
-
-def test_orchestrator_does_not_reference_stages_experimental() -> None:
-    source = inspect.getsource(__import__("app.pipeline.orchestrator", fromlist=["Orchestrator"]))
-    assert "stages_experimental" not in source
 
 
 async def _run_orchestrator_test(tmp_path: Path) -> None:

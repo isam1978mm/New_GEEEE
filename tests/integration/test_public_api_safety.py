@@ -3,8 +3,8 @@
 End-to-end checks over the real FastAPI app proving that:
 - FastAPI validation errors do not echo submitted request bodies (unsafe names,
   coordinates, path-like strings, raw lat/lon values).
-- Public artifact listing excludes LOCAL_SENSITIVE / FILESYSTEM_ONLY /
-  experimental artifacts and never exposes relative/absolute paths.
+- Public artifact listing excludes LOCAL_SENSITIVE / FILESYSTEM_ONLY artifacts
+  and never exposes relative/absolute paths.
 - Artifact download routes only serve public-servable artifacts and reject
   private classes and path-traversal names without leaking paths.
 """
@@ -116,9 +116,8 @@ def test_run_detail_lists_only_public_artifacts() -> None:
         assert response.status_code == 200
         body = response.json()
         listed = {artifact["name"] for artifact in body["artifacts"]}
-        assert listed == {"objects_index", "preview_overlay"}
+        assert listed == {"objects_index", "preview_overlay", "experimental_summary"}
         assert "internal_array" not in listed
-        assert "experimental_summary" not in listed
         assert "kmz_bundle" not in listed
         # No public artifact may expose a relative or absolute path.
         for artifact in body["artifacts"]:
@@ -157,11 +156,13 @@ def test_private_artifacts_are_not_downloadable_through_public_route() -> None:
             filesystem_only = client.get("/runs/run-priv/artifacts/kmz_bundle")
             experimental = client.get("/runs/run-priv/artifacts/experimental_summary")
 
-        for response in (local_sensitive, filesystem_only, experimental):
+        for response in (local_sensitive, filesystem_only):
             assert response.status_code == 404
             assert response.json() == {"error": "artifact_unavailable", "message": "Artifact is unavailable."}
             assert "relative_path" not in response.text
             _assert_no_leakage(response.text)
+        assert experimental.status_code == 200
+        assert experimental.json() == {"note": "hidden"}
 
 
 def test_path_traversal_artifact_names_are_not_served() -> None:
@@ -249,8 +250,8 @@ async def _seed_run_with_mixed_artifacts(settings: Settings, run_id: str) -> Non
                     relative_path="experimental/summary.json",
                     size_bytes=(experimental_dir / "summary.json").stat().st_size,
                     sha256=None,
-                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
-                    http_servable=False,
+                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                    http_servable=True,
                 ),
                 Artifact(
                     run_id=run_id,

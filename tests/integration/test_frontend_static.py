@@ -150,6 +150,9 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "No guarded exports are available for this run yet." in bundle_text
     assert "exports may appear after completion" in bundle_text
     assert "No key downloads are available yet. They appear after a completed run exposes REDACTED_PUBLIC deliverables." in bundle_text
+    assert "Classifier Results" in bundle_text
+    assert "Download classifications CSV" in bundle_text
+    assert "No classifier result is available for this run yet." in bundle_text
     assert "Only REDACTED_PUBLIC deliverables appear here." in bundle_text
     assert "Full export tree and unavailable-output status are available" in bundle_text
     assert "No status history events are available yet. Queued runs may not record detailed stage events until processing starts." in bundle_text
