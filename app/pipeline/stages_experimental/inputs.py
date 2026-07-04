@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -50,9 +49,6 @@ async def validate_experimental_inputs(
     session_factory: async_sessionmaker[AsyncSession],
     run_id: str,
 ) -> ExperimentalInputs:
-    if os.getenv("ENABLE_EXPERIMENTAL") != "1":
-        raise StageError("Experimental module not enabled.")
-
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))
         if run is None:
@@ -167,4 +163,3 @@ def _validate_anomaly_shape(path: Path, grid_spec: GridSpec) -> None:
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
-
