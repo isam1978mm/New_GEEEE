@@ -135,6 +135,9 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Status polling interval" in bundle_text
     assert "read-only" in bundle_text
     assert "Show advanced / unavailable outputs" in bundle_text
+    assert "Private overlay must show coordinate-free summaries only" in bundle_text
+    assert "verify existing UI safety tests before changing this panel" in bundle_text
+    assert "Start a local operator session to request operator-only coordinate-free summaries." in bundle_text
     assert "H5 operator aggregate summary" in bundle_text
     assert "Aggregate prediction summary" in bundle_text
     assert "No row-level output" in bundle_text
