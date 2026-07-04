@@ -388,6 +388,9 @@ const KEY_DOWNLOAD_PATHS = [
   "REPORT_640_FINAL_Zero_Point_Targets.tif",
   "REPORT_640_Mass_Report.tif",
   "REPORT_640_Pottery_Report.tif",
+  "experimental/classifications.csv",
+  "experimental/summary.json",
+  "experimental/neutral_target_labels.json",
   "QA/sar/intermediates/post_rtc/final_VV_dB.npy",
 ];
 
@@ -399,6 +402,7 @@ const OUTPUT_GROUP_ORDER = [
   "NPY_STACKS",
   "QA",
   "REPORT_640",
+  "experimental",
   "Root files",
 ];
 
@@ -942,6 +946,9 @@ function artifactDownloadName(name: string): string {
     alignment_qa: "alignment_qa.json",
     alignment_audit: "alignment_audit.json",
     alignment_mask_selection: "alignment_mask_selection.json",
+    experimental_classifications: "classifications.csv",
+    experimental_summary: "summary.json",
+    experimental_neutral_labels: "neutral_target_labels.json",
   };
   return map[name] || name;
 }

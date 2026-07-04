@@ -24,7 +24,7 @@ from app.pipeline.stages.pca_anomaly import PCA_ANOMALY_TIF_NAME
 from app.services.storage import initialize_run_storage, write_grid_manifest
 
 
-def test_experimental_cli_writes_deterministic_filesystem_only_outputs(tmp_path) -> None:
+def test_experimental_cli_writes_deterministic_redacted_public_outputs(tmp_path) -> None:
     data_dir = tmp_path / "data"
     db_path = data_dir / "gee_screening.db"
     run_id = "run-1"
@@ -32,7 +32,6 @@ def test_experimental_cli_writes_deterministic_filesystem_only_outputs(tmp_path)
     asyncio.run(_seed_completed_run(data_dir=data_dir, db_path=db_path, run_id=run_id))
 
     env = os.environ.copy()
-    env["ENABLE_EXPERIMENTAL"] = "1"
     env["DATA_DIR"] = str(data_dir)
     env["DATABASE_PATH"] = str(db_path)
 
@@ -73,8 +72,8 @@ def test_experimental_cli_writes_deterministic_filesystem_only_outputs(tmp_path)
     artifacts = asyncio.run(_load_experimental_artifacts(data_dir=data_dir, db_path=db_path, run_id=run_id))
     assert set(artifacts) == {"experimental_classifications", "experimental_neutral_labels", "experimental_summary"}
     for artifact in artifacts.values():
-        assert artifact["artifact_class"] == ArtifactClass.FILESYSTEM_ONLY.value
-        assert artifact["http_servable"] is False
+        assert artifact["artifact_class"] == ArtifactClass.REDACTED_PUBLIC.value
+        assert artifact["http_servable"] is True
         assert artifact["relative_path"].startswith("experimental/")
 
 

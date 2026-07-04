@@ -25,8 +25,7 @@ PACKAGE_NAME = "app.pipeline.stages_experimental"
 
 
 @pytest.mark.asyncio
-async def test_validate_experimental_inputs_accepts_completed_grid_consistent_run(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
+async def test_validate_experimental_inputs_accepts_completed_grid_consistent_run(tmp_path) -> None:
     inputs_module = _load_inputs_module()
     settings, session_factory, run_id, engine = await _build_completed_run_fixture(tmp_path)
     try:
@@ -46,8 +45,7 @@ async def test_validate_experimental_inputs_accepts_completed_grid_consistent_ru
 
 
 @pytest.mark.asyncio
-async def test_validate_experimental_inputs_rejects_non_done_run(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
+async def test_validate_experimental_inputs_rejects_non_done_run(tmp_path) -> None:
     inputs_module = _load_inputs_module()
     settings, session_factory, run_id, engine = await _build_completed_run_fixture(tmp_path, status=RunStatus.RUNNING)
     try:
@@ -62,8 +60,7 @@ async def test_validate_experimental_inputs_rejects_non_done_run(tmp_path, monke
 
 
 @pytest.mark.asyncio
-async def test_validate_experimental_inputs_rejects_transform_drift_before_classifier_runs(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("ENABLE_EXPERIMENTAL", "1")
+async def test_validate_experimental_inputs_rejects_transform_drift_before_classifier_runs(tmp_path) -> None:
     inputs_module = _load_inputs_module()
     settings, session_factory, run_id, engine = await _build_completed_run_fixture(tmp_path, drift_transform=True)
     try:

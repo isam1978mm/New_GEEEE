@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.alignment_qa import AlignmentQaStage
+from app.pipeline.stages.classifier import ClassifierStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.dem_derivatives import OUTPUT_NAMES as DEM_DERIVATIVE_NAMES, DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
@@ -51,6 +52,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         hypercube_result = asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
         pca_result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
         object_result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
+        classifier_result = asyncio.run(ClassifierStage().run(context))
         alignment_result = asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
 
         assert _artifact_classes(grid_result) == {
@@ -232,6 +234,11 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         patch_names = [name for name in object_classes if name.startswith("object_patch_")]
         assert patch_names
         assert all(object_classes[name] == ArtifactClass.FILESYSTEM_ONLY for name in patch_names)
+        assert _artifact_classes(classifier_result) == {
+            "experimental_classifications": ArtifactClass.REDACTED_PUBLIC,
+            "experimental_summary": ArtifactClass.REDACTED_PUBLIC,
+            "experimental_neutral_labels": ArtifactClass.REDACTED_PUBLIC,
+        }
         assert _artifact_classes(alignment_result) == {
             "alignment_qa": ArtifactClass.REDACTED_PUBLIC,
             "alignment_audit": ArtifactClass.REDACTED_PUBLIC,
@@ -264,6 +271,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
         asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
         asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
         asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
+        asyncio.run(ClassifierStage().run(context))
         asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
 
         expected_groups = {
@@ -274,6 +282,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "QA",
             "QA/sar/intermediates",
             "objects",
+            "experimental",
         }
         assert "qa" not in {path.name for path in run_dir.iterdir() if path.is_dir()}
         for relative_dir in expected_groups:
@@ -325,6 +334,9 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "objects_index.csv",
             "clusters_summary.csv",
             "objects/object_mask.npy",
+            "experimental/classifications.csv",
+            "experimental/summary.json",
+            "experimental/neutral_target_labels.json",
         }
         for relative_path in required_files:
             assert (run_dir / relative_path).is_file(), relative_path

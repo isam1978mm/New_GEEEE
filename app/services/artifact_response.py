@@ -22,6 +22,9 @@ ARTIFACT_DOWNLOAD_FILENAMES = {
     "alignment_qa": "alignment_qa.json",
     "alignment_audit": "alignment_audit.json",
     "alignment_mask_selection": "alignment_mask_selection.json",
+    "experimental_classifications": "classifications.csv",
+    "experimental_summary": "summary.json",
+    "experimental_neutral_labels": "neutral_target_labels.json",
 }
 
 

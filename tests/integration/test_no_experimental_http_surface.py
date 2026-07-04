@@ -14,7 +14,7 @@ from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
 
 
-def test_experimental_outputs_have_no_http_surface() -> None:
+def test_classifier_outputs_use_normal_artifact_http_surface() -> None:
     with TemporaryDirectory() as temp_dir:
         asyncio.run(_seed_experimental_artifact(Path(temp_dir)))
         settings = Settings(
@@ -27,14 +27,13 @@ def test_experimental_outputs_have_no_http_surface() -> None:
         assert all("experimental" not in path for path in route_paths)
 
         with TestClient(app, raise_server_exceptions=False) as client:
-            blocked = client.get("/runs/run-1/artifacts/experimental_summary")
+            artifact_response = client.get("/runs/run-1/artifacts/experimental_summary")
+            detail_response = client.get("/runs/run-1")
             root = client.get("/")
 
-        assert blocked.status_code == 404
-        assert blocked.json() == {
-            "error": "artifact_unavailable",
-            "message": "Artifact is unavailable.",
-        }
+        assert artifact_response.status_code == 200
+        assert artifact_response.json() == {"note": "visible"}
+        assert {artifact["name"] for artifact in detail_response.json()["artifacts"]} == {"experimental_summary"}
         assert "experimental/summary.json" not in root.text
         assert "experimental_summary" not in root.text
 
@@ -50,7 +49,7 @@ async def _seed_experimental_artifact(tmp_path: Path) -> None:
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     run_dir = data_dir / "runs" / "run-1" / "experimental"
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "summary.json").write_text('{"note":"hidden"}', encoding="utf-8")
+    (run_dir / "summary.json").write_text('{"note":"visible"}', encoding="utf-8")
 
     async with session_factory() as session:
         await _seed_run_and_artifact(session)
@@ -80,10 +79,10 @@ async def _seed_run_and_artifact(session: AsyncSession) -> None:
             run_id="run-1",
             name="experimental_summary",
             relative_path="experimental/summary.json",
-            size_bytes=17,
+            size_bytes=18,
             sha256=None,
-            artifact_class=ArtifactClass.FILESYSTEM_ONLY,
-            http_servable=False,
+            artifact_class=ArtifactClass.REDACTED_PUBLIC,
+            http_servable=True,
         )
     )
     await session.commit()

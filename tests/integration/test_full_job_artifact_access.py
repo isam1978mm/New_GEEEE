@@ -15,6 +15,7 @@ from app.db.models import Artifact, Run
 from app.main import create_app
 from app.pipeline.orchestrator import Orchestrator
 from app.pipeline.stages.alignment_qa import AlignmentQaStage
+from app.pipeline.stages.classifier import ClassifierStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
@@ -81,7 +82,16 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
 
         body = detail_response.json()
         public_names = {artifact["name"] for artifact in body["artifacts"]}
-        assert {"objects_index", "clusters_summary", "alignment_qa", "alignment_audit", "alignment_mask_selection"} <= public_names
+        assert {
+            "objects_index",
+            "clusters_summary",
+            "experimental_classifications",
+            "experimental_summary",
+            "experimental_neutral_labels",
+            "alignment_qa",
+            "alignment_audit",
+            "alignment_mask_selection",
+        } <= public_names
         assert "grid_guard_summary" not in public_names
         assert "sar_npy_VV_dB" not in public_names
         assert "sar_npy_VH_dB" not in public_names
@@ -140,6 +150,9 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["gps_point_comparison_json"] == "full_job/gps/gps_point_comparison.json"
     assert name_to_path["gps_point_comparison_csv"] == "full_job/gps/gps_point_comparison.csv"
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
+    assert name_to_path["experimental_classifications"] == "experimental/classifications.csv"
+    assert name_to_path["experimental_summary"] == "experimental/summary.json"
+    assert name_to_path["experimental_neutral_labels"] == "experimental/neutral_target_labels.json"
     assert name_to_path["parity_qa_summary"] == "QA/parity/parity_qa_summary.json"
     assert name_to_path["thermal_summary"] == "QA/stacks/thermal_summary.json"
     assert name_to_path["st_b10_raw"] == ".internal/st_b10_raw.npy"
@@ -196,6 +209,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             HypercubeStage(grid_spec=grid_spec),
             PcaAnomalyStage(grid_spec=grid_spec),
             ObjectExtractStage(grid_spec=grid_spec),
+            ClassifierStage(),
             AlignmentQaStage(grid_spec=grid_spec),
         ],
     )

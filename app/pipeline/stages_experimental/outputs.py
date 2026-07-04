@@ -137,8 +137,8 @@ async def _upsert_artifact(
             relative_path=relative_path,
             size_bytes=size_bytes,
             sha256=None,
-            artifact_class=ArtifactClass.FILESYSTEM_ONLY,
-            http_servable=False,
+            artifact_class=ArtifactClass.REDACTED_PUBLIC,
+            http_servable=True,
         )
         session.add(artifact)
         return
@@ -146,5 +146,5 @@ async def _upsert_artifact(
     artifact.relative_path = relative_path
     artifact.size_bytes = size_bytes
     artifact.sha256 = None
-    artifact.artifact_class = ArtifactClass.FILESYSTEM_ONLY
-    artifact.http_servable = False
+    artifact.artifact_class = ArtifactClass.REDACTED_PUBLIC
+    artifact.http_servable = True

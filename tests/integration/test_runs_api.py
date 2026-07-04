@@ -49,10 +49,13 @@ def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch
         assert body["id"] == run_id
         assert body["status"] == "done"
         assert "history" in body
-        assert {artifact["name"] for artifact in body["artifacts"]} == {"objects_index", "alignment_qa"}
+        assert {artifact["name"] for artifact in body["artifacts"]} == {
+            "objects_index",
+            "alignment_qa",
+            "experimental_summary",
+        }
         assert all("relative_path" not in artifact for artifact in body["artifacts"])
         assert all("sha256" not in artifact for artifact in body["artifacts"])
-        assert "experimental_summary" not in detail_response.text
         assert "experimental/" not in detail_response.text
         assert "filesystem_only" not in detail_response.text.casefold()
         _assert_no_sensitive_public_fields(detail_response.text)
@@ -133,13 +136,13 @@ def test_run_detail_exposes_public_safe_stage_progress() -> None:
         body = response.json()
         assert body["status"] == "queued"
         assert body["current_stage"] == "dem"
-        assert len(body["stages"]) == 18
+        assert len(body["stages"]) == 19
         assert body["stages"][0] == {"name": "grid", "label": "GRID setup", "status": "done"}
         assert body["stages"][1] == {"name": "dem", "label": "DEM", "status": "running"}
         assert body["stages"][2] == {"name": "zero_shift", "label": "Zero shift", "status": "pending"}
         assert all(set(stage) == {"name", "label", "status"} for stage in body["stages"])
         assert {stage["status"] for stage in body["stages"]} <= {"pending", "running", "done", "failed", "skipped"}
-        assert {stage["label"] for stage in body["stages"]} >= {"GRID setup", "SAR RTC", "Alignment QA"}
+        assert {stage["label"] for stage in body["stages"]} >= {"GRID setup", "SAR RTC", "Classifier", "Alignment QA"}
 
 
 def test_run_public_surfaces_include_safe_disk_summary_without_paths() -> None:
@@ -825,8 +828,8 @@ async def _mark_run_done_with_public_and_hidden_artifacts(settings: Settings, ru
                     relative_path="experimental/summary.json",
                     size_bytes=(experimental_dir / "summary.json").stat().st_size,
                     sha256=None,
-                    artifact_class=ArtifactClass.FILESYSTEM_ONLY,
-                    http_servable=False,
+                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                    http_servable=True,
                 ),
                 Artifact(
                     run_id=run_id,

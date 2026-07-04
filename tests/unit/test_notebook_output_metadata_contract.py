@@ -12,6 +12,7 @@ from affine import Affine
 
 from app.pipeline._base import StageContext
 from app.pipeline.stages.alignment_qa import AlignmentQaStage
+from app.pipeline.stages.classifier import ClassifierStage
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
@@ -280,6 +281,7 @@ def _build_full_deterministic_run(run_dir: Path):
     asyncio.run(HypercubeStage(grid_spec=grid_spec).run(context))
     asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
     asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
+    asyncio.run(ClassifierStage().run(context))
     asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
     return grid_spec
 

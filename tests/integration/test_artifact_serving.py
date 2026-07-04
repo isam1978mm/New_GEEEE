@@ -615,6 +615,7 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "NPY_RADAR_BANDS",
             "NPY_STACKS",
             "QA",
+            "experimental",
             "root",
         } <= output_groups
         assert {
@@ -681,6 +682,9 @@ async def _run_operator_output_inventory_contract_test(tmp_path: Path) -> None:
             "hypercube_norm_params.csv",
             "objects_index.csv",
             "clusters_summary.csv",
+            "experimental/classifications.csv",
+            "experimental/summary.json",
+            "experimental/neutral_target_labels.json",
             "alignment_qa.json",
             "alignment_audit.csv",
             "alignment_mask_selection.json",
@@ -762,6 +766,9 @@ def _write_operator_inventory_fixture(run_dir: Path) -> None:
         "QA/stacks/thermal_summary.json": b'{"thermal":"ok"}',
         "objects_index.csv": b"object_id\n1\n",
         "clusters_summary.csv": b"cluster_id\n1\n",
+        "experimental/classifications.csv": b"object_id,class_id,class_score\n1,Class_A,0.95\n",
+        "experimental/summary.json": b'{"object_count": 1}',
+        "experimental/neutral_target_labels.json": b'{"object_labels": [{"object_id": 1, "class_id": "Class_A"}]}',
         "objects/object_mask.npy": b"mask",
         "alignment_qa.json": b'{"pass": true}',
         "alignment_audit.csv": b"artifact_name,passes_alignment\nDEM_640.tif,true\n",
