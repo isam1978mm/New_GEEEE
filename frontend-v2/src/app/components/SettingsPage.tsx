@@ -131,7 +131,7 @@ export function SettingsPage({
                   Operator-only private preview
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--gs-slate)", marginTop: "2px", lineHeight: "1.5" }}>
-                  Disabled by default. Requires the backend preview flag and trusted upstream operator authentication. Shows coordinate-free counts only; no public downloads or public overlay layer are added.
+                  Disabled by default. Requires the backend preview flag and trusted upstream operator authentication. Private overlay must show coordinate-free summaries only; verify existing UI safety tests before changing this panel.
                 </div>
               </div>
               <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
@@ -150,7 +150,7 @@ export function SettingsPage({
               style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
             >
               <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them before the backend allows preview access.
+                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them before the backend allows preview access. No public downloads, public overlay layer, private geometry, KMZ contents, raw payloads, coordinates, or filesystem paths are shown.
               </div>
             </div>
           </div>
