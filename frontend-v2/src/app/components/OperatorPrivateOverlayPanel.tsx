@@ -71,6 +71,13 @@ export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: Oper
               Uses the default-off backend gate. May forward a provider-supplied bearer token when one is available. Operator identity is not set directly by this browser.
             </div>
 
+            {!resolvedOperatorAccessToken && (
+              <StatusBox
+                tone="neutral"
+                message="Start a local operator session to request operator-only coordinate-free summaries."
+              />
+            )}
+
             <div className="flex flex-wrap gap-2">
               {ARTIFACT_FAMILIES.map((family) => (
                 <button
