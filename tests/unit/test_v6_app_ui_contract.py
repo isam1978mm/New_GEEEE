@@ -38,6 +38,15 @@ def test_operator_private_overlay_section_mounts_v6_package_panel() -> None:
 
     assert "V6PrivatePackagePanel" in source
     assert "operatorAccessToken={resolvedOperatorAccessToken}" in source
+    assert "Start a local operator session to request operator-only coordinate-free summaries." in source
+
+
+def test_settings_operator_private_overlay_copy_stays_safety_scoped() -> None:
+    source = _read("frontend-v2/src/app/components/SettingsPage.tsx")
+
+    assert "Private overlay must show coordinate-free summaries only" in source
+    assert "verify existing UI safety tests before changing this panel" in source
+    assert "No public downloads, public overlay layer, private geometry, KMZ contents, raw payloads, coordinates, or filesystem paths are shown." in source
 
 
 def test_v6_package_frontend_files_avoid_public_raw_payload_terms() -> None:
