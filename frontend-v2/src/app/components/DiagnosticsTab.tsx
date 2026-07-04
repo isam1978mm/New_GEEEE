@@ -282,8 +282,8 @@ export function DiagnosticsTab({ outputTree, artifacts }: DiagnosticsTabProps) {
           className="rounded-lg px-4 py-3"
           style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
         >
-          <span style={{ fontSize: "12px", color: "var(--gs-slate)" }}>
-            No source-backed diagnostics are available for this run.
+          <span style={{ fontSize: "12px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+            No source-backed diagnostics are available yet. Completed runs may expose guarded QA outputs after exports load.
           </span>
         </div>
       )}
@@ -437,8 +437,8 @@ export function DiagnosticsTab({ outputTree, artifacts }: DiagnosticsTabProps) {
           </span>
         </div>
         {advancedUnavailableRows.length === 0 ? (
-          <div className="px-4 py-2.5" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-            No advanced unavailable notes are reported for this run.
+          <div className="px-4 py-2.5" style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+            No advanced unavailable diagnostic notes are reported for this run. Check Exports if guarded outputs are still loading.
           </div>
         ) : (
           advancedUnavailableRows.map((row, index) => {
