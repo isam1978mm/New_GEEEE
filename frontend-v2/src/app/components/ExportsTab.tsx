@@ -109,6 +109,10 @@ export function ExportsTab({
         </div>
       </div>
 
+      <div className="rounded px-3 py-2" style={{ fontSize: "11px", color: "var(--gs-slate)", backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", lineHeight: "1.5" }}>
+        Guarded exports appear only after a run produces public-safe deliverables. Use Advanced / unavailable outputs for status metadata when files are not listed.
+      </div>
+
       {/* Folder browser */}
       <div
         className="rounded-lg bg-card overflow-hidden"
@@ -142,7 +146,7 @@ export function ExportsTab({
           )}
           {!loading && !error && filteredGroups.length === 0 && (
             <div className="px-4 py-8 text-center" style={{ fontSize: "12px", color: "var(--gs-slate)" }}>
-              {search ? "No exports match the current filter." : "No guarded exports are available for this run."}
+              {search ? "No exports match the current filter. Clear the filter or expand another group." : "No guarded exports are available for this run yet. Select a completed run or expand Advanced / unavailable outputs for status metadata."}
             </div>
           )}
           {!loading && !error && filteredGroups.map((group, gi) => {
@@ -316,14 +320,15 @@ export function ExportsTab({
           >
             <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.6", paddingTop: "10px" }}>
               {unavailable.length === 0
-                ? "No unavailable outputs are reported for this run."
+                ? "No unavailable outputs are reported for this run. If the run is still queued or running, exports may appear after completion."
                 : `${unavailable.length} outputs are unavailable for this run. Detailed source status is retained by the guarded operator output API.`}
             </p>
             {unavailable.length > 0 && (
-              <div className="mt-2 flex flex-col gap-1">
-                {unavailable.slice(0, 20).map((item) => (
-                  <div key={item.path} className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-                    {item.path} · {item.status}
+              <div className="flex flex-col gap-1.5 mt-2">
+                {unavailable.map((item) => (
+                  <div key={`${item.groupKey}-${item.name}`} className="rounded px-2 py-1.5" style={{ backgroundColor: "rgba(255,255,255,0.55)", border: "1px solid rgba(28,43,94,0.08)" }}>
+                    <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{item.groupLabel} · {item.name}</div>
+                    <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", marginTop: "2px" }}>{item.reason}</div>
                   </div>
                 ))}
               </div>
