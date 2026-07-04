@@ -34,13 +34,13 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
       {/* Rows */}
       <div className="flex flex-col">
         {loading && (
-          <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-            Loading guarded downloads...
+          <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+            Loading guarded public downloads from the run output API...
           </div>
         )}
         {!loading && downloads.length === 0 && (
-          <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-            Key downloads appear here when a completed run exposes them.
+          <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+            No key downloads are available yet. They appear after a completed run exposes REDACTED_PUBLIC deliverables.
           </div>
         )}
         {!loading && downloads.map((dl, i) => (
@@ -134,8 +134,7 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
                   lineHeight: "1.5",
                 }}
               >
-                Safe operator deliverable. Tagged REDACTED_PUBLIC — cleared for download from this session.
-                Full export tree available in the <strong>Exports</strong> tab.
+                Public-safe operator deliverable. Tagged REDACTED_PUBLIC. Full export tree and unavailable-output status are available in the <strong>Exports</strong> tab.
               </div>
             )}
           </div>
@@ -147,9 +146,8 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
         className="px-3 py-1.5"
         style={{ borderTop: "1px solid var(--border)", backgroundColor: "var(--accent)" }}
       >
-        <p style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-          Safe operator deliverables only. Full exports →{" "}
-          <span style={{ fontWeight: 600, color: "var(--gs-navy)" }}>Exports tab</span>.
+        <p style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+          Only REDACTED_PUBLIC deliverables appear here. Use the <span style={{ fontWeight: 600, color: "var(--gs-navy)" }}>Exports tab</span> for full guarded export status.
         </p>
       </div>
     </div>
