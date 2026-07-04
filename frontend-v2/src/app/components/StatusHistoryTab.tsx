@@ -248,8 +248,8 @@ export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
         {expanded && (
           <div>
             {events.length === 0 && (
-              <div className="px-4 py-3" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-                No detailed status history is available for this run.
+              <div className="px-4 py-3" style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+                No status history events are available yet. Queued runs may not record detailed stage events until processing starts.
               </div>
             )}
             {events.map((ev, i) => (
@@ -257,48 +257,6 @@ export function StatusHistoryTab({ run }: StatusHistoryTabProps) {
             ))}
           </div>
         )}
-
-        {!expanded && (
-          <div className="px-4 py-2">
-            <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-              Click to expand event timeline ({events.length} events).
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Run metadata strip */}
-      <div
-        className="rounded-lg px-4 py-2.5 grid gap-3"
-        style={{
-          backgroundColor: "var(--card)",
-          border: "1px solid var(--border)",
-          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-        }}
-      >
-        {[
-          { label: "Run ID", value: run.id },
-          { label: "Run name", value: run.name },
-          {
-            label: "Final state",
-            value: stateLabel(runState),
-            highlight:
-              runState === "failed" || runState === "stale_failed" ? "var(--gs-red)" :
-              runState === "running" ? "var(--gs-blue)" :
-              "var(--gs-green)",
-          },
-          { label: "Events", value: `${events.length}` },
-        ].map((item) => (
-          <div key={item.label} className="flex flex-col gap-0.5">
-            <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>{item.label}</span>
-            <span
-              className="font-mono"
-              style={{ fontSize: "12px", fontWeight: 700, color: item.highlight || "var(--gs-navy)" }}
-            >
-              {item.value}
-            </span>
-          </div>
-        ))}
       </div>
     </div>
   );
