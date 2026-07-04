@@ -117,6 +117,11 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Oldest runs" in bundle_text
     assert "Stale failed runs" in bundle_text
     assert "No runs yet." in bundle_text
+    assert "No archived runs yet. Queue a run from Dashboard to populate this local archive." in bundle_text
+    assert "No runs match this filter. Clear search or set Status filter to All statuses." in bundle_text
+    assert "No terminal runs are ready for cleanup suggestions yet." in bundle_text
+    assert "No stale failed runs need cleanup attention." in bundle_text
+    assert "No deleted run audit records yet. Deleted terminal runs will appear here with freed storage totals." in bundle_text
     assert "Run disk usage is still being scanned." in bundle_text
     assert "Search runs" in bundle_text
     assert "Status filter" in bundle_text
