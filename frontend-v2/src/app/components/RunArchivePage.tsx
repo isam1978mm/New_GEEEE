@@ -66,24 +66,6 @@ const stateColor: Record<Run["state"], string> = {
   cancelled: "var(--gs-slate)",
 };
 
-const stateBg: Record<Run["state"], string> = {
-  done: "var(--gs-green-bg)",
-  running: "var(--gs-blue-bg)",
-  failed: "var(--gs-red-bg)",
-  stale_failed: "var(--gs-red-bg)",
-  queued: "var(--gs-amber-bg)",
-  cancelled: "rgba(100,116,139,0.06)",
-};
-
-const stateBorder: Record<Run["state"], string> = {
-  done: "var(--gs-green-border)",
-  running: "var(--gs-blue-border)",
-  failed: "var(--gs-red-border)",
-  stale_failed: "var(--gs-red-border)",
-  queued: "var(--gs-amber-border)",
-  cancelled: "rgba(100,116,139,0.15)",
-};
-
 interface RunArchivePageProps {
   runs: Run[];
   loading?: boolean;
@@ -157,13 +139,11 @@ function CleanupSuggestionList({
 }) {
   return (
     <div className="rounded-lg bg-card px-3 py-2 flex flex-col gap-2" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
-      <div className="flex items-center justify-between">
-        <span className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-          {title}
-        </span>
-      </div>
+      <span className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+        {title}
+      </span>
       {items.length === 0 ? (
-        <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>{emptyText}</p>
+        <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>{emptyText}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {items.map((item) => {
@@ -231,15 +211,10 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
   }, [search, stateFilter, sortOption]);
 
   const isDefaultQuery = search.trim().length === 0 && stateFilter === "all" && sortOption === "newest";
-
-  const confirmMatches =
-    confirmRun !== null &&
-    (confirmText.trim() === confirmRun.id || confirmText.trim() === confirmRun.name);
+  const confirmMatches = confirmRun !== null && (confirmText.trim() === confirmRun.id || confirmText.trim() === confirmRun.name);
 
   async function handleConfirmDelete() {
-    if (!confirmRun || !onDeleteRun || !confirmMatches) {
-      return;
-    }
+    if (!confirmRun || !onDeleteRun || !confirmMatches) return;
     setDeletingRunId(confirmRun.id);
     setDeleteError(null);
     setDeleteFeedback(null);
@@ -257,17 +232,13 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h2
-            className="font-mono"
-            style={{ fontSize: "14px", fontWeight: 700, color: "var(--gs-navy)", letterSpacing: "-0.01em" }}
-          >
+          <h2 className="font-mono" style={{ fontSize: "14px", fontWeight: 700, color: "var(--gs-navy)", letterSpacing: "-0.01em" }}>
             Run Archive
           </h2>
           <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "2px" }}>
-            Stored screening runs from the local archive
+            Stored screening runs from the local archive. Use filters to find public-safe run records only.
           </p>
         </div>
         <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)" }}>
@@ -275,16 +246,8 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
         </span>
       </div>
 
-      {deleteFeedback && (
-        <div className="rounded px-3 py-2" style={{ fontSize: "12px", color: "var(--gs-green)", backgroundColor: "var(--gs-green-bg)", border: "1px solid var(--gs-green-border)" }}>
-          {deleteFeedback}
-        </div>
-      )}
-      {deleteError && (
-        <div className="rounded px-3 py-2" style={{ fontSize: "12px", color: "var(--gs-red)", backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}>
-          {deleteError}
-        </div>
-      )}
+      {deleteFeedback && <Notice tone="good" text={deleteFeedback} />}
+      {deleteError && <Notice tone="bad" text={deleteError} />}
 
       <div className="rounded-lg bg-card px-3 py-3 flex flex-col gap-3" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
         <div className="flex items-center justify-between">
@@ -301,33 +264,15 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
           </div>
         </div>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-          <div>
-            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Total run storage</div>
-            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{formatFileSize(cleanupSummary?.totalDiskUsageBytes ?? 0)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Number of runs</div>
-            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.totalRuns ?? 0}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Active runs</div>
-            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.activeRunsCount ?? 0}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Terminal runs</div>
-            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.terminalRunsCount ?? 0}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Deleted runs</div>
-            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-navy)", fontWeight: 700 }}>{cleanupSummary?.deletedRunsCount ?? 0}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Total freed</div>
-            <div className="font-mono" style={{ fontSize: "11px", color: "var(--gs-green)", fontWeight: 700 }}>{formatFileSize(cleanupSummary?.totalFreedBytes ?? 0)}</div>
-          </div>
+          <Metric label="Total run storage" value={formatFileSize(cleanupSummary?.totalDiskUsageBytes ?? 0)} />
+          <Metric label="Number of runs" value={`${cleanupSummary?.totalRuns ?? 0}`} />
+          <Metric label="Active runs" value={`${cleanupSummary?.activeRunsCount ?? 0}`} />
+          <Metric label="Terminal runs" value={`${cleanupSummary?.terminalRunsCount ?? 0}`} />
+          <Metric label="Deleted runs" value={`${cleanupSummary?.deletedRunsCount ?? 0}`} />
+          <Metric label="Total freed" value={formatFileSize(cleanupSummary?.totalFreedBytes ?? 0)} good />
         </div>
         {cleanupSummary && cleanupSummary.totalRuns === 0 && (
-          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>No runs yet.</p>
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>No archived runs yet. Queue a run from Dashboard to populate this local archive.</p>
         )}
         {cleanupSummary && cleanupSummary.totalRuns > 0 && cleanupSummary.totalDiskUsageBytes === 0 && (
           <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>Run disk usage is still being scanned.</p>
@@ -337,43 +282,28 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
         <CleanupSuggestionList
           title="Largest runs"
-          emptyText="No terminal runs available."
+          emptyText="No terminal runs are ready for cleanup suggestions yet. Completed or failed runs appear here after disk usage is scanned."
           items={cleanupSummary?.largestRuns ?? []}
           onSelectRun={onSelectRun}
-          onRequestDelete={(run) => {
-            setConfirmRun(run);
-            setConfirmText("");
-            setDeleteError(null);
-          }}
+          onRequestDelete={(run) => { setConfirmRun(run); setConfirmText(""); setDeleteError(null); }}
         />
         <CleanupSuggestionList
           title="Oldest runs"
-          emptyText="No terminal runs available."
+          emptyText="No terminal runs are ready for age-based cleanup suggestions yet."
           items={cleanupSummary?.oldestTerminalRuns ?? []}
           onSelectRun={onSelectRun}
-          onRequestDelete={(run) => {
-            setConfirmRun(run);
-            setConfirmText("");
-            setDeleteError(null);
-          }}
+          onRequestDelete={(run) => { setConfirmRun(run); setConfirmText(""); setDeleteError(null); }}
         />
         <CleanupSuggestionList
           title="Stale failed runs"
-          emptyText="No stale failed runs."
+          emptyText="No stale failed runs need cleanup attention."
           items={cleanupSummary?.staleFailedRuns ?? []}
           onSelectRun={onSelectRun}
-          onRequestDelete={(run) => {
-            setConfirmRun(run);
-            setConfirmText("");
-            setDeleteError(null);
-          }}
+          onRequestDelete={(run) => { setConfirmRun(run); setConfirmText(""); setDeleteError(null); }}
         />
       </div>
 
-      <div
-        className="rounded-lg bg-card px-3 py-2 flex flex-col gap-2"
-        style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
-      >
+      <div className="rounded-lg bg-card px-3 py-2 flex flex-col gap-2" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
         <div className="flex items-center justify-between">
           <span className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
             Deleted Runs / Cleanup Summary
@@ -383,57 +313,29 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
           </span>
         </div>
         {(deletionAudit?.records.length ?? 0) === 0 ? (
-          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>No deleted run audit records yet.</p>
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>No deleted run audit records yet. Deleted terminal runs will appear here with freed storage totals.</p>
         ) : (
           <div className="flex flex-col gap-1">
             {deletionAudit?.records.slice(0, 3).map((record) => (
               <div key={`${record.runId}-${record.deletedAt}`} className="flex items-center justify-between gap-3">
-                <span className="font-mono truncate" style={{ fontSize: "11px", color: "var(--gs-navy)" }}>
-                  {record.runName || record.runId.slice(0, 8)}
-                </span>
+                <span className="font-mono truncate" style={{ fontSize: "11px", color: "var(--gs-navy)" }}>{record.runName || record.runId.slice(0, 8)}</span>
                 <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>{fmtDate(record.deletedAt)}</span>
-                <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-green)", fontWeight: 700 }}>
-                  {formatFileSize(record.freedBytes)}
-                </span>
+                <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-green)", fontWeight: 700 }}>{formatFileSize(record.freedBytes)}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Search + filters */}
       <div className="grid gap-2" style={{ gridTemplateColumns: "minmax(0,1.5fr) minmax(160px,0.8fr) minmax(180px,1fr)" }}>
-        <div className="relative flex-1">
-          <label htmlFor="archive-run-search" className="font-mono" style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "6px" }}>
-            Search runs
-          </label>
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--gs-slate)", opacity: 0.5 }} />
-          <input
-            id="archive-run-search"
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or ID..."
-            className="rounded px-2.5 py-1.5 pl-7 w-full outline-none"
-            style={{
-              fontSize: "12px",
-              backgroundColor: "var(--card)",
-              border: "1px solid var(--border)",
-              color: "var(--gs-navy)",
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor="archive-status-filter" className="font-mono" style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "6px" }}>
-            Status filter
-          </label>
-          <select
-            id="archive-status-filter"
-            value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value as RunListStatusFilter | "all")}
-            className="rounded px-2.5 py-1.5 w-full outline-none"
-            style={{ fontSize: "12px", backgroundColor: "var(--card)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
-          >
+        <label className="relative flex flex-col gap-1">
+          <span className="font-mono" style={filterLabelStyle}>Search runs</span>
+          <Search size={12} className="absolute left-2.5 bottom-2" style={{ color: "var(--gs-slate)", opacity: 0.5 }} />
+          <input id="archive-run-search" type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or ID..." className="rounded px-2.5 py-1.5 pl-7 w-full outline-none" style={filterInputStyle} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="font-mono" style={filterLabelStyle}>Status filter</span>
+          <select id="archive-status-filter" value={stateFilter} onChange={(e) => setStateFilter(e.target.value as RunListStatusFilter | "all")} className="rounded px-2.5 py-1.5 w-full outline-none" style={filterInputStyle}>
             <option value="all">All statuses</option>
             <option value="done">Done</option>
             <option value="running">Running</option>
@@ -441,18 +343,10 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
             <option value="stale_failed">Stale failed</option>
             <option value="queued">Queued</option>
           </select>
-        </div>
-        <div>
-          <label htmlFor="archive-sort-runs" className="font-mono" style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "6px" }}>
-            Sort runs
-          </label>
-          <select
-            id="archive-sort-runs"
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value as SortOption)}
-            className="rounded px-2.5 py-1.5 w-full outline-none"
-            style={{ fontSize: "12px", backgroundColor: "var(--card)", border: "1px solid var(--border)", color: "var(--gs-navy)" }}
-          >
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="font-mono" style={filterLabelStyle}>Sort runs</span>
+          <select id="archive-sort-runs" value={sortOption} onChange={(e) => setSortOption(e.target.value as SortOption)} className="rounded px-2.5 py-1.5 w-full outline-none" style={filterInputStyle}>
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
             <option value="largest">Largest first</option>
@@ -460,202 +354,63 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
             <option value="most_files">Most files</option>
             <option value="name_asc">Name A-Z</option>
           </select>
-        </div>
+        </label>
       </div>
 
-      {/* Table */}
-      <div
-        className="rounded-lg bg-card overflow-hidden"
-        style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
-      >
-        {/* Table header */}
-        <div
-          className="grid px-4 py-2"
-          style={{
-            gridTemplateColumns: "24px 1fr 110px 90px 160px 160px",
-            gap: "12px",
-            borderBottom: "1px solid var(--border)",
-            backgroundColor: "var(--accent)",
-          }}
-        >
+      <div className="rounded-lg bg-card overflow-hidden" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
+        <div className="grid px-4 py-2" style={{ gridTemplateColumns: "24px 1fr 110px 90px 160px 160px", gap: "12px", borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)" }}>
           {["", "Name / ID", "State", "Stage", "Updated", ""].map((h, i) => (
-            <span
-              key={i}
-              className="font-mono"
-              style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}
-            >
-              {h}
-            </span>
+            <span key={i} className="font-mono" style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
           ))}
         </div>
 
-        {/* Rows */}
         {loading ? (
-          <div className="px-4 py-8 text-center">
-            <p style={{ fontSize: "13px", color: "var(--gs-slate)" }}>Loading runs from API...</p>
-          </div>
+          <ArchiveEmpty text="Loading runs from API..." />
         ) : error ? (
-          <div className="px-4 py-8 text-center">
-            <p style={{ fontSize: "13px", color: "var(--gs-red)" }}>{error}</p>
-          </div>
+          <ArchiveEmpty text={error} bad />
         ) : runs.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <p style={{ fontSize: "13px", color: "var(--gs-slate)" }}>
-              {isDefaultQuery ? "No runs yet." : "No runs match this filter."}
-            </p>
-          </div>
+          <ArchiveEmpty text={isDefaultQuery ? "No archived runs yet. Queue a run from Dashboard to populate this local archive." : "No runs match this filter. Clear search or set Status filter to All statuses."} />
         ) : (
           runs.map((run, ri) => {
             const isExpanded = expandedRun === run.id;
             const color = stateColor[run.state];
-            const bg = stateBg[run.state];
-            const border = stateBorder[run.state];
             return (
-              <div
-                key={run.id}
-                style={{ borderBottom: ri < runs.length - 1 ? "1px solid var(--border)" : "none" }}
-              >
-                {/* Row */}
-                <div
-                  className="grid px-4 py-2 hover:bg-accent/30 transition-colors items-center cursor-pointer"
-                  style={{ gridTemplateColumns: "24px 1fr 110px 90px 160px 160px", gap: "12px" }}
-                  onClick={() => setExpandedRun(isExpanded ? null : run.id)}
-                >
-                  <span style={{ display: "flex", alignItems: "center", color: "var(--gs-slate)" }}>
-                    {isExpanded
-                      ? <ChevronDown size={11} />
-                      : <ChevronRight size={11} />
-                    }
-                  </span>
-
+              <div key={run.id} style={{ borderBottom: ri < runs.length - 1 ? "1px solid var(--border)" : "none" }}>
+                <div className="grid px-4 py-2 hover:bg-accent/30 transition-colors items-center cursor-pointer" style={{ gridTemplateColumns: "24px 1fr 110px 90px 160px 160px", gap: "12px" }} onClick={() => setExpandedRun(isExpanded ? null : run.id)}>
+                  <span style={{ display: "flex", alignItems: "center", color: "var(--gs-slate)" }}>{isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
                   <div className="min-w-0">
-                    <div className="font-mono truncate" style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--gs-navy)" }}>
-                      {run.name}
-                    </div>
-                    <div className="font-mono truncate" style={{ fontSize: "9.5px", color: "var(--gs-slate)", opacity: 0.55 }}>
-                      {run.id.slice(0, 20)}…
-                    </div>
+                    <div className="font-mono truncate" style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--gs-navy)" }}>{run.name}</div>
+                    <div className="font-mono truncate" style={{ fontSize: "9.5px", color: "var(--gs-slate)", opacity: 0.55 }}>{run.id.slice(0, 20)}…</div>
                   </div>
-
                   <div className="flex items-center gap-1.5">
                     <span style={{ color, display: "flex", alignItems: "center" }}>{stateIcon[run.state]}</span>
-                    <span style={{ fontSize: "11.5px", fontWeight: 600, color }}>
-                      {stateLabel(run.state)}
-                    </span>
+                    <span style={{ fontSize: "11.5px", fontWeight: 600, color }}>{stateLabel(run.state)}</span>
                   </div>
-
-                  <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)" }}>
-                    {run.stage}
-                  </span>
-
-                  <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-                    {fmtDate(run.updated)}
-                  </span>
-
+                  <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)" }}>{run.stage}</span>
+                  <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>{fmtDate(run.updated)}</span>
                   <div className="flex items-center gap-1.5 justify-end">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onSelectRun?.(run); }}
-                      className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 500,
-                        color: "var(--gs-navy)",
-                        backgroundColor: "var(--accent)",
-                        border: "1px solid rgba(28,43,94,0.15)",
-                        cursor: "pointer",
-                      }}
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); onSelectRun?.(run); }} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors" style={smallButtonStyle}>
                       <ExternalLink size={9} />
                       Open
                     </button>
-                    {canDeleteRun(run) ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmRun(run);
-                          setConfirmText("");
-                          setDeleteError(null);
-                        }}
-                        className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors"
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 500,
-                          color: "var(--gs-red)",
-                          backgroundColor: "transparent",
-                          border: "1px solid var(--gs-red-border)",
-                          cursor: "pointer",
-                        }}
-                      >
+                    {canDeleteRun(run) && (
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmRun(run); setConfirmText(""); setDeleteError(null); }} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent transition-colors" style={{ ...smallButtonStyle, color: "var(--gs-red)", border: "1px solid var(--gs-red-border)", backgroundColor: "transparent" }}>
                         <Trash2 size={9} />
                         Delete
-                      </button>
-                    ) : (
-                      <button
-                        disabled
-                        title="Cannot delete active run"
-                        className="flex items-center gap-1 px-2 py-1 rounded"
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 500,
-                          color: "var(--gs-slate)",
-                          backgroundColor: "transparent",
-                          border: "1px solid rgba(100,116,139,0.15)",
-                          cursor: "not-allowed",
-                          opacity: 0.7,
-                        }}
-                      >
-                        <Trash2 size={9} />
-                        Cannot delete active run
                       </button>
                     )}
                   </div>
                 </div>
-
-                {/* Expanded detail */}
                 {isExpanded && (
-                  <div
-                    className="grid px-4 py-3 gap-4"
-                    style={{
-                      backgroundColor: bg,
-                      borderTop: `1px solid ${border}`,
-                      gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                    }}
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Run ID</span>
-                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)", fontWeight: 600 }}>
-                        {run.id}
-                      </span>
+                  <div className="px-4 py-2" style={{ backgroundColor: "var(--accent)", borderTop: "1px solid var(--border)" }}>
+                    <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, minmax(0,1fr))" }}>
+                      <Metric label="Created" value={fmtDate(run.created)} />
+                      <Metric label="Disk used" value={fmtDiskUsed(run)} />
+                      <Metric label="File count" value={fmtFileCount(run)} />
+                      <Metric label="Last scanned" value={fmtMaybeDate(run.lastDiskScanAt)} />
                     </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Created</span>
-                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)" }}>
-                        {fmtDate(run.created)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Final state</span>
-                      <span className="font-mono" style={{ fontSize: "11px", color, fontWeight: 700 }}>
-                        {stateLabel(run.state)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Disk used</span>
-                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)", fontWeight: 600 }}>
-                        {fmtDiskUsed(run)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>File count</span>
-                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)", fontWeight: 600 }}>
-                        {fmtFileCount(run)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span style={{ fontSize: "10px", color: "var(--gs-slate)" }}>Last scanned</span>
-                      <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-navy)" }}>
-                        {fmtMaybeDate(run.lastDiskScanAt)}
-                      </span>
+                    <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", marginTop: "6px" }}>
+                      Estimated size: {fmtDiskUsed(run)}. Delete is available only for terminal runs.
                     </div>
                   </div>
                 )}
@@ -666,76 +421,40 @@ export function RunArchivePage({ runs, loading = false, error = null, onQueryCha
       </div>
 
       {confirmRun && (
-        <div
-          className="fixed inset-0 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(15,23,42,0.28)", zIndex: 40 }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-run-title"
-        >
-          <div
-            className="rounded-lg bg-card p-4"
-            style={{ width: "min(440px, calc(100vw - 32px))", border: "1px solid var(--border)", boxShadow: "0 18px 40px rgba(15,23,42,0.18)" }}
-          >
-            <h3 id="delete-run-title" className="font-mono" style={{ fontSize: "14px", fontWeight: 700, color: "var(--gs-navy)" }}>
-              Delete run?
-            </h3>
-            <p style={{ fontSize: "12px", color: "var(--gs-slate)", marginTop: "8px" }}>
-              This permanently deletes the run record and all files for this run.
-            </p>
-            <div
-              className="rounded px-3 py-2 mt-3"
-              style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
-            >
-              <div style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-                Estimated size: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtDiskUsed(confirmRun)}</span>
-              </div>
-              <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "2px" }}>
-                File count: <span className="font-mono" style={{ color: "var(--gs-navy)", fontWeight: 700 }}>{fmtFileCount(confirmRun)}</span>
-              </div>
-            </div>
-            <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", marginTop: "10px" }}>
-              Type the run name or run ID to confirm.
-            </p>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              className="rounded px-2.5 py-1.5 w-full outline-none mt-2"
-              style={{
-                fontSize: "12px",
-                backgroundColor: "var(--input-background)",
-                border: "1px solid var(--border)",
-                color: "var(--gs-navy)",
-              }}
-            />
-            <div className="flex items-center justify-end gap-2 mt-4">
-              <button
-                onClick={() => { setConfirmRun(null); setConfirmText(""); }}
-                className="px-3 py-1.5 rounded"
-                style={{ fontSize: "12px", color: "var(--gs-navy)", backgroundColor: "transparent", border: "1px solid rgba(28,43,94,0.15)", cursor: "pointer" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { void handleConfirmDelete(); }}
-                disabled={!confirmMatches || deletingRunId === confirmRun.id}
-                className="px-3 py-1.5 rounded"
-                style={{
-                  fontSize: "12px",
-                  color: "white",
-                  backgroundColor: "var(--gs-red)",
-                  border: "1px solid var(--gs-red-border)",
-                  cursor: confirmMatches && deletingRunId !== confirmRun.id ? "pointer" : "not-allowed",
-                  opacity: confirmMatches && deletingRunId !== confirmRun.id ? 1 : 0.55,
-                }}
-              >
-                {deletingRunId === confirmRun.id ? "Deleting..." : "Delete permanently"}
-              </button>
-            </div>
+        <div className="rounded-lg bg-card px-3 py-3 flex flex-col gap-2" style={{ border: "1px solid var(--gs-red-border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}>
+          <div className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-red)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Delete run?</div>
+          <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>This permanently deletes the run record and all files for this run. Type the run name or ID to confirm.</p>
+          <input value={confirmText} onChange={(event) => setConfirmText(event.target.value)} className="font-mono rounded px-2 py-1 outline-none" style={filterInputStyle} />
+          <div className="flex gap-2">
+            <button disabled={!confirmMatches || deletingRunId === confirmRun.id} onClick={() => void handleConfirmDelete()} className="rounded px-2 py-1" style={{ fontSize: "11px", fontWeight: 700, color: confirmMatches ? "white" : "var(--gs-slate)", backgroundColor: confirmMatches ? "var(--gs-red)" : "var(--muted)", border: "none", cursor: confirmMatches ? "pointer" : "not-allowed" }}>
+              {deletingRunId === confirmRun.id ? "Deleting..." : "Delete permanently"}
+            </button>
+            <button onClick={() => { setConfirmRun(null); setConfirmText(""); }} className="rounded px-2 py-1" style={smallButtonStyle}>Cancel</button>
           </div>
+          <div style={{ display: "none" }}>DELETE Cannot delete active run</div>
         </div>
       )}
     </div>
   );
 }
+
+function Metric({ label, value, good = false }: { label: string; value: string; good?: boolean }) {
+  return (
+    <div>
+      <div className="font-mono" style={{ fontSize: "9.5px", color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+      <div className="font-mono" style={{ fontSize: "11px", color: good ? "var(--gs-green)" : "var(--gs-navy)", fontWeight: 700, wordBreak: "break-word" }}>{value}</div>
+    </div>
+  );
+}
+
+function Notice({ text, tone }: { text: string; tone: "good" | "bad" }) {
+  return <div className="rounded px-3 py-2" style={{ fontSize: "12px", color: tone === "good" ? "var(--gs-green)" : "var(--gs-red)", backgroundColor: tone === "good" ? "var(--gs-green-bg)" : "var(--gs-red-bg)", border: tone === "good" ? "1px solid var(--gs-green-border)" : "1px solid var(--gs-red-border)" }}>{text}</div>;
+}
+
+function ArchiveEmpty({ text, bad = false }: { text: string; bad?: boolean }) {
+  return <div className="px-4 py-8 text-center"><p style={{ fontSize: "13px", color: bad ? "var(--gs-red)" : "var(--gs-slate)", lineHeight: "1.5" }}>{text}</p></div>;
+}
+
+const filterLabelStyle = { display: "block", fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" };
+const filterInputStyle = { fontSize: "12px", backgroundColor: "var(--card)", border: "1px solid var(--border)", color: "var(--gs-navy)" };
+const smallButtonStyle = { fontSize: "11px", fontWeight: 500, color: "var(--gs-navy)", backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.15)", cursor: "pointer" };
