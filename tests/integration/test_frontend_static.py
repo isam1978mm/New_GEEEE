@@ -138,6 +138,9 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Private overlay must show coordinate-free summaries only" in bundle_text
     assert "verify existing UI safety tests before changing this panel" in bundle_text
     assert "Start a local operator session to request operator-only coordinate-free summaries." in bundle_text
+    assert "Pick or enter a target, preview safe grid metadata, optionally dry-run Earth Engine planning, then queue the local run." in bundle_text
+    assert "Queue Run stays disabled until both target fields are valid." in bundle_text
+    assert "Earth Engine planning is a dry run only; it checks backend readiness before execution." in bundle_text
     assert "H5 operator aggregate summary" in bundle_text
     assert "Aggregate prediction summary" in bundle_text
     assert "No row-level output" in bundle_text
