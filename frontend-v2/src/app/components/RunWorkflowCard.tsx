@@ -132,6 +132,8 @@ export function RunWorkflowCard({ onQueueRun, onPreviewRoi, onPlanEarthEngine, i
         <span style={{ fontSize: "11px", color: "var(--gs-slate)" }}>Queue a new screening run</span>
       </div>
       <div className="px-4 py-3 flex flex-col gap-3">
+        <Info text="Pick or enter a target, preview safe grid metadata, optionally dry-run Earth Engine planning, then queue the local run." />
+
         <div className="flex items-center gap-1">
           {steps.map((step, i) => (
             <div key={step.n} className="flex items-center gap-1">
@@ -147,6 +149,7 @@ export function RunWorkflowCard({ onQueueRun, onPreviewRoi, onPlanEarthEngine, i
           <Coord label="Longitude" value={longitude} min={-180} max={180} placeholder="e.g. -79.3832" invalid={hasLon && !lonOk} onChange={updateLongitude} />
         </div>
         {((hasLat && !latOk) || (hasLon && !lonOk)) && <Message text="Latitude must be -90 to 90 and longitude must be -180 to 180." />}
+        {!targetOk && <Info text="Enter a valid latitude and longitude, or pick a point on the map, before previewing or queueing." />}
 
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
@@ -189,6 +192,7 @@ export function RunWorkflowCard({ onQueueRun, onPreviewRoi, onPlanEarthEngine, i
 
         <Panel title="ROI / Grid Preview" subtitle="Preview metadata is computed before queueing." icon={<Search size={11} />} label={isPreviewingRoi ? "Previewing..." : "Preview"} disabled={!canPreviewRoi} onClick={() => void handlePreviewRoi()}>
           {roiPreviewError && <Message text={roiPreviewError} />}
+          {!roiPreview && !roiPreviewError && <Info text={targetOk ? "Preview will compute grid metadata only before queueing." : "Enter a valid target before requesting ROI / Grid Preview."} />}
           {roiPreview && (
             <div className="grid grid-cols-2 gap-2">
               <Metric label="Reference" value={roiPreview.gridPreview.referenceSystemLabel} />
@@ -209,6 +213,7 @@ export function RunWorkflowCard({ onQueueRun, onPreviewRoi, onPlanEarthEngine, i
           </div>
           {(!acquisitionOk || !cloudOk) && <Message text="Acquisition dates must be ordered and cloud max must be 0 to 100." />}
           {eePlanError && <Message text={eePlanError} />}
+          {!eePlan && !eePlanError && <Info text={targetOk ? "Earth Engine planning is a dry run only; it checks backend readiness before execution." : "Enter a valid target before planning Earth Engine backend readiness."} />}
           {eePlan && (
             <div className="grid grid-cols-2 gap-2">
               <Metric label="Status" value={formatStatus(eePlan.executionStatus)} />
@@ -223,6 +228,8 @@ export function RunWorkflowCard({ onQueueRun, onPreviewRoi, onPlanEarthEngine, i
           <button disabled={!targetOk || isQueueing} onClick={() => void handleQueueRun()} className="flex items-center justify-center gap-1.5 py-2 rounded flex-1" style={{ backgroundColor: targetOk && !isQueueing ? "var(--gs-navy)" : "var(--muted)", color: targetOk && !isQueueing ? "white" : "var(--gs-slate)", border: "none", cursor: targetOk && !isQueueing ? "pointer" : "not-allowed", fontSize: "12.5px", fontWeight: 600 }}><Play size={11} />{isQueueing ? "Queueing..." : "Queue Run"}</button>
           <button onClick={handleReset} className="flex items-center gap-1.5 px-3 py-2 rounded" style={{ backgroundColor: "transparent", color: "var(--gs-slate)", border: "1px solid var(--border)", cursor: "pointer", fontSize: "12px", fontWeight: 500 }}><RotateCcw size={11} />Reset</button>
         </div>
+        {!targetOk && <Info text="Queue Run stays disabled until both target fields are valid." />}
+        {targetOk && !feedback && <Info text="Ready to queue a local run. ROI preview and Earth Engine plan are optional checks." />}
         {feedback && <p style={{ fontSize: "11px", color: "var(--gs-slate)" }}>{feedback}</p>}
       </div>
     </div>
@@ -247,6 +254,10 @@ function Panel({ title, subtitle, icon, label, disabled, onClick, children }: { 
 
 function Message({ text }: { text: string }) {
   return <div className="rounded px-3 py-2" style={{ fontSize: "11px", color: "var(--gs-red)", backgroundColor: "var(--gs-red-bg)", border: "1px solid var(--gs-red-border)" }}>{text}</div>;
+}
+
+function Info({ text }: { text: string }) {
+  return <div className="rounded px-3 py-2" style={{ fontSize: "11px", color: "var(--gs-slate)", backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", lineHeight: "1.5" }}>{text}</div>;
 }
 
 function Metric({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
