@@ -23,4 +23,3 @@ def test_pca_excludes_binary_valid_mask_channel_and_keeps_invalid_pixels_nodata(
     assert report["valid_pixel_count"] == 15
     assert anomaly[0, 0] == np.float32(nodata)
     assert np.all(anomaly[cube[:, :, 2] == 1.0] >= 0.0)
-}
