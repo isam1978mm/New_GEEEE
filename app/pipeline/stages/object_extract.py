@@ -33,6 +33,7 @@ ANOMALY_PERCENTILE = 90.0
 ANOMALY_FLOOR = 0.6
 CLUSTER_EPS_PX = 6.0
 CLUSTER_MIN_SAMPLES = 1
+VALID_MASK_POLICY = "hypercube_last_binary_channel_when_available_else_all_finite"
 
 
 def _read_single_band_tif(path: Path) -> np.ndarray:
@@ -77,14 +78,23 @@ def load_object_extract_inputs(run_dir: Path, grid_spec: GridSpec) -> tuple[np.n
 def build_candidate_mask(
     anomaly: np.ndarray,
     *,
+    valid_mask: np.ndarray | None = None,
+    nodata: float | None = None,
     percentile: float = ANOMALY_PERCENTILE,
     floor: float = ANOMALY_FLOOR,
 ) -> tuple[np.ndarray, float]:
-    finite = anomaly[np.isfinite(anomaly)]
+    finite_mask = np.isfinite(anomaly)
+    if nodata is not None:
+        finite_mask &= anomaly != np.float32(nodata)
+    if valid_mask is not None:
+        if valid_mask.shape != anomaly.shape:
+            raise StageError(f"Object extraction valid_mask shape {valid_mask.shape} does not match anomaly shape {anomaly.shape}.")
+        finite_mask &= valid_mask.astype(bool)
+    finite = anomaly[finite_mask]
     if finite.size == 0:
-        raise StageError("Object extraction requires finite PCA anomaly values.")
+        raise StageError("Object extraction requires valid finite PCA anomaly values.")
     threshold = max(float(np.percentile(finite, percentile)), float(floor))
-    mask = np.isfinite(anomaly) & (anomaly >= threshold)
+    mask = finite_mask & (anomaly >= threshold)
     return mask.astype(np.uint8), threshold
 
 
@@ -237,8 +247,11 @@ def dbscan_cluster_objects(
 def build_object_products(
     anomaly: np.ndarray,
     hypercube: np.ndarray,
+    *,
+    nodata: float | None = None,
 ) -> dict[str, object]:
-    mask, threshold = build_candidate_mask(anomaly)
+    valid_mask = _valid_mask_from_hypercube(hypercube)
+    mask, threshold = build_candidate_mask(anomaly, valid_mask=valid_mask, nodata=nodata)
     components = connected_components(mask)
     objects = summarize_objects(anomaly, components)
     _labels, clusters = dbscan_cluster_objects(objects)
@@ -248,7 +261,26 @@ def build_object_products(
         "objects": objects,
         "clusters": clusters,
         "hypercube": hypercube,
+        "valid_pixel_count": int(valid_mask.sum()),
+        "valid_mask_policy": VALID_MASK_POLICY,
     }
+
+
+def _valid_mask_from_hypercube(hypercube: np.ndarray) -> np.ndarray:
+    if hypercube.ndim != 3 or hypercube.shape[-1] == 0:
+        raise StageError(f"Hypercube must be HWC 3D for object extraction, got shape {hypercube.shape}.")
+    if hypercube.shape[-1] > 1 and _looks_like_valid_mask(hypercube[:, :, -1]):
+        feature_cube = hypercube[:, :, :-1]
+        return ((hypercube[:, :, -1] > 0.5) & np.isfinite(feature_cube).all(axis=-1)).astype(bool)
+    return np.isfinite(hypercube).all(axis=-1).astype(bool)
+
+
+def _looks_like_valid_mask(channel: np.ndarray) -> bool:
+    finite = channel[np.isfinite(channel)]
+    if finite.size == 0:
+        return False
+    is_binary = np.isclose(finite, 0.0, atol=1e-6) | np.isclose(finite, 1.0, atol=1e-6)
+    return bool(is_binary.all())
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
@@ -430,7 +462,7 @@ class ObjectExtractStage(Stage):
 
     async def run(self, context: StageContext) -> StageResult:
         anomaly, hypercube = load_object_extract_inputs(context.run_dir, self.grid_spec)
-        products = build_object_products(anomaly, hypercube)
+        products = build_object_products(anomaly, hypercube, nodata=self.grid_spec.nodata)
         outputs = write_object_outputs(context.run_dir, products)
         patch_paths = outputs["patches"]
         assert isinstance(patch_paths, list)
@@ -507,5 +539,7 @@ class ObjectExtractStage(Stage):
                 "object_count": len(objects),
                 "cluster_count": len(clusters),
                 "candidate_threshold": threshold,
+                "valid_pixel_count": int(products["valid_pixel_count"]),
+                "valid_mask_policy": str(products["valid_mask_policy"]),
             },
         )
