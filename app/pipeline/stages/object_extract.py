@@ -15,7 +15,7 @@ from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult,
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
-from app.pipeline.stages.pca_anomaly import PCA_ANOMALY_TIF_NAME
+from app.pipeline.stages.pca_anomaly import PCA_ANOMALY_TIF_NAME, PCA_RAW_SCORE_NPY_NAME
 from app.services.storage import read_manifest
 
 OBJECTS_INDEX_NAME = "objects_index.csv"
@@ -34,6 +34,10 @@ ANOMALY_FLOOR = 0.6
 CLUSTER_EPS_PX = 6.0
 CLUSTER_MIN_SAMPLES = 1
 VALID_MASK_POLICY = "hypercube_last_binary_channel_when_available_else_all_finite"
+ANOMALY_SCORE_SOURCE_RAW = "pca_raw_score_npy"
+ANOMALY_SCORE_SOURCE_DISPLAY = "display_stretched_pca_anomaly_tif"
+CANDIDATE_THRESHOLD_POLICY_RAW = "raw_score_robust_mad_fallback_midrange"
+CANDIDATE_THRESHOLD_POLICY_DISPLAY = "display_percentile_90_floor_0_6"
 
 
 def _read_single_band_tif(path: Path) -> np.ndarray:
@@ -56,7 +60,7 @@ def _validate_anomaly_sidecar(path: Path, grid_spec: GridSpec) -> None:
         raise GridDriftError(f"Object extraction nodata mismatch: {path.name}")
 
 
-def load_object_extract_inputs(run_dir: Path, grid_spec: GridSpec) -> tuple[np.ndarray, np.ndarray]:
+def load_object_extract_inputs(run_dir: Path, grid_spec: GridSpec) -> tuple[np.ndarray, np.ndarray, str]:
     anomaly_path = run_dir / PCA_ANOMALY_TIF_NAME
     if not anomaly_path.is_file():
         raise StageError("PCA anomaly stage output is required before object extraction.")
@@ -66,13 +70,20 @@ def load_object_extract_inputs(run_dir: Path, grid_spec: GridSpec) -> tuple[np.n
     if not hypercube_path.is_file():
         raise StageError("Hypercube stage output is required before object extraction.")
 
-    anomaly = _read_single_band_tif(anomaly_path).astype(np.float32)
+    raw_score_path = run_dir / PCA_RAW_SCORE_NPY_NAME
+    if raw_score_path.is_file():
+        anomaly = np.load(raw_score_path).astype(np.float32)
+        score_source = ANOMALY_SCORE_SOURCE_RAW
+    else:
+        anomaly = _read_single_band_tif(anomaly_path).astype(np.float32)
+        score_source = ANOMALY_SCORE_SOURCE_DISPLAY
+
     hypercube = np.load(hypercube_path).astype(np.float32)
     if anomaly.shape != (grid_spec.size, grid_spec.size):
-        raise GridDriftError(f"PCA anomaly shape {anomaly.shape} does not match GRID {(grid_spec.size, grid_spec.size)}.")
+        raise GridDriftError(f"PCA anomaly score shape {anomaly.shape} does not match GRID {(grid_spec.size, grid_spec.size)}.")
     if hypercube.shape[:2] != (grid_spec.size, grid_spec.size):
         raise GridDriftError(f"Hypercube shape {hypercube.shape} does not match GRID {(grid_spec.size, grid_spec.size)}.")
-    return anomaly, hypercube
+    return anomaly, hypercube, score_source
 
 
 def build_candidate_mask(
@@ -81,7 +92,8 @@ def build_candidate_mask(
     valid_mask: np.ndarray | None = None,
     nodata: float | None = None,
     percentile: float = ANOMALY_PERCENTILE,
-    floor: float = ANOMALY_FLOOR,
+    floor: float | None = ANOMALY_FLOOR,
+    threshold_policy: str = CANDIDATE_THRESHOLD_POLICY_DISPLAY,
 ) -> tuple[np.ndarray, float]:
     finite_mask = np.isfinite(anomaly)
     if nodata is not None:
@@ -93,9 +105,31 @@ def build_candidate_mask(
     finite = anomaly[finite_mask]
     if finite.size == 0:
         raise StageError("Object extraction requires valid finite PCA anomaly values.")
-    threshold = max(float(np.percentile(finite, percentile)), float(floor))
+    if threshold_policy == CANDIDATE_THRESHOLD_POLICY_RAW:
+        threshold = _raw_score_threshold(finite)
+    elif threshold_policy == CANDIDATE_THRESHOLD_POLICY_DISPLAY:
+        threshold = float(np.percentile(finite, percentile))
+        if floor is not None:
+            threshold = max(threshold, float(floor))
+    else:
+        raise StageError(f"Unknown object extraction threshold policy: {threshold_policy}")
     mask = finite_mask & (anomaly >= threshold)
     return mask.astype(np.uint8), threshold
+
+
+def _raw_score_threshold(values: np.ndarray) -> float:
+    finite = values[np.isfinite(values)].astype(np.float64)
+    if finite.size == 0:
+        raise StageError("Raw PCA score threshold requires finite values.")
+    median = float(np.median(finite))
+    mad = float(np.median(np.abs(finite - median)))
+    if np.isfinite(mad) and mad > 0.0:
+        robust_sigma = 1.4826 * mad
+        return max(float(np.percentile(finite, 99.0)), median + 6.0 * robust_sigma)
+    max_value = float(np.max(finite))
+    if np.isfinite(max_value) and max_value > median:
+        return median + 0.5 * (max_value - median)
+    return max_value + 1e-6
 
 
 def _neighbors(row: int, col: int, height: int, width: int) -> Iterable[tuple[int, int]]:
@@ -249,9 +283,22 @@ def build_object_products(
     hypercube: np.ndarray,
     *,
     nodata: float | None = None,
+    score_source: str = ANOMALY_SCORE_SOURCE_DISPLAY,
 ) -> dict[str, object]:
     valid_mask = _valid_mask_from_hypercube(hypercube)
-    mask, threshold = build_candidate_mask(anomaly, valid_mask=valid_mask, nodata=nodata)
+    threshold_policy = (
+        CANDIDATE_THRESHOLD_POLICY_RAW
+        if score_source == ANOMALY_SCORE_SOURCE_RAW
+        else CANDIDATE_THRESHOLD_POLICY_DISPLAY
+    )
+    threshold_floor = None if threshold_policy == CANDIDATE_THRESHOLD_POLICY_RAW else ANOMALY_FLOOR
+    mask, threshold = build_candidate_mask(
+        anomaly,
+        valid_mask=valid_mask,
+        nodata=nodata,
+        floor=threshold_floor,
+        threshold_policy=threshold_policy,
+    )
     components = connected_components(mask)
     objects = summarize_objects(anomaly, components)
     _labels, clusters = dbscan_cluster_objects(objects)
@@ -263,6 +310,8 @@ def build_object_products(
         "hypercube": hypercube,
         "valid_pixel_count": int(valid_mask.sum()),
         "valid_mask_policy": VALID_MASK_POLICY,
+        "anomaly_score_source": score_source,
+        "candidate_threshold_policy": threshold_policy,
     }
 
 
@@ -292,13 +341,22 @@ def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, objec
             writer.writerow(row)
 
 
-def _build_target_summary(*, objects: list[dict[str, object]], clusters: list[dict[str, object]], threshold: float) -> dict[str, object]:
+def _build_target_summary(
+    *,
+    objects: list[dict[str, object]],
+    clusters: list[dict[str, object]],
+    threshold: float,
+    score_source: str,
+    threshold_policy: str,
+) -> dict[str, object]:
     return {
         "schema": "target_outputs_v1",
         "coordinate_space": "pixel_grid",
         "object_count": len(objects),
         "cluster_count": len(clusters),
         "candidate_threshold": float(threshold),
+        "candidate_score_source": score_source,
+        "candidate_threshold_policy": threshold_policy,
         "max_object_anomaly": max((float(row["max_anomaly"]) for row in objects), default=None),
         "outputs": {
             "csv": f"{TARGET_OUTPUT_DIRNAME}/{TARGET_CANDIDATES_CSV_NAME}",
@@ -322,6 +380,8 @@ def _build_target_summary_text(summary: dict[str, object]) -> str:
             f"Object count: {summary['object_count']}",
             f"Cluster count: {summary['cluster_count']}",
             f"Candidate threshold: {summary['candidate_threshold']}",
+            f"Candidate score source: {summary['candidate_score_source']}",
+            f"Candidate threshold policy: {summary['candidate_threshold_policy']}",
             "Geographic coordinates included: no",
             "Visibility: local filesystem only",
             "",
@@ -378,6 +438,8 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
     mask = products["mask"]
     hypercube = products["hypercube"]
     threshold = products["threshold"]
+    score_source = str(products.get("anomaly_score_source", ANOMALY_SCORE_SOURCE_DISPLAY))
+    threshold_policy = str(products.get("candidate_threshold_policy", CANDIDATE_THRESHOLD_POLICY_DISPLAY))
     assert isinstance(objects, list)
     assert isinstance(clusters, list)
     assert isinstance(mask, np.ndarray)
@@ -422,7 +484,13 @@ def write_object_outputs(run_dir: Path, products: dict[str, object]) -> dict[str
     _write_csv(target_candidates_path, object_fields, objects)
     _write_csv(clusters_path, cluster_fields, clusters)
     np.save(mask_path, mask.astype(np.uint8))
-    summary = _build_target_summary(objects=objects, clusters=clusters, threshold=threshold)
+    summary = _build_target_summary(
+        objects=objects,
+        clusters=clusters,
+        threshold=threshold,
+        score_source=score_source,
+        threshold_policy=threshold_policy,
+    )
     target_summary_json_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     target_summary_txt_path.write_text(_build_target_summary_text(summary), encoding="utf-8")
     detected_features_geojson_path.write_text(
@@ -461,8 +529,13 @@ class ObjectExtractStage(Stage):
         self.grid_spec = grid_spec
 
     async def run(self, context: StageContext) -> StageResult:
-        anomaly, hypercube = load_object_extract_inputs(context.run_dir, self.grid_spec)
-        products = build_object_products(anomaly, hypercube, nodata=self.grid_spec.nodata)
+        anomaly, hypercube, score_source = load_object_extract_inputs(context.run_dir, self.grid_spec)
+        products = build_object_products(
+            anomaly,
+            hypercube,
+            nodata=self.grid_spec.nodata,
+            score_source=score_source,
+        )
         outputs = write_object_outputs(context.run_dir, products)
         patch_paths = outputs["patches"]
         assert isinstance(patch_paths, list)
@@ -539,6 +612,8 @@ class ObjectExtractStage(Stage):
                 "object_count": len(objects),
                 "cluster_count": len(clusters),
                 "candidate_threshold": threshold,
+                "anomaly_score_source": str(products["anomaly_score_source"]),
+                "candidate_threshold_policy": str(products["candidate_threshold_policy"]),
                 "valid_pixel_count": int(products["valid_pixel_count"]),
                 "valid_mask_policy": str(products["valid_mask_policy"]),
             },

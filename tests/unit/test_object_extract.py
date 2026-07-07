@@ -16,6 +16,7 @@ from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import write_raster_sidecar
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.object_extract import ObjectExtractStage, build_object_products
+from app.pipeline.stages.pca_anomaly import PCA_RAW_SCORE_NPY_NAME
 from app.services.storage import read_manifest
 
 
@@ -64,6 +65,38 @@ def test_build_object_products_ignores_high_anomaly_where_valid_mask_is_zero() -
     assert products["clusters"] == []
     assert int(products["mask"].sum()) == 0
     assert products["valid_pixel_count"] == 128
+
+
+def test_object_extract_stage_prefers_raw_pca_score_npy_for_candidates() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        display_anomaly = np.zeros((grid_spec.size, grid_spec.size), dtype=np.float32)
+        display_anomaly[1:5, 1:5] = 0.99
+        raw_score = np.zeros((grid_spec.size, grid_spec.size), dtype=np.float32)
+        raw_score[40:46, 50:57] = 10.0
+        hypercube = np.zeros((grid_spec.size, grid_spec.size, 3), dtype=np.float32)
+        hypercube[:, :, 0] = 0.1
+        hypercube[:, :, 1] = 0.2
+        hypercube[:, :, 2] = 1.0
+        _write_anomaly_inputs(run_dir, display_anomaly, hypercube, grid_spec)
+        np.save(run_dir / PCA_RAW_SCORE_NPY_NAME, raw_score)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+
+        result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
+
+        with (run_dir / "objects_index.csv").open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        assert len(rows) == 1
+        assert rows[0]["row_min"] == "40"
+        assert rows[0]["row_max"] == "45"
+        assert rows[0]["col_min"] == "50"
+        assert rows[0]["col_max"] == "56"
+        assert result.metadata["anomaly_score_source"] == "pca_raw_score_npy"
+        assert result.metadata["candidate_threshold_policy"] == "raw_score_robust_mad_fallback_midrange"
+        target_summary = json.loads((run_dir / "targets" / "target_summary.json").read_text(encoding="utf-8"))
+        assert target_summary["candidate_score_source"] == "pca_raw_score_npy"
+        assert target_summary["candidate_threshold_policy"] == "raw_score_robust_mad_fallback_midrange"
 
 
 def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:

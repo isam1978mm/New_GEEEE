@@ -24,6 +24,12 @@ D2.5 partial:
   - PCA now persists raw projected-magnitude scores separately as pca_anomaly_raw.npy.
   - Display anomaly TIF remains percentile-stretched to [0, 1].
   - PCA report and QA record raw_score_method, display_stretch_method, and raw_score_range.
+
+D2.6 partial:
+  - object_extract now prefers pca_anomaly_raw.npy for candidate thresholding when present.
+  - object_extract falls back to display-stretched pca_anomaly.tif for legacy/manual inputs.
+  - raw-score candidate thresholding uses a robust MAD threshold with midrange fallback instead of the display floor.
+  - target summary and StageResult metadata record candidate score source and threshold policy.
 ```
 
 ## Still open from D2
@@ -32,11 +38,10 @@ D2.5 partial:
 D2.1 compatibility mode decision for legacy PCA
 D2.2 corrected raw PCA scoring using whitened PC distance or reconstruction error
 D2.4 fuller included/excluded band names where band names are available
-D2.5 downstream consumers still use display-stretched pca_anomaly.tif until D2.6
-D2.6 threshold object candidates from raw score rather than display-stretched score
+D2.6 remaining: evaluate/tune robust raw-score threshold policy against frozen references when available
 D2.7 low-valid-fraction blocking
 ```
 
 ## Notes
 
-This is still not full D2 completion. Degenerate feature channels are excluded before PCA fit, and raw PCA projected-magnitude scores are now persisted separately from display-stretched anomaly values. Object extraction still needs D2.6 to threshold candidates from raw score rather than display-stretched score.
+This is still not full D2 completion. Degenerate feature channels are excluded before PCA fit, raw PCA projected-magnitude scores are persisted separately from display-stretched anomaly values, and object extraction now prefers raw PCA scores for candidate thresholding when available. Low-valid-fraction blocking and any frozen-reference threshold tuning remain open.
