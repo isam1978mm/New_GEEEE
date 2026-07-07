@@ -34,7 +34,7 @@ from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.services.storage import read_manifest
 
 
-def test_build_hypercube_products_matches_notebook_masks_and_norm() -> None:
+def test_build_hypercube_products_preserves_invalid_pixels_and_mask_policy() -> None:
     layer_a = np.array([[1.0, 2.0], [3.0, -9999.0]], dtype=np.float32)
     layer_b = np.array([[10.0, 20.0], [30.0, 40.0]], dtype=np.float32)
 
@@ -48,13 +48,17 @@ def test_build_hypercube_products_matches_notebook_masks_and_norm() -> None:
     assert isinstance(cube_clean, np.ndarray)
     assert isinstance(cube_norm_plus_mask, np.ndarray)
     assert cube_raw.shape == (2, 2, 3)
-    assert cube_clean[1, 1, 0] == 0.0
+    assert np.isnan(cube_clean[1, 1, 0])
     assert products["mask_any"][1, 1] == 1
     assert products["mask_all"][1, 1] == 0
     assert cube_norm_plus_mask.shape == (2, 2, 3)
+    assert np.isnan(cube_norm_plus_mask[1, 1, 0])
+    assert cube_norm_plus_mask[1, 1, -1] == 0.0
+    assert cube_raw[1, 1, 0] == np.float32(-9999.0)
+    assert cube_raw[1, 1, -1] == 0.0
     assert cube_norm_plus_mask[0, 0, -1] == 1.0
     assert band_names == ["a", "b", "valid_mask"]
-    assert np.allclose(cube_raw, cube_norm_plus_mask)
+    assert products["valid_mask_policy"] == "all_feature_channels_finite"
 
 
 def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
@@ -87,6 +91,7 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
         cube = np.load(run_dir / "hypercube.npy")
         assert cube.shape == (grid_spec.size, grid_spec.size, 3)
         assert np.all(cube[:, :, -1] == 1.0)
+        assert result.metadata["valid_mask_policy"] == "all_feature_channels_finite"
         with (run_dir / "hypercube_band_order.csv").open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         assert len(rows) == 3
