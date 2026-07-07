@@ -82,10 +82,13 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
         valid_values = _valid_feature_values(patch)
         anomaly_patch = anomaly[row_min : row_max + 1, col_min : col_max + 1]
         finite_anomaly = anomaly_patch[np.isfinite(anomaly_patch)]
+        signal_mean = _normalize_feature(float(valid_values.mean()) if valid_values.size else 0.0)
+        signal_peak = _normalize_feature(float(finite_anomaly.max()) if finite_anomaly.size else 0.0)
+        signal_spread = _normalize_feature(float(valid_values.std()) if valid_values.size else 0.0)
         feature_vector = NeutralFeatureVector(
-            signal_mean=_normalize_feature(float(valid_values.mean()) if valid_values.size else 0.0),
-            signal_peak=_normalize_feature(float(finite_anomaly.max()) if finite_anomaly.size else 0.0),
-            signal_spread=_normalize_feature(float(valid_values.std()) if valid_values.size else 0.0),
+            signal_mean=signal_mean,
+            signal_peak=signal_peak,
+            signal_spread=signal_spread,
         )
         classification = classify_feature_vector(feature_vector)
         classifications.append(
@@ -100,6 +103,9 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
                 "class_score": round(float(classification.class_score), 6),
                 "class_family": classification.class_family,
                 "classifier_version": classification.classifier_version,
+                "signal_mean": round(float(signal_mean), 6),
+                "signal_peak": round(float(signal_peak), 6),
+                "signal_spread": round(float(signal_spread), 6),
             }
         )
 
@@ -192,4 +198,6 @@ def _read_csv_rows(path: Path) -> list[dict[str, str]]:
 
 
 def _normalize_feature(value: float) -> float:
-    return max(0.0, min(1.0, round(float(value), 6)))
+    if not np.isfinite(value):
+        return 0.0
+    return round(float(value), 6)
