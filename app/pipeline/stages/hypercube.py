@@ -70,6 +70,7 @@ NOTEBOOK_PATCHED_14B_BAND_DESCRIPTIONS: tuple[str, ...] = (
 NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT = len(NOTEBOOK_PATCHED_14B_LAYER_ORDER)
 EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}
 EPS = 1e-6
+VALID_MASK_POLICY = "all_feature_channels_finite"
 
 
 def _read_single_band_tif(path: Path) -> np.ndarray:
@@ -99,28 +100,29 @@ def build_hypercube_products(
     source_layers: list[tuple[str, np.ndarray]],
     *,
     nodata: float,
-) -> dict[str, np.ndarray | list[str] | np.ndarray]:
+) -> dict[str, object]:
     if not source_layers:
         raise StageError("Hypercube assembly requires at least one source TIFF.")
 
     source_band_names = [name for name, _array in source_layers]
     layers = [array.astype(np.float32, copy=True) for _name, array in source_layers]
-    cube_raw = np.stack(layers, axis=-1).astype(np.float32)
-    cube_raw[cube_raw == nodata] = np.nan
-    cube_raw[~np.isfinite(cube_raw)] = np.nan
+    cube_source = np.stack(layers, axis=-1).astype(np.float32)
+    cube_source[cube_source == nodata] = np.nan
+    cube_source[~np.isfinite(cube_source)] = np.nan
 
-    mask_any = np.isfinite(cube_raw).any(axis=-1).astype(np.uint8)
-    mask_all = np.isfinite(cube_raw).all(axis=-1).astype(np.uint8)
-    cube_clean = np.nan_to_num(cube_raw, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+    mask_any = np.isfinite(cube_source).any(axis=-1).astype(np.uint8)
+    mask_all = np.isfinite(cube_source).all(axis=-1).astype(np.uint8)
+    cube_clean = cube_source.copy().astype(np.float32)
 
-    channel_count = cube_raw.shape[-1]
-    cube_norm = np.empty_like(cube_clean, dtype=np.float32)
+    channel_count = cube_source.shape[-1]
+    cube_norm = np.full_like(cube_source, np.nan, dtype=np.float32)
     medians = np.zeros((channel_count,), dtype=np.float32)
     iqrs = np.zeros((channel_count,), dtype=np.float32)
 
     for index in range(channel_count):
-        channel = cube_raw[:, :, index]
-        valid = channel[np.isfinite(channel)]
+        channel = cube_source[:, :, index]
+        finite = np.isfinite(channel)
+        valid = channel[finite]
         if valid.size < 100:
             med = 0.0
             iqr = 1.0
@@ -131,10 +133,11 @@ def build_hypercube_products(
             iqr = max(q75 - q25, EPS)
         medians[index] = np.float32(med)
         iqrs[index] = np.float32(iqr)
-        normalized = np.clip((cube_clean[:, :, index] - med) / iqr, -8.0, 8.0)
-        cube_norm[:, :, index] = normalized.astype(np.float32)
+        normalized = np.full(channel.shape, np.nan, dtype=np.float32)
+        normalized[finite] = np.clip((channel[finite] - med) / iqr, -8.0, 8.0).astype(np.float32)
+        cube_norm[:, :, index] = normalized
 
-    cube_norm_plus_mask = np.concatenate([cube_norm, mask_any[:, :, None].astype(np.float32)], axis=-1)
+    cube_norm_plus_mask = np.concatenate([cube_norm, mask_all[:, :, None].astype(np.float32)], axis=-1)
     cube_out = np.where(np.isfinite(cube_norm_plus_mask), cube_norm_plus_mask, nodata).astype(np.float32)
     persisted_band_names = [*source_band_names, "valid_mask"]
 
@@ -149,6 +152,7 @@ def build_hypercube_products(
         "mask_all": mask_all,
         "medians": medians,
         "iqrs": iqrs,
+        "valid_mask_policy": VALID_MASK_POLICY,
     }
 
 
@@ -543,6 +547,7 @@ class HypercubeStage(Stage):
                 "band_names": band_names,
                 "band_count": len(band_names),
                 "shape": [self.grid_spec.size, self.grid_spec.size, len(band_names)],
+                "valid_mask_policy": str(products.get("valid_mask_policy", VALID_MASK_POLICY)),
                 "notebook_output_statuses": notebook_output_statuses,
             },
         )
