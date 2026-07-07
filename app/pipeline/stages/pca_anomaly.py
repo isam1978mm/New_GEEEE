@@ -22,6 +22,7 @@ PCA_MAX_FIT_PIXELS = 120000
 PCA_COMPONENTS = 3
 PCA_MIN_FEATURE_STD = 1e-9
 PCA_RAW_SCORE_NPY_NAME = "pca_anomaly_raw.npy"
+PCA_MIN_VALID_PIXEL_FRACTION = 0.05
 
 
 def load_hypercube_array(run_dir: Path) -> np.ndarray:
@@ -74,6 +75,7 @@ def compute_pca_anomaly(
     n_components: int = PCA_COMPONENTS,
     valid_mask_channel: bool | None = None,
     return_raw_score: bool = False,
+    min_valid_pixel_fraction: float = PCA_MIN_VALID_PIXEL_FRACTION,
 ) -> tuple[np.ndarray, dict[str, object]] | tuple[np.ndarray, np.ndarray, dict[str, object]]:
     if cube.ndim != 3:
         raise StageError(f"Hypercube must be HWC 3D, got shape {cube.shape}.")
@@ -99,10 +101,17 @@ def compute_pca_anomaly(
 
     height, width, channels = cube_clean.shape
     matrix = cube_clean.reshape(-1, channels).astype(np.float32)
+    pixel_count = int(matrix.shape[0])
     valid_flat = valid_mask.reshape(-1)
     valid_indexes = np.flatnonzero(valid_flat)
     if valid_indexes.size == 0:
         raise StageError("PCA anomaly requires at least one valid selected hypercube pixel.")
+    valid_pixel_fraction = float(valid_indexes.size / max(pixel_count, 1))
+    if valid_pixel_fraction < float(min_valid_pixel_fraction):
+        raise StageError(
+            "PCA anomaly valid pixel fraction "
+            f"{valid_pixel_fraction:.6f} is below minimum {float(min_valid_pixel_fraction):.6f}."
+        )
     sample_size = min(max_fit_pixels, int(valid_indexes.size))
     rng = np.random.default_rng(seed)
     sample_idx = rng.choice(valid_indexes, size=sample_size, replace=False)
@@ -128,8 +137,10 @@ def compute_pca_anomaly(
     report = {
         "seed": int(seed),
         "sample_size": int(sample_size),
-        "pixel_count": int(matrix.shape[0]),
+        "pixel_count": int(pixel_count),
         "valid_pixel_count": int(valid_indexes.size),
+        "valid_pixel_fraction": float(valid_pixel_fraction),
+        "min_valid_pixel_fraction": float(min_valid_pixel_fraction),
         "components_count": int(components.shape[0]),
         "input_feature_channel_count": int(input_feature_channel_count),
         "feature_channel_count": int(channels),
@@ -255,6 +266,8 @@ def write_pca_outputs(
         "raw_score_range": report.get("raw_score_range"),
         "pixel_count": int(report["pixel_count"]),
         "valid_pixel_count": int(report["valid_pixel_count"]),
+        "valid_pixel_fraction": float(report.get("valid_pixel_fraction", 0.0)),
+        "min_valid_pixel_fraction": float(report.get("min_valid_pixel_fraction", 0.0)),
         "anomaly_min": float(valid_anomaly.min()) if valid_anomaly.size else None,
         "anomaly_max": float(valid_anomaly.max()) if valid_anomaly.size else None,
         "anomaly_mean": float(valid_anomaly.mean()) if valid_anomaly.size else None,

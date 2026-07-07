@@ -6,8 +6,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
+import pytest
 
 from app.db.models.enums import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import build_run_grid
@@ -74,6 +76,19 @@ def test_compute_pca_anomaly_excludes_degenerate_feature_channels() -> None:
     assert report["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
 
 
+def test_compute_pca_anomaly_blocks_low_valid_fraction() -> None:
+    nodata = -9999.0
+    cube = np.zeros((10, 10, 3), dtype=np.float32)
+    base = np.arange(100, dtype=np.float32).reshape(10, 10)
+    cube[:, :, 0] = base
+    cube[:, :, 1] = base * 2.0
+    cube[:, :, 2] = 0.0
+    cube[0:3, 0:3, 2] = 1.0
+
+    with pytest.raises(StageError, match="valid pixel fraction"):
+        compute_pca_anomaly(cube, nodata=nodata, seed=0, min_valid_pixel_fraction=0.10)
+
+
 def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
@@ -116,6 +131,8 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert qa_summary["feature_channel_count"] == 1
         assert qa_summary["excluded_feature_channel_count"] == 2
         assert qa_summary["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
+        assert qa_summary["valid_pixel_fraction"] == 1.0
+        assert qa_summary["min_valid_pixel_fraction"] == 0.05
         assert qa_summary["raw_score_method"] == "pca_projected_component_magnitude"
         assert qa_summary["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
         assert qa_summary["raw_score_range"]["max"] is not None
