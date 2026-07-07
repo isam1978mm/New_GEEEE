@@ -78,14 +78,14 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
         row_max = int(row["row_max"])
         col_min = int(row["col_min"])
         col_max = int(row["col_max"])
-        patch = hypercube[row_min : row_max + 1, col_min : col_max + 1, :-1]
-        valid_patch = patch[np.isfinite(patch)]
+        patch = hypercube[row_min : row_max + 1, col_min : col_max + 1, :]
+        valid_values = _valid_feature_values(patch)
         anomaly_patch = anomaly[row_min : row_max + 1, col_min : col_max + 1]
         finite_anomaly = anomaly_patch[np.isfinite(anomaly_patch)]
         feature_vector = NeutralFeatureVector(
-            signal_mean=_normalize_feature(float(valid_patch.mean()) if valid_patch.size else 0.0),
+            signal_mean=_normalize_feature(float(valid_values.mean()) if valid_values.size else 0.0),
             signal_peak=_normalize_feature(float(finite_anomaly.max()) if finite_anomaly.size else 0.0),
-            signal_spread=_normalize_feature(float(valid_patch.std()) if valid_patch.size else 0.0),
+            signal_spread=_normalize_feature(float(valid_values.std()) if valid_values.size else 0.0),
         )
         classification = classify_feature_vector(feature_vector)
         classifications.append(
@@ -150,7 +150,7 @@ def _build_neutral_labels(classifications: list[dict[str, object]], summary: dic
     cluster_labels = [
         {
             "cluster_id": cluster_id,
-            "dominant_class_id": sorted(class_ids)[0],
+            "dominant_class_id": _dominant_class_id(class_ids),
             "class_ids": sorted(class_ids),
         }
         for cluster_id, class_ids in sorted(labels_by_cluster.items())
@@ -162,6 +162,28 @@ def _build_neutral_labels(classifications: list[dict[str, object]], summary: dic
         "object_labels": object_labels,
         "cluster_labels": cluster_labels,
     }
+
+
+def _valid_feature_values(patch: np.ndarray) -> np.ndarray:
+    if patch.ndim != 3 or patch.shape[-1] == 0:
+        return np.array([], dtype=np.float32)
+    if patch.shape[-1] == 1:
+        feature_patch = patch
+        valid_mask = np.isfinite(feature_patch).all(axis=-1)
+    else:
+        feature_patch = patch[:, :, :-1]
+        valid_mask = (patch[:, :, -1] > 0.5) & np.isfinite(feature_patch).all(axis=-1)
+    values = feature_patch[valid_mask]
+    values = values[np.isfinite(values)]
+    return values.astype(np.float32, copy=False)
+
+
+def _dominant_class_id(class_ids: list[str]) -> str:
+    if not class_ids:
+        return ""
+    counts = Counter(class_ids)
+    max_count = max(counts.values())
+    return sorted(class_id for class_id, count in counts.items() if count == max_count)[0]
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
