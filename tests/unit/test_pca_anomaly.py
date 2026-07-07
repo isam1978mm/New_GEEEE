@@ -33,6 +33,28 @@ def test_compute_pca_anomaly_is_seeded_and_normalized() -> None:
     assert float(np.max(anomaly_a)) <= 1.0
 
 
+def test_compute_pca_anomaly_can_return_raw_score_separate_from_display_stretch() -> None:
+    nodata = -9999.0
+    base = np.arange(36, dtype=np.float32).reshape(6, 6)
+    cube = np.zeros((6, 6, 3), dtype=np.float32)
+    cube[:, :, 0] = base
+    cube[:, :, 1] = base**2
+    cube[:, :, 2] = np.flipud(base)
+
+    anomaly, raw_score, report = compute_pca_anomaly(cube, nodata=nodata, seed=0, return_raw_score=True)
+
+    valid = raw_score != nodata
+    assert raw_score.shape == anomaly.shape
+    assert np.all(np.isfinite(raw_score[valid]))
+    assert np.all(raw_score[valid] >= 0.0)
+    assert float(np.min(anomaly[valid])) >= 0.0
+    assert float(np.max(anomaly[valid])) <= 1.0
+    assert not np.allclose(raw_score[valid], anomaly[valid])
+    assert report["raw_score_method"] == "pca_projected_component_magnitude"
+    assert report["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
+    assert report["raw_score_range"]["max"] is not None
+
+
 def test_compute_pca_anomaly_excludes_degenerate_feature_channels() -> None:
     nodata = -9999.0
     cube = np.zeros((5, 5, 4), dtype=np.float32)
@@ -65,17 +87,27 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
 
         result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["pca_anomaly_tif", "pca_eigenvalues", "parity_qa_summary"]
+        assert [artifact.name for artifact in result.artifacts] == [
+            "pca_anomaly_tif",
+            "pca_anomaly_raw_npy",
+            "pca_eigenvalues",
+            "parity_qa_summary",
+        ]
         artifact_classes = {artifact.name: artifact.artifact_class for artifact in result.artifacts}
         assert artifact_classes == {
             "pca_anomaly_tif": ArtifactClass.LOCAL_SENSITIVE,
+            "pca_anomaly_raw_npy": ArtifactClass.LOCAL_SENSITIVE,
             "pca_eigenvalues": ArtifactClass.LOCAL_SENSITIVE,
             "parity_qa_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
         sidecar = read_manifest(raster_sidecar_path(run_dir / "pca_anomaly.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
+        raw_score = np.load(run_dir / "pca_anomaly_raw.npy")
+        assert raw_score.shape == (grid_spec.size, grid_spec.size)
         report = read_manifest(run_dir / "pca_eigenvalues.json")
         assert report["seed"] == 0
+        assert report["raw_score_method"] == "pca_projected_component_magnitude"
+        assert report["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
         assert "eigenvalues" in report or "explained_variance" in report
         qa_summary = json.loads((run_dir / "QA" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
         assert qa_summary["seed"] == 0
@@ -84,6 +116,9 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert qa_summary["feature_channel_count"] == 1
         assert qa_summary["excluded_feature_channel_count"] == 2
         assert qa_summary["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
+        assert qa_summary["raw_score_method"] == "pca_projected_component_magnitude"
+        assert qa_summary["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
+        assert qa_summary["raw_score_range"]["max"] is not None
 
 
 def _settings(run_dir: Path):

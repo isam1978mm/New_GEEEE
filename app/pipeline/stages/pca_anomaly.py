@@ -21,6 +21,7 @@ PCA_SAMPLE_SEED = 0
 PCA_MAX_FIT_PIXELS = 120000
 PCA_COMPONENTS = 3
 PCA_MIN_FEATURE_STD = 1e-9
+PCA_RAW_SCORE_NPY_NAME = "pca_anomaly_raw.npy"
 
 
 def load_hypercube_array(run_dir: Path) -> np.ndarray:
@@ -72,7 +73,8 @@ def compute_pca_anomaly(
     max_fit_pixels: int = PCA_MAX_FIT_PIXELS,
     n_components: int = PCA_COMPONENTS,
     valid_mask_channel: bool | None = None,
-) -> tuple[np.ndarray, dict[str, object]]:
+    return_raw_score: bool = False,
+) -> tuple[np.ndarray, dict[str, object]] | tuple[np.ndarray, np.ndarray, dict[str, object]]:
     if cube.ndim != 3:
         raise StageError(f"Hypercube must be HWC 3D, got shape {cube.shape}.")
 
@@ -110,14 +112,18 @@ def compute_pca_anomaly(
     mean, components, explained_variance, explained_ratio = _fit_pca_components(fit_matrix, n_components=actual_components)
     projected = (matrix - mean) @ components.T
     magnitude_raw = np.sqrt(np.sum(projected**2, axis=1)).reshape(height, width).astype(np.float32)
-    magnitude_valid = magnitude_raw[valid_mask & np.isfinite(magnitude_raw)]
-    p01, p99 = np.percentile(magnitude_valid, [1, 99]) if magnitude_valid.size else (0.0, 1.0)
+    raw_score = np.full((height, width), nodata, dtype=np.float32)
+    raw_valid_mask = valid_mask & np.isfinite(magnitude_raw)
+    raw_score[raw_valid_mask] = magnitude_raw[raw_valid_mask]
+    raw_score_valid = raw_score[(raw_score != nodata) & np.isfinite(raw_score)]
+
+    p01, p99 = np.percentile(raw_score_valid, [1, 99]) if raw_score_valid.size else (0.0, 1.0)
     if not np.isfinite(p01) or not np.isfinite(p99) or p99 <= p01:
-        p01 = float(np.nanmin(magnitude_valid)) if magnitude_valid.size else 0.0
-        p99 = float(np.nanmax(magnitude_valid)) if magnitude_valid.size else 1.0
+        p01 = float(np.nanmin(raw_score_valid)) if raw_score_valid.size else 0.0
+        p99 = float(np.nanmax(raw_score_valid)) if raw_score_valid.size else 1.0
     anomaly = np.full((height, width), nodata, dtype=np.float32)
     anomaly_valid = np.clip((magnitude_raw - p01) / (p99 - p01 + 1e-12), 0.0, 1.0).astype(np.float32)
-    anomaly[valid_mask] = anomaly_valid[valid_mask]
+    anomaly[raw_valid_mask] = anomaly_valid[raw_valid_mask]
 
     report = {
         "seed": int(seed),
@@ -138,7 +144,16 @@ def compute_pca_anomaly(
         "explained_variance_ratio": [float(value) for value in explained_ratio],
         "mean_vector_length": int(mean.shape[0]),
         "percentile_range": {"p01": float(p01), "p99": float(p99)},
+        "raw_score_method": "pca_projected_component_magnitude",
+        "display_stretch_method": "percentile_1_99_on_valid_raw_score",
+        "raw_score_range": {
+            "min": float(raw_score_valid.min()) if raw_score_valid.size else None,
+            "max": float(raw_score_valid.max()) if raw_score_valid.size else None,
+            "mean": float(raw_score_valid.mean()) if raw_score_valid.size else None,
+        },
     }
+    if return_raw_score:
+        return anomaly, raw_score, report
     return anomaly, report
 
 
@@ -201,8 +216,15 @@ def _looks_like_valid_mask(channel: np.ndarray) -> bool:
     return bool(is_binary.all())
 
 
-def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, report: dict[str, object]) -> dict[str, Path]:
+def write_pca_outputs(
+    run_dir: Path,
+    grid_spec: GridSpec,
+    anomaly: np.ndarray,
+    raw_score: np.ndarray,
+    report: dict[str, object],
+) -> dict[str, Path]:
     tif_path = run_dir / PCA_ANOMALY_TIF_NAME
+    raw_score_path = run_dir / PCA_RAW_SCORE_NPY_NAME
     report_path = run_dir / PCA_REPORT_NAME
     qa_path = ensure_run_qa_dir(run_dir) / "parity" / PCA_PARITY_QA_NAME
     qa_path.parent.mkdir(parents=True, exist_ok=True)
@@ -214,6 +236,7 @@ def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, r
         dtype="float32",
         shape=anomaly.shape,
     )
+    np.save(raw_score_path, raw_score.astype(np.float32, copy=False))
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
     valid_anomaly = anomaly[(anomaly != grid_spec.nodata) & np.isfinite(anomaly)]
     qa_payload = {
@@ -227,6 +250,9 @@ def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, r
         "used_valid_mask_channel": bool(report["used_valid_mask_channel"]),
         "valid_mask_policy": str(report["valid_mask_policy"]),
         "pca_feature_policy": str(report.get("pca_feature_policy", "legacy")),
+        "raw_score_method": str(report.get("raw_score_method", "legacy_projected_magnitude")),
+        "display_stretch_method": str(report.get("display_stretch_method", "legacy_percentile_display")),
+        "raw_score_range": report.get("raw_score_range"),
         "pixel_count": int(report["pixel_count"]),
         "valid_pixel_count": int(report["valid_pixel_count"]),
         "anomaly_min": float(valid_anomaly.min()) if valid_anomaly.size else None,
@@ -234,7 +260,12 @@ def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, r
         "anomaly_mean": float(valid_anomaly.mean()) if valid_anomaly.size else None,
     }
     qa_path.write_text(json.dumps(qa_payload, indent=2, sort_keys=True), encoding="utf-8")
-    return {"pca_anomaly_tif": tif_path, "pca_report": report_path, "parity_qa_summary": qa_path}
+    return {
+        "pca_anomaly_tif": tif_path,
+        "pca_anomaly_raw_npy": raw_score_path,
+        "pca_report": report_path,
+        "parity_qa_summary": qa_path,
+    }
 
 
 class PcaAnomalyStage(Stage):
@@ -247,14 +278,25 @@ class PcaAnomalyStage(Stage):
 
     async def run(self, context: StageContext) -> StageResult:
         cube = load_hypercube_array(context.run_dir)
-        anomaly, report = compute_pca_anomaly(cube, nodata=self.grid_spec.nodata, seed=self.seed)
-        outputs = write_pca_outputs(context.run_dir, self.grid_spec, anomaly, report)
+        anomaly, raw_score, report = compute_pca_anomaly(
+            cube,
+            nodata=self.grid_spec.nodata,
+            seed=self.seed,
+            return_raw_score=True,
+        )
+        outputs = write_pca_outputs(context.run_dir, self.grid_spec, anomaly, raw_score, report)
         artifacts = [
             build_stage_artifact(
                 name="pca_anomaly_tif",
                 relative_path=outputs["pca_anomaly_tif"].relative_to(context.run_dir).as_posix(),
                 artifact_class=ArtifactClass.LOCAL_SENSITIVE,
                 size_bytes=outputs["pca_anomaly_tif"].stat().st_size,
+            ),
+            build_stage_artifact(
+                name="pca_anomaly_raw_npy",
+                relative_path=outputs["pca_anomaly_raw_npy"].relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.LOCAL_SENSITIVE,
+                size_bytes=outputs["pca_anomaly_raw_npy"].stat().st_size,
             ),
             build_stage_artifact(
                 name="pca_eigenvalues",
