@@ -52,9 +52,25 @@ def test_compute_pca_anomaly_can_return_raw_score_separate_from_display_stretch(
     assert float(np.min(anomaly[valid])) >= 0.0
     assert float(np.max(anomaly[valid])) <= 1.0
     assert not np.allclose(raw_score[valid], anomaly[valid])
-    assert report["raw_score_method"] == "pca_projected_component_magnitude"
+    assert report["raw_score_method"] == "pca_whitened_projected_component_distance"
     assert report["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
     assert report["raw_score_range"]["max"] is not None
+
+
+def test_compute_pca_anomaly_raw_score_uses_whitened_pc_distance() -> None:
+    nodata = -9999.0
+    rows, cols = np.indices((8, 8), dtype=np.float32)
+    cube = np.zeros((8, 8, 3), dtype=np.float32)
+    cube[:, :, 0] = rows
+    cube[:, :, 1] = cols * 100.0
+    cube[:, :, 2] = rows + cols
+
+    _anomaly, raw_score, report = compute_pca_anomaly(cube, nodata=nodata, seed=0, return_raw_score=True)
+
+    valid = raw_score != nodata
+    assert report["raw_score_method"] == "pca_whitened_projected_component_distance"
+    assert np.all(np.isfinite(raw_score[valid]))
+    assert float(np.max(raw_score[valid])) > 0.0
 
 
 def test_compute_pca_anomaly_excludes_degenerate_feature_channels() -> None:
@@ -121,7 +137,7 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert raw_score.shape == (grid_spec.size, grid_spec.size)
         report = read_manifest(run_dir / "pca_eigenvalues.json")
         assert report["seed"] == 0
-        assert report["raw_score_method"] == "pca_projected_component_magnitude"
+        assert report["raw_score_method"] == "pca_whitened_projected_component_distance"
         assert report["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
         assert "eigenvalues" in report or "explained_variance" in report
         qa_summary = json.loads((run_dir / "QA" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
@@ -133,7 +149,7 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert qa_summary["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
         assert qa_summary["valid_pixel_fraction"] == 1.0
         assert qa_summary["min_valid_pixel_fraction"] == 0.05
-        assert qa_summary["raw_score_method"] == "pca_projected_component_magnitude"
+        assert qa_summary["raw_score_method"] == "pca_whitened_projected_component_distance"
         assert qa_summary["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
         assert qa_summary["raw_score_range"]["max"] is not None
 

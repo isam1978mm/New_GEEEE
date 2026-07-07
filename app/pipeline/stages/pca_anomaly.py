@@ -120,7 +120,9 @@ def compute_pca_anomaly(
     actual_components = min(n_components, channels, sample_size)
     mean, components, explained_variance, explained_ratio = _fit_pca_components(fit_matrix, n_components=actual_components)
     projected = (matrix - mean) @ components.T
-    magnitude_raw = np.sqrt(np.sum(projected**2, axis=1)).reshape(height, width).astype(np.float32)
+    component_scale = np.sqrt(np.maximum(explained_variance.astype(np.float32), np.float32(1e-12)))
+    whitened_projected = projected / component_scale
+    magnitude_raw = np.sqrt(np.sum(whitened_projected**2, axis=1)).reshape(height, width).astype(np.float32)
     raw_score = np.full((height, width), nodata, dtype=np.float32)
     raw_valid_mask = valid_mask & np.isfinite(magnitude_raw)
     raw_score[raw_valid_mask] = magnitude_raw[raw_valid_mask]
@@ -155,7 +157,7 @@ def compute_pca_anomaly(
         "explained_variance_ratio": [float(value) for value in explained_ratio],
         "mean_vector_length": int(mean.shape[0]),
         "percentile_range": {"p01": float(p01), "p99": float(p99)},
-        "raw_score_method": "pca_projected_component_magnitude",
+        "raw_score_method": "pca_whitened_projected_component_distance",
         "display_stretch_method": "percentile_1_99_on_valid_raw_score",
         "raw_score_range": {
             "min": float(raw_score_valid.min()) if raw_score_valid.size else None,
