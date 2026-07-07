@@ -9,7 +9,7 @@ from PIL import Image
 
 from app.config import Settings
 from app.db.session import create_engine, create_session_factory
-from app.errors import AppError
+from app.pipeline.stages.classifier import _valid_feature_values
 from app.pipeline.stages_experimental.classifier import NeutralFeatureVector, classify_feature_vector
 from app.pipeline.stages_experimental.inputs import ExperimentalInputs, validate_experimental_inputs
 from app.pipeline.stages_experimental.outputs import write_experimental_outputs
@@ -56,14 +56,14 @@ def build_experimental_results(inputs: ExperimentalInputs) -> tuple[list[dict[st
         col_min = int(row["col_min"])
         col_max = int(row["col_max"])
 
-        patch = hypercube[row_min : row_max + 1, col_min : col_max + 1, :-1]
-        valid_patch = patch[np.isfinite(patch)]
+        patch = hypercube[row_min : row_max + 1, col_min : col_max + 1, :]
+        valid_values = _valid_feature_values(patch)
         anomaly_patch = anomaly[row_min : row_max + 1, col_min : col_max + 1]
         finite_anomaly = anomaly_patch[np.isfinite(anomaly_patch)]
 
-        mean_signal = float(valid_patch.mean()) if valid_patch.size else 0.0
+        mean_signal = float(valid_values.mean()) if valid_values.size else 0.0
         peak_signal = float(finite_anomaly.max()) if finite_anomaly.size else 0.0
-        spread_signal = float(valid_patch.std()) if valid_patch.size else 0.0
+        spread_signal = float(valid_values.std()) if valid_values.size else 0.0
         feature_vector = NeutralFeatureVector(
             signal_mean=_normalize_feature(mean_signal),
             signal_peak=_normalize_feature(peak_signal),
@@ -98,16 +98,3 @@ def build_experimental_results(inputs: ExperimentalInputs) -> tuple[list[dict[st
 
 def _normalize_feature(value: float) -> float:
     return max(0.0, min(1.0, round(float(value), 6)))
-
-
-def main() -> int:
-    args = build_parser().parse_args()
-    try:
-        return asyncio.run(run_cli(run_id=args.run_id))
-    except AppError as exc:
-        print(str(exc))
-        return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
