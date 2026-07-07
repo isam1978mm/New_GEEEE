@@ -9,13 +9,15 @@
 Docs-only planning change.
 
 ```text
-active_proposed_track: Plan D - output reliability hardening
-behavior_changed: no
-public_private_boundary_changed: no
+active_proposed_track: Plan D - private-local output reliability and enhancement
+behavior_changed: yes, only when reliability/output-quality fixes are implemented
+public_private_boundary_changed: yes, plan is now private-local/operator-first
 external_rerun_required: no
 ```
 
 Plan D exists because review found code paths that can produce misleading app outputs even when a run finishes successfully. This document turns those findings into a staged fix plan.
+
+This plan is now scoped for a private/local operator app. The priority is to improve local output quality, diagnostic depth, and correctness. Do not add public-safe redaction, coordinate suppression, neutralization, or artifact hiding as Plan D work unless the operator explicitly asks for it. Local runtime outputs may be rich and detailed. Do not commit private sample values, exact private targets, or local-only data into the repository.
 
 This plan is about software correctness, data-quality handling, and artifact consistency. It does not validate any physical-world conclusion.
 
@@ -24,7 +26,7 @@ This plan is about software correctness, data-quality handling, and artifact con
 ```text
 1. Keep each fix small and reviewable.
 2. Add or update tests before each behavior change where practical.
-3. Keep private/local-only data out of public docs, UI, logs, and public artifacts.
+3. Treat the app as private/local: improve operator-visible local outputs; do not commit private sample values or local-only data into the repository.
 4. Use one source of truth per artifact family.
 5. If app behavior intentionally corrects a notebook bug, mark it PARITY_CORRECTS and document why.
 6. Do not claim frozen numeric parity unless exact frozen reference outputs exist.
@@ -181,7 +183,7 @@ D3.5 Replace three mixed-unit features with a compact vector:
      - per-band local contrast
      - object area and compactness
      - valid pixel fraction
-D3.6 Keep public-safe neutral labels if required, but avoid overclaiming physical meaning.
+D3.6 Keep rich private-local diagnostic labels/features; avoid unsupported certainty, but do not neutralize or hide useful operator evidence.
 ```
 
 Acceptance gate:
@@ -311,6 +313,15 @@ Acceptance gate:
 ```text
 Dead helpers cannot be reintroduced without tests.
 Categorical class codes are not averaged into misleading numeric classes.
+```
+
+## Private-local output policy update
+
+```text
+Plan D is not a public-safe/redaction track.
+Do not add future tasks whose only purpose is public exposure hardening, coordinate suppression, HTTP hiding, or neutralized wording.
+Keep reliability and truthfulness fixes: nodata handling, scoring correctness, valid-mask gating, thermal scaling, geometry consistency, data-quality blocking, and richer diagnostics.
+If a future change would reduce private/local output detail, mark it out of scope unless the operator explicitly requests it.
 ```
 
 ## Suggested PR breakdown

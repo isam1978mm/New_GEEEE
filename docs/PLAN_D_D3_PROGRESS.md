@@ -2,7 +2,7 @@
 
 ## Scope
 
-Classifier feature repair. No private/local-only data was added.
+Classifier feature repair for a private/local operator app. No private/local-only data was added to the repo.
 
 ## Completed
 
@@ -22,5 +22,10 @@ D3.2 partial:
 ```text
 D3.4 robust-scale object features against scene or local background
 D3.5 replace mixed-unit features with compact vector
-D3.6 keep public-safe neutral labels without overclaiming physical meaning
+D3.6 keep rich private-local diagnostic labels/features without unsupported certainty
+```
+## Private-local policy
+
+```text
+Do not continue D3 as a public-safe neutralization track. Future classifier work should improve local diagnostic usefulness, preserve evidence detail, and avoid hiding useful operator-facing output.
 ```
