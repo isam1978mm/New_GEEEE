@@ -88,7 +88,7 @@ def test_apply_local_dem_rtc_uses_passed_scale_m() -> None:
     assert not np.allclose(outputs_scale_10["VV_dB"], outputs_scale_20["VV_dB"])
 
 
-def test_apply_local_dem_rtc_valid_mask_matches_cell25_when_angle_is_nodata() -> None:
+def test_apply_local_dem_rtc_rejects_pixels_where_angle_is_nodata() -> None:
     nodata = -9999.0
     dem = np.full((4, 4), 100.0, dtype=np.float32)
     cube = np.stack(
@@ -103,10 +103,11 @@ def test_apply_local_dem_rtc_valid_mask_matches_cell25_when_angle_is_nodata() ->
 
     outputs = apply_local_dem_rtc(cube, dem, nodata=nodata, scale_m=10.0)
 
-    assert outputs["VV_dB"][1, 2] != nodata
-    assert outputs["VH_dB"][1, 2] != nodata
-    assert outputs["logRatio_dB"][1, 2] != nodata
+    assert outputs["VV_dB"][1, 2] == nodata
+    assert outputs["VH_dB"][1, 2] == nodata
+    assert outputs["logRatio_dB"][1, 2] == nodata
     assert outputs["incidence"][1, 2] == nodata
+    assert outputs["VV_dB"][0, 0] != nodata
 
 
 def test_per_image_products_db_applies_notebook_no_cop_dem_filter_chain(monkeypatch: pytest.MonkeyPatch) -> None:

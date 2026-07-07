@@ -20,6 +20,8 @@ D0 tests added/updated:
   - hypercube invalid source pixels stay invalid through normalization
   - hypercube valid_mask policy is explicit and tested as all_feature_channels_finite
   - object extraction ignores high anomaly pixels where valid_mask is 0
+  - focus hard classifier value extraction excludes nodata sentinels
+  - SAR local RTC rejects pixels where angle is nodata
 
 D1 behavior patched:
   - app/pipeline/stages/classifier.py now computes object features through valid_mask-aware helper
@@ -32,6 +34,8 @@ D1 behavior patched:
   - Hypercube StageResult metadata now records valid_mask_policy
   - app/pipeline/stages/object_extract.py now thresholds only valid hypercube pixels and can exclude nodata anomaly pixels from percentile calculations
   - ObjectExtract StageResult metadata now records valid_pixel_count and valid_mask_policy
+  - app/pipeline/stages/focus_mask.py _hard_get_vals now excludes nodata sentinel values
+  - app/pipeline/stages/sar_rtc.py local RTC valid mask now requires finite non-nodata angle
 ```
 
 ## Commits
@@ -49,18 +53,17 @@ bf85761 test: update hypercube invalid-pixel policy
 894c1a2 test: cover object extraction valid-mask gate
 ```
 
-## Still open from D0-D1
+## Local verification checklist
 
 ```text
-D0 remaining:
-  - focus stats nodata sentinel test
-  - SAR angle nodata validity test
+Run before push:
+  - pytest tests/unit/test_focus_mask.py::test_hard_get_vals_excludes_nodata_sentinel tests/unit/test_sar_rtc.py::test_apply_local_dem_rtc_rejects_pixels_where_angle_is_nodata -q
+  - pytest tests/unit/test_focus_mask.py tests/unit/test_sar_rtc.py -q
 
-D1 remaining:
-  - patch focus_mask.py _hard_get_vals to exclude nodata sentinel values
-  - patch sar_rtc.py local RTC valid mask to require angle != nodata
+D0/D1 remaining after this local patch:
+  - none known, pending local pytest pass
 ```
 
 ## Notes
 
-The root hypercube invalid-pixel normalization blocker is now patched. Object extraction is now valid-mask gated. The remaining D1 work is focus sentinel filtering and SAR angle nodata handling.
+The root hypercube invalid-pixel normalization blocker is now patched. Object extraction is now valid-mask gated. The final local D1 patch covers focus sentinel filtering and SAR angle nodata handling.

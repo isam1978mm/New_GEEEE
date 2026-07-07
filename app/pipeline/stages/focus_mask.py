@@ -542,9 +542,10 @@ def build_focus_roi_analysis_products(
         "target_geojson": {"type": "FeatureCollection", "features": features},
     }
 
-def _hard_get_vals(arr: np.ndarray, mask: np.ndarray) -> np.ndarray:
+def _hard_get_vals(arr: np.ndarray, mask: np.ndarray, *, nodata: float = -9999.0) -> np.ndarray:
     vals = arr[mask].astype(np.float64)
     vals = vals[np.isfinite(vals)]
+    vals = vals[vals != float(nodata)]
     return vals
 
 

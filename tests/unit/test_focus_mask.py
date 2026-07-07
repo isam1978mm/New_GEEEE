@@ -16,13 +16,28 @@ from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile, raster_sidecar_path
 from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
-from app.pipeline.stages.focus_mask import FocusMaskStage
+from app.pipeline.stages.focus_mask import FocusMaskStage, _hard_get_vals
 from app.pipeline.stages.secret_layers import SecretLayersStage
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.thermal import ThermalStage, deterministic_lst_fetcher
 from app.services.storage import read_manifest
+
+
+def test_hard_get_vals_excludes_nodata_sentinel() -> None:
+    arr = np.array(
+        [
+            [1.5, -9999.0],
+            [np.nan, 2.5],
+        ],
+        dtype=np.float32,
+    )
+    mask = np.ones(arr.shape, dtype=bool)
+
+    vals = _hard_get_vals(arr, mask)
+
+    np.testing.assert_array_equal(vals, np.array([1.5, 2.5], dtype=np.float64))
 
 
 def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:

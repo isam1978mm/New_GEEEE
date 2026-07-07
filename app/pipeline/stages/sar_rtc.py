@@ -412,8 +412,12 @@ def apply_local_dem_rtc(
     cos_inc = np.where(np.isfinite(cos_inc), np.maximum(cos_inc, 1e-6), np.nan)
 
     valid = (
-        (vv_db != nodata)
+        np.isfinite(vv_db)
+        & np.isfinite(vh_db)
+        & np.isfinite(angle)
+        & (vv_db != nodata)
         & (vh_db != nodata)
+        & (angle != nodata)
         & np.isfinite(corr)
         & np.isfinite(cos_inc)
     )
@@ -433,7 +437,8 @@ def apply_local_dem_rtc(
     vv_db_corr[valid] = lin_to_db(vv_lin[valid]).astype(np.float32)
     vh_db_corr[valid] = lin_to_db(vh_lin[valid]).astype(np.float32)
     log_ratio[valid] = (vv_db_corr[valid] - vh_db_corr[valid]).astype(np.float32)
-    incidence[angle != nodata] = angle[angle != nodata].astype(np.float32)
+    valid_angle = np.isfinite(angle) & (angle != nodata)
+    incidence[valid_angle] = angle[valid_angle].astype(np.float32)
 
     return {
         "VV_dB": vv_db_corr,
