@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult,
 from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
-from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
+from app.pipeline.stages.hypercube import HYPERCUBE_BAND_ORDER_NAME, HYPERCUBE_NPY_NAME
 
 PCA_ANOMALY_TIF_NAME = "pca_anomaly.tif"
 PCA_REPORT_NAME = "pca_eigenvalues.json"
@@ -30,6 +31,24 @@ def load_hypercube_array(run_dir: Path) -> np.ndarray:
     if not hypercube_path.is_file():
         raise StageError("Hypercube stage output is required before PCA anomaly.")
     return np.load(hypercube_path).astype(np.float32)
+
+
+def load_hypercube_band_names(run_dir: Path) -> list[str] | None:
+    band_order_path = run_dir / HYPERCUBE_BAND_ORDER_NAME
+    if not band_order_path.is_file():
+        return None
+    rows: list[tuple[int, str]] = []
+    with band_order_path.open("r", encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            try:
+                band_index = int(row["band_index"])
+                band_name = str(row["band_name"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            rows.append((band_index, band_name))
+    if not rows:
+        return None
+    return [band_name for _index, band_name in sorted(rows)]
 
 
 def robust_channel_fill_and_clip(cube_in: np.ndarray, *, p_low: float = 1.0, p_high: float = 99.0) -> np.ndarray:
@@ -76,6 +95,8 @@ def compute_pca_anomaly(
     valid_mask_channel: bool | None = None,
     return_raw_score: bool = False,
     min_valid_pixel_fraction: float = PCA_MIN_VALID_PIXEL_FRACTION,
+    feature_channel_names: list[str] | None = None,
+    feature_channel_name_source: str | None = None,
 ) -> tuple[np.ndarray, dict[str, object]] | tuple[np.ndarray, np.ndarray, dict[str, object]]:
     if cube.ndim != 3:
         raise StageError(f"Hypercube must be HWC 3D, got shape {cube.shape}.")
@@ -91,10 +112,24 @@ def compute_pca_anomaly(
         raise StageError("PCA anomaly requires at least one feature channel after support-mask removal.")
 
     input_feature_channel_count = int(feature_cube.shape[-1])
+    normalized_feature_channel_names, resolved_feature_channel_name_source = _normalize_feature_channel_names(
+        feature_channel_names,
+        cube_channel_count=int(cube_float.shape[-1]),
+        feature_channel_count=input_feature_channel_count,
+        used_valid_mask_channel=used_valid_mask_channel,
+        source=feature_channel_name_source,
+    )
     selected_feature_cube, included_feature_channels, excluded_feature_channels = _select_pca_feature_channels(
         feature_cube,
         support_mask,
+        normalized_feature_channel_names,
     )
+    included_feature_channel_names = [normalized_feature_channel_names[index] for index in included_feature_channels]
+    included_feature_bands = [
+        {"channel_index": int(index), "band_name": normalized_feature_channel_names[index]}
+        for index in included_feature_channels
+    ]
+    excluded_feature_channel_names = [str(item.get("band_name", f"channel_{item['channel_index']}")) for item in excluded_feature_channels]
     valid_mask = support_mask & np.isfinite(selected_feature_cube).all(axis=-1)
 
     cube_clean = robust_channel_fill_and_clip(selected_feature_cube, p_low=1.0, p_high=99.0)
@@ -149,6 +184,11 @@ def compute_pca_anomaly(
         "excluded_feature_channel_count": int(len(excluded_feature_channels)),
         "included_feature_channels": included_feature_channels,
         "excluded_feature_channels": excluded_feature_channels,
+        "included_feature_channel_names": included_feature_channel_names,
+        "excluded_feature_channel_names": excluded_feature_channel_names,
+        "included_feature_bands": included_feature_bands,
+        "excluded_feature_bands": excluded_feature_channels,
+        "feature_channel_name_source": resolved_feature_channel_name_source,
         "used_valid_mask_channel": bool(used_valid_mask_channel),
         "valid_mask_policy": "last_binary_channel_excluded_from_features" if used_valid_mask_channel else "finite_selected_feature_channels_after_degenerate_exclusion",
         "pca_feature_policy": "exclude_valid_mask_all_nodata_and_near_constant_channels",
@@ -184,9 +224,30 @@ def _split_feature_cube_and_valid_mask(
     return cube, support_mask, False
 
 
+def _normalize_feature_channel_names(
+    feature_channel_names: list[str] | None,
+    *,
+    cube_channel_count: int,
+    feature_channel_count: int,
+    used_valid_mask_channel: bool,
+    source: str | None,
+) -> tuple[list[str], str]:
+    default_names = [f"channel_{index}" for index in range(feature_channel_count)]
+    if feature_channel_names is None:
+        return default_names, "generated_index_names"
+
+    names = [str(name) for name in feature_channel_names]
+    if used_valid_mask_channel and len(names) == cube_channel_count and feature_channel_count == cube_channel_count - 1:
+        return names[:-1], str(source or "provided_full_hypercube_channel_names")
+    if len(names) == feature_channel_count:
+        return names, str(source or "provided_feature_channel_names")
+    return default_names, "generated_index_names_name_count_mismatch"
+
+
 def _select_pca_feature_channels(
     feature_cube: np.ndarray,
     support_mask: np.ndarray,
+    feature_channel_names: list[str],
 ) -> tuple[np.ndarray, list[int], list[dict[str, object]]]:
     included: list[int] = []
     excluded: list[dict[str, object]] = []
@@ -194,10 +255,12 @@ def _select_pca_feature_channels(
         channel = feature_cube[:, :, channel_index]
         values = channel[support_mask]
         finite_values = values[np.isfinite(values)]
+        band_name = feature_channel_names[channel_index] if channel_index < len(feature_channel_names) else f"channel_{channel_index}"
         if finite_values.size == 0:
             excluded.append(
                 {
                     "channel_index": int(channel_index),
+                    "band_name": band_name,
                     "reason": "no_finite_values",
                     "valid_value_count": 0,
                 }
@@ -208,6 +271,7 @@ def _select_pca_feature_channels(
             excluded.append(
                 {
                     "channel_index": int(channel_index),
+                    "band_name": band_name,
                     "reason": "near_constant",
                     "valid_value_count": int(finite_values.size),
                     "std": channel_std,
@@ -260,6 +324,9 @@ def write_pca_outputs(
         "input_feature_channel_count": int(report.get("input_feature_channel_count", report["feature_channel_count"])),
         "feature_channel_count": int(report["feature_channel_count"]),
         "excluded_feature_channel_count": int(report.get("excluded_feature_channel_count", 0)),
+        "included_feature_channel_names": report.get("included_feature_channel_names", []),
+        "excluded_feature_channel_names": report.get("excluded_feature_channel_names", []),
+        "feature_channel_name_source": str(report.get("feature_channel_name_source", "generated_index_names")),
         "used_valid_mask_channel": bool(report["used_valid_mask_channel"]),
         "valid_mask_policy": str(report["valid_mask_policy"]),
         "pca_feature_policy": str(report.get("pca_feature_policy", "legacy")),
@@ -293,11 +360,14 @@ class PcaAnomalyStage(Stage):
 
     async def run(self, context: StageContext) -> StageResult:
         cube = load_hypercube_array(context.run_dir)
+        band_names = load_hypercube_band_names(context.run_dir)
         anomaly, raw_score, report = compute_pca_anomaly(
             cube,
             nodata=self.grid_spec.nodata,
             seed=self.seed,
             return_raw_score=True,
+            feature_channel_names=band_names,
+            feature_channel_name_source=HYPERCUBE_BAND_ORDER_NAME if band_names is not None else None,
         )
         outputs = write_pca_outputs(context.run_dir, self.grid_spec, anomaly, raw_score, report)
         artifacts = [

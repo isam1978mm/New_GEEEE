@@ -39,16 +39,20 @@ D2.6 partial:
 D2.7:
   - PCA blocks low-valid-fraction scenes before fitting.
   - PCA report records valid_pixel_fraction and min_valid_pixel_fraction when a scene passes.
+
+D2.4 partial:
+  - PCA reads hypercube_band_order.csv when available.
+  - PCA report and QA now expose included/excluded feature channel names.
+  - Degenerate-channel exclusion reasons include band_name alongside channel_index.
 ```
 
 ## Still open from D2
 
 ```text
 D2.1 compatibility mode decision for legacy PCA
-D2.4 fuller included/excluded band names where band names are available
 D2.6 remaining: evaluate/tune robust raw-score threshold policy against frozen references when available
 ```
 
 ## Notes
 
-This is still not full D2 completion. Degenerate feature channels are excluded before PCA fit, raw PCA whitened-distance scores are persisted separately from display-stretched anomaly values, and object extraction now prefers raw PCA scores for candidate thresholding when available. Frozen-reference threshold tuning remains open when reference outputs become available.
+This is still not full D2 completion. Degenerate feature channels are excluded before PCA fit, raw PCA whitened-distance scores are persisted separately from display-stretched anomaly values, object extraction now prefers raw PCA scores for candidate thresholding when available, and PCA now reports included/excluded feature band names where hypercube band-order metadata exists. Frozen-reference threshold tuning remains open when reference outputs become available.

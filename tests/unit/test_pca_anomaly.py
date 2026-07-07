@@ -92,6 +92,31 @@ def test_compute_pca_anomaly_excludes_degenerate_feature_channels() -> None:
     assert report["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
 
 
+
+def test_compute_pca_anomaly_reports_feature_band_names_when_provided() -> None:
+    nodata = -9999.0
+    cube = np.zeros((5, 5, 4), dtype=np.float32)
+    cube[:, :, 0] = np.arange(25, dtype=np.float32).reshape(5, 5)
+    cube[:, :, 1] = 7.0
+    cube[:, :, 2] = nodata
+    cube[:, :, 3] = 1.0
+
+    _anomaly, report = compute_pca_anomaly(
+        cube,
+        nodata=nodata,
+        seed=0,
+        valid_mask_channel=True,
+        feature_channel_names=["Signal_A", "Constant_B", "Missing_C", "valid_mask"],
+        feature_channel_name_source="test_band_names",
+    )
+
+    assert report["feature_channel_name_source"] == "test_band_names"
+    assert report["included_feature_channel_names"] == ["Signal_A"]
+    assert report["included_feature_bands"] == [{"channel_index": 0, "band_name": "Signal_A"}]
+    excluded = {item["band_name"]: item["reason"] for item in report["excluded_feature_bands"]}
+    assert excluded == {"Constant_B": "near_constant", "Missing_C": "no_finite_values"}
+
+
 def test_compute_pca_anomaly_blocks_low_valid_fraction() -> None:
     nodata = -9999.0
     cube = np.zeros((10, 10, 3), dtype=np.float32)
@@ -114,6 +139,13 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         cube[:, :, 1] = 2.0
         cube[:, :, 2] = np.linspace(0.0, 1.0, grid_spec.size * grid_spec.size, dtype=np.float32).reshape(grid_spec.size, grid_spec.size)
         np.save(run_dir / "hypercube.npy", cube)
+        (run_dir / "hypercube_band_order.csv").write_text(
+            "band_index,band_name,source_file\n"
+            "0,Flat_A,Flat_A.tif\n"
+            "1,Flat_B,Flat_B.tif\n"
+            "2,Variable_C,Variable_C.tif\n",
+            encoding="utf-8",
+        )
         context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
 
         result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
@@ -147,6 +179,9 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert qa_summary["feature_channel_count"] == 1
         assert qa_summary["excluded_feature_channel_count"] == 2
         assert qa_summary["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
+        assert qa_summary["feature_channel_name_source"] == "hypercube_band_order.csv"
+        assert qa_summary["included_feature_channel_names"] == ["Variable_C"]
+        assert qa_summary["excluded_feature_channel_names"] == ["Flat_A", "Flat_B"]
         assert qa_summary["valid_pixel_fraction"] == 1.0
         assert qa_summary["min_valid_pixel_fraction"] == 0.05
         assert qa_summary["raw_score_method"] == "pca_whitened_projected_component_distance"
