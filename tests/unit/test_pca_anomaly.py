@@ -33,6 +33,25 @@ def test_compute_pca_anomaly_is_seeded_and_normalized() -> None:
     assert float(np.max(anomaly_a)) <= 1.0
 
 
+def test_compute_pca_anomaly_excludes_degenerate_feature_channels() -> None:
+    nodata = -9999.0
+    cube = np.zeros((5, 5, 4), dtype=np.float32)
+    cube[:, :, 0] = np.arange(25, dtype=np.float32).reshape(5, 5)
+    cube[:, :, 1] = 7.0
+    cube[:, :, 2] = nodata
+    cube[:, :, 3] = 1.0
+
+    anomaly, report = compute_pca_anomaly(cube, nodata=nodata, seed=0, valid_mask_channel=True)
+
+    assert np.all(anomaly != nodata)
+    assert report["input_feature_channel_count"] == 3
+    assert report["feature_channel_count"] == 1
+    assert report["included_feature_channels"] == [0]
+    excluded = {item["channel_index"]: item["reason"] for item in report["excluded_feature_channels"]}
+    assert excluded == {1: "near_constant", 2: "no_finite_values"}
+    assert report["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
+
+
 def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
@@ -60,7 +79,11 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert "eigenvalues" in report or "explained_variance" in report
         qa_summary = json.loads((run_dir / "QA" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
         assert qa_summary["seed"] == 0
-        assert qa_summary["components_count"] == 3
+        assert qa_summary["components_count"] == 1
+        assert qa_summary["input_feature_channel_count"] == 3
+        assert qa_summary["feature_channel_count"] == 1
+        assert qa_summary["excluded_feature_channel_count"] == 2
+        assert qa_summary["pca_feature_policy"] == "exclude_valid_mask_all_nodata_and_near_constant_channels"
 
 
 def _settings(run_dir: Path):

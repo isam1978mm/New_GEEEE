@@ -20,6 +20,7 @@ PCA_PARITY_QA_NAME = "parity_qa_summary.json"
 PCA_SAMPLE_SEED = 0
 PCA_MAX_FIT_PIXELS = 120000
 PCA_COMPONENTS = 3
+PCA_MIN_FEATURE_STD = 1e-9
 
 
 def load_hypercube_array(run_dir: Path) -> np.ndarray:
@@ -78,21 +79,28 @@ def compute_pca_anomaly(
     cube_float = cube.astype(np.float32, copy=True)
     cube_float[cube_float == nodata] = np.nan
     cube_float[~np.isfinite(cube_float)] = np.nan
-    feature_cube, valid_mask, used_valid_mask_channel = _split_feature_cube_and_valid_mask(
+    feature_cube, support_mask, used_valid_mask_channel = _split_feature_cube_and_valid_mask(
         cube_float,
         valid_mask_channel=valid_mask_channel,
     )
     if feature_cube.shape[-1] == 0:
         raise StageError("PCA anomaly requires at least one feature channel after support-mask removal.")
 
-    cube_clean = robust_channel_fill_and_clip(feature_cube, p_low=1.0, p_high=99.0)
+    input_feature_channel_count = int(feature_cube.shape[-1])
+    selected_feature_cube, included_feature_channels, excluded_feature_channels = _select_pca_feature_channels(
+        feature_cube,
+        support_mask,
+    )
+    valid_mask = support_mask & np.isfinite(selected_feature_cube).all(axis=-1)
+
+    cube_clean = robust_channel_fill_and_clip(selected_feature_cube, p_low=1.0, p_high=99.0)
 
     height, width, channels = cube_clean.shape
     matrix = cube_clean.reshape(-1, channels).astype(np.float32)
     valid_flat = valid_mask.reshape(-1)
     valid_indexes = np.flatnonzero(valid_flat)
     if valid_indexes.size == 0:
-        raise StageError("PCA anomaly requires at least one valid hypercube pixel.")
+        raise StageError("PCA anomaly requires at least one valid selected hypercube pixel.")
     sample_size = min(max_fit_pixels, int(valid_indexes.size))
     rng = np.random.default_rng(seed)
     sample_idx = rng.choice(valid_indexes, size=sample_size, replace=False)
@@ -117,9 +125,14 @@ def compute_pca_anomaly(
         "pixel_count": int(matrix.shape[0]),
         "valid_pixel_count": int(valid_indexes.size),
         "components_count": int(components.shape[0]),
+        "input_feature_channel_count": int(input_feature_channel_count),
         "feature_channel_count": int(channels),
+        "excluded_feature_channel_count": int(len(excluded_feature_channels)),
+        "included_feature_channels": included_feature_channels,
+        "excluded_feature_channels": excluded_feature_channels,
         "used_valid_mask_channel": bool(used_valid_mask_channel),
-        "valid_mask_policy": "last_binary_channel_excluded_from_features" if used_valid_mask_channel else "finite_all_feature_channels",
+        "valid_mask_policy": "last_binary_channel_excluded_from_features" if used_valid_mask_channel else "finite_selected_feature_channels_after_degenerate_exclusion",
+        "pca_feature_policy": "exclude_valid_mask_all_nodata_and_near_constant_channels",
         "eigenvalues": [float(value) for value in explained_variance],
         "explained_variance": [float(value) for value in explained_variance],
         "explained_variance_ratio": [float(value) for value in explained_ratio],
@@ -137,10 +150,47 @@ def _split_feature_cube_and_valid_mask(
     use_last_channel = _looks_like_valid_mask(cube[:, :, -1]) if valid_mask_channel is None else bool(valid_mask_channel)
     if use_last_channel and cube.shape[-1] > 1:
         feature_cube = cube[:, :, :-1]
-        valid_mask = (cube[:, :, -1] > 0.5) & np.isfinite(feature_cube).all(axis=-1)
-        return feature_cube, valid_mask.astype(bool), True
-    valid_mask = np.isfinite(cube).all(axis=-1)
-    return cube, valid_mask.astype(bool), False
+        support_mask = (cube[:, :, -1] > 0.5) & np.isfinite(cube[:, :, -1])
+        return feature_cube, support_mask.astype(bool), True
+    support_mask = np.ones(cube.shape[:2], dtype=bool)
+    return cube, support_mask, False
+
+
+def _select_pca_feature_channels(
+    feature_cube: np.ndarray,
+    support_mask: np.ndarray,
+) -> tuple[np.ndarray, list[int], list[dict[str, object]]]:
+    included: list[int] = []
+    excluded: list[dict[str, object]] = []
+    for channel_index in range(feature_cube.shape[-1]):
+        channel = feature_cube[:, :, channel_index]
+        values = channel[support_mask]
+        finite_values = values[np.isfinite(values)]
+        if finite_values.size == 0:
+            excluded.append(
+                {
+                    "channel_index": int(channel_index),
+                    "reason": "no_finite_values",
+                    "valid_value_count": 0,
+                }
+            )
+            continue
+        channel_std = float(np.nanstd(finite_values))
+        if not np.isfinite(channel_std) or channel_std <= PCA_MIN_FEATURE_STD:
+            excluded.append(
+                {
+                    "channel_index": int(channel_index),
+                    "reason": "near_constant",
+                    "valid_value_count": int(finite_values.size),
+                    "std": channel_std,
+                }
+            )
+            continue
+        included.append(int(channel_index))
+
+    if not included:
+        raise StageError("PCA anomaly requires at least one non-degenerate feature channel.")
+    return feature_cube[:, :, included], included, excluded
 
 
 def _looks_like_valid_mask(channel: np.ndarray) -> bool:
@@ -171,9 +221,12 @@ def write_pca_outputs(run_dir: Path, grid_spec: GridSpec, anomaly: np.ndarray, r
         "seed": int(report["seed"]),
         "sample_size": int(report["sample_size"]),
         "components_count": int(report["components_count"]),
+        "input_feature_channel_count": int(report.get("input_feature_channel_count", report["feature_channel_count"])),
         "feature_channel_count": int(report["feature_channel_count"]),
+        "excluded_feature_channel_count": int(report.get("excluded_feature_channel_count", 0)),
         "used_valid_mask_channel": bool(report["used_valid_mask_channel"]),
         "valid_mask_policy": str(report["valid_mask_policy"]),
+        "pca_feature_policy": str(report.get("pca_feature_policy", "legacy")),
         "pixel_count": int(report["pixel_count"]),
         "valid_pixel_count": int(report["valid_pixel_count"]),
         "anomaly_min": float(valid_anomaly.min()) if valid_anomaly.size else None,
