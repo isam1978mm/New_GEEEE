@@ -10,7 +10,7 @@ import pytest
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
-from app.pipeline._base import StageContext
+from app.pipeline._base import ParityCategory, StageContext
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage, compute_pca_anomaly
@@ -54,6 +54,9 @@ def test_compute_pca_anomaly_can_return_raw_score_separate_from_display_stretch(
     assert not np.allclose(raw_score[valid], anomaly[valid])
     assert report["raw_score_method"] == "pca_whitened_projected_component_distance"
     assert report["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
+    assert report["legacy_pca_compatibility_mode"] == "not_enabled_corrected_default"
+    assert report["parity_category"] == "PARITY_CORRECTS"
+    assert "Frozen numeric notebook parity is not claimed" in report["parity_reason"]
     assert report["raw_score_range"]["max"] is not None
 
 
@@ -150,6 +153,11 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
 
         result = asyncio.run(PcaAnomalyStage(grid_spec=grid_spec).run(context))
 
+        assert PcaAnomalyStage.parity_category is ParityCategory.PARITY_CORRECTS
+        assert PcaAnomalyStage.parity_reason is not None
+        assert result.metadata["legacy_pca_compatibility_mode"] == "not_enabled_corrected_default"
+        assert result.metadata["parity_category"] == "PARITY_CORRECTS"
+
         assert [artifact.name for artifact in result.artifacts] == [
             "pca_anomaly_tif",
             "pca_anomaly_raw_npy",
@@ -171,6 +179,8 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert report["seed"] == 0
         assert report["raw_score_method"] == "pca_whitened_projected_component_distance"
         assert report["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
+        assert report["legacy_pca_compatibility_mode"] == "not_enabled_corrected_default"
+        assert report["parity_category"] == "PARITY_CORRECTS"
         assert "eigenvalues" in report or "explained_variance" in report
         qa_summary = json.loads((run_dir / "QA" / "parity" / "parity_qa_summary.json").read_text(encoding="utf-8"))
         assert qa_summary["seed"] == 0
@@ -186,6 +196,9 @@ def test_pca_anomaly_stage_writes_classified_outputs_and_report() -> None:
         assert qa_summary["min_valid_pixel_fraction"] == 0.05
         assert qa_summary["raw_score_method"] == "pca_whitened_projected_component_distance"
         assert qa_summary["display_stretch_method"] == "percentile_1_99_on_valid_raw_score"
+        assert qa_summary["legacy_pca_compatibility_mode"] == "not_enabled_corrected_default"
+        assert qa_summary["parity_category"] == "PARITY_CORRECTS"
+        assert "Frozen numeric notebook parity is not claimed" in qa_summary["parity_reason"]
         assert qa_summary["raw_score_range"]["max"] is not None
 
 

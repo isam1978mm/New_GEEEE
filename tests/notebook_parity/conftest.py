@@ -45,7 +45,7 @@ PARITY_TEST_REGISTRY: dict[str, ParityRegistryEntry] = {
     "test_pca_parity.py": ParityRegistryEntry(
         stage_module="app.pipeline.stages.pca_anomaly",
         stage_class="PcaAnomalyStage",
-        expected_category=ParityCategory.PARITY_REPRODUCES,
+        expected_category=ParityCategory.PARITY_CORRECTS,
     ),
     "test_s2_parity.py": ParityRegistryEntry(
         stage_module="app.pipeline.stages.s2_indices",

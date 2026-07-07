@@ -13,6 +13,12 @@ No private/local-only data was added.
 ## Completed in this patch
 
 ```text
+D2.1:
+  - legacy notebook-style PCA is not kept as the normal path.
+  - corrected PCA is the default.
+  - PcaAnomalyStage is marked PARITY_CORRECTS, not PARITY_REPRODUCES.
+  - PCA report and QA record legacy_pca_compatibility_mode and parity_reason.
+
 D2.2:
   - PCA raw score now uses whitened projected PC distance.
   - PCA scales component scores by explained variance before distance calculation.
@@ -49,10 +55,10 @@ D2.4 partial:
 ## Still open from D2
 
 ```text
-D2.1 compatibility mode decision for legacy PCA
-D2.6 remaining: evaluate/tune robust raw-score threshold policy against frozen references when available
+No required D2 checklist items remain open.
+Optional later: evaluate/tune robust raw-score threshold policy only if frozen references become available.
 ```
 
 ## Notes
 
-This is still not full D2 completion. Degenerate feature channels are excluded before PCA fit, raw PCA whitened-distance scores are persisted separately from display-stretched anomaly values, object extraction now prefers raw PCA scores for candidate thresholding when available, and PCA now reports included/excluded feature band names where hypercube band-order metadata exists. Frozen-reference threshold tuning remains open when reference outputs become available.
+Required Plan D D2 checklist items are complete. Degenerate feature channels are excluded before PCA fit, raw PCA whitened-distance scores are persisted separately from display-stretched anomaly values, object extraction prefers raw PCA scores for candidate thresholding, low-valid-fraction scenes are blocked, PCA reports included/excluded feature band names where hypercube band-order metadata exists, and the stage is marked PARITY_CORRECTS because frozen numeric notebook parity is not claimed.

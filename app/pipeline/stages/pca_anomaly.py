@@ -24,6 +24,12 @@ PCA_COMPONENTS = 3
 PCA_MIN_FEATURE_STD = 1e-9
 PCA_RAW_SCORE_NPY_NAME = "pca_anomaly_raw.npy"
 PCA_MIN_VALID_PIXEL_FRACTION = 0.05
+PCA_LEGACY_COMPATIBILITY_MODE = "not_enabled_corrected_default"
+PCA_PARITY_REASON = (
+    "Plan D D2 intentionally replaces legacy notebook-style projected-magnitude PCA display scoring "
+    "with corrected whitened raw PCA distance, valid-pixel blocking, degenerate-band exclusion, "
+    "and raw-score object thresholding. Frozen numeric notebook parity is not claimed for this stage."
+)
 
 
 def load_hypercube_array(run_dir: Path) -> np.ndarray:
@@ -199,6 +205,9 @@ def compute_pca_anomaly(
         "percentile_range": {"p01": float(p01), "p99": float(p99)},
         "raw_score_method": "pca_whitened_projected_component_distance",
         "display_stretch_method": "percentile_1_99_on_valid_raw_score",
+        "legacy_pca_compatibility_mode": PCA_LEGACY_COMPATIBILITY_MODE,
+        "parity_category": ParityCategory.PARITY_CORRECTS.value,
+        "parity_reason": PCA_PARITY_REASON,
         "raw_score_range": {
             "min": float(raw_score_valid.min()) if raw_score_valid.size else None,
             "max": float(raw_score_valid.max()) if raw_score_valid.size else None,
@@ -332,6 +341,9 @@ def write_pca_outputs(
         "pca_feature_policy": str(report.get("pca_feature_policy", "legacy")),
         "raw_score_method": str(report.get("raw_score_method", "legacy_projected_magnitude")),
         "display_stretch_method": str(report.get("display_stretch_method", "legacy_percentile_display")),
+        "legacy_pca_compatibility_mode": str(report.get("legacy_pca_compatibility_mode", "legacy_unspecified")),
+        "parity_category": str(report.get("parity_category", "PARITY_REPRODUCES")),
+        "parity_reason": str(report.get("parity_reason", "")),
         "raw_score_range": report.get("raw_score_range"),
         "pixel_count": int(report["pixel_count"]),
         "valid_pixel_count": int(report["valid_pixel_count"]),
@@ -352,7 +364,8 @@ def write_pca_outputs(
 
 class PcaAnomalyStage(Stage):
     name = "pca_anomaly"
-    parity_category = ParityCategory.PARITY_REPRODUCES
+    parity_category = ParityCategory.PARITY_CORRECTS
+    parity_reason = PCA_PARITY_REASON
 
     def __init__(self, *, grid_spec: GridSpec, seed: int = PCA_SAMPLE_SEED) -> None:
         self.grid_spec = grid_spec
