@@ -49,6 +49,23 @@ def test_build_object_products_finds_objects_clusters_and_pixel_space_only_rows(
     assert forbidden.isdisjoint({key.lower() for key in first.keys()})
 
 
+def test_build_object_products_ignores_high_anomaly_where_valid_mask_is_zero() -> None:
+    anomaly = np.zeros((12, 12), dtype=np.float32)
+    anomaly[1:5, 1:5] = 0.99
+    hypercube = np.zeros((12, 12, 3), dtype=np.float32)
+    hypercube[:, :, 0] = 0.1
+    hypercube[:, :, 1] = 0.2
+    hypercube[:, :, 2] = 1.0
+    hypercube[1:5, 1:5, 2] = 0.0
+
+    products = build_object_products(anomaly, hypercube, nodata=-9999.0)
+
+    assert products["objects"] == []
+    assert products["clusters"] == []
+    assert int(products["mask"].sum()) == 0
+    assert products["valid_pixel_count"] == 128
+
+
 def test_object_extract_stage_writes_classified_outputs_and_patches() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
