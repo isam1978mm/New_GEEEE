@@ -17,6 +17,10 @@ from app.pipeline.stages.report_640 import (
     NOTEBOOK_REPORT_S2_END,
     NOTEBOOK_REPORT_S2_SOURCE_BANDS,
     NOTEBOOK_REPORT_S2_START,
+    REPORT_MASS_CORRECTED_FORMULA,
+    REPORT_MASS_CORRECTION_REASON,
+    ST_B10_OFFSET_K,
+    ST_B10_SCALE,
     Report640Stage,
     build_notebook_report_pottery_image,
     build_notebook_report_s2_composite,
@@ -26,6 +30,7 @@ from app.pipeline.stages.report_640 import (
     compute_report_zero_point_targets,
     create_ee_notebook_report_mass_fetcher,
     create_ee_notebook_report_pottery_fetcher,
+    scale_st_b10_to_kelvin,
 )
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -63,7 +68,10 @@ def test_report_640_stage_emits_three_implemented_reports() -> None:
 
         mass_detail = metadata["report_details"]["REPORT_640_Mass_Report"]
         assert mass_detail["status"] == "implemented"
-        assert mass_detail["formula"] == "B12 * ST_B10 / 1000"
+        assert mass_detail["formula"] == REPORT_MASS_CORRECTED_FORMULA
+        assert mass_detail["formula_version"] == "st_b10_kelvin_scaled_v1"
+        assert mass_detail["parity_category"] == "PARITY_CORRECTS"
+        assert mass_detail["correction_reason"] == REPORT_MASS_CORRECTION_REASON
 
 
 def test_report_640_manifest_documents_three_implemented_reports() -> None:
@@ -96,9 +104,14 @@ def test_report_640_manifest_documents_three_implemented_reports() -> None:
         assert manifest["reports"]["REPORT_640_FINAL_Zero_Point_Targets.tif"]["status"] == "implemented"
         mass_report = manifest["reports"]["REPORT_640_Mass_Report.tif"]
         assert mass_report["status"] == "implemented"
-        assert mass_report["formula"] == "B12 * ST_B10 / 1000"
+        assert mass_report["formula"] == REPORT_MASS_CORRECTED_FORMULA
         assert "s2_raw_cube.npy" in mass_report["source_equivalent"]
         assert "st_b10_raw.npy" in mass_report["source_equivalent"]
+        assert "scaled_to_kelvin" in mass_report["source_equivalent"]
+        assert mass_report["source_family"] == "private_local_corrected"
+        assert mass_report["formula_version"] == "st_b10_kelvin_scaled_v1"
+        assert mass_report["parity_category"] == "PARITY_CORRECTS"
+        assert mass_report["correction_reason"] == REPORT_MASS_CORRECTION_REASON
 
 
 def test_notebook_report_s2_composite_uses_report_provenance(monkeypatch) -> None:
@@ -467,17 +480,26 @@ def test_mass_report_raster_is_emitted_with_grid_contract() -> None:
             assert float(dataset.nodata) == float(grid_spec.nodata)
 
 
-def test_mass_report_formula_matches_notebook() -> None:
+def test_mass_report_formula_uses_scaled_kelvin_for_private_local_default() -> None:
     size = 64
     b12 = np.ones((size, size), dtype=np.float32) * 0.5
-    st_b10 = np.ones((size, size), dtype=np.float32) * 200.0
+    st_b10 = np.ones((size, size), dtype=np.float32) * 41000.0
     cube = np.stack([
         np.zeros((size, size)), np.zeros((size, size)), np.zeros((size, size)),
         np.zeros((size, size)), np.zeros((size, size)), b12, np.zeros((size, size))
     ], axis=-1)
     result = compute_report_mass_report(cube, st_b10, nodata=-9999.0)
-    expected = np.float32((0.5 * 200.0) / 1000.0)
+    kelvin = np.float32(41000.0) * ST_B10_SCALE + ST_B10_OFFSET_K
+    expected = np.float32((0.5 * kelvin) / 1000.0)
     assert np.allclose(result, expected)
+
+
+def test_st_b10_scale_helper_preserves_nodata() -> None:
+    raw = np.array([[41000.0, -9999.0]], dtype=np.float32)
+    result = scale_st_b10_to_kelvin(raw, nodata=-9999.0)
+    expected = np.float32(41000.0) * ST_B10_SCALE + ST_B10_OFFSET_K
+    assert np.isclose(result[0, 0], expected)
+    assert result[0, 1] == np.float32(-9999.0)
 
 
 def test_pottery_report_formula_matches_notebook() -> None:
