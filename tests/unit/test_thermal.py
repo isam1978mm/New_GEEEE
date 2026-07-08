@@ -120,8 +120,8 @@ def test_build_notebook_l9_st_b10_image_uses_notebook_source(monkeypatch: pytest
             calls.append(("filterDate", (start, end)))
             return self
 
-        def select(self, band):
-            calls.append(("select", band))
+        def map(self, func):
+            calls.append(("map", func.__name__))
             return self
 
         def median(self):
@@ -136,7 +136,7 @@ def test_build_notebook_l9_st_b10_image_uses_notebook_source(monkeypatch: pytest
     assert ("ImageCollection", NOTEBOOK_L9_ST_B10_COLLECTION) in calls
     assert ("filterBounds", "grid-region") in calls
     assert ("filterDate", (NOTEBOOK_THERMAL_START, NOTEBOOK_THERMAL_END)) in calls
-    assert ("select", "ST_B10") in calls
+    assert ("map", "prep_notebook_l9_st_b10") in calls
     assert ("median", None) in calls
     assert not any(call == ("ImageCollection", "LANDSAT/LC08/C02/T1_L2") for call in calls)
 

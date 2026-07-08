@@ -69,6 +69,15 @@ def prep_landsat_st_b10(img):
     return img.select("ST_B10").rename("ST_B10_RAW").updateMask(mask).copyProperties(img, ["system:time_start"])
 
 
+def prep_notebook_l9_st_b10(img):
+    qa = img.select("QA_PIXEL")
+    cloud_shadow = qa.bitwiseAnd(1 << 4).eq(0)
+    clouds = qa.bitwiseAnd(1 << 3).eq(0)
+    cirrus = qa.bitwiseAnd(1 << 2).eq(0)
+    mask = cloud_shadow.And(clouds).And(cirrus)
+    return img.select("ST_B10").updateMask(mask).copyProperties(img, ["system:time_start"])
+
+
 def build_landsat_lst_collection(grid_spec: GridSpec, *, start_date: str = DEFAULT_START, end_date: str = DEFAULT_END):
     region = build_grid_region(grid_spec)
     l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2").filterBounds(region).filterDate(start_date, end_date)
@@ -93,7 +102,7 @@ def build_notebook_l9_st_b10_image(
         ee.ImageCollection(NOTEBOOK_L9_ST_B10_COLLECTION)
         .filterBounds(build_grid_region(grid_spec))
         .filterDate(start_date, end_date)
-        .select("ST_B10")
+        .map(prep_notebook_l9_st_b10)
         .median()
     )
 
