@@ -125,6 +125,16 @@ def build_s2_composite(
     )
 
 
+
+def prep_landsat_st_b10_masked(img):
+    qa = img.select("QA_PIXEL")
+    cloud_shadow = qa.bitwiseAnd(1 << 4).eq(0)
+    clouds = qa.bitwiseAnd(1 << 3).eq(0)
+    cirrus = qa.bitwiseAnd(1 << 2).eq(0)
+    mask = cloud_shadow.And(clouds).And(cirrus)
+    return img.select("ST_B10").updateMask(mask).copyProperties(img, ["system:time_start"])
+
+
 def build_aix_s2_month_composite(
     grid_spec: GridSpec,
     *,
@@ -169,13 +179,13 @@ def build_aix_landsat_thermal_month_composite(
             ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
             .filterBounds(region)
             .filterDate(start, end)
-            .select(["ST_B10"])
+            .map(prep_landsat_st_b10_masked)
         )
         l8 = (
             ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
             .filterBounds(region)
             .filterDate(start, end)
-            .select(["ST_B10"])
+            .map(prep_landsat_st_b10_masked)
         )
         col = col.merge(l9).merge(l8)
     return col.median()
@@ -248,14 +258,14 @@ def build_aix_dem_matched_mask_image(grid_spec: GridSpec):
         ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
         .filterBounds(region)
         .filterDate("2022-01-01", "2026-02-28")
-        .select(["ST_B10"])
+        .map(prep_landsat_st_b10_masked)
         .median()
     )
     l9 = (
         ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
         .filterBounds(region)
         .filterDate("2022-01-01", "2026-02-28")
-        .select(["ST_B10"])
+        .map(prep_landsat_st_b10_masked)
         .median()
     )
     thermal = ee.ImageCollection([l8.select("ST_B10"), l9.select("ST_B10")]).median()
@@ -306,14 +316,14 @@ def build_fusion_intelligence_image(grid_spec: GridSpec):
         ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
         .filterBounds(region)
         .filterDate("2022-01-01", "2026-02-28")
-        .select(["ST_B10"])
+        .map(prep_landsat_st_b10_masked)
         .median()
     )
     l9 = (
         ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
         .filterBounds(region)
         .filterDate("2022-01-01", "2026-02-28")
-        .select(["ST_B10"])
+        .map(prep_landsat_st_b10_masked)
         .median()
     )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -8,6 +9,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pytest
 
+import app.pipeline.stages.s2_indices as s2_indices_module
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path
@@ -131,6 +133,27 @@ def test_build_s2_composite_uses_notebook_filters(monkeypatch: pytest.MonkeyPatc
     assert ("filter", ("lt", "CLOUDY_PIXEL_PERCENTAGE", 3)) in calls
     assert ("select", ["B2", "B3", "B4", "B8", "B11", "B12", "B1"]) in calls
     assert ("median", None) in calls
+
+
+def test_landsat_st_b10_aix_and_fusion_builders_apply_qa_mask_before_median() -> None:
+    helper_source = inspect.getsource(s2_indices_module.prep_landsat_st_b10_masked)
+
+    assert "QA_PIXEL" in helper_source
+    assert "1 << 4" in helper_source
+    assert "1 << 3" in helper_source
+    assert "1 << 2" in helper_source
+    assert ".updateMask(mask)" in helper_source
+
+    expected_masked_collection_counts = {
+        s2_indices_module.build_aix_landsat_thermal_month_composite: 2,
+        s2_indices_module.build_aix_dem_matched_mask_image: 2,
+        s2_indices_module.build_fusion_intelligence_image: 2,
+    }
+
+    for builder, expected_count in expected_masked_collection_counts.items():
+        source = inspect.getsource(builder)
+        assert source.count(".map(prep_landsat_st_b10_masked)") == expected_count
+        assert '.select(["ST_B10"])' not in source
 
 
 def test_create_ee_s2_cube_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyPatch) -> None:
