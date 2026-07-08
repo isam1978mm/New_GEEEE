@@ -206,7 +206,11 @@ def build_aix_extra_tensor_image(grid_spec: GridSpec):
                 s2.select("B11").divide(s2.select("B12")).unitScale(0, 2).rename(
                     f"AIX_{AIX_TIME_TAG}_{tag}_MineralAlterationProxy_Norm01"
                 ),
-                thermal.select("ST_B10").unitScale(280, 320).rename(
+                thermal.select("ST_B10")
+                .multiply(0.00341802)
+                .add(149.0)
+                .unitScale(280, 320)
+                .rename(
                     f"AIX_{AIX_TIME_TAG}_{tag}_ThermalAnomaly_Norm01"
                 ),
             ]
