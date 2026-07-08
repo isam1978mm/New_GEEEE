@@ -50,7 +50,7 @@ export interface ExportGroup {
   fileCount: number;
   totalSize: string;
   files: ExportFile[];
-  isPublicSafe?: boolean;
+  hasDownloads?: boolean;
 }
 
 export interface KeyDownload {
@@ -852,7 +852,7 @@ function groupOutputs(outputs: ExportFile[]): ExportGroup[] {
         fileCount: sortedFiles.length,
         totalSize: formatFileSize(totalBytes),
         files: sortedFiles,
-        isPublicSafe: sortedFiles.some((file) => Boolean(file.downloadUrl)),
+        hasDownloads: sortedFiles.some((file) => Boolean(file.downloadUrl)),
       };
     });
 }

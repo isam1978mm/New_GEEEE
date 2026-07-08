@@ -110,7 +110,7 @@ export function ExportsTab({
       </div>
 
       <div className="rounded px-3 py-2" style={{ fontSize: "11px", color: "var(--gs-slate)", backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", lineHeight: "1.5" }}>
-        Guarded exports appear only after a run produces public-safe deliverables. Use Advanced / unavailable outputs for status metadata when files are not listed.
+        Private/local exports appear after a run writes them to the output folder. Use Advanced / unavailable outputs for status metadata when files are not listed.
       </div>
 
       {/* Folder browser */}
@@ -146,7 +146,7 @@ export function ExportsTab({
           )}
           {!loading && !error && filteredGroups.length === 0 && (
             <div className="px-4 py-8 text-center" style={{ fontSize: "12px", color: "var(--gs-slate)" }}>
-              {search ? "No exports match the current filter. Clear the filter or expand another group." : "No guarded exports are available for this run yet. Select a completed run or expand Advanced / unavailable outputs for status metadata."}
+              {search ? "No exports match the current filter. Clear the filter or expand another group." : "No private/local exports are available for this run yet. Select a completed run or expand Advanced / unavailable outputs for status metadata."}
             </div>
           )}
           {!loading && !error && filteredGroups.map((group, gi) => {
@@ -183,7 +183,7 @@ export function ExportsTab({
                     <span className="font-mono" style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.65 }}>
                       {group.totalSize}
                     </span>
-                    {group.isPublicSafe ? (
+                    {group.hasDownloads ? (
                       <span
                         className="font-mono"
                         style={{
