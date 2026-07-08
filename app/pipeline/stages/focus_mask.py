@@ -63,9 +63,9 @@ FOCUS_SECRET_LAYER_FILES = {
 }
 
 FOCUS_REPORT_BAND_FILES = {
-    "REPORT_640_FINAL_Zero_Point_Targets": "REPORT_640_FINAL_Zero_Point_Targets_640.npy",
-    "REPORT_640_Mass_Report": "REPORT_640_Mass_Report_640.npy",
-    "REPORT_640_Pottery_Report": "REPORT_640_Pottery_Report_640.npy",
+    "REPORT_640_FINAL_Zero_Point_Targets": "REPORT_640_FINAL_Zero_Point_Targets.tif",
+    "REPORT_640_Mass_Report": "REPORT_640_Mass_Report.tif",
+    "REPORT_640_Pottery_Report": "REPORT_640_Pottery_Report.tif",
 }
 
 
@@ -111,7 +111,7 @@ def load_focus_analysis_bands(run_dir: Path, *, grid_spec: GridSpec) -> dict[str
         bands[notebook_name] = _load_tif(run_dir / "AI_READY_640" / filename, grid_spec=grid_spec)
 
     for notebook_name, filename in FOCUS_REPORT_BAND_FILES.items():
-        bands[notebook_name] = _load_npy(run_dir / "NPY_RADAR_BANDS" / filename, grid_spec=grid_spec)
+        bands[notebook_name] = _load_tif(run_dir / filename, grid_spec=grid_spec)
 
     return bands
 

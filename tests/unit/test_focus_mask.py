@@ -18,6 +18,7 @@ from app.pipeline.stages.dem_derivatives import DemDerivativesStage
 from app.pipeline.stages.feature_stacks import FeatureStacksStage
 from app.pipeline.stages.focus_mask import FocusMaskStage, _hard_get_vals
 from app.pipeline.stages.secret_layers import SecretLayersStage
+from app.pipeline.stages.report_640 import Report640Stage
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
@@ -52,6 +53,7 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         asyncio.run(DemDerivativesStage(grid_spec=grid_spec).run(context))
         asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
         asyncio.run(SecretLayersStage(grid_spec=grid_spec).run(context))
+        asyncio.run(Report640Stage(grid_spec=grid_spec).run(context))
         asyncio.run(FeatureStacksStage(grid_spec=grid_spec).run(context))
 
         result = asyncio.run(FocusMaskStage(grid_spec=grid_spec).run(context))
