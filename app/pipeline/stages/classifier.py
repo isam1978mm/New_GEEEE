@@ -53,7 +53,6 @@ class ClassifierStage(Stage):
                 "object_count": summary["object_count"],
                 "cluster_count": summary["cluster_count"],
                 "classifier_version": summary["classifier_version"],
-                "classifier_feature_policy": summary.get("classifier_feature_policy"),
             },
         )
 
@@ -72,8 +71,6 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
         anomaly = np.array(image, dtype=np.float32)
     object_rows = _read_csv_rows(objects_path)
     cluster_rows = _read_csv_rows(clusters_path)
-    scene_feature_values = _valid_feature_values(hypercube)
-    scene_anomaly_values = anomaly[np.isfinite(anomaly)]
 
     classifications: list[dict[str, object]] = []
     for row in object_rows:
@@ -82,18 +79,16 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
         col_min = int(row["col_min"])
         col_max = int(row["col_max"])
         patch = hypercube[row_min : row_max + 1, col_min : col_max + 1, :]
+        valid_values = _valid_feature_values(patch)
         anomaly_patch = anomaly[row_min : row_max + 1, col_min : col_max + 1]
-        diagnostics = _object_feature_diagnostics(
-            patch,
-            anomaly_patch,
-            row=row,
-            scene_feature_values=scene_feature_values,
-            scene_anomaly_values=scene_anomaly_values,
-        )
+        finite_anomaly = anomaly_patch[np.isfinite(anomaly_patch)]
+        signal_mean = _normalize_feature(float(valid_values.mean()) if valid_values.size else 0.0)
+        signal_peak = _normalize_feature(float(finite_anomaly.max()) if finite_anomaly.size else 0.0)
+        signal_spread = _normalize_feature(float(valid_values.std()) if valid_values.size else 0.0)
         feature_vector = NeutralFeatureVector(
-            signal_mean=float(diagnostics["signal_mean"]),
-            signal_peak=float(diagnostics["signal_peak"]),
-            signal_spread=float(diagnostics["signal_spread"]),
+            signal_mean=signal_mean,
+            signal_peak=signal_peak,
+            signal_spread=signal_spread,
         )
         classification = classify_feature_vector(feature_vector)
         classifications.append(
@@ -108,7 +103,9 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
                 "class_score": round(float(classification.class_score), 6),
                 "class_family": classification.class_family,
                 "classifier_version": classification.classifier_version,
-                **diagnostics,
+                "signal_mean": round(float(signal_mean), 6),
+                "signal_peak": round(float(signal_peak), 6),
+                "signal_spread": round(float(signal_spread), 6),
             }
         )
 
@@ -118,7 +115,6 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
         "cluster_count": len(cluster_rows),
         "class_counts": dict(sorted(counts.items())),
         "classifier_version": classifications[0]["classifier_version"] if classifications else "experimental_v1",
-        "classifier_feature_policy": "private_local_robust_object_evidence_v1",
     }
     return classifications, summary
 
@@ -174,100 +170,18 @@ def _build_neutral_labels(classifications: list[dict[str, object]], summary: dic
     }
 
 
-def _object_feature_diagnostics(
-    patch: np.ndarray,
-    anomaly_patch: np.ndarray,
-    *,
-    row: dict[str, str],
-    scene_feature_values: np.ndarray,
-    scene_anomaly_values: np.ndarray,
-) -> dict[str, object]:
-    feature_patch, valid_mask = _valid_feature_patch_and_mask(patch)
-    valid_values = feature_patch[valid_mask]
-    valid_values = valid_values[np.isfinite(valid_values)].astype(np.float32, copy=False)
-    anomaly_values = anomaly_patch[valid_mask] if anomaly_patch.shape == valid_mask.shape else anomaly_patch[np.isfinite(anomaly_patch)]
-    anomaly_values = anomaly_values[np.isfinite(anomaly_values)].astype(np.float32, copy=False)
-
-    bbox_area_px = int(max(patch.shape[0] * patch.shape[1], 1))
-    object_area_px = int(_row_float(row, "area_px", float(bbox_area_px)))
-    valid_pixel_count = int(valid_mask.sum())
-    valid_pixel_fraction = valid_pixel_count / float(bbox_area_px)
-    compactness = max(0.0, min(1.0, object_area_px / float(bbox_area_px)))
-
-    signal_mean_raw = float(valid_values.mean()) if valid_values.size else 0.0
-    signal_spread_raw = float(valid_values.std()) if valid_values.size else 0.0
-    anomaly_mean = float(anomaly_values.mean()) if anomaly_values.size else 0.0
-    anomaly_peak = float(anomaly_values.max()) if anomaly_values.size else 0.0
-    signal_mean_z = _robust_z(signal_mean_raw, scene_feature_values)
-    anomaly_peak_z = _robust_z(anomaly_peak, scene_anomaly_values)
-
-    signal_mean = _unit_evidence_from_z(signal_mean_z) * valid_pixel_fraction
-    signal_peak = _unit_evidence_from_z(anomaly_peak_z) * valid_pixel_fraction
-    signal_spread = compactness * valid_pixel_fraction
-
-    return {
-        "signal_mean": round(float(signal_mean), 6),
-        "signal_peak": round(float(signal_peak), 6),
-        "signal_spread": round(float(signal_spread), 6),
-        "signal_mean_raw": round(float(signal_mean_raw), 6),
-        "signal_mean_z": round(float(signal_mean_z), 6),
-        "signal_spread_raw": round(float(signal_spread_raw), 6),
-        "anomaly_mean": round(float(anomaly_mean), 6),
-        "anomaly_peak": round(float(anomaly_peak), 6),
-        "anomaly_peak_z": round(float(anomaly_peak_z), 6),
-        "object_area_px": int(object_area_px),
-        "bbox_area_px": int(bbox_area_px),
-        "compactness": round(float(compactness), 6),
-        "valid_pixel_count": int(valid_pixel_count),
-        "valid_pixel_fraction": round(float(valid_pixel_fraction), 6),
-        "feature_policy": "private_local_robust_object_evidence_v1",
-    }
-
-
 def _valid_feature_values(patch: np.ndarray) -> np.ndarray:
-    feature_patch, valid_mask = _valid_feature_patch_and_mask(patch)
+    if patch.ndim != 3 or patch.shape[-1] == 0:
+        return np.array([], dtype=np.float32)
+    if patch.shape[-1] == 1:
+        feature_patch = patch
+        valid_mask = np.isfinite(feature_patch).all(axis=-1)
+    else:
+        feature_patch = patch[:, :, :-1]
+        valid_mask = (patch[:, :, -1] > 0.5) & np.isfinite(feature_patch).all(axis=-1)
     values = feature_patch[valid_mask]
     values = values[np.isfinite(values)]
     return values.astype(np.float32, copy=False)
-
-
-def _valid_feature_patch_and_mask(patch: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    if patch.ndim != 3 or patch.shape[-1] == 0:
-        return np.empty((*patch.shape[:2], 0), dtype=np.float32), np.zeros(patch.shape[:2], dtype=bool)
-    if patch.shape[-1] == 1:
-        feature_patch = patch.astype(np.float32, copy=False)
-        valid_mask = np.isfinite(feature_patch).all(axis=-1)
-    else:
-        feature_patch = patch[:, :, :-1].astype(np.float32, copy=False)
-        valid_mask = (patch[:, :, -1] > 0.5) & np.isfinite(feature_patch).all(axis=-1)
-    return feature_patch, valid_mask.astype(bool)
-
-
-def _row_float(row: dict[str, str], key: str, default: float) -> float:
-    try:
-        return float(row.get(key, default))
-    except (TypeError, ValueError):
-        return float(default)
-
-
-def _robust_z(value: float, background: np.ndarray) -> float:
-    if not np.isfinite(value):
-        return 0.0
-    finite = background[np.isfinite(background)].astype(np.float64, copy=False)
-    if finite.size < 2:
-        return 0.0
-    median = float(np.median(finite))
-    mad = float(np.median(np.abs(finite - median)))
-    scale = 1.4826 * mad if np.isfinite(mad) and mad > 1e-9 else float(np.std(finite))
-    if not np.isfinite(scale) or scale <= 1e-9:
-        return 0.0
-    return round(float((value - median) / scale), 6)
-
-
-def _unit_evidence_from_z(value: float) -> float:
-    if not np.isfinite(value):
-        return 0.0
-    return max(0.0, min(1.0, 0.5 + float(value) / 6.0))
 
 
 def _dominant_class_id(class_ids: list[str]) -> str:
