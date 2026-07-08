@@ -1987,7 +1987,7 @@ def build_field_operations_products(
             },
         })
 
-        placemarks.append("\\n".join([
+        placemarks.append("\n".join([
             "        <Placemark>",
             f"            <name>Target {target_id}: {_kmz_xml_text(target_class)}</name>",
             "            <description><![CDATA[",
@@ -2035,7 +2035,7 @@ def build_field_operations_products(
 
     return {
         "field_operations_geojson": geojson,
-        "field_operations_kml": "\\n".join(kml_lines),
+        "field_operations_kml": "\n".join(kml_lines),
         "field_operations_feature_count": len(features),
     }
 

@@ -299,6 +299,8 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "<GroundOverlay>" in heatmap_kml
         assert "<LatLonBox>" in heatmap_kml
         assert "source_cell=cell_155" in heatmap_kml
+        assert "\\n" not in heatmap_kml
+        assert "\n" in heatmap_kml
 
         with zipfile.ZipFile(targets_3d_kmz, "r") as zf:
             target_names = set(zf.namelist())
@@ -309,6 +311,8 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "source_cell=cell_155" in target_kml
         assert target_kml.count("<Placemark>") == len(target_rows)
         assert "<altitudeMode>relativeToGround</altitudeMode>" in target_kml
+        assert "\\n" not in target_kml
+        assert "\n" in target_kml
 
         field_geojson = run_dir / "full_job" / "focus" / "FINAL_ARCHEO_INTELLIGENCE_MAP.geojson"
         field_kmz = run_dir / "full_job" / "focus" / "TESLA_V7_2_FIELD_OPERATIONS.kmz"
@@ -341,6 +345,8 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
         assert "source_cell=cell_200" in field_kml
         assert field_kml.count("<Placemark>") == len(target_rows)
         assert "Strategic Intelligence Data" in field_kml
+        assert "\\n" not in field_kml
+        assert "\n" in field_kml
 
         live_manifest = run_dir / "full_job" / "focus" / "APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json"
 
