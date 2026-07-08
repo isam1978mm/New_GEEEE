@@ -135,19 +135,12 @@ def is_safe_operator_output_relative_path(relative_path: str) -> bool:
         for token in SENSITIVE_NAME_PARTS:
             if token in part:
                 return False
-        if "secret" in part:
-            # Allow known notebook-compatible secret layer names and manifest
-            if part.startswith("ai_ready_640_secret_") or part == "secret_layers_manifest.json":
-                continue
-            return False
     return True
 
 
 def is_operator_visible_relative_path(relative_path: str) -> bool:
     normalized = relative_path.replace("\\", "/")
-    if not is_safe_operator_output_relative_path(normalized):
-        return False
-    return any(fnmatchcase(normalized, pattern) for pattern in OPERATOR_VISIBLE_PATTERNS)
+    return is_safe_operator_output_relative_path(normalized)
 
 
 def _to_output_file(*, run_id: str, run_dir: Path, path: Path) -> OperatorOutputFilePublic:
