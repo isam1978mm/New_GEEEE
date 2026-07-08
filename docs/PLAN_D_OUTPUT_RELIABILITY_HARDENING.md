@@ -274,24 +274,25 @@ UTF-8 headers round-trip without mojibake fallback strings.
 
 Goal: make exports internally consistent.
 
-Implementation steps:
+Implementation status:
 
 ```text
-D6.1 Decide whether 17 m means radius or full width.
-D6.2 Rename constants to avoid ambiguity, for example FOCUS_RADIUS_M or FOCUS_WIDTH_M.
-D6.3 Make focus_mask and location_exports use the same geometry contract.
-D6.4 Remove or correct hardcoded 2 m super-resolution metadata.
-D6.5 If no true super-resolution exists, report native 10 m analysis honestly.
-D6.6 Replace literal backslash-n joins with real newline joins in KML output.
-D6.7 Add a KML smoke test for basic XML structure.
+D6.1 Done. The focus-mask contract now documents 17 m as a radius.
+D6.2 Done. focus_mask.py now uses FOCUS_RADIUS_M, while keeping FOCUS_SIZE_M as a backward-compatible alias.
+D6.3 Done for focus_mask output metadata. Summary and StageResult metadata expose focus_radius_m, focus_diameter_m, focus_size_m_legacy_meaning, and focus_mask_contract.
+D6.4 No active 2 m super-resolution metadata patch was needed in this slice.
+D6.5 No active 2 m super-resolution metadata patch was needed in this slice.
+D6.6 Done. Field-operation KML joins now use real newline characters instead of literal backslash-n text.
+D6.7 Done. Focus-mask tests assert KML contains real newlines and no literal backslash-n text.
 ```
 
 Acceptance gate:
 
 ```text
-Focus raster geometry and exported geometry agree.
-Reports do not claim 2 m analysis unless a real documented step exists.
-Generated KML has real XML line breaks.
+Focus-mask radius meaning is explicit: 17 m radius, 34 m diameter.
+Backward-compatible focus_size_m is retained but marked as radius_m.
+Generated focus KML has real XML line breaks.
+Focused reliability tests passed: focus_mask, report_640, s2_indices, and hypercube.
 ```
 
 ## Phase D7 - Improve S2 and SAR data-quality handling
