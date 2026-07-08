@@ -324,7 +324,12 @@ def build_fusion_intelligence_image(grid_spec: GridSpec):
     tensor_mass_volume_shadow = s2.select("B12").multiply(l9.select("ST_B10")).divide(1000)
 
     gold_signal = tensor_gold_alloy_signal.gt(1.5)
-    void_signal = l8.select("ST_B10").lt(310)
+    void_signal = (
+        l8.select("ST_B10")
+        .multiply(0.00341802)
+        .add(149.0)
+        .lt(310)
+    )
     hard_target = mask_quartz_basalt.gt(2.0)
     ancient_signal = mask_carbon_age_indicator.gt(0.4)
     final_target_map = gold_signal.And(void_signal).And(hard_target).And(ancient_signal)
