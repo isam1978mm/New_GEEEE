@@ -230,10 +230,10 @@ def test_run_create_accepts_missing_name() -> None:
     assert payload.name is None
 
 
-def test_run_create_rejects_coordinate_like_name() -> None:
-    for unsafe in ("35.12345, 36.54321", "near -12.3456,-45.6789"):
-        with pytest.raises(ValidationError):
-            RunCreate(lat=35.0, lon=36.0, name=unsafe)
+def test_run_create_accepts_private_local_coordinate_like_name() -> None:
+    for name in ("35.12345, 36.54321", "near -12.3456,-45.6789"):
+        payload = RunCreate(lat=35.0, lon=36.0, name=name)
+        assert payload.name == name
 
 
 @pytest.mark.parametrize(
@@ -251,9 +251,9 @@ def test_run_create_rejects_coordinate_like_name() -> None:
         "fingerprint",
     ],
 )
-def test_run_create_rejects_forbidden_term_in_name(term: str) -> None:
-    with pytest.raises(ValidationError):
-        RunCreate(lat=35.0, lon=36.0, name=f"my {term} run")
+def test_run_create_accepts_private_local_terms_in_name(term: str) -> None:
+    payload = RunCreate(lat=35.0, lon=36.0, name=f"my {term} run")
+    assert payload.name == f"my {term} run"
 
 
 # --- 3. Public artifact listing safety ---------------------------------------

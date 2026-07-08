@@ -1,29 +1,11 @@
 from __future__ import annotations
 
-import re
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.db.models.enums import RunStatus
 from app.schemas.artifact import ArtifactPublic
-
-COORDINATE_LIKE_PATTERN = re.compile(r"\b-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+\b")
-FORBIDDEN_RUN_NAME_TERMS = (
-    "latitude",
-    "longitude",
-    "coords",
-    "coordinates",
-    "geometry",
-    "bounds",
-    "bbox",
-    "transform",
-    "path",
-    "hash",
-    "checksum",
-    "fingerprint",
-)
-
 
 class RunCreate(BaseModel):
     lat: float = Field(ge=-90.0, le=90.0)
@@ -32,14 +14,7 @@ class RunCreate(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def validate_public_name(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        lowered = value.casefold()
-        if COORDINATE_LIKE_PATTERN.search(value):
-            raise ValueError("Run name contains coordinate-like content.")
-        if any(term in lowered for term in FORBIDDEN_RUN_NAME_TERMS):
-            raise ValueError("Run name contains forbidden public text.")
+    def validate_private_local_name(cls, value: str | None) -> str | None:
         return value
 
 
