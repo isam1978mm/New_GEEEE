@@ -35,12 +35,12 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
       <div className="flex flex-col">
         {loading && (
           <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-            Loading guarded public downloads from the run output API...
+            Loading private/local downloads from the run output API...
           </div>
         )}
         {!loading && downloads.length === 0 && (
           <div className="px-3 py-2" style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-            No key downloads are available yet. They appear after a completed run exposes REDACTED_PUBLIC deliverables.
+            No key downloads are available yet. They appear after a completed run writes private/local outputs.
           </div>
         )}
         {!loading && downloads.map((dl, i) => (
@@ -64,7 +64,7 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
                   letterSpacing: "0.03em",
                 }}
               >
-                PUB
+                DL
               </span>
 
               {/* Name + path */}
@@ -134,7 +134,7 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
                   lineHeight: "1.5",
                 }}
               >
-                Public-safe operator deliverable. Tagged REDACTED_PUBLIC. Full export tree and unavailable-output status are available in the <strong>Exports</strong> tab.
+                Pinned private/local operator download. Full export tree and unavailable-output status are available in the <strong>Exports</strong> tab.
               </div>
             )}
           </div>
@@ -147,7 +147,7 @@ export function KeyDownloads({ downloads, loading = false }: KeyDownloadsProps) 
         style={{ borderTop: "1px solid var(--border)", backgroundColor: "var(--accent)" }}
       >
         <p style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-          Only REDACTED_PUBLIC deliverables appear here. Use the <span style={{ fontWeight: 600, color: "var(--gs-navy)" }}>Exports tab</span> for full guarded export status.
+          Pinned downloads appear here. Use the <span style={{ fontWeight: 600, color: "var(--gs-navy)" }}>Exports tab</span> for the full private/local export list.
         </p>
       </div>
     </div>

@@ -175,7 +175,7 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
               className="font-mono"
               style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}
             >
-              Public Run Outputs
+              Private Local Outputs
             </span>
             <span
               className="font-mono"
@@ -190,10 +190,10 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
                 letterSpacing: "0.03em",
               }}
             >
-              REDACTED_PUBLIC
+              PRIVATE_LOCAL
             </span>
             <span style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.6 }}>
-              safe deliverables only
+              pinned downloads
             </span>
           </div>
           <KeyDownloads downloads={keyDownloads} loading={loadingOutputs} />
