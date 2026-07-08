@@ -196,29 +196,53 @@ Cluster dominant labels match the most frequent object labels.
 
 ## Phase D4 - Single source of truth for REPORT_640 and thermal scaling
 
-Goal: remove contradictory named products and raw-DN thermal bugs.
+Goal: remove contradictory `REPORT_640` source usage and raw-DN thermal bugs without breaking notebook-parity outputs.
 
-Implementation steps:
+Implementation status:
 
 ```text
-D4.1 Choose one canonical owner for REPORT_640 products, preferably report_640.py.
-D4.2 Rename fusion-derived outputs if they are kept.
-D4.3 Rebuild or rename REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy so name and formula match.
-D4.4 Add source_family, formula_version, parity_category, and correction_reason to manifests.
-D4.5 Use Landsat Collection 2 ST_B10 scale helper everywhere Kelvin is intended:
-     Kelvin = 0.00341802 * DN + 149.0
-D4.6 Apply thermal QA masking consistently.
-D4.7 Fix Zero_Point thermal condition to compare scaled Kelvin.
-D4.8 Fix AIX thermal Norm01 to scale Kelvin, not raw DN.
-D4.9 Use DEM mosaic for AIX terrain products.
+D4.1 Done. Canonical root REPORT_640_*.tif owner is report_640.py.
+D4.2 Done. REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy remains a separate cell-099 stack from s2_indices.py, not the canonical root REPORT_640 owner.
+D4.3 Done by ownership lock. Root REPORT_640 rasters are not rebuilt from the cell-099 fusion stack.
+D4.4 Done. REPORT_640_Mass_Report metadata records source_family, formula_version, parity_category, correction_reason, thermal_input_units, and thermal_scaling_applied.
+D4.5 Done. Kelvin scaling is used where Kelvin is intended. REPORT_640_Mass_Report intentionally remains raw-ST_B10 notebook parity.
+D4.6 Done. Thermal QA masking is applied consistently to notebook L9 and AIX/fusion Landsat ST_B10 sources.
+D4.7 Done. Zero_Point thermal condition compares scaled Kelvin to the 310 K threshold.
+D4.8 Done. AIX thermal Norm01 scales Landsat ST_B10 to Kelvin before unitScale(280, 320).
+D4.9 Done. Focus-mask analysis now consumes canonical root REPORT_640_*.tif rasters, not cell-099 NPY_RADAR_BANDS report-name arrays.
+D4.10 Done. This section locks the final REPORT_640 source ownership decision.
+```
+
+Ownership lock:
+
+```text
+Canonical root REPORT_640 rasters:
+  owner: app/pipeline/stages/report_640.py
+  outputs:
+    REPORT_640_Pottery_Report.tif
+    REPORT_640_Mass_Report.tif
+    REPORT_640_FINAL_Zero_Point_Targets.tif
+
+Notebook cell-099 fusion stack:
+  owner: app/pipeline/stages/s2_indices.py
+  output:
+    NPY_STACKS/REPORT_640_FINAL_INTELLIGENCE_STACK_640.npy
+  status:
+    kept as a separate notebook stack alias; it is not the canonical root REPORT_640 source.
+
+Downstream consumers:
+  hypercube.py uses canonical root REPORT_640_*.tif rasters.
+  focus_mask.py uses canonical root REPORT_640_*.tif rasters.
 ```
 
 Acceptance gate:
 
 ```text
-No two stages write the same canonical REPORT_640 name with different formulas.
+No two stages write the same canonical root REPORT_640_*.tif output.
+Cell-099 fusion-stack outputs may keep notebook band names, but they are not treated as root REPORT_640 owners.
 Thermal thresholds are applied only after ST_B10 scaling.
-AIX terrain products cover the intended grid or fail with QA-blocked status.
+REPORT_640_Mass_Report is explicitly documented as raw-ST_B10 notebook parity, not Kelvin thermal anomaly.
+Focus analysis uses the canonical root REPORT_640 rasters.
 ```
 
 ## Phase D5 - Fix focus evidence handling
