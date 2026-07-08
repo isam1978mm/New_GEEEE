@@ -14,6 +14,97 @@ Priorities:
 
 The paid images request/export package is in scope. It is an offline export package for manual operator use. It is not a live external ordering integration.
 
+## Working Rule
+
+Work one main checklist item at a time.
+
+For each main item:
+
+1. inspect the listed files;
+2. implement only the listed subitems;
+3. run the listed focused tests;
+4. update this checklist from unchecked to done only after verification;
+5. then move to the next main item.
+
+## Current Checklist
+
+### Item 0 — Scope And Docs Lock
+
+- [x] 0.1 Keep the paid images request/export package in scope.
+- [x] 0.2 Explain that `V6` is legacy/internal naming for the export package.
+- [ ] 0.3 Update remaining V6 docs to remove deprecated/parked/out-of-scope wording.
+- [ ] 0.4 Record parity corrections in `docs/PARITY_EXCEPTIONS.md`.
+- [ ] 0.5 Verify docs diff.
+
+### Item 1 — P0 Correctness Fixes
+
+- [ ] 1.1 Thermal inertia: align local and EE-style source/unit basis.
+- [ ] 1.2 Thermal inertia: record source and unit in metadata.
+- [ ] 1.3 Thermal inertia: add regression tests.
+- [ ] 1.4 Fusion target mask: fix raw-DN versus reflectance threshold handling.
+- [ ] 1.5 Fusion target mask: add expected cloud filter.
+- [ ] 1.6 Fusion target mask: align deterministic twin and production path.
+- [ ] 1.7 Fusion target mask: add regression tests.
+- [ ] 1.8 Empty/all-nodata: add source collection size gates.
+- [ ] 1.9 Empty/all-nodata: raise `StageError` when required source data is missing.
+- [ ] 1.10 Empty/all-nodata: add valid-fraction checks after fetch.
+- [ ] 1.11 Empty/all-nodata: record valid-fraction information.
+
+### Item 2 — No Misleading Success
+
+- [ ] 2.1 Full-job report: remove unconditional coverage.
+- [ ] 2.2 Full-job report: scan actual run directory.
+- [ ] 2.3 Full-job report: report present and missing files per output family.
+- [ ] 2.4 Full-job report: add missing-output tests.
+- [ ] 2.5 Export package: `package_ready=true` only after OK validation.
+- [ ] 2.6 Export package: pair ZIP and validation report by one generation token.
+- [ ] 2.7 Export package: reject mismatched ZIP/report pairs.
+- [ ] 2.8 Export package: disable retrieve action when validation is not OK.
+- [ ] 2.9 Export package: keep UI/review responses metadata-only.
+- [ ] 2.10 Manifest/history: distinguish missing files from corrupt/unreadable files.
+- [ ] 2.11 Manifest/history: surface read errors instead of silently returning clean empty state.
+
+### Item 3 — Run Reliability
+
+- [ ] 3.1 Include orphan `QUEUED` runs in stale startup cleanup.
+- [ ] 3.2 Add tests for queued and running stale runs.
+- [ ] 3.3 Add a shared atomic JSON write helper.
+- [ ] 3.4 Replace truncate-in-place writes.
+- [ ] 3.5 Add atomic-write tests where practical.
+
+### Item 4 — Raster And Data Quality
+
+- [ ] 4.1 Replace plain TIFF writes with georeferenced raster writes where required.
+- [ ] 4.2 Keep sidecars.
+- [ ] 4.3 Verify raster readers still work.
+- [ ] 4.4 Add CRS/transform/nodata checks.
+- [ ] 4.5 Prevent invalid pixels from silently becoming legal zero values without a validity signal.
+- [ ] 4.6 Gate or warn on low valid fraction.
+
+### Item 5 — Export Package Provenance
+
+- [ ] 5.1 Record package provenance.
+- [ ] 5.2 Record score basis.
+- [ ] 5.3 Record geometry basis.
+- [ ] 5.4 Label fallback score or fallback geometry when used.
+- [ ] 5.5 Label placeholder map content when used.
+- [ ] 5.6 Keep package artifacts local/private.
+- [ ] 5.7 Keep UI metadata-only.
+- [ ] 5.8 Do not claim frozen external notebook parity unless a verified source is supplied.
+
+### Item 6 — Naming Cleanup
+
+- [ ] 6.1 Use user-facing name `Paid Imagery Export Package` or `Imagery Export Package`.
+- [ ] 6.2 Keep internal `v6_*` names temporarily if renaming is risky.
+- [ ] 6.3 Add comments/docstrings that V6 is legacy/internal naming.
+- [ ] 6.4 Do not break existing routes or tests.
+
+### Item 7 — Status Docs Cleanup
+
+- [ ] 7.1 Remove contradictions between status docs and open-items docs.
+- [ ] 7.2 Document known placeholders and tolerated gaps.
+- [ ] 7.3 Document what remains not implemented.
+
 ## Phase 0 — Scope And Docs Lock
 
 Files:
