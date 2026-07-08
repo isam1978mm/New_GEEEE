@@ -39,7 +39,9 @@ FIELD_OPERATIONS_GEOJSON_NAME = "FINAL_ARCHEO_INTELLIGENCE_MAP.geojson"
 FIELD_OPERATIONS_KMZ_NAME = "TESLA_V7_2_FIELD_OPERATIONS.kmz"
 LIVE_OVERLAY_MANIFEST_NAME = "APP_NATIVE_LIVE_OVERLAY_MANIFEST_V7_2.json"
 FOCUS_DIR_PARTS = ("full_job", "focus")
-FOCUS_SIZE_M = 17.0
+FOCUS_RADIUS_M = 17.0
+# Backward-compatible alias: old reports used focus_size_m, but the geometry is a radius.
+FOCUS_SIZE_M = FOCUS_RADIUS_M
 
 FOCUS_ANALYSIS_BANDS = (
     "Secret_Gold_Halo",
@@ -120,7 +122,7 @@ def build_focus_mask_products(
     ai_ready_stack: np.ndarray,
     *,
     grid_spec: GridSpec,
-    focus_size_m: float = FOCUS_SIZE_M,
+    focus_radius_m: float = FOCUS_RADIUS_M,
 ) -> dict[str, object]:
     if ai_ready_stack.ndim != 3:
         raise StageError("Focus-mask stage requires a 3D ai_ready support stack.")
@@ -129,7 +131,7 @@ def build_focus_mask_products(
 
     transform = grid_spec.transform
     pixel_size_m = float((abs(transform[0]) + abs(transform[4])) / 2.0)
-    radius_px = float(focus_size_m) / pixel_size_m
+    radius_px = float(focus_radius_m) / pixel_size_m
     center_row = float(grid_spec.size) / 2.0
     center_col = float(grid_spec.size) / 2.0
 
@@ -164,7 +166,11 @@ def build_focus_mask_products(
 
     summary = {
         "stage": "focus_mask",
-        "focus_size_m": float(focus_size_m),
+        "focus_radius_m": float(focus_radius_m),
+        "focus_diameter_m": float(focus_radius_m * 2.0),
+        "focus_size_m": float(focus_radius_m),
+        "focus_size_m_legacy_meaning": "radius_m",
+        "focus_mask_contract": "circular_mask_radius_m_centered_on_authoritative_grid",
         "mask_pixel_count": int(mask.sum()),
         "window_shape": [int(masked_window.shape[0]), int(masked_window.shape[1]), int(masked_window.shape[2])],
         "analysis_source": "ai_ready_support_stack",
@@ -2593,7 +2599,11 @@ class FocusMaskStage(Stage):
         return StageResult(
             artifacts=artifacts,
             metadata={
+                "focus_radius_m": float(summary["focus_radius_m"]),
+                "focus_diameter_m": float(summary["focus_diameter_m"]),
                 "focus_size_m": float(summary["focus_size_m"]),
+                "focus_size_m_legacy_meaning": summary["focus_size_m_legacy_meaning"],
+                "focus_mask_contract": summary["focus_mask_contract"],
                 "mask_pixel_count": int(summary["mask_pixel_count"]),
                 "window_shape": summary["window_shape"],
                 "roi_pixel_report": FOCUS_PIXEL_REPORT_CSV_NAME,

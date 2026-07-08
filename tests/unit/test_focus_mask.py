@@ -102,6 +102,10 @@ def test_focus_mask_stage_writes_filesystem_only_local_outputs() -> None:
 
         summary = json.loads((run_dir / "full_job" / "focus" / "focus_zone_summary.json").read_text(encoding="utf-8"))
         assert summary["focus_size_m"] == 17.0
+        assert summary["focus_radius_m"] == 17.0
+        assert summary["focus_diameter_m"] == 34.0
+        assert summary["focus_size_m_legacy_meaning"] == "radius_m"
+        assert summary["focus_mask_contract"] == "circular_mask_radius_m_centered_on_authoritative_grid"
         assert summary["mask_pixel_count"] == int(mask.sum())
         assert "coordinates" not in json.dumps(summary).casefold()
         assert "geometry" not in json.dumps(summary).casefold()
