@@ -18,15 +18,6 @@ from app.pipeline.stages.thermal import RAW_ST_B10_NPY_NAME, build_notebook_l9_s
 from app.services.ee_session import initialize_ee_session
 
 EPS = 1e-10
-ST_B10_SCALE = np.float32(0.00341802)
-ST_B10_OFFSET_K = np.float32(149.0)
-REPORT_MASS_CORRECTED_FORMULA = "B12 * (0.00341802 * ST_B10 + 149.0) / 1000"
-REPORT_MASS_LEGACY_FORMULA = "B12 * ST_B10 / 1000"
-REPORT_MASS_CORRECTION_REASON = (
-    "Private-local corrected default scales Landsat Collection 2 ST_B10 to Kelvin "
-    "before REPORT_640 mass calculation; legacy raw-DN notebook formula is kept only "
-    "when an explicit notebook mass fetcher is injected."
-)
 REPORT_640_MANIFEST_NAME = "REPORT_640_manifest.json"
 REPORT_640_NPY_OUTPUT_DIR = "NPY_RADAR_BANDS"
 NOTEBOOK_REPORT_S2_START = "2022-01-01"
@@ -72,26 +63,17 @@ def compute_report_pottery_report(s2_cube: np.ndarray, *, nodata: float) -> np.n
     return result
 
 
-def scale_st_b10_to_kelvin(st_b10_raw: np.ndarray, *, nodata: float) -> np.ndarray:
-    """Apply Landsat Collection 2 ST_B10 scale factors to raw DN values."""
-    valid = (st_b10_raw != nodata) & np.isfinite(st_b10_raw)
-    result = np.full(st_b10_raw.shape, nodata, dtype=np.float32)
-    result[valid] = (st_b10_raw[valid].astype(np.float32) * ST_B10_SCALE + ST_B10_OFFSET_K).astype(np.float32)
-    return result
-
-
 def compute_report_mass_report(s2_cube: np.ndarray, st_b10_raw: np.ndarray, *, nodata: float) -> np.ndarray:
-    """B12 * scaled ST_B10 Kelvin / 1000 for the private-local corrected default."""
+    """B12 * ST_B10 / 1000."""
     b12 = s2_cube[:, :, _S2_BAND_INDEX["B12"]]
-    st_b10_kelvin = scale_st_b10_to_kelvin(st_b10_raw, nodata=nodata)
     valid = (
         (b12 != nodata)
-        & (st_b10_kelvin != nodata)
+        & (st_b10_raw != nodata)
         & np.isfinite(b12)
-        & np.isfinite(st_b10_kelvin)
+        & np.isfinite(st_b10_raw)
     )
     result = np.full(b12.shape, nodata, dtype=np.float32)
-    result[valid] = ((b12[valid] * st_b10_kelvin[valid]) / np.float32(1000.0)).astype(np.float32)
+    result[valid] = ((b12[valid] * st_b10_raw[valid]) / np.float32(1000.0)).astype(np.float32)
     return result
 
 
@@ -257,10 +239,6 @@ def write_report_640_manifest(
             "formula": item["formula"],
             "source_equivalent": item.get("source_equivalent"),
             "source_provenance": item.get("source_provenance"),
-            "source_family": item.get("source_family"),
-            "formula_version": item.get("formula_version"),
-            "parity_category": item.get("parity_category"),
-            "correction_reason": item.get("correction_reason"),
         }
     for item in not_implemented:
         reports[item["filename"]] = {
@@ -281,8 +259,7 @@ class Report640Stage(Stage):
     """Compute REPORT_640 rasters from persisted pipeline outputs."""
 
     name = "report_640"
-    parity_category = ParityCategory.PARITY_CORRECTS
-    parity_reason = REPORT_MASS_CORRECTION_REASON
+    parity_category = ParityCategory.PARITY_REPRODUCES
 
     def __init__(
         self,
@@ -336,24 +313,11 @@ class Report640Stage(Stage):
             "source_provenance": "notebook_report_s2" if self.pottery_fetcher is not None else "s2_raw",
         }
 
-        if self.mass_fetcher is not None:
-            mass = self.mass_fetcher(grid_spec=self.grid_spec)
-            mass_formula = REPORT_MASS_LEGACY_FORMULA
-            mass_source_equivalent = "notebook_report_s2 + notebook_l9_st_b10"
-            mass_source_provenance = "notebook_report_s2_l9_st_b10"
-            mass_source_family = "notebook_legacy_fetcher"
-            mass_formula_version = "legacy_raw_st_b10_notebook"
-            mass_parity_category = ParityCategory.PARITY_REPRODUCES.value
-            mass_correction_reason = None
-        else:
-            mass = compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
-            mass_formula = REPORT_MASS_CORRECTED_FORMULA
-            mass_source_equivalent = f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME} scaled_to_kelvin"
-            mass_source_provenance = "s2_raw_st_b10_kelvin_scaled"
-            mass_source_family = "private_local_corrected"
-            mass_formula_version = "st_b10_kelvin_scaled_v1"
-            mass_parity_category = ParityCategory.PARITY_CORRECTS.value
-            mass_correction_reason = REPORT_MASS_CORRECTION_REASON
+        mass = (
+            self.mass_fetcher(grid_spec=self.grid_spec)
+            if self.mass_fetcher is not None
+            else compute_report_mass_report(s2_cube, st_b10_raw, nodata=nodata)
+        )
         if mass.shape[:2] != expected_shape:
             raise StageError(f"REPORT_640_Mass_Report shape {mass.shape[:2]} != expected {expected_shape}")
         tif_path = write_report_640_output(context.run_dir, self.grid_spec, REPORT_MASS_NAME, mass)
@@ -369,23 +333,19 @@ class Report640Stage(Stage):
         implemented_specs.append(
             {
                 "filename": f"{REPORT_MASS_NAME}.tif",
-                "formula": mass_formula,
-                "source_equivalent": mass_source_equivalent,
-                "source_provenance": mass_source_provenance,
-                "source_family": mass_source_family,
-                "formula_version": mass_formula_version,
-                "parity_category": mass_parity_category,
-                "correction_reason": mass_correction_reason,
+                "formula": "B12 * ST_B10 / 1000",
+                "source_equivalent": (
+                    "notebook_report_s2 + notebook_l9_st_b10"
+                    if self.mass_fetcher is not None
+                    else f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}"
+                ),
+                "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
             }
         )
         layer_metadata[REPORT_MASS_NAME] = {
             "status": "implemented",
-            "formula": mass_formula,
-            "source_provenance": mass_source_provenance,
-            "source_family": mass_source_family,
-            "formula_version": mass_formula_version,
-            "parity_category": mass_parity_category,
-            "correction_reason": mass_correction_reason,
+            "formula": "B12 * ST_B10 / 1000",
+            "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
         }
 
         zero_point = compute_report_zero_point_targets(s2_cube, nodata=nodata)
