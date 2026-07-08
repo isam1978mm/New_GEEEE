@@ -234,12 +234,24 @@ def write_report_640_manifest(
     manifest_path = qa_dir / REPORT_640_MANIFEST_NAME
     reports: dict[str, dict] = {}
     for item in implemented:
-        reports[item["filename"]] = {
+        entry = {
             "status": "implemented",
             "formula": item["formula"],
             "source_equivalent": item.get("source_equivalent"),
             "source_provenance": item.get("source_provenance"),
         }
+        for optional_key in (
+            "source_family",
+            "formula_version",
+            "parity_category",
+            "correction_reason",
+            "thermal_input_units",
+            "thermal_scaling_applied",
+            "output_semantics",
+        ):
+            if optional_key in item:
+                entry[optional_key] = item[optional_key]
+        reports[item["filename"]] = entry
     for item in not_implemented:
         reports[item["filename"]] = {
             "status": "not_implemented_no_source_equivalent",
@@ -340,12 +352,26 @@ class Report640Stage(Stage):
                     else f"{S2_RAW_CUBE_NPY_NAME} + {RAW_ST_B10_NPY_NAME}"
                 ),
                 "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
+                "source_family": "notebook_report_640",
+                "formula_version": "notebook_raw_st_b10_v1",
+                "parity_category": "PARITY_REPRODUCES",
+                "correction_reason": None,
+                "thermal_input_units": "raw_landsat_st_b10_dn",
+                "thermal_scaling_applied": False,
+                "output_semantics": "notebook_parity_mass_shadow_not_kelvin_thermal_anomaly",
             }
         )
         layer_metadata[REPORT_MASS_NAME] = {
             "status": "implemented",
             "formula": "B12 * ST_B10 / 1000",
             "source_provenance": "notebook_report_s2_l9_st_b10" if self.mass_fetcher is not None else "s2_raw_st_b10_raw",
+            "source_family": "notebook_report_640",
+            "formula_version": "notebook_raw_st_b10_v1",
+            "parity_category": "PARITY_REPRODUCES",
+            "correction_reason": None,
+            "thermal_input_units": "raw_landsat_st_b10_dn",
+            "thermal_scaling_applied": False,
+            "output_semantics": "notebook_parity_mass_shadow_not_kelvin_thermal_anomaly",
         }
 
         zero_point = compute_report_zero_point_targets(s2_cube, nodata=nodata)

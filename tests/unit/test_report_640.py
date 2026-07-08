@@ -64,6 +64,9 @@ def test_report_640_stage_emits_three_implemented_reports() -> None:
         mass_detail = metadata["report_details"]["REPORT_640_Mass_Report"]
         assert mass_detail["status"] == "implemented"
         assert mass_detail["formula"] == "B12 * ST_B10 / 1000"
+        assert mass_detail["thermal_input_units"] == "raw_landsat_st_b10_dn"
+        assert mass_detail["thermal_scaling_applied"] is False
+        assert mass_detail["parity_category"] == "PARITY_REPRODUCES"
 
 
 def test_report_640_manifest_documents_three_implemented_reports() -> None:
@@ -97,6 +100,9 @@ def test_report_640_manifest_documents_three_implemented_reports() -> None:
         mass_report = manifest["reports"]["REPORT_640_Mass_Report.tif"]
         assert mass_report["status"] == "implemented"
         assert mass_report["formula"] == "B12 * ST_B10 / 1000"
+        assert mass_report["thermal_input_units"] == "raw_landsat_st_b10_dn"
+        assert mass_report["thermal_scaling_applied"] is False
+        assert mass_report["parity_category"] == "PARITY_REPRODUCES"
         assert "s2_raw_cube.npy" in mass_report["source_equivalent"]
         assert "st_b10_raw.npy" in mass_report["source_equivalent"]
 
