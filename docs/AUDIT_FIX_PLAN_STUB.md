@@ -52,10 +52,10 @@ For each main item:
 
 ### Item 2 — No Misleading Success
 
-- [ ] 2.1 Full-job report: remove unconditional coverage.
-- [ ] 2.2 Full-job report: scan actual run directory.
-- [ ] 2.3 Full-job report: report present and missing files per output family.
-- [ ] 2.4 Full-job report: add missing-output tests.
+- [x] 2.1 Full-job report: remove unconditional coverage.
+- [x] 2.2 Full-job report: scan actual run directory.
+- [x] 2.3 Full-job report: report present and missing files per output family.
+- [x] 2.4 Full-job report: add missing-output tests.
 - [ ] 2.5 Export package: `package_ready=true` only after OK validation.
 - [ ] 2.6 Export package: pair ZIP and validation report by one generation token.
 - [ ] 2.7 Export package: reject mismatched ZIP/report pairs.
