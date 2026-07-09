@@ -1,8 +1,12 @@
-# V6-APP-FLOW-1 Backend Flow
+# V6-APP-FLOW-1 Backend Flow For Paid Imagery Export Package
 
 ## Current Status
 
-V6-APP-FLOW-1 adds the backend generate/review/retrieve flow for the real V6 package path.
+`V6` is legacy/internal naming for the app's Paid Imagery Export Package.
+
+This feature remains in scope. It generates an offline export package for manual operator use outside the app. It is not a live ordering service or external provider integration.
+
+V6-APP-FLOW-1 adds the backend generate/review/retrieve flow for the package path.
 
 Implemented now:
 
@@ -17,7 +21,7 @@ Implemented now:
 - file response for the ZIP package only after authorization;
 - unit tests.
 
-The flow is backend-only. Frontend UI work is still not done.
+The backend flow is implemented. Frontend UI was added later and is documented in `docs/V6_APP_UI_1.md`.
 
 ## Added Files
 
@@ -52,20 +56,23 @@ The package retrieval endpoint returns the ZIP file only after the same authoriz
 - Denied requests do not read package inputs.
 - JSON responses do not include rows, spatial payloads, hashes, or filesystem paths.
 - Generated package files remain filesystem artifacts.
-- Frontend UI is not added in this step.
+- Provider request submission remains manual and outside the app.
 
-## Still Not Done
+## Current Follow-Up Work
 
-- frontend generate button;
-- frontend review panel;
-- frontend package action;
-- end-to-end UI tests.
-
-## Next Step
+The audit fixing plan tracks the remaining backend correctness work:
 
 ```text
-V6-APP-UI-1: add frontend generate/review/retrieve UI wired to the backend flow.
+docs/AUDIT_FIX_PLAN_STUB.md
 ```
+
+Relevant checklist items:
+
+- `package_ready=true` only after OK validation;
+- pair ZIP and validation report by one generation token;
+- reject mismatched ZIP/report pairs;
+- keep review responses metadata-only;
+- add provenance labels in generated package data.
 
 ## Checklist
 
@@ -79,7 +86,6 @@ V6-APP-UI-1: add frontend generate/review/retrieve UI wired to the backend flow.
 - [x] Mount routes through existing operator router.
 - [x] Keep JSON responses metadata-only.
 - [x] Add unit tests.
-- [ ] Add frontend generate action.
-- [ ] Add frontend review panel.
-- [ ] Add frontend package action.
-- [ ] Add end-to-end UI tests.
+- [ ] Gate package readiness on OK validation.
+- [ ] Pair ZIP and validation report by generation.
+- [ ] Reject mismatched package generations.
