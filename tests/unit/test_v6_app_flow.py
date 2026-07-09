@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from app.config import Settings
@@ -84,6 +85,10 @@ def _touch_input_file(settings: Settings, run_id: str = "run-1") -> None:
     input_file.write_text("{}", encoding="utf-8")
 
 
+def _package_dir(settings: Settings, run_id: str = "run-1") -> Path:
+    return settings.data_dir / "runs" / run_id / V6_PRIVATE_PACKAGE_RELATIVE_DIR
+
+
 def test_generate_private_v6_package_writes_package_and_returns_safe_metadata(tmp_path: Path, monkeypatch) -> None:
     settings = _settings(tmp_path)
     _touch_input_file(settings)
@@ -95,8 +100,9 @@ def test_generate_private_v6_package_writes_package_and_returns_safe_metadata(tm
     assert result.body["outcome"] == "generated"
     assert result.body["package_ready"] is True
     assert result.body["payload_count"] == 12
+    assert result.body["generation_token"] == "20260103T010203Z"
     verify_redacted(result.body)
-    output_dir = settings.data_dir / "runs" / "run-1" / V6_PRIVATE_PACKAGE_RELATIVE_DIR
+    output_dir = _package_dir(settings)
     assert (output_dir / "V6_REAL_GENERATED_20260103T010203Z.zip").is_file()
 
 
@@ -111,8 +117,72 @@ def test_review_private_v6_package_returns_safe_metadata_after_generate(tmp_path
     assert result.status_code == 200
     assert result.body["outcome"] == "available"
     assert result.body["package_ready"] is True
+    assert result.body["package_pair_verified"] is True
+    assert result.body["generation_token"] == "20260103T010203Z"
     assert result.body["issue_count"] == 0
     verify_redacted(result.body)
+
+
+def test_review_private_v6_package_blocks_invalid_validation_status(tmp_path: Path, monkeypatch) -> None:
+    settings = _settings(tmp_path)
+    _touch_input_file(settings)
+    monkeypatch.setattr("app.services.v6_app_flow.load_v6_real_package_inputs", lambda _: _package_inputs())
+    generate_private_v6_package(settings=settings, run_id="run-1", access_context=_access())
+
+    report_path = _package_dir(settings) / "V6_REAL_GENERATED_validation_20260103T010203Z.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["validation_status"] = "invalid"
+    report["issues"] = ["forced-invalid"]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    review = review_private_v6_package(settings=settings, run_id="run-1", access_context=_access())
+    download = resolve_private_v6_package_download(settings=settings, run_id="run-1", access_context=_access())
+
+    assert review.status_code == 200
+    assert review.body["outcome"] == "not_available"
+    assert review.body["package_ready"] is False
+    assert review.body["package_pair_verified"] is False
+    assert review.body["issue_count"] == 1
+    assert download.file_path is None
+    assert download.body["package_ready"] is False
+    verify_redacted(review.body)
+
+
+def test_review_private_v6_package_rejects_mismatched_zip_report_pair(tmp_path: Path, monkeypatch) -> None:
+    settings = _settings(tmp_path)
+    _touch_input_file(settings)
+    monkeypatch.setattr("app.services.v6_app_flow.load_v6_real_package_inputs", lambda _: _package_inputs())
+    generate_private_v6_package(settings=settings, run_id="run-1", access_context=_access())
+
+    package_dir = _package_dir(settings)
+    original_zip = package_dir / "V6_REAL_GENERATED_20260103T010203Z.zip"
+    mismatched_zip = package_dir / "V6_REAL_GENERATED_20260104T010203Z.zip"
+    mismatched_report = package_dir / "V6_REAL_GENERATED_validation_20260104T010203Z.json"
+    mismatched_zip.write_bytes(original_zip.read_bytes())
+    mismatched_report.write_text(
+        json.dumps(
+            {
+                "validation_status": "generated_synthetic_package_verified",
+                "zip_filename": "V6_REAL_GENERATED_20260103T010203Z.zip",
+                "payload_count": 12,
+                "zip_entry_count": 13,
+                "category_counts": {},
+                "issues": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    review = review_private_v6_package(settings=settings, run_id="run-1", access_context=_access())
+    download = resolve_private_v6_package_download(settings=settings, run_id="run-1", access_context=_access())
+
+    assert review.body["generation_token"] == "20260104T010203Z"
+    assert review.body["package_ready"] is False
+    assert review.body["package_pair_verified"] is False
+    assert review.body["zip_filename"] == "V6_REAL_GENERATED_20260104T010203Z.zip"
+    assert download.file_path is None
+    assert download.body["package_ready"] is False
+    verify_redacted(review.body)
 
 
 def test_resolve_private_v6_package_download_returns_file_only_after_generate(tmp_path: Path, monkeypatch) -> None:
@@ -124,6 +194,8 @@ def test_resolve_private_v6_package_download_returns_file_only_after_generate(tm
     result = resolve_private_v6_package_download(settings=settings, run_id="run-1", access_context=_access())
 
     assert result.status_code == 200
+    assert result.body["package_ready"] is True
+    assert result.body["package_pair_verified"] is True
     assert result.file_path is not None
     assert result.file_path.is_file()
     assert result.file_name == "V6_REAL_GENERATED_20260103T010203Z.zip"
@@ -138,7 +210,7 @@ def test_v6_package_flow_is_default_off_and_does_not_create_output(tmp_path: Pat
     assert result.status_code == 403
     assert result.body["outcome"] == "denied"
     verify_redacted(result.body)
-    output_dir = settings.data_dir / "runs" / "run-1" / V6_PRIVATE_PACKAGE_RELATIVE_DIR
+    output_dir = _package_dir(settings)
     assert not output_dir.exists()
 
 
