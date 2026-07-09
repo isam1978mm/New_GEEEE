@@ -282,11 +282,12 @@ def build_full_job_local_output_comparison_report(run_dir: Path | None = None) -
     }
 
 
-def write_full_job_local_output_comparison_report(output_dir: Path) -> Path:
+def write_full_job_local_output_comparison_report(output_dir: Path, *, run_dir: Path | None = None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
+    scan_dir = run_dir if run_dir is not None else output_dir
     report_path = output_dir / FULL_JOB_LOCAL_OUTPUT_REPORT_NAME
     report_path.write_text(
-        json.dumps(build_full_job_local_output_comparison_report(output_dir), indent=2, sort_keys=True),
+        json.dumps(build_full_job_local_output_comparison_report(scan_dir), indent=2, sort_keys=True),
         encoding="utf-8",
     )
     return report_path
