@@ -56,13 +56,13 @@ For each main item:
 - [x] 2.2 Full-job report: scan actual run directory.
 - [x] 2.3 Full-job report: report present and missing files per output family.
 - [x] 2.4 Full-job report: add missing-output tests.
-- [ ] 2.5 Export package: `package_ready=true` only after OK validation.
-- [ ] 2.6 Export package: pair ZIP and validation report by one generation token.
-- [ ] 2.7 Export package: reject mismatched ZIP/report pairs.
-- [ ] 2.8 Export package: disable retrieve action when validation is not OK.
-- [ ] 2.9 Export package: keep UI/review responses metadata-only.
-- [ ] 2.10 Manifest/history: distinguish missing files from corrupt/unreadable files.
-- [ ] 2.11 Manifest/history: surface read errors instead of silently returning clean empty state.
+- [x] 2.5 Export package: `package_ready=true` only after OK validation.
+- [x] 2.6 Export package: pair ZIP and validation report by one generation token.
+- [x] 2.7 Export package: reject mismatched ZIP/report pairs.
+- [x] 2.8 Export package: disable retrieve action when validation is not OK.
+- [x] 2.9 Export package: keep UI/review responses metadata-only.
+- [x] 2.10 Manifest/history: distinguish missing files from corrupt/unreadable files.
+- [x] 2.11 Manifest/history: surface read errors instead of silently returning clean empty state.
 
 ### Item 3 — Run Reliability
 
