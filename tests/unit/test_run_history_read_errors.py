@@ -17,7 +17,7 @@ def test_read_run_history_distinguishes_missing_from_corrupt_history(tmp_path: P
     assert read_run_history_events(settings, run_id) == []
 
     history_path = tmp_path / "runs" / run_id / RUN_STATUS_HISTORY_NAME
-    history_path.parent.mkdir(parents=True)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
     history_path.write_text("{not-json", encoding="utf-8")
 
     events = read_run_history_events(settings, run_id)
@@ -32,7 +32,7 @@ def test_append_run_event_does_not_persist_synthetic_history_read_error(tmp_path
     settings = _settings(tmp_path)
     run_id = "run-1"
     history_path = tmp_path / "runs" / run_id / RUN_STATUS_HISTORY_NAME
-    history_path.parent.mkdir(parents=True)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
     history_path.write_text("{not-json", encoding="utf-8")
 
     append_run_event(settings, run_id, "run_started")
