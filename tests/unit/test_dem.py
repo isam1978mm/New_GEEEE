@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from app.db.models.enums import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import ParityCategory, StageContext
 from app.pipeline.stages.dem import (
     DEM_TILE_SIZE,
@@ -59,6 +60,16 @@ def test_build_dem_array_is_deterministic_and_tile_assembled() -> None:
     assert float(first[319, 319]) == 1375.25
     assert float(first[320, 320]) == 1376.0
     assert float(first[-1, -1]) == 1615.25
+
+
+def test_build_dem_array_rejects_all_nodata_source() -> None:
+    grid_spec = build_run_grid(35.59499, 36.12694)
+
+    def all_nodata_tile(**kwargs):
+        return np.full((kwargs["size"], kwargs["size"]), grid_spec.nodata, dtype=np.float32)
+
+    with pytest.raises(StageError, match="insufficient valid data"):
+        build_dem_array(grid_spec, tile_fetcher=all_nodata_tile)
 
 
 def test_create_ee_dem_tile_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -139,6 +150,7 @@ def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
         }
         assert result.metadata["tile_size"] == DEM_TILE_SIZE
         assert result.metadata["tile_count"] == 4
+        assert result.metadata["dem_valid_fraction"] == 1.0
 
         tif_path = run_dir / "dem.tif"
         npy_path = run_dir / "dem.npy"
@@ -165,6 +177,7 @@ def test_dem_stage_writes_classified_grid_aligned_outputs() -> None:
         assert audit_summary["stage"] == "dem"
         assert audit_summary["grid_locked"] is True
         assert audit_summary["tile_count"] == 4
+        assert audit_summary["valid_fraction"] == 1.0
 
 
 def _settings(run_dir: Path):
