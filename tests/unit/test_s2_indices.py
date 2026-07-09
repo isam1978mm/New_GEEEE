@@ -11,6 +11,7 @@ import pytest
 
 import app.pipeline.stages.s2_indices as s2_indices_module
 from app.db.models.enums import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import build_run_grid
@@ -201,6 +202,23 @@ def test_create_ee_s2_cube_fetcher_uses_sample_rectangle(monkeypatch: pytest.Mon
     assert len(rectangle_calls) == 4
 
 
+def test_s2_indices_stage_rejects_all_nodata_source_cube() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+
+        def all_nodata_s2_cube_fetcher(*, grid_spec):
+            return np.full(
+                (grid_spec.size, grid_spec.size, len(S2_SOURCE_BANDS)),
+                grid_spec.nodata,
+                dtype=np.float32,
+            )
+
+        with pytest.raises(StageError, match="insufficient valid data"):
+            asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=all_nodata_s2_cube_fetcher).run(context))
+
+
 def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
@@ -240,6 +258,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
             assert artifact_classes[name] == ArtifactClass.FILESYSTEM_ONLY
         assert all(artifact.http_servable is False for artifact in result.artifacts if artifact.name.startswith("s2_") and artifact.name not in INDEX_NAMES)
         assert result.metadata["band_names"] == list(INDEX_NAMES)
+        assert result.metadata["source_valid_fraction"] == 1.0
         assert result.metadata["mask_names"] == ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"]
         assert result.metadata["aix_extra_tensor_stack"] == AIX_EXTRA_TENSORS_STACK_NPY
         assert result.metadata["aix_extra_tensor_bands"] == list(AIX_EXTRA_TENSOR_BANDS)
@@ -330,6 +349,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
 
         summary = json.loads((run_dir / "QA" / "stacks" / "s2_indices_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "s2_indices"
+        assert summary["source_valid_fraction"] == 1.0
         assert summary["index_bands"] == list(INDEX_NAMES)
         assert summary["source_bands"] == list(S2_SOURCE_BANDS)
 

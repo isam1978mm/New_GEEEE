@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 
 from app.db.models.enums import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline.stages.dem import DEM_TILE_SIZE, raster_sidecar_path, write_georeferenced_raster, write_raster_sidecar
@@ -20,6 +21,7 @@ DEFAULT_END = "2026-02-28"
 DEFAULT_S2_CLOUD_MAX = 3
 FUSION_REPORT_CLOUD_MAX = 10
 S2_SR_REFLECTANCE_SCALE = 0.0001
+MIN_S2_VALID_FRACTION = 0.001
 S2_SOURCE_BANDS = ("B2", "B3", "B4", "B8", "B11", "B12", "B1")
 INDEX_NAMES = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 S2_RAW_CUBE_NPY_NAME = "s2_raw_cube.npy"
@@ -765,6 +767,30 @@ def _finite_or_nodata(array: np.ndarray, *, nodata: float) -> np.ndarray:
     return np.where(np.isfinite(array), array, nodata).astype(np.float32)
 
 
+def _valid_fraction(array: np.ndarray, *, nodata: float) -> float:
+    valid = np.isfinite(array) & (array != nodata)
+    return float(valid.mean())
+
+
+def validate_source_cube(
+    cube: np.ndarray,
+    grid_spec: GridSpec,
+    *,
+    source_name: str,
+    expected_bands: int,
+) -> float:
+    expected_shape = (grid_spec.size, grid_spec.size, expected_bands)
+    if cube.shape != expected_shape:
+        raise StageError(f"{source_name} shape {cube.shape} does not match expected {expected_shape}.")
+    fraction = _valid_fraction(cube, nodata=grid_spec.nodata)
+    if fraction < MIN_S2_VALID_FRACTION:
+        raise StageError(
+            f"{source_name} produced insufficient valid data: "
+            f"valid_fraction={fraction:.6f}, minimum={MIN_S2_VALID_FRACTION:.6f}."
+        )
+    return fraction
+
+
 def _build_aix_extra_tensor_alias() -> dict[str, object]:
     return {
         "filename": AIX_EXTRA_TENSORS_STACK_NPY,
@@ -1077,7 +1103,16 @@ def write_s2_mask_outputs(
     }
 
 
-def write_s2_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: float, start_date: str, end_date: str, cloud_max: int) -> Path:
+def write_s2_summary(
+    run_dir: Path,
+    outputs: dict[str, np.ndarray],
+    *,
+    nodata: float,
+    start_date: str,
+    end_date: str,
+    cloud_max: int,
+    source_valid_fraction: float,
+) -> Path:
     qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "s2_indices_summary.json"
@@ -1099,6 +1134,8 @@ def write_s2_summary(run_dir: Path, outputs: dict[str, np.ndarray], *, nodata: f
                 "start_date": start_date,
                 "end_date": end_date,
                 "cloud_max": cloud_max,
+                "minimum_valid_fraction": MIN_S2_VALID_FRACTION,
+                "source_valid_fraction": round(float(source_valid_fraction), 6),
                 "source_bands": list(S2_SOURCE_BANDS),
                 "index_bands": list(INDEX_NAMES),
                 "index_summaries": index_summaries,
@@ -1148,6 +1185,12 @@ class S2IndicesStage(Stage):
             cloud_max=self.cloud_max,
         )
         cube = fetcher(grid_spec=self.grid_spec)
+        source_valid_fraction = validate_source_cube(
+            cube,
+            self.grid_spec,
+            source_name="S2 source cube",
+            expected_bands=len(S2_SOURCE_BANDS),
+        )
         outputs = compute_s2_indices(cube, nodata=self.grid_spec.nodata)
         masks = compute_s2_dem_matched_masks(cube, outputs, nodata=self.grid_spec.nodata)
         written_paths = write_s2_outputs(context.run_dir, self.grid_spec, outputs)
@@ -1166,6 +1209,7 @@ class S2IndicesStage(Stage):
             start_date=self.start_date,
             end_date=self.end_date,
             cloud_max=self.cloud_max,
+            source_valid_fraction=source_valid_fraction,
         )
         # Persist raw S2 band cube for downstream secret layers stage.
         raw_cube_path = context.run_dir / S2_RAW_CUBE_NPY_NAME
@@ -1179,6 +1223,12 @@ class S2IndicesStage(Stage):
         else:
             aix_fetcher = create_ee_aix_extra_tensor_fetcher(context.settings, self.grid_spec)
         aix_cube = aix_fetcher(grid_spec=self.grid_spec)
+        validate_source_cube(
+            aix_cube,
+            self.grid_spec,
+            source_name="AIX extra tensor cube",
+            expected_bands=len(AIX_EXTRA_TENSOR_BANDS),
+        )
         aix_extra_tensor_outputs = write_aix_extra_tensor_outputs(context.run_dir, self.grid_spec, aix_cube)
 
         if self.aix_dem_matched_mask_fetcher is not None:
@@ -1188,6 +1238,12 @@ class S2IndicesStage(Stage):
         else:
             aix_mask_fetcher = create_ee_aix_dem_matched_mask_fetcher(context.settings, self.grid_spec)
         aix_dem_matched_mask_cube = aix_mask_fetcher(grid_spec=self.grid_spec)
+        validate_source_cube(
+            aix_dem_matched_mask_cube,
+            self.grid_spec,
+            source_name="AIX DEM matched mask cube",
+            expected_bands=len(AIX_DEM_MATCHED_MASK_BANDS),
+        )
         aix_dem_matched_mask_outputs = write_aix_dem_matched_mask_outputs(context.run_dir, self.grid_spec, aix_dem_matched_mask_cube)
 
         if self.fusion_intelligence_fetcher is not None:
@@ -1197,6 +1253,12 @@ class S2IndicesStage(Stage):
         else:
             fusion_fetcher = create_ee_fusion_intelligence_fetcher(context.settings, self.grid_spec)
         fusion_intelligence_cube = fusion_fetcher(grid_spec=self.grid_spec)
+        validate_source_cube(
+            fusion_intelligence_cube,
+            self.grid_spec,
+            source_name="Fusion intelligence cube",
+            expected_bands=len(FUSION_INTELLIGENCE_BANDS),
+        )
         fusion_intelligence_outputs = write_fusion_intelligence_outputs(context.run_dir, self.grid_spec, fusion_intelligence_cube)
 
         if self.tesla_atomic_inference_fetcher is not None:
@@ -1206,6 +1268,12 @@ class S2IndicesStage(Stage):
         else:
             tesla_fetcher = create_ee_tesla_atomic_inference_fetcher(context.settings, self.grid_spec)
         tesla_atomic_inference_cube = tesla_fetcher(grid_spec=self.grid_spec)
+        validate_source_cube(
+            tesla_atomic_inference_cube,
+            self.grid_spec,
+            source_name="Tesla atomic inference cube",
+            expected_bands=len(TESLA_ATOMIC_INFERENCE_BANDS),
+        )
         tesla_atomic_inference_outputs = write_tesla_atomic_inference_outputs(
             context.run_dir, self.grid_spec, tesla_atomic_inference_cube
         )
@@ -1307,6 +1375,7 @@ class S2IndicesStage(Stage):
                 "band_names": list(INDEX_NAMES),
                 "source_bands": list(S2_SOURCE_BANDS),
                 "shape": [self.grid_spec.size, self.grid_spec.size],
+                "source_valid_fraction": round(float(source_valid_fraction), 6),
                 "mask_names": ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"],
                 "aix_extra_tensor_stack": AIX_EXTRA_TENSORS_STACK_NPY,
                 "aix_extra_tensor_bands": list(AIX_EXTRA_TENSOR_BANDS),
