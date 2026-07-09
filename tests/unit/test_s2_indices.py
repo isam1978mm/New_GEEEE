@@ -135,6 +135,14 @@ def test_build_s2_composite_uses_notebook_filters(monkeypatch: pytest.MonkeyPatc
     assert ("median", None) in calls
 
 
+def test_fusion_intelligence_s2_uses_cloud_filter_and_reflectance_scaled_carbon_mask() -> None:
+    source = inspect.getsource(s2_indices_module.build_fusion_intelligence_image)
+
+    assert '.filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", FUSION_REPORT_CLOUD_MAX))' in source
+    assert '.multiply(S2_SR_REFLECTANCE_SCALE)' in source
+    assert 'mask_carbon_age_indicator.gt(0.4)' in source
+
+
 def test_landsat_st_b10_aix_and_fusion_builders_apply_qa_mask_before_median() -> None:
     helper_source = inspect.getsource(s2_indices_module.prep_landsat_st_b10_masked)
 

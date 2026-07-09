@@ -18,6 +18,8 @@ from app.services.ee_session import initialize_ee_session
 DEFAULT_START = "2022-01-01"
 DEFAULT_END = "2026-02-28"
 DEFAULT_S2_CLOUD_MAX = 3
+FUSION_REPORT_CLOUD_MAX = 10
+S2_SR_REFLECTANCE_SCALE = 0.0001
 S2_SOURCE_BANDS = ("B2", "B3", "B4", "B8", "B11", "B12", "B1")
 INDEX_NAMES = ("NDVI", "NDWI", "NDMI", "NBR", "IRONOX", "IRON_SWIR", "BSI")
 S2_RAW_CUBE_NPY_NAME = "s2_raw_cube.npy"
@@ -309,6 +311,7 @@ def build_fusion_intelligence_image(grid_spec: GridSpec):
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         .filterBounds(region)
         .filterDate("2022-01-01", "2026-02-28")
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", FUSION_REPORT_CLOUD_MAX))
         .select(["B1", "B2", "B3", "B4", "B8", "B8A", "B11", "B12"])
         .median()
     )
@@ -329,7 +332,7 @@ def build_fusion_intelligence_image(grid_spec: GridSpec):
 
     tensor_gold_alloy_signal = s2.select("B12").divide(s2.select("B11"))
     tensor_pottery_jars = s2.select("B11").divide(s2.select("B8A"))
-    mask_carbon_age_indicator = s2.select("B12").subtract(s2.select("B8"))
+    mask_carbon_age_indicator = s2.select("B12").subtract(s2.select("B8")).multiply(S2_SR_REFLECTANCE_SCALE)
     mask_quartz_basalt = s2.select("B12").divide(s2.select("B11"))
     tensor_mass_volume_shadow = s2.select("B12").multiply(l9.select("ST_B10")).divide(1000)
 
