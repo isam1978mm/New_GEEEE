@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 from typing import Any, Mapping
 
 from app.config import Settings
@@ -17,6 +18,7 @@ from app.pipeline.parity.operator_overlay_access_foundation import (
 )
 from app.services.operator_run_authorization import resolve_run_authorization
 from app.services.storage import get_run_dir
+from app.services.v6_generator_package import GENERATOR_STATUS_VERIFIED
 from app.services.v6_package_observability import V6PackageFlowObservation, record_v6_package_flow_observation
 from app.services.v6_real_gee_runtime import validate_v6_aoi_bounds
 from app.services.v6_real_package import V6RealPackageInputs, generate_v6_package_from_real_outputs
@@ -26,6 +28,8 @@ from app.services.v6_real_zones import V6RequestZone
 
 V6_PRIVATE_INPUT_RELATIVE_PATH = Path("private") / "v6" / "real_package_inputs.json"
 V6_PRIVATE_PACKAGE_RELATIVE_DIR = Path("private") / "v6" / "generated_package"
+_REAL_ZIP_NAME_RE = re.compile(r"^V6_REAL_GENERATED_(?P<token>\d{8}T\d{6}Z)\.zip$")
+_REAL_VALIDATION_NAME_RE = re.compile(r"^V6_REAL_GENERATED_validation_(?P<token>\d{8}T\d{6}Z)\.json$")
 
 
 @dataclass(frozen=True)
@@ -43,6 +47,16 @@ class V6PrivatePackageAccessContext:
     roles: tuple[str, ...]
     authorized_run_ids: tuple[str, ...]
     request_id: str
+
+
+@dataclass(frozen=True)
+class V6PackagePair:
+    token: str
+    zip_path: Path
+    validation_report_path: Path
+    report: dict[str, Any]
+    is_verified: bool
+    reason: str | None = None
 
 
 def generate_private_v6_package(
@@ -127,9 +141,8 @@ def review_private_v6_package(
             denial_reason=denial_reason,
         )
 
-    report_path = _latest_validation_report_path(settings, run_id)
-    zip_path = _latest_zip_path(settings, run_id)
-    if report_path is None or zip_path is None:
+    pair = _latest_package_pair(settings, run_id)
+    if pair is None:
         return _observe_and_return(
             action="review",
             settings=settings,
@@ -138,43 +151,15 @@ def review_private_v6_package(
             result=_not_available(run_id=run_id, request_id=access_context.request_id),
         )
 
-    try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return _observe_and_return(
-            action="review",
-            settings=settings,
-            run_id=run_id,
-            access_context=access_context,
-            result=V6PrivatePackageFlowResult(
-                status_code=200,
-                body=_operator_body(
-                    outcome="not_available",
-                    run_id=run_id,
-                    request_id=access_context.request_id,
-                    package_ready=False,
-                ),
-            ),
-        )
-
     body = _operator_body(
-        outcome="available",
+        outcome="available" if pair.is_verified else "not_available",
         run_id=run_id,
         request_id=access_context.request_id,
-        package_ready=True,
+        package_ready=pair.is_verified,
     )
-    body.update(
-        {
-            "validation_status": str(report.get("validation_status", "unknown")),
-            "payload_count": int(report.get("payload_count", 0) or 0),
-            "zip_entry_count": int(report.get("zip_entry_count", 0) or 0),
-            "category_counts": dict(report.get("category_counts", {})),
-            "issue_count": len(report.get("issues", []) or []),
-            "warning_count": len(report.get("warnings", []) or []),
-            "zip_filename": zip_path.name,
-            "validation_report_filename": report_path.name,
-        }
-    )
+    body.update(_package_pair_metadata(pair))
+    if not pair.is_verified:
+        body["message"] = "Package ZIP is not available until validation is verified and paired with the same generation token."
     return _observe_and_return(
         action="review",
         settings=settings,
@@ -201,15 +186,25 @@ def resolve_private_v6_package_download(
             denial_reason=denial_reason,
         )
 
-    zip_path = _latest_zip_path(settings, run_id)
-    if zip_path is None:
+    pair = _latest_package_pair(settings, run_id)
+    if pair is None or not pair.is_verified:
+        body = _operator_body(
+            outcome="not_available",
+            run_id=run_id,
+            request_id=access_context.request_id,
+            package_ready=False,
+        )
+        if pair is not None:
+            body.update(_package_pair_metadata(pair))
+            body["message"] = "Package ZIP retrieval is blocked until validation is verified and paired with the same generation token."
         return _observe_and_return(
             action="retrieve",
             settings=settings,
             run_id=run_id,
             access_context=access_context,
-            result=_not_available(run_id=run_id, request_id=access_context.request_id),
+            result=V6PrivatePackageFlowResult(status_code=200, body=body),
         )
+
     return _observe_and_return(
         action="retrieve",
         settings=settings,
@@ -217,14 +212,17 @@ def resolve_private_v6_package_download(
         access_context=access_context,
         result=V6PrivatePackageFlowResult(
             status_code=200,
-            body=_operator_body(
-                outcome="available",
-                run_id=run_id,
-                request_id=access_context.request_id,
-                package_ready=True,
-            ),
-            file_path=zip_path,
-            file_name=zip_path.name,
+            body={
+                **_operator_body(
+                    outcome="available",
+                    run_id=run_id,
+                    request_id=access_context.request_id,
+                    package_ready=True,
+                ),
+                **_package_pair_metadata(pair),
+            },
+            file_path=pair.zip_path,
+            file_name=pair.zip_path.name,
         ),
     )
 
@@ -366,6 +364,7 @@ def _package_result_body(*, outcome: str, run_id: str, request_id: str, result: 
             "zip_filename": Path(result.zip_path).name,
             "inventory_filename": Path(result.inventory_path).name,
             "validation_report_filename": Path(result.validation_report_path).name,
+            "generation_token": _generation_token_from_zip_name(Path(result.zip_path).name),
         }
     )
     return body
@@ -423,24 +422,73 @@ def _private_package_dir(settings: Settings, run_id: str) -> Path:
     return get_run_dir(settings, run_id) / V6_PRIVATE_PACKAGE_RELATIVE_DIR
 
 
-def _latest_validation_report_path(settings: Settings, run_id: str) -> Path | None:
+def _latest_package_pair(settings: Settings, run_id: str) -> V6PackagePair | None:
     output_dir = _private_package_dir(settings, run_id)
     if not output_dir.is_dir():
         return None
-    reports = sorted(output_dir.glob("V6_REAL_GENERATED_validation_*.json"))
-    return reports[-1] if reports else None
 
-
-def _latest_zip_path(settings: Settings, run_id: str) -> Path | None:
-    output_dir = _private_package_dir(settings, run_id)
-    if not output_dir.is_dir():
+    zip_by_token = {
+        token: path
+        for path in sorted(output_dir.glob("V6_REAL_GENERATED_*.zip"))
+        if (token := _generation_token_from_zip_name(path.name)) is not None
+    }
+    report_by_token = {
+        token: path
+        for path in sorted(output_dir.glob("V6_REAL_GENERATED_validation_*.json"))
+        if (token := _generation_token_from_validation_name(path.name)) is not None
+    }
+    shared_tokens = sorted(set(zip_by_token) & set(report_by_token))
+    if not shared_tokens:
         return None
-    zip_paths = sorted(output_dir.glob("V6_REAL_GENERATED_*.zip"))
-    return zip_paths[-1] if zip_paths else None
+
+    token = shared_tokens[-1]
+    zip_path = zip_by_token[token]
+    report_path = report_by_token[token]
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        report = {}
+        return V6PackagePair(token=token, zip_path=zip_path, validation_report_path=report_path, report=report, is_verified=False, reason="validation_report_unreadable")
+
+    expected_zip_name = str(report.get("zip_filename", ""))
+    validation_status = str(report.get("validation_status", "unknown"))
+    issues = report.get("issues", []) or []
+    is_verified = expected_zip_name == zip_path.name and validation_status == GENERATOR_STATUS_VERIFIED and len(issues) == 0
+    reason = None if is_verified else "validation_not_verified_or_zip_mismatch"
+    return V6PackagePair(token=token, zip_path=zip_path, validation_report_path=report_path, report=report, is_verified=is_verified, reason=reason)
+
+
+def _package_pair_metadata(pair: V6PackagePair) -> dict[str, Any]:
+    report = pair.report
+    issues = report.get("issues", []) or []
+    warnings = report.get("warnings", []) or []
+    return {
+        "validation_status": str(report.get("validation_status", "unknown")),
+        "payload_count": int(report.get("payload_count", 0) or 0),
+        "zip_entry_count": int(report.get("zip_entry_count", 0) or 0),
+        "category_counts": dict(report.get("category_counts", {})),
+        "issue_count": len(issues),
+        "warning_count": len(warnings),
+        "zip_filename": pair.zip_path.name,
+        "validation_report_filename": pair.validation_report_path.name,
+        "generation_token": pair.token,
+        "package_pair_verified": pair.is_verified,
+        "package_pair_reason": pair.reason,
+    }
+
+
+def _generation_token_from_zip_name(filename: str) -> str | None:
+    match = _REAL_ZIP_NAME_RE.fullmatch(filename)
+    return match.group("token") if match else None
+
+
+def _generation_token_from_validation_name(filename: str) -> str | None:
+    match = _REAL_VALIDATION_NAME_RE.fullmatch(filename)
+    return match.group("token") if match else None
 
 
 def _required_str(value: object, name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str) or not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} is required")
     return value.strip()
 
