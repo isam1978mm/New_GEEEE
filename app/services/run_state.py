@@ -14,18 +14,18 @@ ACTIVE_RUN_STATUSES = (RunStatus.QUEUED, RunStatus.RUNNING)
 
 async def mark_stale_running_runs(session: AsyncSession) -> int:
     try:
-        result = await session.execute(select(Run).where(Run.status == RunStatus.RUNNING))
+        result = await session.execute(select(Run).where(Run.status.in_(ACTIVE_RUN_STATUSES)))
     except OperationalError as exc:
         if _is_missing_runs_table_error(exc):
             await session.rollback()
             return 0
         raise
 
-    running_runs = result.scalars().all()
-    for run in running_runs:
+    active_runs = result.scalars().all()
+    for run in active_runs:
         run.status = RunStatus.STALE_FAILED
     await session.commit()
-    return len(running_runs)
+    return len(active_runs)
 
 
 async def ensure_single_active_run(session: AsyncSession) -> None:
