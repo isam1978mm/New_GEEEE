@@ -15,6 +15,7 @@ from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.thermal import (
     DEFAULT_END,
     DEFAULT_START,
+    L9_RAW_ST_B10_NPY_NAME,
     NOTEBOOK_L9_ST_B10_COLLECTION,
     NOTEBOOK_THERMAL_END,
     NOTEBOOK_THERMAL_INERTIA_NAME,
@@ -244,6 +245,7 @@ def test_create_ee_lst_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr("app.pipeline.stages.thermal.initialize_ee_session", lambda _settings: init_calls.append("init"))
     monkeypatch.setattr("app.pipeline.stages.thermal.build_landsat_lst_collection", lambda *_args, **_kwargs: FakeMappedCollection("LST_DAY_K"))
     monkeypatch.setattr("app.pipeline.stages.thermal.build_landsat_st_b10_collection", lambda *_args, **_kwargs: FakeMappedCollection("ST_B10_RAW"))
+    monkeypatch.setattr("app.pipeline.stages.thermal.build_notebook_l9_st_b10_image", lambda _grid_spec: FakeImage("ST_B10"))
     monkeypatch.setattr("app.pipeline.stages.thermal.ee.Image", lambda image: image)
     monkeypatch.setattr("app.pipeline.stages.thermal.to_grid_lst", lambda image, _grid_spec: image)
     monkeypatch.setattr("app.pipeline.stages.thermal.finalize_for_sample", lambda image, _grid_spec: image)
@@ -257,7 +259,9 @@ def test_create_ee_lst_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyP
     assert outputs.lst.dtype == np.float32
     assert outputs.st_b10_raw.shape == (640, 640)
     assert outputs.st_b10_raw.dtype == np.float32
-    assert len(rectangle_calls) == 4
+    assert outputs.l9_st_b10_raw.shape == (640, 640)
+    assert outputs.l9_st_b10_raw.dtype == np.float32
+    assert len(rectangle_calls) == 12
 
 
 def test_create_ee_notebook_thermal_inertia_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -304,17 +308,21 @@ def test_thermal_stage_writes_classified_grid_aligned_output() -> None:
 
         result = asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=deterministic_lst_fetcher).run(context))
 
-        assert [artifact.name for artifact in result.artifacts] == ["lst", "thermal_summary", "st_b10_raw"]
+        assert [artifact.name for artifact in result.artifacts] == ["lst", "thermal_summary", "st_b10_raw", "l9_st_b10_raw"]
         assert result.artifacts[0].artifact_class == ArtifactClass.LOCAL_SENSITIVE
         assert result.artifacts[1].artifact_class == ArtifactClass.FILESYSTEM_ONLY
         assert result.artifacts[2].artifact_class == ArtifactClass.FILESYSTEM_ONLY
+        assert result.artifacts[3].artifact_class == ArtifactClass.FILESYSTEM_ONLY
         sidecar = read_manifest(raster_sidecar_path(run_dir / "lst.tif"))
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
         assert np.load(run_dir / RAW_ST_B10_NPY_NAME).shape == (grid_spec.size, grid_spec.size)
+        assert np.load(run_dir / L9_RAW_ST_B10_NPY_NAME).shape == (grid_spec.size, grid_spec.size)
         summary = json.loads((run_dir / "QA" / "stacks" / "thermal_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "thermal"
         assert summary["start_date"] == DEFAULT_START
         assert summary["end_date"] == DEFAULT_END
+        assert summary["l9_st_b10_source_collection"] == NOTEBOOK_L9_ST_B10_COLLECTION
+        assert summary["l9_st_b10_unit"] == "raw_dn"
 
 
 def _settings(run_dir: Path):
