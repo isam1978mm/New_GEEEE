@@ -27,6 +27,7 @@ NOTEBOOK_THERMAL_END = "2026-03-01"
 NOTEBOOK_L9_ST_B10_COLLECTION = "LANDSAT/LC09/C02/T1_L2"
 NOTEBOOK_THERMAL_EPS = 1e-6
 NOTEBOOK_THERMAL_INERTIA_NAME = "AI_READY_640_Secret_Thermal_Inertia"
+MIN_THERMAL_VALID_FRACTION = 0.001
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,6 +240,32 @@ def deterministic_lst_fetcher(*, grid_spec: GridSpec) -> ThermalOutputs:
     return ThermalOutputs(lst=lst, st_b10_raw=st_b10_raw, l9_st_b10_raw=l9_st_b10_raw)
 
 
+def _valid_fraction(array: np.ndarray, *, nodata: float) -> float:
+    valid = np.isfinite(array) & (array != nodata)
+    return float(valid.mean())
+
+
+def validate_thermal_outputs(outputs: ThermalOutputs, grid_spec: GridSpec) -> dict[str, float]:
+    expected_shape = (grid_spec.size, grid_spec.size)
+    arrays = {
+        "lst": outputs.lst,
+        "st_b10_raw": outputs.st_b10_raw,
+        "l9_st_b10_raw": outputs.l9_st_b10_raw,
+    }
+    fractions: dict[str, float] = {}
+    for name, array in arrays.items():
+        if array.shape != expected_shape:
+            raise StageError(f"Thermal {name} output shape {array.shape} does not match expected {expected_shape}.")
+        fraction = _valid_fraction(array, nodata=grid_spec.nodata)
+        fractions[name] = fraction
+        if fraction < MIN_THERMAL_VALID_FRACTION:
+            raise StageError(
+                f"Thermal {name} source produced insufficient valid data: "
+                f"valid_fraction={fraction:.6f}, minimum={MIN_THERMAL_VALID_FRACTION:.6f}."
+            )
+    return fractions
+
+
 def write_lst_output(run_dir: Path, grid_spec: GridSpec, lst: np.ndarray) -> Path:
     tif_path = run_dir / LST_TIF_NAME
     Image.fromarray(lst.astype(np.float32)).save(tif_path, format="TIFF")
@@ -266,11 +293,19 @@ def write_l9_st_b10_raw_output(run_dir: Path, l9_st_b10_raw: np.ndarray) -> Path
     return path
 
 
-def write_thermal_summary(run_dir: Path, lst: np.ndarray, *, nodata: float, start_date: str, end_date: str) -> Path:
+def write_thermal_summary(
+    run_dir: Path,
+    lst: np.ndarray,
+    *,
+    nodata: float,
+    start_date: str,
+    end_date: str,
+    valid_fractions: dict[str, float],
+) -> Path:
     qa_dir = ensure_run_qa_dir(run_dir) / "stacks"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "thermal_summary.json"
-    valid = lst != nodata
+    valid = np.isfinite(lst) & (lst != nodata)
     values = lst[valid]
     summary_path.write_text(
         json.dumps(
@@ -279,9 +314,11 @@ def write_thermal_summary(run_dir: Path, lst: np.ndarray, *, nodata: float, star
                 "start_date": start_date,
                 "end_date": end_date,
                 "valid_fraction": round(float(valid.mean()), 6),
-                "min": round(float(values.min()), 6) if values.size else None,
-                "max": round(float(values.max()), 6) if values.size else None,
-                "mean": round(float(values.mean()), 6) if values.size else None,
+                "minimum_valid_fraction": MIN_THERMAL_VALID_FRACTION,
+                "valid_fractions": {name: round(float(value), 6) for name, value in valid_fractions.items()},
+                "min": round(float(values.min()), 6),
+                "max": round(float(values.max()), 6),
+                "mean": round(float(values.mean()), 6),
                 "raw_st_b10_unit": "raw_dn",
                 "l9_st_b10_source_collection": NOTEBOOK_L9_ST_B10_COLLECTION,
                 "l9_st_b10_unit": "raw_dn",
@@ -319,15 +356,10 @@ class ThermalStage(Stage):
             end_date=self.end_date,
         )
         outputs = fetcher(grid_spec=self.grid_spec)
+        valid_fractions = validate_thermal_outputs(outputs, self.grid_spec)
         lst = outputs.lst
         st_b10_raw = outputs.st_b10_raw
         l9_st_b10_raw = outputs.l9_st_b10_raw
-        if lst.shape != (self.grid_spec.size, self.grid_spec.size):
-            raise StageError("Thermal LST output must align to the authoritative GRID.")
-        if st_b10_raw.shape != (self.grid_spec.size, self.grid_spec.size):
-            raise StageError("Thermal raw ST_B10 output must align to the authoritative GRID.")
-        if l9_st_b10_raw.shape != (self.grid_spec.size, self.grid_spec.size):
-            raise StageError("Thermal L9 raw ST_B10 output must align to the authoritative GRID.")
         tif_path = write_lst_output(context.run_dir, self.grid_spec, lst)
         st_b10_path = write_st_b10_raw_output(context.run_dir, st_b10_raw)
         l9_st_b10_path = write_l9_st_b10_raw_output(context.run_dir, l9_st_b10_raw)
@@ -337,6 +369,7 @@ class ThermalStage(Stage):
             nodata=self.grid_spec.nodata,
             start_date=self.start_date,
             end_date=self.end_date,
+            valid_fractions=valid_fractions,
         )
         artifacts = [
             build_stage_artifact(
@@ -374,6 +407,7 @@ class ThermalStage(Stage):
                 "shape": [self.grid_spec.size, self.grid_spec.size],
                 "start_date": self.start_date,
                 "end_date": self.end_date,
+                "valid_fractions": {name: round(float(value), 6) for name, value in valid_fractions.items()},
                 "st_b10_raw_unit": "raw_dn",
                 "l9_st_b10_raw_source_collection": NOTEBOOK_L9_ST_B10_COLLECTION,
                 "l9_st_b10_raw_unit": "raw_dn",
