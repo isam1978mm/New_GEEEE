@@ -40,7 +40,6 @@ S2_SECRET_LAYER_NAMES = (
     "AI_READY_640_Secret_Chemical_Protector",
 )
 THERMAL_INERTIA_LAYER_NAME = "AI_READY_640_Secret_Thermal_Inertia"
-THERMAL_INERTIA_SOURCE_PROVENANCE = "notebook_l9_st_b10_raw"
 THERMAL_INERTIA_SOURCE_UNIT = "raw_dn"
 
 
@@ -426,7 +425,7 @@ def _source_provenance_for_spec(
     if spec["name"] in S2_SECRET_LAYER_NAMES and (secret_s2_cube_fetcher is not None or secret_s2_layer_fetcher is not None):
         return "notebook_secret_s2"
     if spec["name"] == THERMAL_INERTIA_LAYER_NAME:
-        return "notebook_l9_st_b10" if thermal_inertia_fetcher is not None else THERMAL_INERTIA_SOURCE_PROVENANCE
+        return "notebook_l9_st_b10" if thermal_inertia_fetcher is not None else "thermal"
     return str(spec["source_type"])
 
 
