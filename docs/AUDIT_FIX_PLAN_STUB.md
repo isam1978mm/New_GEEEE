@@ -33,7 +33,7 @@ For each main item:
 - [x] 0.1 Keep the paid images request/export package in scope.
 - [x] 0.2 Explain that `V6` is legacy/internal naming for the export package.
 - [x] 0.3 Update remaining V6 docs to remove deprecated/parked/out-of-scope wording.
-- [ ] 0.4 Record parity corrections in `docs/PARITY_EXCEPTIONS.md`.
+- [x] 0.4 Record parity corrections in `docs/PARITY_EXCEPTIONS.md`.
 - [ ] 0.5 Verify docs diff.
 
 ### Item 1 — P0 Correctness Fixes
