@@ -38,9 +38,9 @@ For each main item:
 
 ### Item 1 — P0 Correctness Fixes
 
-- [ ] 1.1 Thermal inertia: align local and EE-style source/unit basis.
-- [ ] 1.2 Thermal inertia: record source and unit in metadata.
-- [ ] 1.3 Thermal inertia: add regression tests.
+- [x] 1.1 Thermal inertia: align local and EE-style source/unit basis.
+- [x] 1.2 Thermal inertia: record source and unit in metadata.
+- [x] 1.3 Thermal inertia: add regression tests.
 - [ ] 1.4 Fusion target mask: fix raw-DN versus reflectance threshold handling.
 - [ ] 1.5 Fusion target mask: add expected cloud filter.
 - [ ] 1.6 Fusion target mask: align deterministic twin and production path.
