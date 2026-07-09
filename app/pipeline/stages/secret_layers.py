@@ -23,7 +23,7 @@ from app.pipeline.stages.dem import build_dem_tile_requests, write_georeferenced
 from app.pipeline.stages.dem_derivatives import box_mean_nanaware
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.s2_indices import S2_SOURCE_BANDS, S2_RAW_CUBE_NPY_NAME
-from app.pipeline.stages.thermal import LST_TIF_NAME
+from app.pipeline.stages.thermal import L9_RAW_ST_B10_NPY_NAME, NOTEBOOK_L9_ST_B10_COLLECTION
 from app.services.ee_session import initialize_ee_session
 
 EPS = 1e-10
@@ -39,6 +39,9 @@ S2_SECRET_LAYER_NAMES = (
     "AI_READY_640_Secret_Tunnel_Ceiling",
     "AI_READY_640_Secret_Chemical_Protector",
 )
+THERMAL_INERTIA_LAYER_NAME = "AI_READY_640_Secret_Thermal_Inertia"
+THERMAL_INERTIA_SOURCE_PROVENANCE = "notebook_l9_st_b10_raw"
+THERMAL_INERTIA_SOURCE_UNIT = "raw_dn"
 
 
 class HiddenDoorsFetcher(Protocol):
@@ -56,7 +59,6 @@ class SecretS2LayerFetcher(Protocol):
 class ThermalInertiaFetcher(Protocol):
     def __call__(self, *, grid_spec: GridSpec) -> np.ndarray: ...
 
-# --- Layer definitions -------------------------------------------------------
 
 SECRET_LAYER_SPECS = [
     {
@@ -78,10 +80,10 @@ SECRET_LAYER_SPECS = [
         "inputs": ["B8", "B4"],
     },
     {
-        "name": "AI_READY_640_Secret_Thermal_Inertia",
+        "name": THERMAL_INERTIA_LAYER_NAME,
         "formula": "l9_col / focal_mean(l9_col, 500m)",
         "source_type": "thermal",
-        "inputs": ["lst"],
+        "inputs": ["l9_st_b10_raw"],
     },
     {
         "name": "AI_READY_640_Secret_Chemical_Protector",
@@ -96,8 +98,6 @@ SECRET_LAYER_SPECS = [
         "inputs": ["dem"],
     },
 ]
-
-# --- Hillshade (parameterized azimuth/altitude) ------------------------------
 
 
 def compute_hillshade_parameterized(
@@ -122,9 +122,6 @@ def compute_hillshade_parameterized(
     return hillshade.astype(np.float32, copy=False)
 
 
-# --- Layer computation -------------------------------------------------------
-
-
 def _check_source_available(spec: dict, available_s2_bands: set[str]) -> tuple[bool, str]:
     """Return (is_available, reason) for a layer spec."""
     if spec["source_type"] == "s2_raw":
@@ -132,7 +129,6 @@ def _check_source_available(spec: dict, available_s2_bands: set[str]) -> tuple[b
         if missing:
             return False, f"Raw S2 band(s) {', '.join(missing)} not available in app S2_SOURCE_BANDS {sorted(available_s2_bands)}"
         return True, ""
-    # thermal and dem are always available if the stage ran
     return True, ""
 
 
@@ -192,17 +188,16 @@ def compute_secret_tunnel_ceiling(
 
 
 def compute_secret_thermal_inertia(
-    lst: np.ndarray, *, nodata: float, scale_m: float
+    l9_st_b10_raw: np.ndarray, *, nodata: float, scale_m: float
 ) -> np.ndarray:
-    """l9_col / focal_mean(l9_col, 500m)"""
-    lst_float = lst.astype(np.float32, copy=True)
-    lst_float = np.where(lst_float == nodata, np.nan, lst_float)
-    # 500m focal mean radius in pixels
+    """l9_col / focal_mean(l9_col, 500m), computed on raw Landsat 9 ST_B10 DN."""
+    source = l9_st_b10_raw.astype(np.float32, copy=True)
+    source = np.where(source == nodata, np.nan, source)
     radius_px = max(1, int(round(500.0 / scale_m)))
-    focal_mean = box_mean_nanaware(lst_float, radius_px)
-    source_valid = np.isfinite(lst_float) & np.isfinite(focal_mean) & (focal_mean != 0.0)
-    result = np.full(lst.shape, nodata, dtype=np.float32)
-    result[source_valid] = (lst_float[source_valid] / focal_mean[source_valid]).astype(np.float32)
+    focal_mean = box_mean_nanaware(source, radius_px)
+    source_valid = np.isfinite(source) & np.isfinite(focal_mean) & (focal_mean != 0.0)
+    result = np.full(l9_st_b10_raw.shape, nodata, dtype=np.float32)
+    result[source_valid] = (source[source_valid] / focal_mean[source_valid]).astype(np.float32)
     return result
 
 
@@ -358,9 +353,6 @@ def create_ee_hidden_doors_fetcher(settings, grid_spec: GridSpec) -> HiddenDoors
     return fetch_hidden_doors
 
 
-# --- Source loading -----------------------------------------------------------
-
-
 def load_s2_raw_cube(run_dir: Path) -> np.ndarray:
     """Load the raw S2 band cube persisted by the S2 indices stage."""
     path = run_dir / S2_RAW_CUBE_NPY_NAME
@@ -377,23 +369,15 @@ def load_dem_array(run_dir: Path) -> np.ndarray:
     return np.load(path)
 
 
-def load_lst_array(run_dir: Path, *, nodata: float) -> np.ndarray:
-    """Load the LST raster persisted by the thermal stage."""
-    from PIL import Image
-
-    path = run_dir / LST_TIF_NAME
+def load_l9_st_b10_raw_array(run_dir: Path) -> np.ndarray:
+    """Load the notebook-basis raw L9 ST_B10 array persisted by the thermal stage."""
+    path = run_dir / L9_RAW_ST_B10_NPY_NAME
     if not path.is_file():
-        raise StageError("Thermal stage output is required before secret layers stage.")
-    with Image.open(path) as image:
-        return np.array(image, dtype=np.float32)
+        raise StageError("Thermal L9 raw ST_B10 output is required before secret thermal inertia.")
+    return np.load(path)
 
 
-# --- Output writing -----------------------------------------------------------
-
-
-def write_secret_layer_output(
-    run_dir: Path, grid_spec: GridSpec, name: str, array: np.ndarray
-) -> Path:
+def write_secret_layer_output(run_dir: Path, grid_spec: GridSpec, name: str, array: np.ndarray) -> Path:
     """Write a single secret layer as a georeferenced GeoTIFF under AI_READY_640/."""
     output_dir = run_dir / SECRET_LAYER_OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -428,14 +412,28 @@ def write_secret_layers_manifest(
         "implemented": implemented,
         "not_implemented": not_implemented,
     }
-    manifest_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=False),
-        encoding="utf-8",
-    )
+    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=False), encoding="utf-8")
     return manifest_path
 
 
-# --- Stage class --------------------------------------------------------------
+def _source_provenance_for_spec(
+    spec: dict,
+    *,
+    secret_s2_cube_fetcher: SecretS2CubeFetcher | None,
+    secret_s2_layer_fetcher: SecretS2LayerFetcher | None,
+    thermal_inertia_fetcher: ThermalInertiaFetcher | None,
+) -> str:
+    if spec["name"] in S2_SECRET_LAYER_NAMES and (secret_s2_cube_fetcher is not None or secret_s2_layer_fetcher is not None):
+        return "notebook_secret_s2"
+    if spec["name"] == THERMAL_INERTIA_LAYER_NAME:
+        return "notebook_l9_st_b10" if thermal_inertia_fetcher is not None else THERMAL_INERTIA_SOURCE_PROVENANCE
+    return str(spec["source_type"])
+
+
+def _source_unit_for_spec(spec: dict) -> str | None:
+    if spec["name"] == THERMAL_INERTIA_LAYER_NAME:
+        return THERMAL_INERTIA_SOURCE_UNIT
+    return None
 
 
 class SecretLayersStage(Stage):
@@ -465,11 +463,10 @@ class SecretLayersStage(Stage):
         scale_m = float(self.grid_spec.manifest.scale_m)
         nodata = self.grid_spec.nodata
 
-        # Load source data (lazy — only load if needed)
         s2_cube = None
         s2_layers = None
         dem = None
-        lst = None
+        l9_st_b10_raw = None
 
         implemented_specs: list[dict] = []
         not_implemented_specs: list[dict] = []
@@ -491,7 +488,6 @@ class SecretLayersStage(Stage):
                 }
                 continue
 
-            # Compute the layer
             if spec["name"] == "AI_READY_640_Secret_Gold_Halo":
                 if self.secret_s2_layer_fetcher is not None:
                     if s2_layers is None:
@@ -499,11 +495,7 @@ class SecretLayersStage(Stage):
                     array = s2_layers[spec["name"]]
                 else:
                     if s2_cube is None:
-                        s2_cube = (
-                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
-                            if self.secret_s2_cube_fetcher is not None
-                            else load_s2_raw_cube(context.run_dir)
-                        )
+                        s2_cube = self.secret_s2_cube_fetcher(grid_spec=self.grid_spec) if self.secret_s2_cube_fetcher is not None else load_s2_raw_cube(context.run_dir)
                     array = compute_secret_gold_halo(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Silver_Oxide":
                 if self.secret_s2_layer_fetcher is not None:
@@ -512,11 +504,7 @@ class SecretLayersStage(Stage):
                     array = s2_layers[spec["name"]]
                 else:
                     if s2_cube is None:
-                        s2_cube = (
-                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
-                            if self.secret_s2_cube_fetcher is not None
-                            else load_s2_raw_cube(context.run_dir)
-                        )
+                        s2_cube = self.secret_s2_cube_fetcher(grid_spec=self.grid_spec) if self.secret_s2_cube_fetcher is not None else load_s2_raw_cube(context.run_dir)
                     array = compute_secret_silver_oxide(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Tunnel_Ceiling":
                 if self.secret_s2_layer_fetcher is not None:
@@ -525,19 +513,15 @@ class SecretLayersStage(Stage):
                     array = s2_layers[spec["name"]]
                 else:
                     if s2_cube is None:
-                        s2_cube = (
-                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
-                            if self.secret_s2_cube_fetcher is not None
-                            else load_s2_raw_cube(context.run_dir)
-                        )
+                        s2_cube = self.secret_s2_cube_fetcher(grid_spec=self.grid_spec) if self.secret_s2_cube_fetcher is not None else load_s2_raw_cube(context.run_dir)
                     array = compute_secret_tunnel_ceiling(s2_cube, nodata=nodata, band_names=s2_band_names)
-            elif spec["name"] == "AI_READY_640_Secret_Thermal_Inertia":
+            elif spec["name"] == THERMAL_INERTIA_LAYER_NAME:
                 if self.thermal_inertia_fetcher is not None:
                     array = self.thermal_inertia_fetcher(grid_spec=self.grid_spec)
                 else:
-                    if lst is None:
-                        lst = load_lst_array(context.run_dir, nodata=nodata)
-                    array = compute_secret_thermal_inertia(lst, nodata=nodata, scale_m=scale_m)
+                    if l9_st_b10_raw is None:
+                        l9_st_b10_raw = load_l9_st_b10_raw_array(context.run_dir)
+                    array = compute_secret_thermal_inertia(l9_st_b10_raw, nodata=nodata, scale_m=scale_m)
             elif spec["name"] == "AI_READY_640_Secret_Chemical_Protector":
                 if self.secret_s2_layer_fetcher is not None:
                     if s2_layers is None:
@@ -545,11 +529,7 @@ class SecretLayersStage(Stage):
                     array = s2_layers[spec["name"]]
                 else:
                     if s2_cube is None:
-                        s2_cube = (
-                            self.secret_s2_cube_fetcher(grid_spec=self.grid_spec)
-                            if self.secret_s2_cube_fetcher is not None
-                            else load_s2_raw_cube(context.run_dir)
-                        )
+                        s2_cube = self.secret_s2_cube_fetcher(grid_spec=self.grid_spec) if self.secret_s2_cube_fetcher is not None else load_s2_raw_cube(context.run_dir)
                     array = compute_secret_chemical_protector(s2_cube, nodata=nodata, band_names=s2_band_names)
             elif spec["name"] == "AI_READY_640_Secret_Hidden_Doors":
                 if self.hidden_doors_fetcher is not None:
@@ -559,19 +539,13 @@ class SecretLayersStage(Stage):
                         dem = load_dem_array(context.run_dir)
                     array = compute_secret_hidden_doors(dem, nodata=nodata, scale_m=scale_m)
             else:
-                # Should not reach here for implemented layers
                 continue
 
-            # Validate output shape
             expected_shape = (self.grid_spec.size, self.grid_spec.size)
             if array.shape[:2] != expected_shape:
-                raise StageError(
-                    f"Secret layer {spec['name']} shape {array.shape[:2]} != expected {expected_shape}"
-                )
+                raise StageError(f"Secret layer {spec['name']} shape {array.shape[:2]} != expected {expected_shape}")
 
-            tif_path = write_secret_layer_output(
-                context.run_dir, self.grid_spec, spec["name"], array
-            )
+            tif_path = write_secret_layer_output(context.run_dir, self.grid_spec, spec["name"], array)
             artifacts.append(
                 build_stage_artifact(
                     name=spec["name"],
@@ -580,41 +554,36 @@ class SecretLayersStage(Stage):
                     size_bytes=tif_path.stat().st_size,
                 )
             )
-            implemented_specs.append({
+            source_provenance = _source_provenance_for_spec(
+                spec,
+                secret_s2_cube_fetcher=self.secret_s2_cube_fetcher,
+                secret_s2_layer_fetcher=self.secret_s2_layer_fetcher,
+                thermal_inertia_fetcher=self.thermal_inertia_fetcher,
+            )
+            implemented_item = {
                 "name": spec["name"],
                 "formula": spec["formula"],
                 "status": "implemented",
                 "source_type": spec["source_type"],
                 "inputs": spec["inputs"],
                 "output_path": f"{SECRET_LAYER_OUTPUT_DIR}/{spec['name']}.tif",
-                "source_provenance": (
-                    "notebook_secret_s2"
-                    if spec["name"] in S2_SECRET_LAYER_NAMES
-                    and (self.secret_s2_cube_fetcher is not None or self.secret_s2_layer_fetcher is not None)
-                    else spec["source_type"]
-                    if spec["name"] != "AI_READY_640_Secret_Thermal_Inertia" or self.thermal_inertia_fetcher is None
-                    else "notebook_l9_st_b10"
-                ),
-            })
-            layer_metadata[spec["name"]] = {
+                "source_provenance": source_provenance,
+            }
+            layer_item = {
                 "status": "implemented",
                 "formula": spec["formula"],
-                "source_provenance": (
-                    "notebook_secret_s2"
-                    if spec["name"] in S2_SECRET_LAYER_NAMES
-                    and (self.secret_s2_cube_fetcher is not None or self.secret_s2_layer_fetcher is not None)
-                    else spec["source_type"]
-                    if spec["name"] != "AI_READY_640_Secret_Thermal_Inertia" or self.thermal_inertia_fetcher is None
-                    else "notebook_l9_st_b10"
-                ),
+                "source_provenance": source_provenance,
             }
+            source_unit = _source_unit_for_spec(spec)
+            if source_unit is not None:
+                implemented_item["source_unit"] = source_unit
+                implemented_item["source_collection"] = NOTEBOOK_L9_ST_B10_COLLECTION
+                layer_item["source_unit"] = source_unit
+                layer_item["source_collection"] = NOTEBOOK_L9_ST_B10_COLLECTION
+            implemented_specs.append(implemented_item)
+            layer_metadata[spec["name"]] = layer_item
 
-        # Write manifest
-        manifest_path = write_secret_layers_manifest(
-            context.run_dir,
-            implemented=implemented_specs,
-            not_implemented=not_implemented_specs,
-        )
+        manifest_path = write_secret_layers_manifest(context.run_dir, implemented=implemented_specs, not_implemented=not_implemented_specs)
         artifacts.append(
             build_stage_artifact(
                 name="secret_layers_manifest",
