@@ -41,10 +41,10 @@ For each main item:
 - [x] 1.1 Thermal inertia: align local and EE-style source/unit basis.
 - [x] 1.2 Thermal inertia: record source and unit in metadata.
 - [x] 1.3 Thermal inertia: add regression tests.
-- [ ] 1.4 Fusion target mask: fix raw-DN versus reflectance threshold handling.
-- [ ] 1.5 Fusion target mask: add expected cloud filter.
-- [ ] 1.6 Fusion target mask: align deterministic twin and production path.
-- [ ] 1.7 Fusion target mask: add regression tests.
+- [x] 1.4 Fusion target mask: fix raw-DN versus reflectance threshold handling.
+- [x] 1.5 Fusion target mask: add expected cloud filter.
+- [x] 1.6 Fusion target mask: align deterministic twin and production path.
+- [x] 1.7 Fusion target mask: add regression tests.
 - [ ] 1.8 Empty/all-nodata: add source collection size gates.
 - [ ] 1.9 Empty/all-nodata: raise `StageError` when required source data is missing.
 - [ ] 1.10 Empty/all-nodata: add valid-fraction checks after fetch.
