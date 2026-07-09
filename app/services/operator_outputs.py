@@ -32,6 +32,7 @@ SENSITIVE_NAME_PARTS = (
     "private_key",
 )
 STATUS_NOT_IMPLEMENTED = "not_implemented_no_source_equivalent"
+STATUS_MANIFEST_READ_ERROR = "manifest_read_error"
 OPERATOR_VISIBLE_PATTERNS = (
     "DEM_GEO8_TIFS/*",
     "GEOTIFF_RADAR_BANDS/*",
@@ -82,7 +83,7 @@ OPERATOR_VISIBLE_PATTERNS = (
 
 def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOutputTreePublic:
     run_dir = get_run_dir(settings, run_id)
-    not_implemented = _collect_not_implemented(settings=settings, run_id=run_id)
+    not_implemented, read_errors = _collect_not_implemented_and_read_errors(settings=settings, run_id=run_id)
     not_implemented_paths = {item.relative_path for item in not_implemented}
     outputs: list[OperatorOutputFilePublic] = []
     if run_dir.is_dir():
@@ -98,6 +99,7 @@ def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOu
         run_id=run_id,
         outputs=outputs,
         not_implemented=not_implemented,
+        read_errors=read_errors,
     )
 
 
@@ -163,23 +165,40 @@ def _to_output_file(*, run_id: str, run_dir: Path, path: Path) -> OperatorOutput
 
 
 def _collect_not_implemented(*, settings: Settings, run_id: str) -> list[OperatorOutputStatusPublic]:
+    items, _read_errors = _collect_not_implemented_and_read_errors(settings=settings, run_id=run_id)
+    return items
+
+
+def _collect_not_implemented_and_read_errors(
+    *,
+    settings: Settings,
+    run_id: str,
+) -> tuple[list[OperatorOutputStatusPublic], list[OperatorOutputStatusPublic]]:
     run_dir = get_run_dir(settings, run_id)
     items: list[OperatorOutputStatusPublic] = []
-    items.extend(_read_report_640_manifest(run_dir / "QA" / "REPORT_640_manifest.json"))
-    items.extend(_read_sar_intermediate_manifest(run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"))
-    items.extend(_read_hypercube_manifest(run_dir / "stage_hypercube.manifest.json"))
-    items.extend(_read_secret_layers_manifest(run_dir / "QA" / "stacks" / "secret_layers_manifest.json"))
-    return sorted(
+    read_errors: list[OperatorOutputStatusPublic] = []
+    for next_items, next_errors in (
+        _read_report_640_manifest(run_dir / "QA" / "REPORT_640_manifest.json"),
+        _read_sar_intermediate_manifest(run_dir / "QA" / "sar" / "intermediates" / "sar_intermediate_manifest.json"),
+        _read_hypercube_manifest(run_dir / "stage_hypercube.manifest.json"),
+        _read_secret_layers_manifest(run_dir / "QA" / "stacks" / "secret_layers_manifest.json"),
+    ):
+        items.extend(next_items)
+        read_errors.extend(next_errors)
+    visible_items = sorted(
         (item for item in items if is_operator_visible_relative_path(item.relative_path)),
         key=lambda item: item.relative_path,
     )
+    return visible_items, sorted(read_errors, key=lambda item: item.source)
 
 
-def _read_report_640_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
-    payload = _read_json(path)
+def _read_report_640_manifest(path: Path) -> tuple[list[OperatorOutputStatusPublic], list[OperatorOutputStatusPublic]]:
+    payload, read_error = _read_json(path, source="QA/REPORT_640_manifest.json")
+    if read_error is not None:
+        return [], [read_error]
     reports = payload.get("reports") if isinstance(payload, dict) else None
     if not isinstance(reports, dict):
-        return []
+        return [], []
     items: list[OperatorOutputStatusPublic] = []
     for filename, report_payload in reports.items():
         if not isinstance(filename, str) or not isinstance(report_payload, dict):
@@ -188,14 +207,16 @@ def _read_report_640_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
         if status != STATUS_NOT_IMPLEMENTED:
             continue
         items.append(_not_implemented_item(relative_path=filename, source="QA/REPORT_640_manifest.json"))
-    return items
+    return items, []
 
 
-def _read_sar_intermediate_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
-    payload = _read_json(path)
+def _read_sar_intermediate_manifest(path: Path) -> tuple[list[OperatorOutputStatusPublic], list[OperatorOutputStatusPublic]]:
+    payload, read_error = _read_json(path, source="QA/sar/intermediates/sar_intermediate_manifest.json")
+    if read_error is not None:
+        return [], [read_error]
     stages = payload.get("stages") if isinstance(payload, dict) else None
     if not isinstance(stages, dict):
-        return []
+        return [], []
     items: list[OperatorOutputStatusPublic] = []
     for stage_name, stage_payload in stages.items():
         if not isinstance(stage_name, str) or not isinstance(stage_payload, dict):
@@ -220,17 +241,19 @@ def _read_sar_intermediate_manifest(path: Path) -> list[OperatorOutputStatusPubl
                 source="QA/sar/intermediates/sar_intermediate_manifest.json",
             )
         )
-    return items
+    return items, []
 
 
-def _read_hypercube_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
-    payload = _read_json(path)
+def _read_hypercube_manifest(path: Path) -> tuple[list[OperatorOutputStatusPublic], list[OperatorOutputStatusPublic]]:
+    payload, read_error = _read_json(path, source="stage_hypercube.manifest.json")
+    if read_error is not None:
+        return [], [read_error]
     metadata = payload.get("metadata") if isinstance(payload, dict) else None
     if not isinstance(metadata, dict):
-        return []
+        return [], []
     notebook_statuses = metadata.get("notebook_output_statuses")
     if not isinstance(notebook_statuses, list):
-        return []
+        return [], []
     items: list[OperatorOutputStatusPublic] = []
     for item in notebook_statuses:
         if not isinstance(item, dict):
@@ -240,16 +263,18 @@ def _read_hypercube_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
         if not isinstance(filename, str) or status != STATUS_NOT_IMPLEMENTED:
             continue
         items.append(_not_implemented_item(relative_path=f"NPY_STACKS/{filename}", source="stage_hypercube.manifest.json"))
-    return items
+    return items, []
 
 
-def _read_secret_layers_manifest(path: Path) -> list[OperatorOutputStatusPublic]:
-    payload = _read_json(path)
+def _read_secret_layers_manifest(path: Path) -> tuple[list[OperatorOutputStatusPublic], list[OperatorOutputStatusPublic]]:
+    payload, read_error = _read_json(path, source="QA/stacks/secret_layers_manifest.json")
+    if read_error is not None:
+        return [], [read_error]
     if not isinstance(payload, dict):
-        return []
+        return [], []
     not_implemented = payload.get("not_implemented")
     if not isinstance(not_implemented, list):
-        return []
+        return [], []
     items: list[OperatorOutputStatusPublic] = []
     for layer in not_implemented:
         if not isinstance(layer, dict):
@@ -264,7 +289,7 @@ def _read_secret_layers_manifest(path: Path) -> list[OperatorOutputStatusPublic]
                 source="QA/stacks/secret_layers_manifest.json",
             )
         )
-    return items
+    return items, []
 
 
 def _not_implemented_item(*, relative_path: str, source: str) -> OperatorOutputStatusPublic:
@@ -282,14 +307,31 @@ def _not_implemented_item(*, relative_path: str, source: str) -> OperatorOutputS
     )
 
 
-def _read_json(path: Path) -> dict[str, Any]:
+def _read_error_item(*, source: str) -> OperatorOutputStatusPublic:
+    path = Path(source)
+    directory = path.parent.as_posix()
+    if directory == ".":
+        directory = ""
+    return OperatorOutputStatusPublic(
+        relative_path=source,
+        filename=path.name,
+        directory=directory,
+        group=_group_for_relative_path(source),
+        status=STATUS_MANIFEST_READ_ERROR,
+        source=source,
+    )
+
+
+def _read_json(path: Path, *, source: str) -> tuple[dict[str, Any], OperatorOutputStatusPublic | None]:
     if not path.is_file():
-        return {}
+        return {}, None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
+        return {}, _read_error_item(source=source)
+    if not isinstance(payload, dict):
+        return {}, _read_error_item(source=source)
+    return payload, None
 
 
 def _group_for_relative_path(relative_path: str) -> str:
