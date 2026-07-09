@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from app.db.models.enums import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import StageContext
 from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import build_run_grid
@@ -21,6 +22,7 @@ from app.pipeline.stages.thermal import (
     NOTEBOOK_THERMAL_INERTIA_NAME,
     NOTEBOOK_THERMAL_START,
     RAW_ST_B10_NPY_NAME,
+    ThermalOutputs,
     ThermalStage,
     build_landsat_lst_collection,
     build_landsat_st_b10_collection,
@@ -300,6 +302,20 @@ def test_create_ee_notebook_thermal_inertia_fetcher_uses_sample_rectangle(monkey
     assert len(rectangle_calls) == 4
 
 
+def test_thermal_stage_rejects_all_nodata_outputs() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+
+        def all_nodata_fetcher(*, grid_spec):
+            array = np.full((grid_spec.size, grid_spec.size), grid_spec.nodata, dtype=np.float32)
+            return ThermalOutputs(lst=array, st_b10_raw=array, l9_st_b10_raw=array)
+
+        with pytest.raises(StageError, match="insufficient valid data"):
+            asyncio.run(ThermalStage(grid_spec=grid_spec, lst_fetcher=all_nodata_fetcher).run(context))
+
+
 def test_thermal_stage_writes_classified_grid_aligned_output() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
@@ -317,10 +333,20 @@ def test_thermal_stage_writes_classified_grid_aligned_output() -> None:
         assert sidecar["transform"] == grid_spec.manifest.crs_transform
         assert np.load(run_dir / RAW_ST_B10_NPY_NAME).shape == (grid_spec.size, grid_spec.size)
         assert np.load(run_dir / L9_RAW_ST_B10_NPY_NAME).shape == (grid_spec.size, grid_spec.size)
+        assert result.metadata["valid_fractions"] == {
+            "lst": 1.0,
+            "st_b10_raw": 1.0,
+            "l9_st_b10_raw": 1.0,
+        }
         summary = json.loads((run_dir / "QA" / "stacks" / "thermal_summary.json").read_text(encoding="utf-8"))
         assert summary["stage"] == "thermal"
         assert summary["start_date"] == DEFAULT_START
         assert summary["end_date"] == DEFAULT_END
+        assert summary["valid_fractions"] == {
+            "lst": 1.0,
+            "st_b10_raw": 1.0,
+            "l9_st_b10_raw": 1.0,
+        }
         assert summary["l9_st_b10_source_collection"] == NOTEBOOK_L9_ST_B10_COLLECTION
         assert summary["l9_st_b10_unit"] == "raw_dn"
 
