@@ -11,6 +11,7 @@ import rasterio
 from rasterio.transform import Affine
 
 from app.db.models.enums import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import (
     ParityCategory,
     Stage,
@@ -28,6 +29,7 @@ DEM_NPY_NAME = "dem.npy"
 DEM_TILE_SIZE = 320
 NOTEBOOK_DEM_DIR_NAME = "DEM_GEO8_TIFS"
 NOTEBOOK_DEM_TIF_NAME = "DEM_640.tif"
+MIN_DEM_VALID_FRACTION = 0.001
 
 
 class DemTileFetcher(Protocol):
@@ -150,10 +152,28 @@ def create_ee_dem_tile_fetcher(settings, grid_spec: GridSpec) -> DemTileFetcher:
         rect = dem_image.sampleRectangle(region=tile_geo, defaultValue=grid_spec.nodata).getInfo()
         tile = np.array(rect["properties"]["DEM"], dtype=np.float32)[:size, :size]
         if tile.shape != (size, size):
-            raise ValueError(f"EE DEM tile returned shape {tile.shape}, expected {(size, size)}.")
+            raise StageError(f"EE DEM tile returned shape {tile.shape}, expected {(size, size)}.")
         return tile
 
     return fetch_tile
+
+
+def valid_fraction(array: np.ndarray, *, nodata: float) -> float:
+    valid = np.isfinite(array) & (array != nodata)
+    return float(valid.mean())
+
+
+def validate_dem_array(dem_array: np.ndarray, grid_spec: GridSpec) -> float:
+    expected_shape = (grid_spec.size, grid_spec.size)
+    if dem_array.shape != expected_shape:
+        raise StageError(f"DEM output shape {dem_array.shape} does not match expected {expected_shape}.")
+    fraction = valid_fraction(dem_array, nodata=grid_spec.nodata)
+    if fraction < MIN_DEM_VALID_FRACTION:
+        raise StageError(
+            f"DEM source produced insufficient valid data: valid_fraction={fraction:.6f}, "
+            f"minimum={MIN_DEM_VALID_FRACTION:.6f}."
+        )
+    return fraction
 
 
 def build_dem_array(
@@ -177,7 +197,7 @@ def build_dem_array(
             size=request.size,
         )
         if tile.shape != (request.size, request.size):
-            raise ValueError(
+            raise StageError(
                 f"DEM tile ({request.tile_row},{request.tile_col}) returned shape {tile.shape}, "
                 f"expected {(request.size, request.size)}."
             )
@@ -185,6 +205,7 @@ def build_dem_array(
         col_start = request.tile_col * request.size
         dem[row_start : row_start + request.size, col_start : col_start + request.size] = tile
 
+    validate_dem_array(dem, grid_spec)
     return dem
 
 
@@ -269,11 +290,13 @@ def write_dem_outputs(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray)
     }
 
 
-def write_dem_audit_summary(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray) -> Path:
+def write_dem_audit_summary(run_dir: Path, grid_spec: GridSpec, dem_array: np.ndarray, *, valid_fraction_value: float) -> Path:
     qa_dir = ensure_run_qa_dir(run_dir) / "grid_dem"
     qa_dir.mkdir(parents=True, exist_ok=True)
     summary_path = qa_dir / "dem_audit_summary.json"
     nodata_count = int((dem_array == grid_spec.nodata).sum())
+    valid = np.isfinite(dem_array) & (dem_array != grid_spec.nodata)
+    values = dem_array[valid]
     payload = {
         "stage": "dem",
         "shape": [int(dem_array.shape[0]), int(dem_array.shape[1])],
@@ -282,8 +305,10 @@ def write_dem_audit_summary(run_dir: Path, grid_spec: GridSpec, dem_array: np.nd
         "tile_count": len(build_dem_tile_requests(grid_spec)),
         "nodata_count": nodata_count,
         "nodata_fraction": round(nodata_count / float(dem_array.size), 6),
-        "dem_min": round(float(dem_array.min()), 6),
-        "dem_max": round(float(dem_array.max()), 6),
+        "valid_fraction": round(float(valid_fraction_value), 6),
+        "minimum_valid_fraction": MIN_DEM_VALID_FRACTION,
+        "dem_min": round(float(values.min()), 6),
+        "dem_max": round(float(values.max()), 6),
         "grid_locked": True,
     }
     summary_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -306,8 +331,14 @@ class DemStage(Stage):
     async def run(self, context: StageContext) -> StageResult:
         tile_fetcher = self.tile_fetcher or create_ee_dem_tile_fetcher(context.settings, self.grid_spec)
         dem_array = build_dem_array(self.grid_spec, tile_fetcher=tile_fetcher)
+        dem_valid_fraction = validate_dem_array(dem_array, self.grid_spec)
         outputs = write_dem_outputs(context.run_dir, self.grid_spec, dem_array)
-        audit_summary_path = write_dem_audit_summary(context.run_dir, self.grid_spec, dem_array)
+        audit_summary_path = write_dem_audit_summary(
+            context.run_dir,
+            self.grid_spec,
+            dem_array,
+            valid_fraction_value=dem_valid_fraction,
+        )
         artifacts = [
             build_stage_artifact(
                 name="dem_tif",
@@ -339,8 +370,9 @@ class DemStage(Stage):
             artifacts=artifacts,
             metadata={
                 "dem_shape": list(dem_array.shape),
-                "dem_min": float(dem_array.min()),
-                "dem_max": float(dem_array.max()),
+                "dem_min": float(dem_array[np.isfinite(dem_array) & (dem_array != self.grid_spec.nodata)].min()),
+                "dem_max": float(dem_array[np.isfinite(dem_array) & (dem_array != self.grid_spec.nodata)].max()),
+                "dem_valid_fraction": round(float(dem_valid_fraction), 6),
                 "grid_crs": f"EPSG:{self.grid_spec.manifest.epsg}",
                 "tile_size": DEM_TILE_SIZE,
                 "tile_count": len(build_dem_tile_requests(self.grid_spec)),
