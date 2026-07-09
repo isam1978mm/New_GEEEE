@@ -1,8 +1,8 @@
-"""A5 unit tests for stale running-run cleanup and active-run locking.
+"""A5 unit tests for stale active-run cleanup and active-run locking.
 
-Verifies ``mark_stale_running_runs`` transitions only RUNNING runs to
-STALE_FAILED, persists the change, returns the count of changed runs, and
-tolerates a missing ``runs`` table (fresh DB before migrations).
+Verifies ``mark_stale_running_runs`` transitions orphan QUEUED and RUNNING
+runs to STALE_FAILED, persists the change, returns the count of changed runs,
+and tolerates a missing ``runs`` table (fresh DB before migrations).
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from app.errors import ActiveRunConflictError
 from app.services.run_state import ensure_single_active_run, mark_stale_running_runs
 
 
-def test_mark_stale_running_runs_transitions_only_running() -> None:
+def test_mark_stale_running_runs_transitions_queued_and_running() -> None:
     asyncio.run(_run_mark_stale_running_runs_case())
 
 
@@ -51,7 +51,7 @@ async def _run_mark_stale_running_runs_case() -> None:
             async with session_factory() as session:
                 changed = await mark_stale_running_runs(session)
 
-            assert changed == 2
+            assert changed == 3
 
             # Re-open a fresh session to prove the change persisted to the DB.
             async with session_factory() as session:
@@ -66,17 +66,17 @@ async def _run_mark_stale_running_runs_case() -> None:
 
     assert statuses["run-running-a"] == RunStatus.STALE_FAILED
     assert statuses["run-running-b"] == RunStatus.STALE_FAILED
-    assert statuses["run-queued"] == RunStatus.QUEUED
+    assert statuses["run-queued"] == RunStatus.STALE_FAILED
     assert statuses["run-done"] == RunStatus.DONE
     assert statuses["run-failed"] == RunStatus.FAILED
     assert statuses["run-stale"] == RunStatus.STALE_FAILED
 
 
-def test_mark_stale_running_runs_returns_zero_with_no_running_runs() -> None:
-    asyncio.run(_run_no_running_case())
+def test_mark_stale_running_runs_returns_zero_with_no_active_runs() -> None:
+    asyncio.run(_run_no_active_case())
 
 
-async def _run_no_running_case() -> None:
+async def _run_no_active_case() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
         _upgrade_database(settings)
@@ -86,8 +86,8 @@ async def _run_no_running_case() -> None:
             async with session_factory() as session:
                 session.add_all(
                     [
-                        _run("run-queued", RunStatus.QUEUED),
                         _run("run-done", RunStatus.DONE),
+                        _run("run-failed", RunStatus.FAILED),
                     ]
                 )
                 await session.commit()
