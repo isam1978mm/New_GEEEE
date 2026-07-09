@@ -261,7 +261,7 @@ def test_create_ee_lst_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyP
     assert outputs.st_b10_raw.dtype == np.float32
     assert outputs.l9_st_b10_raw.shape == (640, 640)
     assert outputs.l9_st_b10_raw.dtype == np.float32
-    assert len(rectangle_calls) == 12
+    assert len(rectangle_calls) == 4
 
 
 def test_create_ee_notebook_thermal_inertia_fetcher_uses_sample_rectangle(monkeypatch: pytest.MonkeyPatch) -> None:
