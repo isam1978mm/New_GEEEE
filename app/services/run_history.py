@@ -41,6 +41,7 @@ SAFE_EVENT_TYPES = {
     "run_done",
     "run_failed",
     "run_stale_failed",
+    "history_read_error",
 }
 
 
@@ -63,7 +64,7 @@ def append_run_event(
     event = build_run_event(event_type=event_type, stage_name=stage_name, timestamp=timestamp)
     if event is None:
         return
-    events = read_run_history_events(settings, run_id)
+    events = read_run_history_events(settings, run_id, include_read_errors=False)
     events.append(event)
     run_dir = initialize_run_storage(settings, run_id)
     payload = {"events": [event.model_dump(mode="json") for event in events]}
@@ -73,7 +74,12 @@ def append_run_event(
     )
 
 
-def read_run_history_events(settings: Settings, run_id: str) -> list[RunHistoryEvent]:
+def read_run_history_events(
+    settings: Settings,
+    run_id: str,
+    *,
+    include_read_errors: bool = True,
+) -> list[RunHistoryEvent]:
     run_dir = initialize_run_storage(settings, run_id)
     history_path = run_dir / RUN_STATUS_HISTORY_NAME
     if not history_path.exists():
@@ -81,10 +87,10 @@ def read_run_history_events(settings: Settings, run_id: str) -> list[RunHistoryE
     try:
         payload = read_manifest(history_path)
     except (OSError, ValueError):
-        return []
+        return _history_read_error_events() if include_read_errors else []
     raw_events = payload.get("events")
     if not isinstance(raw_events, list):
-        return []
+        return _history_read_error_events() if include_read_errors else []
     events: list[RunHistoryEvent] = []
     for raw_event in raw_events:
         if not isinstance(raw_event, dict):
@@ -138,6 +144,11 @@ def _coerce_event(raw_event: dict[str, Any]) -> RunHistoryEvent | None:
     return build_run_event(event_type=event_type, stage_name=safe_stage, timestamp=event_time)
 
 
+def _history_read_error_events() -> list[RunHistoryEvent]:
+    event = build_run_event(event_type="history_read_error")
+    return [event] if event is not None else []
+
+
 def _event_text(event_type: str, stage_label: str | None) -> tuple[str, str]:
     if event_type == "run_created":
         return "Run created", "Run record created."
@@ -151,6 +162,8 @@ def _event_text(event_type: str, stage_label: str | None) -> tuple[str, str]:
         return "Run failed", "Pipeline execution failed."
     if event_type == "run_stale_failed":
         return "Run marked stale", "Run did not complete before process restart."
+    if event_type == "history_read_error":
+        return "Run history unreadable", "Run history metadata could not be read."
     if event_type == "stage_started" and stage_label:
         return f"{stage_label} started", f"{stage_label} stage started."
     if event_type == "stage_done" and stage_label:
