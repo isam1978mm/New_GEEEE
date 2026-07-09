@@ -2,11 +2,15 @@
 
 ## Current Status
 
-V6-FINAL-WIRING-1 documents the full backend-to-frontend smoke path for the real V6 package workflow and freezes the regression checklist for this phase.
+`V6` is legacy/internal naming for the app's Paid Imagery Export Package.
+
+This feature remains in scope. It generates an offline export package for manual operator use outside the app. It is not a live ordering service or external provider integration.
+
+V6-FINAL-WIRING-1 documents the full backend-to-frontend smoke path for the package workflow and freezes the regression checklist for this phase.
 
 Completed before this checkpoint:
 
-- app-side V6 package feed;
+- app-side package feed;
 - private backend generate/review/retrieve flow;
 - default-off operator authorization gate;
 - frontend generate/review/retrieve panel;
@@ -20,9 +24,9 @@ This document is the operator-facing smoke and regression guide. It does not add
 ```text
 operator session
   -> selected run
-  -> run-local V6 package input manifest
+  -> run-local package input manifest
   -> backend generate action
-  -> app-generated V6 package payloads
+  -> app-generated package payloads
   -> validation report
   -> frontend review metadata panel
   -> authorized ZIP retrieval
@@ -31,6 +35,8 @@ operator session
 The browser must only show metadata: readiness, validation status, payload count, ZIP entry count, issue count, warning count, package filename, and category counts.
 
 The browser must not render candidate rows, spatial payload bodies, hashes, local filesystem paths, or private package contents.
+
+Provider request submission remains manual and outside the app.
 
 ## Required Flags And Auth Context
 
@@ -75,8 +81,8 @@ python -m pytest tests/unit/test_notebook_safety.py -q --basetemp .pytest-v6-gen
 Pass criteria:
 
 - all tests pass;
-- denied V6 package requests return generic denial bodies;
-- denied requests do not read V6 package input files;
+- denied package requests return generic denial bodies;
+- denied requests do not read package input files;
 - review responses are metadata-only;
 - package retrieval resolves only after authorization;
 - notebook safety tests remain unchanged.
@@ -93,27 +99,27 @@ npm run build
 Pass criteria:
 
 - build completes;
-- the operator private section mounts the V6 package panel;
-- Generate package calls the backend generate route;
-- Review metadata calls the backend review route;
-- Retrieve ZIP calls the backend package retrieval route;
+- the operator private section mounts the package panel;
+- generate package calls the backend generate route;
+- review metadata calls the backend review route;
+- retrieve ZIP calls the backend package retrieval route;
 - the UI displays metadata only;
 - the UI does not display candidate rows or spatial payload bodies.
 
 ## Manual Browser Smoke
 
-1. Start the app with the V6 package flow flag enabled.
-2. Open the app and select a completed run that has a run-local V6 package input manifest.
+1. Start the app with the package flow flag enabled.
+2. Open the app and select a completed run that has a run-local package input manifest.
 3. Start an operator session.
 4. Enable the operator private section in settings.
 5. Open the selected run dashboard.
-6. Confirm the V6 package panel appears.
+6. Confirm the package panel appears.
 7. Click Review metadata.
 8. Confirm the panel reports not available before generation or package metadata after generation.
 9. Click Generate package.
-10. Confirm validation status is shown and package-ready state becomes true.
-11. Click Retrieve ZIP.
-12. Confirm a ZIP retrieval starts.
+10. Confirm validation status is shown.
+11. Confirm package-ready state is true only when validation is OK.
+12. Click Retrieve ZIP only when the package is ready.
 13. Confirm no candidate rows, spatial payload bodies, hashes, local filesystem paths, or package internals are visible in the browser UI.
 
 ## Full Regression Checklist
@@ -149,12 +155,15 @@ Pass criteria:
 
 ## Current Gaps After This Checkpoint
 
-- Browser end-to-end automation is still manual smoke only.
-- Operator deployment docs still need environment-specific values.
-- The real Earth Engine execution path still depends on configured credentials and runtime authorization.
-
-## Next Step
+The audit fixing plan tracks the remaining package correctness work:
 
 ```text
-V6-READY-FREEZE-1: review final docs, run full regression, and freeze the V6 real package workflow checkpoint.
+docs/AUDIT_FIX_PLAN_STUB.md
 ```
+
+Relevant checklist items:
+
+- package readiness must depend on OK validation;
+- ZIP and validation report must be paired by generation;
+- user-facing wording should say Paid Imagery Export Package or Imagery Export Package;
+- provenance must identify score basis and geometry basis.
