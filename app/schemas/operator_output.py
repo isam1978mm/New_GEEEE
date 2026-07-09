@@ -28,3 +28,4 @@ class OperatorOutputTreePublic(BaseModel):
     run_id: str
     outputs: list[OperatorOutputFilePublic] = Field(default_factory=list)
     not_implemented: list[OperatorOutputStatusPublic] = Field(default_factory=list)
+    read_errors: list[OperatorOutputStatusPublic] = Field(default_factory=list)
