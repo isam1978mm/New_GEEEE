@@ -45,10 +45,10 @@ For each main item:
 - [x] 1.5 Fusion target mask: add expected cloud filter.
 - [x] 1.6 Fusion target mask: align deterministic twin and production path.
 - [x] 1.7 Fusion target mask: add regression tests.
-- [ ] 1.8 Empty/all-nodata: add source collection size gates.
-- [ ] 1.9 Empty/all-nodata: raise `StageError` when required source data is missing.
-- [ ] 1.10 Empty/all-nodata: add valid-fraction checks after fetch.
-- [ ] 1.11 Empty/all-nodata: record valid-fraction information.
+- [x] 1.8 Empty/all-nodata: add source collection size gates.
+- [x] 1.9 Empty/all-nodata: raise `StageError` when required source data is missing.
+- [x] 1.10 Empty/all-nodata: add valid-fraction checks after fetch.
+- [x] 1.11 Empty/all-nodata: record valid-fraction information.
 
 ### Item 2 — No Misleading Success
 
