@@ -185,9 +185,6 @@ APPROVED_OUTPUT_FAMILIES: tuple[OutputFamilySpec, ...] = (
     ),
 )
 
-
-CURRENT_APP_OUTPUT_FAMILIES: tuple[OutputFamilySpec, ...] = APPROVED_OUTPUT_FAMILIES
-
 INTENTIONALLY_EXCLUDED_FAMILIES: tuple[OutputFamilySpec, ...] = (
     OutputFamilySpec(
         family_id="raw_notebook_runtime_mirrors",
@@ -217,7 +214,6 @@ INTENTIONALLY_EXCLUDED_FAMILIES: tuple[OutputFamilySpec, ...] = (
     ),
 )
 
-
 ON_HOLD_FAMILIES: tuple[OutputFamilySpec, ...] = (
     OutputFamilySpec(
         family_id="training_scaffolding",
@@ -243,36 +239,45 @@ ON_HOLD_FAMILIES: tuple[OutputFamilySpec, ...] = (
 )
 
 
-def build_full_job_local_output_comparison_report() -> dict[str, object]:
-    approved_by_id = {item.family_id: item for item in APPROVED_OUTPUT_FAMILIES}
-    current_by_id = {item.family_id: item for item in CURRENT_APP_OUTPUT_FAMILIES}
+def build_full_job_local_output_comparison_report(run_dir: Path | None = None) -> dict[str, object]:
+    file_index = _build_file_index(run_dir) if run_dir is not None else set()
+    family_reports = [_serialize_scanned_family(item, file_index=file_index) for item in APPROVED_OUTPUT_FAMILIES]
 
-    covered_ids = sorted(set(approved_by_id) & set(current_by_id))
-    missing_ids = sorted(set(approved_by_id) - set(current_by_id))
-
-    covered_outputs = [_serialize_family(current_by_id[family_id], status="covered") for family_id in covered_ids]
-    missing_outputs = [_serialize_family(approved_by_id[family_id], status="missing_approved") for family_id in missing_ids]
+    covered_outputs = [item for item in family_reports if item["status"] == "covered"]
+    missing_outputs = [item for item in family_reports if item["status"] in {"missing_approved", "partial"}]
     excluded_outputs = [_serialize_family(item, status="intentionally_excluded") for item in INTENTIONALLY_EXCLUDED_FAMILIES]
     on_hold_outputs = [_serialize_family(item, status="on_hold") for item in ON_HOLD_FAMILIES]
+
+    partial_count = sum(1 for item in family_reports if item["status"] == "partial")
+    missing_count = sum(1 for item in family_reports if item["status"] == "missing_approved")
+    total_present_files = sum(int(item["present_output_count"]) for item in family_reports)
+    total_missing_files = sum(int(item["missing_output_count"]) for item in family_reports)
 
     return {
         "report_type": "full_job_local_output_comparison",
         "artifact_class": ArtifactClass.FILESYSTEM_ONLY.value,
         "local_only": True,
+        "scan_mode": "actual_run_directory" if run_dir is not None else "no_run_directory_supplied",
+        "scan_root_included": False,
         "source_documents": [
             "docs/NOTEBOOK_FULL_JOB_INVENTORY.md",
             "docs/NOTEBOOK_FULL_JOB_ARTIFACT_CONTRACT.md",
             "plan.md",
         ],
+        "approved_output_families": family_reports,
         "covered_outputs": covered_outputs,
         "missing_approved_outputs": missing_outputs,
         "intentionally_excluded_outputs": excluded_outputs,
         "on_hold_outputs": on_hold_outputs,
         "summary": {
+            "approved_output_family_count": len(family_reports),
             "covered_output_family_count": len(covered_outputs),
-            "missing_approved_output_family_count": len(missing_outputs),
+            "partial_output_family_count": partial_count,
+            "missing_approved_output_family_count": missing_count,
             "intentionally_excluded_output_family_count": len(excluded_outputs),
             "on_hold_output_family_count": len(on_hold_outputs),
+            "present_expected_file_count": total_present_files,
+            "missing_expected_file_count": total_missing_files,
         },
     }
 
@@ -281,7 +286,7 @@ def write_full_job_local_output_comparison_report(output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / FULL_JOB_LOCAL_OUTPUT_REPORT_NAME
     report_path.write_text(
-        json.dumps(build_full_job_local_output_comparison_report(), indent=2, sort_keys=True),
+        json.dumps(build_full_job_local_output_comparison_report(output_dir), indent=2, sort_keys=True),
         encoding="utf-8",
     )
     return report_path
@@ -291,3 +296,51 @@ def _serialize_family(item: OutputFamilySpec, *, status: str) -> dict[str, objec
     payload = asdict(item)
     payload["status"] = status
     return payload
+
+
+def _serialize_scanned_family(item: OutputFamilySpec, *, file_index: set[str]) -> dict[str, object]:
+    present_outputs: list[str] = []
+    missing_outputs: list[str] = []
+    for output in item.outputs:
+        if _expected_output_exists(output, file_index):
+            present_outputs.append(output)
+        else:
+            missing_outputs.append(output)
+
+    if not missing_outputs:
+        status = "covered"
+    elif present_outputs:
+        status = "partial"
+    else:
+        status = "missing_approved"
+
+    payload = asdict(item)
+    payload.update(
+        {
+            "status": status,
+            "present_outputs": present_outputs,
+            "missing_outputs": missing_outputs,
+            "present_output_count": len(present_outputs),
+            "missing_output_count": len(missing_outputs),
+        }
+    )
+    return payload
+
+
+def _build_file_index(run_dir: Path) -> set[str]:
+    if not run_dir.exists() or not run_dir.is_dir():
+        return set()
+    return {_normalise_relative_path(path.relative_to(run_dir)) for path in run_dir.rglob("*") if path.is_file()}
+
+
+def _expected_output_exists(expected_output: str, file_index: set[str]) -> bool:
+    expected = _normalise_relative_path(Path(expected_output))
+    if "###" not in expected:
+        return expected in file_index
+
+    prefix, suffix = expected.split("###", 1)
+    return any(path.startswith(prefix) and path.endswith(suffix) and len(path) > len(prefix) + len(suffix) for path in file_index)
+
+
+def _normalise_relative_path(path: Path | str) -> str:
+    return str(path).replace("\\", "/").lower()
