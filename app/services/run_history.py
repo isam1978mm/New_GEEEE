@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel
 
 from app.config import Settings
-from app.services.storage import initialize_run_storage, read_manifest
+from app.services.storage import initialize_run_storage, read_manifest, write_json_atomic
 
 RUN_STATUS_HISTORY_NAME = "run_status_history.json"
 
@@ -68,10 +67,7 @@ def append_run_event(
     events.append(event)
     run_dir = initialize_run_storage(settings, run_id)
     payload = {"events": [event.model_dump(mode="json") for event in events]}
-    (run_dir / RUN_STATUS_HISTORY_NAME).write_text(
-        json.dumps(payload, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    write_json_atomic(run_dir / RUN_STATUS_HISTORY_NAME, payload, indent=2, sort_keys=True)
 
 
 def read_run_history_events(
