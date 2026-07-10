@@ -24,13 +24,14 @@ def test_v6_package_frontend_api_targets_private_operator_routes() -> None:
 def test_request_package_panel_has_generate_review_and_retrieve_actions() -> None:
     source = _read("frontend-v2/src/app/components/V6PrivatePackagePanel.tsx")
 
-    assert "Paid Imagery Request Package" in source
-    assert "Generate request package" in source
+    assert "Paid Imagery Export Package" in source
+    assert "Generate export package" in source
     assert "Review package metadata" in source
-    assert "Retrieve package ZIP" in source
+    assert "Retrieve export package ZIP" in source
     assert "metadata only" in source
     assert "V6 real package flow" not in source
     assert "spatial payloads" in source
+    assert "Paid Imagery Request Package" not in source
 
 
 def test_operator_private_overlay_section_mounts_v6_package_panel() -> None:
