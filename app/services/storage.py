@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -99,6 +101,43 @@ def read_manifest(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def write_json_atomic(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    indent: int | None = 2,
+    sort_keys: bool = True,
+    newline: bool = False,
+) -> Path:
+    text = json.dumps(payload, indent=indent, sort_keys=sort_keys)
+    if newline:
+        text += "\n"
+    return write_text_atomic(path, text, encoding="utf-8")
+
+
+def write_text_atomic(path: Path, text: str, *, encoding: str = "utf-8") -> Path:
+    return write_bytes_atomic(path, text.encode(encoding))
+
+
+def write_bytes_atomic(path: Path, data: bytes) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    except Exception:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+    return path
+
+
 def resolve_run_artifact_path(settings: Settings, run_id: str, relative_path: str) -> Path:
     if not relative_path:
         raise ArtifactServeViolation()
@@ -148,5 +187,5 @@ def _write_manifest_file(
 ) -> Path:
     run_dir = initialize_run_storage(settings, run_id)
     manifest_path = run_dir / filename
-    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    write_json_atomic(manifest_path, payload, indent=2, sort_keys=True)
     return manifest_path
