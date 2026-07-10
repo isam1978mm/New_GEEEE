@@ -123,7 +123,7 @@ def test_generate_v6_package_from_real_outputs_writes_zip_inventory_and_report(t
         assert len(request_zones["features"]) == 2
 
     inventory = json.loads((tmp_path / "V6_REAL_GENERATED_inventory_20260103T010203Z.json").read_text())
-    assert inventory["package_provenance"]["frontend_metadata_only"] is True
+    assert inventory["package_provenance"]["privacy"]["frontend_metadata_only"] is True
     assert inventory["package_provenance"]["frozen_notebook_parity_claimed"] is False
 
     validation_report = json.loads((tmp_path / "V6_REAL_GENERATED_validation_20260103T010203Z.json").read_text())
