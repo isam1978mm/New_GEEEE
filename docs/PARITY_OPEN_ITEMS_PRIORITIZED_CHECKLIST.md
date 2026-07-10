@@ -1,21 +1,31 @@
-﻿# Parity Open Items — Prioritized Checklist
+# Parity Open Items — Prioritized Checklist
 
 ## Purpose
 
-This is the current operational checklist for `notebooks/new.ipynb` parity work.
+This is the operational checklist for `notebooks/new.ipynb` parity work. It is separate from the private/local Paid Imagery Export Package audit track.
 
-Full roadmap history remains in `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`.
-Expected output scope is maintained in `docs/parity_expected_outputs_sourcelocked.json`.
+Full roadmap history remains in:
+
+```text
+docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md
+```
+
+Expected output scope is maintained in:
+
+```text
+docs/parity_expected_outputs_sourcelocked.json
+```
 
 ## Scope Rule
 
-- `notebooks/new.ipynb` is the in-scope notebook.
-- V6 remains parked as a separate external-notebook/package track.
+- `notebooks/new.ipynb` is the in-scope notebook for this parity checklist.
+- The Paid Imagery Export Package is active app functionality, but old/external V6 notebook parity is not claimed here.
+- Internal `V6` / `v6_*` names are legacy implementation names for the export-package path unless a document explicitly says otherwise.
 - Real value parity requires the frozen D1C reference plus D2 validation.
 - Same-source comparisons prove mapping/tooling only.
 - Real app parity requires matching app-generated output for the D1C grid.
 - Source-recovery items are documented notebook outputs but are not fabricated or regenerated from mismatched pipelines.
-- Preview/export is not parity-blocking unless future work changes artifact names, filtering, safety classes, generated previews, or export packages.
+- Preview/export work is not parity-blocking unless future work changes artifact names, filtering, safety classes, generated previews, or export packages.
 
 ## Closed Work
 
@@ -37,15 +47,12 @@ Expected output scope is maintained in `docs/parity_expected_outputs_sourcelocke
 
 ## Blocked Real App Parity Items
 
-These are blocked, not failed. Same-source comparisons prove verifier mapping/tooling only; they
-are not real app parity. Real app-vs-reference parity requires app-generated output on the frozen
-D1C grid/source contract, D2-valid reference bundle validation, and then the existing verifier/CLI.
+These are blocked, not failed. Same-source comparisons prove verifier mapping/tooling only; they are not real app parity. Real app-vs-reference parity requires app-generated output on the frozen D1C grid/source contract, D2-valid reference bundle validation, and then the existing verifier/CLI.
 
 Unblock condition for every blocked item below:
 
 1. produce the matching app-generated output without fabricating or copying reference artifacts;
-2. prove the same D1C grid/source contract: same CRS, scale, width/height, transform/origin,
-   source contract, band count, shape convention, dtype, and output semantics;
+2. prove the same D1C grid/source contract: same CRS, scale, width/height, transform/origin, source contract, band count, shape convention, dtype, and output semantics;
 3. run the existing D2-gated verifier/CLI against the frozen D1C reference bundle.
 
 | Item | Status | Blocked reason | Existing verification path |
@@ -59,10 +66,7 @@ Unblock condition for every blocked item below:
 
 ## Source-Recovery Items
 
-Source-recovery items have notebook/source evidence but are not verified runtime parity targets yet.
-Do not fabricate outputs, do not regenerate from a mismatched notebook or pipeline version, and do
-not treat renamed/app-native equivalents as notebook parity. Each item needs an explicit
-recovery/build task before parity verification.
+Source-recovery items have notebook/source evidence but are not verified runtime parity targets yet. Do not fabricate outputs, do not regenerate from a mismatched notebook or pipeline version, and do not treat renamed/app-native equivalents as notebook parity.
 
 | Item | Status | Reason | Needed to unblock |
 | --- | --- | --- | --- |
@@ -71,34 +75,11 @@ recovery/build task before parity verification.
 | SAR/S1 support, intermediate, and QA/provenance outputs | source-recovery | ASC/DESC filtered layers, `S1_FILTERED_LAYERS_STACK_640.npy`, pre-RTC/intermediate/QA outputs either lack matching app writer paths or have app-native/renamed equivalents only. | Recover exact notebook source contract, selected source IDs/metadata, writer paths, and references before verification. |
 | PAN/optical image components and stack | source-recovery | D1C has source-locked PAN components and `PAN_LAYERS_STACK_640.npy`; current app has no matching PAN writer and existing optical outputs are not equivalents. | Add explicit source-driven PAN writer/run, then run PAN component and stack verifiers. |
 
-## Current Remaining-Job Sequence
+## Paid Imagery Export Package Clarification
 
-### 1. FINAL-1 — Final parity status / remaining blocked-run list — NEXT
+The app-side Paid Imagery Export Package remains active and in scope for the private/local app audit. It is not parked, deprecated, or removed.
 
-- [x] Query Graphify before direct source-file reading.
-- [x] Produce final closed-work list.
-- [x] Produce final blocked real app-vs-reference list.
-- [x] Produce final source-recovery list.
-- [x] Confirm V6 remains parked.
-- [x] Do not modify runtime code or generated artifacts.
-
-FINAL-1 status: closed as a docs-only parity status update. The local Graphify CLI was invoked
-first, but `graphify-out/graph.json` was absent, so no graph traversal was available. The final
-status was reconciled from the active parity checklist, source-locked baseline, V6 scope document,
-and the relevant verifier/recovery contracts. No runtime code, formulas, writers, verifiers,
-tolerances, source-locked baseline values, notebook files, reference bundles, generated artifacts,
-frontend build files, cache files, or Graphify outputs were changed.
-
-### 2. V6 — parked separate project
-
-- [ ] Later: provide external V6 notebook/export.
-- [ ] Later: freeze V6 package.
-- [ ] Later: source-lock V6 formulas.
-- [ ] Later: decide whether app integrates V6 workflow.
-
-V6 status: parked. It is a separate external-notebook/package track and does not block
-`notebooks/new.ipynb` parity closure. V6 can restart only after the operator supplies the separate
-originating V6 notebook or a real frozen V6 package.
+The separate old/external V6 notebook parity track remains unresolved until an operator supplies a verified external V6 notebook/export source. The active app package records provenance and does not claim frozen external V6 notebook parity.
 
 ## Completed Foundation
 
@@ -110,10 +91,9 @@ originating V6 notebook or a real frozen V6 package.
 
 ## Cross-Reference
 
+- `docs/AUDIT_FIX_PLAN_STUB.md`
 - `docs/NOTEBOOK_PARITY_FULL_CHECKLIST.md`
 - `docs/V6_PACKAGE_GENERATION_SCOPE.md`
 - `docs/SAFE_NOTEBOOK_CAPABILITY_PHASES.md`
 - `docs/parity_expected_outputs_sourcelocked.json`
 - `AGENTS.md`
-
-(End of PARITY_OPEN_ITEMS_PRIORITIZED_CHECKLIST.md.)
