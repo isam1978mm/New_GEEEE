@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import csv
-import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.qa_paths import ensure_run_qa_dir
-from app.pipeline.stages.dem import raster_sidecar_path, write_raster_sidecar
+from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.pipeline.stages.hypercube import HYPERCUBE_BAND_ORDER_NAME, HYPERCUBE_NPY_NAME
+from app.services.storage import write_json_atomic
 
 PCA_ANOMALY_TIF_NAME = "pca_anomaly.tif"
 PCA_REPORT_NAME = "pca_eigenvalues.json"
@@ -314,7 +313,7 @@ def write_pca_outputs(
     report_path = run_dir / PCA_REPORT_NAME
     qa_path = ensure_run_qa_dir(run_dir) / "parity" / PCA_PARITY_QA_NAME
     qa_path.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(anomaly.astype(np.float32)).save(tif_path, format="TIFF")
+    write_georeferenced_raster(tif_path, anomaly, grid_spec)
     write_raster_sidecar(
         tif_path,
         grid_manifest=grid_spec.manifest,
@@ -323,7 +322,7 @@ def write_pca_outputs(
         shape=anomaly.shape,
     )
     np.save(raw_score_path, raw_score.astype(np.float32, copy=False))
-    report_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+    write_json_atomic(report_path, report, indent=2, sort_keys=True)
     valid_anomaly = anomaly[(anomaly != grid_spec.nodata) & np.isfinite(anomaly)]
     qa_payload = {
         "stage": "pca_anomaly",
@@ -353,7 +352,7 @@ def write_pca_outputs(
         "anomaly_max": float(valid_anomaly.max()) if valid_anomaly.size else None,
         "anomaly_mean": float(valid_anomaly.mean()) if valid_anomaly.size else None,
     }
-    qa_path.write_text(json.dumps(qa_payload, indent=2, sort_keys=True), encoding="utf-8")
+    write_json_atomic(qa_path, qa_payload, indent=2, sort_keys=True)
     return {
         "pca_anomaly_tif": tif_path,
         "pca_anomaly_raw_npy": raw_score_path,
