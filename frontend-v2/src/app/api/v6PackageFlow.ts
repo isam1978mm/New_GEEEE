@@ -51,7 +51,7 @@ export async function retrieveV6Package(
       return { status: mapV6PackageStatus(payload, runId, response.status === 403 ? "denied" : undefined) };
     }
     if (!response.ok) {
-      return { status: errorStatus(runId, "Paid Imagery Request Package is temporarily unavailable.") };
+      return { status: errorStatus(runId, "Paid Imagery Export Package is temporarily unavailable.") };
     }
     const blob = await response.blob();
     const filename = filenameFromContentDisposition(response.headers.get("content-disposition")) || "V6_REAL_GENERATED.zip";
@@ -66,7 +66,7 @@ export async function retrieveV6Package(
       filename,
     };
   } catch (_error) {
-    return { status: errorStatus(runId, "Paid Imagery Request Package is temporarily unavailable.") };
+    return { status: errorStatus(runId, "Paid Imagery Export Package is temporarily unavailable.") };
   }
 }
 
@@ -93,11 +93,11 @@ async function requestV6PackageStatus(url: string, fallbackRunId: string, init?:
       if (mapped.outcome === "invalid_package_inputs") {
         return mapped;
       }
-      return errorStatus(fallbackRunId, "Paid Imagery Request Package status is temporarily unavailable.");
+      return errorStatus(fallbackRunId, "Paid Imagery Export Package status is temporarily unavailable.");
     }
     return mapV6PackageStatus(payload, fallbackRunId);
   } catch (_error) {
-    return errorStatus(fallbackRunId, "Paid Imagery Request Package status is temporarily unavailable.");
+    return errorStatus(fallbackRunId, "Paid Imagery Export Package status is temporarily unavailable.");
   }
 }
 
