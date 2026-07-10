@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import math
 from pathlib import Path
 from typing import Any
@@ -9,7 +8,7 @@ from pyproj import Transformer
 
 from app.config import Settings
 from app.services.grid import GridManifest, build_grid_manifest
-from app.services.storage import initialize_run_storage
+from app.services.storage import initialize_run_storage, write_json_atomic
 
 ROI_CONTRACT_RELATIVE_PATH = "PRIVATE/RUN_ROI_CONTRACT.json"
 ROI_CONTRACT_SCHEMA = "notebook_roi_contract_v1"
@@ -140,8 +139,7 @@ def write_run_roi_contract_from_grid_manifest(
 def write_run_roi_contract_payload(*, settings: Settings, run_id: str, contract: dict[str, Any]) -> Path:
     run_dir = initialize_run_storage(settings, run_id)
     path = run_dir / ROI_CONTRACT_RELATIVE_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(contract, indent=2, sort_keys=True), encoding="utf-8")
+    write_json_atomic(path, contract, indent=2, sort_keys=True)
     return path
 
 
