@@ -199,10 +199,8 @@ def _read_single_band_tif(path: Path) -> np.ndarray:
         return np.array(image, dtype=np.float32)
 
 
-def _save_multipage_tiff(path: Path, cube_hwc: np.ndarray) -> None:
-    pages = [Image.fromarray(cube_hwc[:, :, band_index].astype(np.float32)) for band_index in range(cube_hwc.shape[-1])]
-    first, *rest = pages
-    first.save(path, format="TIFF", save_all=True, append_images=rest)
+def _save_stack_geotiff(path: Path, cube_hwc: np.ndarray, grid_spec: GridSpec) -> None:
+    write_georeferenced_raster(path, cube_hwc.astype(np.float32, copy=False), grid_spec)
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
@@ -1324,9 +1322,9 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     notebook_sim_geophysical_stack_npy_path = notebook_stack_dir / NOTEBOOK_SIM_GEOPHYSICAL_STACK_NPY
     notebook_stack_alias_manifest_path = notebook_stack_dir / NOTEBOOK_STACK_ALIAS_MANIFEST_JSON
 
-    _save_multipage_tiff(stack_tif_path, cube)
+    _save_stack_geotiff(stack_tif_path, cube, grid_spec)
     np.save(stack_npy_path, cube)
-    _save_multipage_tiff(radar_linear_tif_path, radar_linear_stack)
+    _save_stack_geotiff(radar_linear_tif_path, radar_linear_stack, grid_spec)
     np.save(radar_linear_npy_path, radar_linear_stack)
     np.save(notebook_radar_stack_npy_path, radar_db_stack)
     np.save(notebook_science_core_stack_npy_path, cube)
@@ -1485,7 +1483,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
 
     write_georeferenced_raster(radar_db_tif_path, radar_db_stack, grid_spec)
     np.save(radar_db_npy_path, radar_db_stack)
-    _save_multipage_tiff(ai_ready_tif_path, ai_ready_stack)
+    _save_stack_geotiff(ai_ready_tif_path, ai_ready_stack, grid_spec)
     np.save(ai_ready_npy_path, ai_ready_stack)
     Image.fromarray(s2_mask.astype(np.float32)).save(s2_mask_path, format="TIFF")
     write_raster_sidecar(stack_tif_path, grid_manifest=grid_spec.manifest, nodata=grid_spec.nodata, dtype="float32", shape=cube.shape[:2])

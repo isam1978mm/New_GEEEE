@@ -6,7 +6,8 @@ from typing import Protocol
 
 import ee
 import numpy as np
-from PIL import Image
+import rasterio
+from rasterio.transform import Affine
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
@@ -754,13 +755,27 @@ def compute_s2_dem_matched_masks(cube: np.ndarray, outputs: dict[str, np.ndarray
     }
 
 
-def write_raster(path: Path, array: np.ndarray) -> None:
-    Image.fromarray(array.astype(np.float32)).save(path, format="TIFF")
+def write_raster(path: Path, array: np.ndarray, grid_spec: GridSpec) -> None:
+    write_georeferenced_raster(path, _finite_or_nodata(array, nodata=grid_spec.nodata), grid_spec)
 
 
-def write_mask_raster(path: Path, mask: np.ndarray) -> None:
+def write_mask_raster(path: Path, mask: np.ndarray, grid_spec: GridSpec) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(mask.astype(np.uint8, copy=False)).save(path, format="TIFF")
+    data = mask.astype(np.uint8, copy=False)
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=int(data.shape[0]),
+        width=int(data.shape[1]),
+        count=1,
+        dtype="float32",
+        crs=grid_spec.crs,
+        transform=Affine(*grid_spec.transform),
+        nodata=0,
+        compress="deflate",
+    ) as dataset:
+        dataset.write(data, 1)
 
 
 def _finite_or_nodata(array: np.ndarray, *, nodata: float) -> np.ndarray:
@@ -891,7 +906,7 @@ def write_aix_extra_tensor_outputs(run_dir: Path, grid_spec: GridSpec, cube: np.
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,
-            nodata=grid_spec.nodata,
+            nodata=0.0,
             dtype="float32",
             shape=band_array.shape,
         )
@@ -930,7 +945,7 @@ def write_aix_dem_matched_mask_outputs(run_dir: Path, grid_spec: GridSpec, cube:
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,
-            nodata=grid_spec.nodata,
+            nodata=0.0,
             dtype="float32",
             shape=band_array.shape,
         )
@@ -969,7 +984,7 @@ def write_fusion_intelligence_outputs(run_dir: Path, grid_spec: GridSpec, cube: 
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,
-            nodata=grid_spec.nodata,
+            nodata=0.0,
             dtype="float32",
             shape=band_array.shape,
         )
@@ -1008,7 +1023,7 @@ def write_tesla_atomic_inference_outputs(run_dir: Path, grid_spec: GridSpec, cub
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,
-            nodata=grid_spec.nodata,
+            nodata=0.0,
             dtype="float32",
             shape=band_array.shape,
         )
@@ -1025,11 +1040,11 @@ def write_s2_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.n
     written_paths: list[Path] = []
     for name, array in outputs.items():
         tif_path = run_dir / f"{name}.tif"
-        write_raster(tif_path, array)
+        write_raster(tif_path, array, grid_spec)
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,
-            nodata=grid_spec.nodata,
+            nodata=0.0,
             dtype="float32",
             shape=array.shape,
         )
@@ -1054,8 +1069,8 @@ def write_s2_mask_outputs(
 
     raw_valid = masks["raw_valid_mask"]
     index_valid = masks["index_valid_mask"]
-    write_mask_raster(raw_valid_path, raw_valid)
-    write_mask_raster(index_valid_path, index_valid)
+    write_mask_raster(raw_valid_path, raw_valid, grid_spec)
+    write_mask_raster(index_valid_path, index_valid, grid_spec)
     for path, mask in ((raw_valid_path, raw_valid), (index_valid_path, index_valid)):
         write_raster_sidecar(
             path,
