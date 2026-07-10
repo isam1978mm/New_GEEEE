@@ -15,7 +15,7 @@ interface V6PrivatePackagePanelProps {
 
 type ActionState = "idle" | "generating" | "reviewing" | "retrieving";
 
-const PACKAGE_TITLE = "Paid Imagery Request Package";
+const PACKAGE_TITLE = "Paid Imagery Export Package";
 
 export function V6PrivatePackagePanel({ runId, operatorAccessToken }: V6PrivatePackagePanelProps) {
   const contextOperatorAccessToken = useOperatorAccessToken();
@@ -45,7 +45,7 @@ export function V6PrivatePackagePanel({ runId, operatorAccessToken }: V6PrivateP
     setFeedback(null);
     const nextStatus = await generateV6Package(runId, { accessToken: resolvedOperatorAccessToken });
     setStatus(nextStatus);
-    setFeedback(nextStatus.outcome === "generated" ? "Request package generated." : nextStatus.message || "Request package generation did not complete.");
+    setFeedback(nextStatus.outcome === "generated" ? "Export package generated." : nextStatus.message || "Export package generation did not complete.");
     setActionState("idle");
   }
 
@@ -64,9 +64,9 @@ export function V6PrivatePackagePanel({ runId, operatorAccessToken }: V6PrivateP
     setStatus(result.status);
     if (result.blob && result.filename) {
       saveBlob(result.blob, result.filename);
-      setFeedback("Request package retrieval started.");
+      setFeedback("Export package retrieval started.");
     } else {
-      setFeedback(result.status.message || "Request package is not available for retrieval.");
+      setFeedback(result.status.message || "Export package is not available for retrieval.");
     }
     setActionState("idle");
   }
@@ -91,13 +91,13 @@ export function V6PrivatePackagePanel({ runId, operatorAccessToken }: V6PrivateP
 
         <div className="px-4 py-3 flex flex-col gap-3">
           <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-            Generates, reviews, and retrieves a ZIP package for requesting/reviewing paid imagery over the best candidate zones. The panel shows metadata only and never displays rows or spatial payloads.
+            Generates, reviews, and retrieves a ZIP export package for requesting/reviewing paid imagery over the best candidate zones. The panel shows metadata only and never displays rows or spatial payloads.
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <ActionButton label="Generate request package" disabled={actionState !== "idle"} onClick={() => { void handleGenerate(); }} />
+            <ActionButton label="Generate export package" disabled={actionState !== "idle"} onClick={() => { void handleGenerate(); }} />
             <ActionButton label="Review package metadata" disabled={actionState !== "idle"} onClick={() => { void handleReview(); }} />
-            <ActionButton label="Retrieve package ZIP" disabled={actionState !== "idle" || status?.packageReady !== true} onClick={() => { void handleRetrieve(); }} />
+            <ActionButton label="Retrieve export package ZIP" disabled={actionState !== "idle" || status?.packageReady !== true} onClick={() => { void handleRetrieve(); }} />
           </div>
 
           {actionState !== "idle" && <StatusBox tone="neutral" message={loadingMessage(actionState)} />}
@@ -114,28 +114,28 @@ function PackageStatusBody({ status }: { status: V6PackageStatus }) {
     return (
       <StatusBox
         tone="warning"
-        message={status.message || "Paid Imagery Request Package is not available for this operator session."}
+        message={status.message || "Paid Imagery Export Package is not available for this operator session."}
         detail={status.supportReference ? `Support reference: ${status.supportReference}` : undefined}
       />
     );
   }
 
   if (status.outcome === "not_available") {
-    return <StatusBox tone="neutral" message="No request package is available for this run yet." />;
+    return <StatusBox tone="neutral" message="No export package is available for this run yet." />;
   }
 
   if (status.outcome === "invalid_package_inputs") {
-    return <StatusBox tone="error" message="The run-local request package inputs are invalid." />;
+    return <StatusBox tone="error" message="The run-local export package inputs are invalid." />;
   }
 
   if (status.outcome === "error") {
-    return <StatusBox tone="error" message={status.message || "Paid Imagery Request Package is temporarily unavailable."} />;
+    return <StatusBox tone="error" message={status.message || "Paid Imagery Export Package is temporarily unavailable."} />;
   }
 
   return (
     <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}>
       <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--gs-navy)", marginBottom: "6px" }}>
-        Request package metadata
+        Export package metadata
       </div>
       <dl className="grid gap-2" style={{ gridTemplateColumns: "max-content 1fr", fontSize: "11px", color: "var(--gs-slate)" }}>
         <dt style={termStyle}>Run</dt>
@@ -228,12 +228,12 @@ function StatusBox({ tone, message, detail }: { tone: "neutral" | "warning" | "e
 
 function loadingMessage(actionState: ActionState): string {
   if (actionState === "generating") {
-    return "Generating request package...";
+    return "Generating export package...";
   }
   if (actionState === "retrieving") {
-    return "Retrieving package ZIP...";
+    return "Retrieving export package ZIP...";
   }
-  return "Reviewing package metadata...";
+  return "Reviewing export package metadata...";
 }
 
 const termStyle = { fontWeight: 600, color: "var(--gs-navy)" } as const;
