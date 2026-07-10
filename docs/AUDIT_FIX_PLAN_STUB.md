@@ -66,8 +66,8 @@ For each main item:
 
 ### Item 3 — Run Reliability
 
-- [ ] 3.1 Include orphan `QUEUED` runs in stale startup cleanup.
-- [ ] 3.2 Add tests for queued and running stale runs.
+- [x] 3.1 Include orphan `QUEUED` runs in stale startup cleanup.
+- [x] 3.2 Add tests for queued and running stale runs.
 - [ ] 3.3 Add a shared atomic JSON write helper.
 - [ ] 3.4 Replace truncate-in-place writes.
 - [ ] 3.5 Add atomic-write tests where practical.
