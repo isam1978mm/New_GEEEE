@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 import ee
 import numpy as np
-from PIL import Image
 
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.qa_paths import ensure_run_qa_dir
-from app.pipeline.stages.dem import DEM_TILE_SIZE, write_raster_sidecar
+from app.pipeline.stages.dem import DEM_TILE_SIZE, write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import GridSpec
 from app.services.ee_session import initialize_ee_session
+from app.services.storage import write_json_atomic
 
 DEFAULT_START = "2022-01-01"
 DEFAULT_END = "2026-02-28"
@@ -268,7 +267,7 @@ def validate_thermal_outputs(outputs: ThermalOutputs, grid_spec: GridSpec) -> di
 
 def write_lst_output(run_dir: Path, grid_spec: GridSpec, lst: np.ndarray) -> Path:
     tif_path = run_dir / LST_TIF_NAME
-    Image.fromarray(lst.astype(np.float32)).save(tif_path, format="TIFF")
+    write_georeferenced_raster(tif_path, lst, grid_spec)
     write_raster_sidecar(
         tif_path,
         grid_manifest=grid_spec.manifest,
@@ -307,26 +306,24 @@ def write_thermal_summary(
     summary_path = qa_dir / "thermal_summary.json"
     valid = np.isfinite(lst) & (lst != nodata)
     values = lst[valid]
-    summary_path.write_text(
-        json.dumps(
-            {
-                "stage": "thermal",
-                "start_date": start_date,
-                "end_date": end_date,
-                "valid_fraction": round(float(valid.mean()), 6),
-                "minimum_valid_fraction": MIN_THERMAL_VALID_FRACTION,
-                "valid_fractions": {name: round(float(value), 6) for name, value in valid_fractions.items()},
-                "min": round(float(values.min()), 6),
-                "max": round(float(values.max()), 6),
-                "mean": round(float(values.mean()), 6),
-                "raw_st_b10_unit": "raw_dn",
-                "l9_st_b10_source_collection": NOTEBOOK_L9_ST_B10_COLLECTION,
-                "l9_st_b10_unit": "raw_dn",
-            },
-            indent=2,
-            sort_keys=True,
-        ),
-        encoding="utf-8",
+    write_json_atomic(
+        summary_path,
+        {
+            "stage": "thermal",
+            "start_date": start_date,
+            "end_date": end_date,
+            "valid_fraction": round(float(valid.mean()), 6),
+            "minimum_valid_fraction": MIN_THERMAL_VALID_FRACTION,
+            "valid_fractions": {name: round(float(value), 6) for name, value in valid_fractions.items()},
+            "min": round(float(values.min()), 6),
+            "max": round(float(values.max()), 6),
+            "mean": round(float(values.mean()), 6),
+            "raw_st_b10_unit": "raw_dn",
+            "l9_st_b10_source_collection": NOTEBOOK_L9_ST_B10_COLLECTION,
+            "l9_st_b10_unit": "raw_dn",
+        },
+        indent=2,
+        sort_keys=True,
     )
     return summary_path
 
