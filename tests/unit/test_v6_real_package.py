@@ -15,6 +15,16 @@ from app.services.v6_real_scoring import V6ScoredCandidate
 from app.services.v6_real_zones import generate_v6_request_zones
 
 
+PROVENANCE_HEADERS = (
+    "score_basis",
+    "geometry_basis",
+    "package_provenance",
+    "fallback_score_used",
+    "fallback_geometry_used",
+    "frozen_notebook_parity_claimed",
+)
+
+
 def _candidate(cell_id: str, rank: int, *, score: float = 0.75, warnings: int = 0) -> V6ScoredCandidate:
     return V6ScoredCandidate(
         cell_id=cell_id,
@@ -65,11 +75,25 @@ def test_build_v6_payloads_from_real_outputs_contains_real_rows_and_zone_payload
     top_csv = payloads["lawful_gee_candidate_scout_top_25_20260103T010203Z.csv"].decode("utf-8")
     assert "V6_CELL_R001_C001" in top_csv
     assert "v6_review_priority_score" in top_csv
+    for header in PROVENANCE_HEADERS:
+        assert header in top_csv
 
     zones_csv = payloads["request_zones_v6.csv"].decode("utf-8")
     assert "primary_cell_id" in zones_csv
     assert "V6_RZ_001" in zones_csv
     assert "V6_QUOTE_001" in zones_csv
+    assert "geometry_basis" in zones_csv
+
+    summary = payloads["paid_archive_request_summary.txt"].decode("utf-8")
+    assert "Package provenance:" in summary
+    assert "Score basis:" in summary
+    assert "Geometry basis:" in summary
+    assert "Frozen external notebook parity claimed: False" in summary
+    assert "placeholder" in summary
+
+    map_html = payloads["visual_inspection_map.html"].decode("utf-8")
+    assert "placeholder" in map_html
+    assert "No imagery" in map_html
 
     zone_geojson = json.loads(payloads["request_zones_v6.geojson"].decode("utf-8"))
     assert zone_geojson["type"] == "FeatureCollection"
@@ -98,9 +122,16 @@ def test_generate_v6_package_from_real_outputs_writes_zip_inventory_and_report(t
         assert request_zones["type"] == "FeatureCollection"
         assert len(request_zones["features"]) == 2
 
+    inventory = json.loads((tmp_path / "V6_REAL_GENERATED_inventory_20260103T010203Z.json").read_text())
+    assert inventory["package_provenance"]["frontend_metadata_only"] is True
+    assert inventory["package_provenance"]["frozen_notebook_parity_claimed"] is False
+
     validation_report = json.loads((tmp_path / "V6_REAL_GENERATED_validation_20260103T010203Z.json").read_text())
     assert validation_report["real_output_feed"] is True
     assert validation_report["input_run_id"] == "REAL_RUN_FIXTURE_001"
+    assert validation_report["package_provenance"]["score_basis"] == "app_scored_candidates_v6_review_priority_score"
+    assert validation_report["package_provenance"]["geometry_basis"] == "app_generated_request_zones_from_grid_cells"
+    assert validation_report["package_provenance"]["frozen_notebook_parity_claimed"] is False
 
 
 def test_real_package_cli_summary_is_safe_metadata_only(tmp_path) -> None:
@@ -116,6 +147,21 @@ def test_real_package_cli_summary_is_safe_metadata_only(tmp_path) -> None:
     assert "V6_CELL_R001_C001" not in serialized
     assert "coordinates" not in serialized
     assert "features" not in serialized
+
+
+def test_v6_real_package_inputs_safe_summary_includes_provenance_without_rows_or_geometry() -> None:
+    summary = _package_inputs().safe_summary()
+    serialized = json.dumps(summary, sort_keys=True)
+
+    assert summary["source_mode"] == "local_existing_run_outputs"
+    assert summary["score_basis"] == "app_scored_candidates_v6_review_priority_score"
+    assert summary["geometry_basis"] == "app_generated_request_zones_from_grid_cells"
+    assert summary["package_provenance"] == "app_generated_private_local_export_package"
+    assert summary["frozen_notebook_parity_claimed"] is False
+    assert summary["contains_rows"] is False
+    assert summary["contains_geometry"] is False
+    assert "V6_CELL_R001_C001" not in serialized
+    assert "coordinates" not in serialized
 
 
 def test_v6_real_package_inputs_validates_required_values() -> None:
