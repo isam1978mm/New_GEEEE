@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from app.config import Settings
-from app.services.storage import get_run_dir
+from app.services.storage import get_run_dir, write_text_atomic
 from app.services.v6_app_flow import V6_PRIVATE_INPUT_RELATIVE_PATH
 from app.services.v6_real_gee_runtime import V6AoiBounds, V6GridCell, validate_v6_aoi_bounds
 from app.services.v6_real_scoring import V6ScoredCandidate
@@ -25,6 +25,19 @@ from app.services.v6_real_zones import V6RequestZone, V6RequestZoneConfig, gener
 _LOCAL_SCHEMA_VERSION = "v6_1_local_package_input_v1"
 _MAX_LOCAL_CANDIDATES = 25
 _POINT_BUFFER_DEGREES = 0.001
+_SOURCE_MODE = "local_existing_run_outputs"
+_GEOMETRY_BASIS = "aoi_bounds_split_evenly_across_ranked_candidates"
+_PACKAGE_PROVENANCE = "local_loopback_generated_from_private_run_outputs"
+_PLACEHOLDER_MAP_LABEL = "visual_inspection_map_is_placeholder_no_imagery"
+_SCORE_COLUMNS = (
+    "v6_review_priority_score",
+    "candidate_score",
+    "score",
+    "mean_score",
+    "confidence",
+    "area",
+    "pixel_count",
+)
 
 
 @dataclass(frozen=True)
@@ -55,15 +68,34 @@ def ensure_local_v6_package_input(settings: Settings, run_id: str) -> V6LocalPac
     if not source_rows:
         return _result(False, None, "candidate_source_missing", run_id, 0, 0)
 
-    candidates = _build_candidates(source_rows[:_MAX_LOCAL_CANDIDATES])
+    source_rows = source_rows[:_MAX_LOCAL_CANDIDATES]
+    score_basis, fallback_score_used = _score_basis_from_rows(source_rows)
+    candidates = _build_candidates(source_rows)
     grid_cells = _build_grid_cells_for_candidates(aoi=aoi, candidates=candidates)
     zones = generate_v6_request_zones(
         candidates,
         grid_cells,
         config=V6RequestZoneConfig(max_zones=len(candidates)),
     )
-    _write_input_file(input_path=input_path, run_id=run_id, candidates=candidates, zones=zones)
-    return _result(True, input_path, "created", run_id, len(candidates), len(zones))
+    _write_input_file(
+        input_path=input_path,
+        run_id=run_id,
+        candidates=candidates,
+        zones=zones,
+        score_basis=score_basis,
+        fallback_score_used=fallback_score_used,
+    )
+    return _result(
+        True,
+        input_path,
+        "created",
+        run_id,
+        len(candidates),
+        len(zones),
+        score_basis=score_basis,
+        fallback_score_used=fallback_score_used,
+        fallback_geometry_used=True,
+    )
 
 
 def _local_loopback_mode(settings: Settings) -> bool:
@@ -200,17 +232,27 @@ def _write_input_file(
     run_id: str,
     candidates: tuple[V6ScoredCandidate, ...],
     zones: tuple[V6RequestZone, ...],
+    score_basis: str,
+    fallback_score_used: bool,
 ) -> None:
     input_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema_version": _LOCAL_SCHEMA_VERSION,
-        "source_mode": "local_existing_run_outputs",
+        "source_mode": _SOURCE_MODE,
         "run_id": run_id,
         "timestamp": datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"),
+        "score_basis": score_basis,
+        "geometry_basis": _GEOMETRY_BASIS,
+        "package_provenance": _PACKAGE_PROVENANCE,
+        "fallback_score_used": bool(fallback_score_used),
+        "fallback_geometry_used": True,
+        "placeholder_map_label": _PLACEHOLDER_MAP_LABEL,
+        "frozen_notebook_parity_claimed": False,
+        "provenance": _provenance_payload(score_basis=score_basis, fallback_score_used=fallback_score_used),
         "scored_candidates": [candidate.as_package_row() for candidate in candidates],
         "request_zones": [_zone_input_row(zone) for zone in zones],
     }
-    input_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_text_atomic(input_path, json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _zone_input_row(zone: V6RequestZone) -> dict[str, Any]:
@@ -230,16 +272,34 @@ def _zone_input_row(zone: V6RequestZone) -> dict[str, Any]:
     }
 
 
+def _provenance_payload(*, score_basis: str, fallback_score_used: bool) -> dict[str, Any]:
+    return {
+        "source_mode": _SOURCE_MODE,
+        "score_basis": score_basis,
+        "geometry_basis": _GEOMETRY_BASIS,
+        "package_provenance": _PACKAGE_PROVENANCE,
+        "fallback_score_used": bool(fallback_score_used),
+        "fallback_geometry_used": True,
+        "placeholder_map_label": _PLACEHOLDER_MAP_LABEL,
+        "frozen_notebook_parity_claimed": False,
+        "privacy": {
+            "artifact_class": "LOCAL_SENSITIVE",
+            "filesystem_only": True,
+            "frontend_metadata_only": True,
+            "public_access": False,
+        },
+    }
+
+
+def _score_basis_from_rows(rows: list[Mapping[str, object]]) -> tuple[str, bool]:
+    keys = sorted({key for row in rows for key in _SCORE_COLUMNS if _is_finite_number(row.get(key))})
+    if keys:
+        return f"source_columns:{','.join(keys)}", False
+    return "fallback_row_width_minus_rank_index", True
+
+
 def _score_from_row(row: Mapping[str, object], index: int) -> float:
-    for key in (
-        "v6_review_priority_score",
-        "candidate_score",
-        "score",
-        "mean_score",
-        "confidence",
-        "area",
-        "pixel_count",
-    ):
+    for key in _SCORE_COLUMNS:
         value = row.get(key)
         if _is_finite_number(value):
             return float(value)
@@ -277,6 +337,10 @@ def _result(
     run_id: str,
     candidate_count: int,
     zone_count: int,
+    *,
+    score_basis: str | None = None,
+    fallback_score_used: bool = False,
+    fallback_geometry_used: bool = False,
 ) -> V6LocalPackageInputResult:
     return V6LocalPackageInputResult(
         created=created,
@@ -288,6 +352,14 @@ def _result(
             "reason": reason,
             "candidate_count": candidate_count,
             "request_zone_count": zone_count,
+            "source_mode": _SOURCE_MODE,
+            "score_basis": score_basis or "not_applicable",
+            "geometry_basis": _GEOMETRY_BASIS if fallback_geometry_used else "not_applicable",
+            "package_provenance": _PACKAGE_PROVENANCE,
+            "fallback_score_used": bool(fallback_score_used),
+            "fallback_geometry_used": bool(fallback_geometry_used),
+            "placeholder_map_label": _PLACEHOLDER_MAP_LABEL,
+            "frozen_notebook_parity_claimed": False,
             "contains_rows": False,
             "contains_geometry": False,
             "private_file_only": True,
