@@ -30,6 +30,11 @@ from app.services.v6_real_zones import V6RequestZone, request_zones_to_geojson
 
 _TIMESTAMP_PATTERN = re.compile(r"^\d{8}T\d{6}Z$")
 _CHUNK_SIZE = 1024 * 1024
+_DEFAULT_SOURCE_MODE = "local_existing_run_outputs"
+_DEFAULT_SCORE_BASIS = "app_scored_candidates_v6_review_priority_score"
+_DEFAULT_GEOMETRY_BASIS = "app_generated_request_zones_from_grid_cells"
+_DEFAULT_PACKAGE_PROVENANCE = "app_generated_private_local_export_package"
+_DEFAULT_PLACEHOLDER_MAP_LABEL = "visual_inspection_map_is_placeholder_no_imagery"
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,14 @@ class V6RealPackageInputs:
     timestamp: str
     scored_candidates: tuple[V6ScoredCandidate, ...]
     request_zones: tuple[V6RequestZone, ...]
+    source_mode: str = _DEFAULT_SOURCE_MODE
+    score_basis: str = _DEFAULT_SCORE_BASIS
+    geometry_basis: str = _DEFAULT_GEOMETRY_BASIS
+    package_provenance: str = _DEFAULT_PACKAGE_PROVENANCE
+    fallback_score_used: bool = False
+    fallback_geometry_used: bool = False
+    placeholder_map_label: str = _DEFAULT_PLACEHOLDER_MAP_LABEL
+    frozen_notebook_parity_claimed: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.run_id, str) or not self.run_id.strip():
@@ -55,8 +68,34 @@ class V6RealPackageInputs:
             "timestamp": self.timestamp,
             "scored_candidate_count": len(self.scored_candidates),
             "request_zone_count": len(self.request_zones),
+            "source_mode": self.source_mode,
+            "score_basis": self.score_basis,
+            "geometry_basis": self.geometry_basis,
+            "package_provenance": self.package_provenance,
+            "fallback_score_used": bool(self.fallback_score_used),
+            "fallback_geometry_used": bool(self.fallback_geometry_used),
+            "placeholder_map_label": self.placeholder_map_label,
+            "frozen_notebook_parity_claimed": bool(self.frozen_notebook_parity_claimed),
             "contains_rows": False,
             "contains_geometry": False,
+        }
+
+    def provenance_metadata(self) -> dict[str, Any]:
+        return {
+            "source_mode": self.source_mode,
+            "score_basis": self.score_basis,
+            "geometry_basis": self.geometry_basis,
+            "package_provenance": self.package_provenance,
+            "fallback_score_used": bool(self.fallback_score_used),
+            "fallback_geometry_used": bool(self.fallback_geometry_used),
+            "placeholder_map_label": self.placeholder_map_label,
+            "frozen_notebook_parity_claimed": bool(self.frozen_notebook_parity_claimed),
+            "privacy": {
+                "artifact_class": "LOCAL_SENSITIVE",
+                "filesystem_only": True,
+                "frontend_metadata_only": True,
+                "public_access": False,
+            },
         }
 
 
@@ -89,11 +128,13 @@ def generate_v6_package_from_real_outputs(
         }
         for name, content in sorted(payloads.items())
     ]
+    provenance = package_inputs.provenance_metadata()
     inventory_payload = {
         "created_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "generator": "app-side V6 real-output package generator",
         "input_run_id": package_inputs.run_id,
         "file_count": len(records),
+        "package_provenance": provenance,
         "records": records,
     }
     inventory_text = json.dumps(inventory_payload, indent=2, sort_keys=True)
@@ -117,6 +158,7 @@ def generate_v6_package_from_real_outputs(
             "zip_entry_count": len(payloads) + 1,
             "package_sha256": _sha256_path(zip_path),
             "real_output_feed": True,
+            "package_provenance": provenance,
         }
     )
     write_text_atomic(
@@ -143,6 +185,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
     timestamp = package_inputs.timestamp
     top25_csv = f"lawful_gee_candidate_scout_top_25_{timestamp}.csv"
     top25_geojson = f"lawful_gee_candidate_scout_top_25_{timestamp}.geojson"
+    provenance_columns = _provenance_columns(package_inputs)
 
     candidates_by_cell = {candidate.cell_id: candidate for candidate in package_inputs.scored_candidates}
     top_candidates = tuple(sorted(package_inputs.scored_candidates, key=lambda item: item.final_priority_rank_v6))[:25]
@@ -154,6 +197,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
             "final_priority_rank_v6": candidate.final_priority_rank_v6,
             "v6_review_priority_score": _format_score(candidate.v6_review_priority_score),
             "v6_false_positive_warning_count": candidate.v6_false_positive_warning_count,
+            **provenance_columns,
         }
         for candidate in top_candidates
     ]
@@ -167,6 +211,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
             "v6_quality_adjusted_score": _format_score(candidate.v6_quality_adjusted_score),
             "v6_no_warning_bonus": _format_score(candidate.v6_no_warning_bonus),
             "v6_review_priority_score": _format_score(candidate.v6_review_priority_score),
+            **provenance_columns,
         }
         for candidate in top_candidates
     ]
@@ -179,6 +224,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
             "final_priority_rank_v6": zone.final_priority_rank_v6,
             "v6_review_priority_score": _format_score(zone.v6_review_priority_score),
             "v6_false_positive_warning_count": zone.v6_false_positive_warning_count,
+            **provenance_columns,
         }
         for zone in package_inputs.request_zones
     ]
@@ -188,6 +234,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
             "request_zone_id": zone.request_zone_id,
             "primary_cell_id": zone.source_cell_id,
             "final_priority_rank_v6": zone.final_priority_rank_v6,
+            **provenance_columns,
         }
         for zone in package_inputs.request_zones
     ]
@@ -197,6 +244,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
             "request_zone_id": zone.request_zone_id,
             "quote_score": _format_score(candidates_by_cell[zone.source_cell_id].v6_review_priority_score),
             "source_cell_id": zone.source_cell_id,
+            **provenance_columns,
         }
         for zone in package_inputs.request_zones
         if zone.source_cell_id in candidates_by_cell
@@ -212,6 +260,7 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
                 "final_priority_rank_v6",
                 "v6_review_priority_score",
                 "v6_false_positive_warning_count",
+                *_PROVENANCE_HEADERS,
             ],
             top_candidate_rows,
         ),
@@ -229,16 +278,17 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
                 "final_priority_rank_v6",
                 "v6_review_priority_score",
                 "v6_false_positive_warning_count",
+                *_PROVENANCE_HEADERS,
             ],
             request_zone_rows,
         ),
         "request_zones_v6.geojson": _json_bytes(zone_geojson),
         "paid_imagery_quote_template_v6.csv": _csv_bytes_from_dicts(
-            ["quote_id", "request_zone_id", "primary_cell_id", "final_priority_rank_v6"],
+            ["quote_id", "request_zone_id", "primary_cell_id", "final_priority_rank_v6", *_PROVENANCE_HEADERS],
             quote_template_rows,
         ),
         "paid_imagery_quote_comparison_v6.csv": _csv_bytes_from_dicts(
-            ["quote_id", "request_zone_id", "quote_score", "source_cell_id"],
+            ["quote_id", "request_zone_id", "quote_score", "source_cell_id", *_PROVENANCE_HEADERS],
             quote_comparison_rows,
         ),
         "paid_archive_request_summary.txt": (
@@ -246,15 +296,31 @@ def build_v6_payloads_from_real_outputs(*, package_inputs: V6RealPackageInputs) 
             f"Input run: {package_inputs.run_id}\n"
             f"Candidate count: {len(package_inputs.scored_candidates)}\n"
             f"Request zone count: {len(package_inputs.request_zones)}\n"
+            f"Package provenance: {package_inputs.package_provenance}\n"
+            f"Score basis: {package_inputs.score_basis}\n"
+            f"Geometry basis: {package_inputs.geometry_basis}\n"
+            f"Fallback score used: {bool(package_inputs.fallback_score_used)}\n"
+            f"Fallback geometry used: {bool(package_inputs.fallback_geometry_used)}\n"
+            f"Frozen external notebook parity claimed: {bool(package_inputs.frozen_notebook_parity_claimed)}\n"
             "This package is generated from app-side scored candidates and request zones.\n"
+            "The visual inspection map is a placeholder and does not contain imagery.\n"
         ).encode("utf-8"),
         "visual_inspection_map.html": (
             "<!doctype html>\n"
-            "<html><head><meta charset=\"utf-8\"><title>V6 App Generated Map</title></head>\n"
-            "<body><p>Private app-generated V6 map placeholder.</p></body></html>\n"
+            "<html><head><meta charset=\"utf-8\"><title>V6 App Generated Map Placeholder</title></head>\n"
+            "<body><p>Private app-generated V6 map placeholder. No imagery is embedded in this HTML.</p></body></html>\n"
         ).encode("utf-8"),
     }
 
+
+_PROVENANCE_HEADERS = [
+    "score_basis",
+    "geometry_basis",
+    "package_provenance",
+    "fallback_score_used",
+    "fallback_geometry_used",
+    "frozen_notebook_parity_claimed",
+]
 
 _ENHANCED_HEADERS = [
     "cell_id",
@@ -267,6 +333,7 @@ _ENHANCED_HEADERS = [
     "v6_false_positive_penalty",
     "v6_quality_adjusted_score",
     "v6_no_warning_bonus",
+    *_PROVENANCE_HEADERS,
 ]
 
 _STABLE_HEADERS = [
@@ -275,7 +342,19 @@ _STABLE_HEADERS = [
     "v6_review_priority_score",
     "final_priority_rank_v6",
     "v6_false_positive_warning_count",
+    *_PROVENANCE_HEADERS,
 ]
+
+
+def _provenance_columns(package_inputs: V6RealPackageInputs) -> dict[str, object]:
+    return {
+        "score_basis": package_inputs.score_basis,
+        "geometry_basis": package_inputs.geometry_basis,
+        "package_provenance": package_inputs.package_provenance,
+        "fallback_score_used": bool(package_inputs.fallback_score_used),
+        "fallback_geometry_used": bool(package_inputs.fallback_geometry_used),
+        "frozen_notebook_parity_claimed": bool(package_inputs.frozen_notebook_parity_claimed),
+    }
 
 
 def _candidate_zone_geojson(
