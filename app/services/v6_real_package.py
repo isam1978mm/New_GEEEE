@@ -17,6 +17,7 @@ import re
 from typing import Any, Mapping, Sequence
 import zipfile
 
+from app.services.storage import write_bytes_atomic, write_text_atomic
 from app.services.v6_generator_package import (
     GENERATOR_STATUS_INVALID,
     GENERATOR_STATUS_VERIFIED,
@@ -72,7 +73,7 @@ def generate_v6_package_from_real_outputs(
 
     payloads = build_v6_payloads_from_real_outputs(package_inputs=package_inputs)
     for name, content in payloads.items():
-        (payload_dir / name).write_bytes(content)
+        write_bytes_atomic(payload_dir / name, content)
 
     inventory_name = f"V6_REAL_GENERATED_inventory_{package_inputs.timestamp}.json"
     zip_name = package_name or f"V6_REAL_GENERATED_{package_inputs.timestamp}.zip"
@@ -95,8 +96,9 @@ def generate_v6_package_from_real_outputs(
         "file_count": len(records),
         "records": records,
     }
-    inventory_bytes = json.dumps(inventory_payload, indent=2, sort_keys=True).encode("utf-8")
-    inventory_path.write_bytes(inventory_bytes)
+    inventory_text = json.dumps(inventory_payload, indent=2, sort_keys=True)
+    inventory_bytes = inventory_text.encode("utf-8")
+    write_text_atomic(inventory_path, inventory_text, encoding="utf-8")
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, content in sorted(payloads.items()):
@@ -117,7 +119,8 @@ def generate_v6_package_from_real_outputs(
             "real_output_feed": True,
         }
     )
-    validation_report_path.write_text(
+    write_text_atomic(
+        validation_report_path,
         json.dumps(validation_report, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
