@@ -21,6 +21,7 @@ from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.report_640 import Report640Stage
+from app.pipeline.stages.run_quality import RunQualityStage
 from app.pipeline.stages.s2_indices import INDEX_NAMES, S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SAR_NPY_OUTPUT_DIR, SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -54,6 +55,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         object_result = asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
         classifier_result = asyncio.run(ClassifierStage().run(context))
         alignment_result = asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
+        run_quality_result = asyncio.run(RunQualityStage().run(context))
 
         assert _artifact_classes(grid_result) == {
             "grid_manifest": ArtifactClass.LOCAL_SENSITIVE,
@@ -130,6 +132,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "lst": ArtifactClass.LOCAL_SENSITIVE,
             "thermal_summary": ArtifactClass.FILESYSTEM_ONLY,
             "st_b10_raw": ArtifactClass.FILESYSTEM_ONLY,
+            "l9_st_b10_raw": ArtifactClass.FILESYSTEM_ONLY,
         }
         assert _artifact_classes(secret_layers_result) == {
             "AI_READY_640_Secret_Gold_Halo": ArtifactClass.LOCAL_SENSITIVE,
@@ -224,6 +227,7 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert isinstance(patched["reason"], str)
         assert _artifact_classes(pca_result) == {
             "pca_anomaly_tif": ArtifactClass.LOCAL_SENSITIVE,
+            "pca_anomaly_raw_npy": ArtifactClass.LOCAL_SENSITIVE,
             "pca_eigenvalues": ArtifactClass.LOCAL_SENSITIVE,
             "parity_qa_summary": ArtifactClass.FILESYSTEM_ONLY,
         }
@@ -235,6 +239,9 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
         assert patch_names
         assert all(object_classes[name] == ArtifactClass.FILESYSTEM_ONLY for name in patch_names)
         assert _artifact_classes(classifier_result) == {
+            "classifier_classifications": ArtifactClass.REDACTED_PUBLIC,
+            "classifier_summary": ArtifactClass.REDACTED_PUBLIC,
+            "classifier_neutral_labels": ArtifactClass.REDACTED_PUBLIC,
             "experimental_classifications": ArtifactClass.REDACTED_PUBLIC,
             "experimental_summary": ArtifactClass.REDACTED_PUBLIC,
             "experimental_neutral_labels": ArtifactClass.REDACTED_PUBLIC,
@@ -244,6 +251,9 @@ def test_full_job_artifact_families_are_emitted_by_owner_stages() -> None:
             "alignment_audit": ArtifactClass.REDACTED_PUBLIC,
             "alignment_mask_selection": ArtifactClass.REDACTED_PUBLIC,
             "alignment_summary_redacted": ArtifactClass.LOCAL_SENSITIVE,
+        }
+        assert _artifact_classes(run_quality_result) == {
+            "run_quality_summary": ArtifactClass.REDACTED_PUBLIC,
         }
 
 
@@ -273,6 +283,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
         asyncio.run(ObjectExtractStage(grid_spec=grid_spec).run(context))
         asyncio.run(ClassifierStage().run(context))
         asyncio.run(AlignmentQaStage(grid_spec=grid_spec).run(context))
+        asyncio.run(RunQualityStage().run(context))
 
         expected_groups = {
             "DEM_GEO8_TIFS",
@@ -282,6 +293,7 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "QA",
             "QA/sar/intermediates",
             "objects",
+            "classifier",
             "experimental",
         }
         assert "qa" not in {path.name for path in run_dir.iterdir() if path.is_dir()}
@@ -334,9 +346,13 @@ def test_full_job_run_dir_matches_notebook_compatible_inventory_contract() -> No
             "objects_index.csv",
             "clusters_summary.csv",
             "objects/object_mask.npy",
+            "classifier/classifications.csv",
+            "classifier/summary.json",
+            "classifier/neutral_target_labels.json",
             "experimental/classifications.csv",
             "experimental/summary.json",
             "experimental/neutral_target_labels.json",
+            "QA/run_quality/run_quality_summary.json",
         }
         for relative_path in required_files:
             assert (run_dir / relative_path).is_file(), relative_path

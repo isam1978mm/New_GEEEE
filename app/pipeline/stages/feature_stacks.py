@@ -1485,7 +1485,7 @@ def write_feature_stack_outputs(run_dir: Path, grid_spec: GridSpec, products: di
     np.save(radar_db_npy_path, radar_db_stack)
     _save_stack_geotiff(ai_ready_tif_path, ai_ready_stack, grid_spec)
     np.save(ai_ready_npy_path, ai_ready_stack)
-    Image.fromarray(s2_mask.astype(np.float32)).save(s2_mask_path, format="TIFF")
+    write_georeferenced_raster(s2_mask_path, s2_mask.astype(np.float32, copy=False), grid_spec)
     write_raster_sidecar(stack_tif_path, grid_manifest=grid_spec.manifest, nodata=grid_spec.nodata, dtype="float32", shape=cube.shape[:2])
     write_raster_sidecar(
         radar_linear_tif_path,
