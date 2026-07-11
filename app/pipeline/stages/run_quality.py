@@ -98,6 +98,11 @@ def build_run_quality_summary(run_dir: Path) -> dict[str, Any]:
     alignment_check = _check_record("alignment_qa", alignment_path, alignment_summary, alignment_issue)
     checks.append(alignment_check)
 
+    classifier_path = run_dir / "classifier" / "summary.json"
+    classifier_summary, classifier_issue = _read_json(classifier_path)
+    classifier_check = _check_record("classifier", classifier_path, classifier_summary, classifier_issue)
+    checks.append(classifier_check)
+
     any_inputs_found = any(check["present"] for check in checks)
     if not any_inputs_found:
         return {
@@ -187,6 +192,31 @@ def build_run_quality_summary(run_dir: Path) -> dict[str, Any]:
             blockers.append("alignment_qa_checked_no_rasters")
             alignment_check["status"] = "BLOCKED"
 
+    if classifier_summary is not None:
+        classifier_stage = str(classifier_summary.get("classifier_stage", "")).strip()
+        classifier_quality = str(classifier_summary.get("classifier_quality", "")).strip()
+        input_contract = str(classifier_summary.get("input_contract", "")).strip()
+        object_count = int(classifier_summary.get("object_count", 0))
+        classifier_check["details"].update(
+            {
+                "classifier_stage": classifier_stage,
+                "classifier_quality": classifier_quality,
+                "input_contract": input_contract,
+                "object_count": object_count,
+                "classifier_version": str(classifier_summary.get("classifier_version", "")),
+            }
+        )
+        if classifier_stage != "core":
+            blockers.append("classifier_not_core_stage")
+            classifier_check["status"] = "BLOCKED"
+        if classifier_quality != "input_contract_validated" or input_contract != "classifier_inputs_v1":
+            blockers.append("classifier_input_contract_not_validated")
+            classifier_check["status"] = "BLOCKED"
+        if object_count <= 0:
+            warnings.append("classifier_no_objects_classified")
+            if classifier_check["status"] == "PASS":
+                classifier_check["status"] = "WARNING"
+
     for check in checks:
         if check["status"] == "UNKNOWN":
             unknowns.append(f"{check['name']}_unknown")
@@ -229,7 +259,7 @@ def write_run_quality_summary(run_dir: Path) -> Path:
 class RunQualityStage(Stage):
     name = "run_quality"
     parity_category = ParityCategory.PARITY_REPLACES
-    parity_reason = "Adds a local run-quality gate across S2, zero-shift, and alignment QA outputs."
+    parity_reason = "Adds a local run-quality gate across S2, zero-shift, alignment QA, and classifier contract outputs."
 
     async def run(self, context: StageContext) -> StageResult:
         summary_path = write_run_quality_summary(context.run_dir)
