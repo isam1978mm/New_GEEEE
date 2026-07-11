@@ -193,7 +193,7 @@ def _collect_not_implemented_and_read_errors(
         items.extend(next_items)
         read_errors.extend(next_errors)
     visible_items = sorted(
-        (item for item in items if is_operator_visible_relative_path(item.relative_path)),
+        (item for item in items if is_operator_tree_listable_relative_path(item.relative_path)),
         key=lambda item: item.relative_path,
     )
     return visible_items, sorted(read_errors, key=lambda item: item.source)
