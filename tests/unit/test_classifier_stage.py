@@ -6,10 +6,12 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from app.config import Settings
 from app.db.models import ArtifactClass
+from app.errors import StageError
 from app.pipeline._base import StageContext
 from app.pipeline.stages.classifier import ClassifierStage
 from app.pipeline.stages.grid import build_run_grid
@@ -53,12 +55,15 @@ def test_classifier_stage_writes_core_artifacts_with_legacy_aliases(tmp_path: Pa
     assert len(classifications) == 2
     assert all(row["class_id"].startswith("Class_") for row in classifications)
     assert all(row["classifier_version"] == "core_v1" for row in classifications)
+    assert all(row["classifier_quality"] == "input_contract_validated" for row in classifications)
     assert all("lat" not in {key.casefold() for key in row} for row in classifications)
 
     summary = json.loads((run_dir / "classifier" / "summary.json").read_text(encoding="utf-8"))
     assert summary["classifier_stage"] == "core"
+    assert summary["classifier_quality"] == "input_contract_validated"
     assert summary["classifier_version"] == "core_v1"
     assert summary["output_contract"] == "core_classifier_outputs_v1"
+    assert summary["input_contract"] == "classifier_inputs_v1"
     assert summary["object_count"] == 2
     assert summary["cluster_count"] == 1
 
@@ -69,8 +74,65 @@ def test_classifier_stage_writes_core_artifacts_with_legacy_aliases(tmp_path: Pa
         (run_dir / "classifier" / "neutral_target_labels.json").read_text(encoding="utf-8")
     )
     assert neutral_labels["classifier_stage"] == "core"
+    assert neutral_labels["classifier_quality"] == "input_contract_validated"
     assert len(neutral_labels["object_labels"]) == 2
     assert neutral_labels["cluster_labels"][0]["dominant_class_id"].startswith("Class_")
+
+
+def test_classifier_stage_blocks_shape_mismatch(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "gee_screening.db")
+    _write_classifier_inputs(run_dir, 64)
+    Image.fromarray(np.zeros((32, 32), dtype=np.float32)).save(run_dir / PCA_ANOMALY_TIF_NAME, format="TIFF")
+
+    with pytest.raises(StageError, match="shape mismatch"):
+        asyncio.run(ClassifierStage().run(StageContext(run_id="run-1", settings=settings, run_dir=run_dir)))
+
+
+def test_classifier_stage_blocks_out_of_bounds_object(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "gee_screening.db")
+    _write_classifier_inputs(run_dir, 64)
+    _write_csv(
+        run_dir / OBJECTS_INDEX_NAME,
+        ["object_id", "cluster_id", "row_min", "row_max", "col_min", "col_max"],
+        [{"object_id": 1, "cluster_id": 0, "row_min": 60, "row_max": 65, "col_min": 40, "col_max": 43}],
+    )
+
+    with pytest.raises(StageError, match="bounds exceed raster shape"):
+        asyncio.run(ClassifierStage().run(StageContext(run_id="run-1", settings=settings, run_dir=run_dir)))
+
+
+def test_classifier_stage_blocks_missing_required_object_column(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "gee_screening.db")
+    _write_classifier_inputs(run_dir, 64)
+    _write_csv(
+        run_dir / OBJECTS_INDEX_NAME,
+        ["object_id", "cluster_id", "row_min", "row_max", "col_min"],
+        [{"object_id": 1, "cluster_id": 0, "row_min": 32, "row_max": 35, "col_min": 40}],
+    )
+
+    with pytest.raises(StageError, match="missing required columns"):
+        asyncio.run(ClassifierStage().run(StageContext(run_id="run-1", settings=settings, run_dir=run_dir)))
+
+
+def test_classifier_stage_blocks_invalid_integer_object_value(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "gee_screening.db")
+    _write_classifier_inputs(run_dir, 64)
+    _write_csv(
+        run_dir / OBJECTS_INDEX_NAME,
+        ["object_id", "cluster_id", "row_min", "row_max", "col_min", "col_max"],
+        [{"object_id": 1, "cluster_id": 0, "row_min": "bad", "row_max": 35, "col_min": 40, "col_max": 43}],
+    )
+
+    with pytest.raises(StageError, match="invalid integer value"):
+        asyncio.run(ClassifierStage().run(StageContext(run_id="run-1", settings=settings, run_dir=run_dir)))
 
 
 def _write_classifier_inputs(run_dir: Path, grid_size: int) -> None:
