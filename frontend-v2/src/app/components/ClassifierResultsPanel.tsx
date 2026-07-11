@@ -1,5 +1,5 @@
 import { Download, Info, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   classifierDownloadLinks,
   fetchClassifierObjects,
@@ -258,7 +258,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <div className="font-mono mb-1.5" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
       {children}
