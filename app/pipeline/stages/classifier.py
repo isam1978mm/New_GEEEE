@@ -33,6 +33,8 @@ LEGACY_CLASSIFIER_ARTIFACTS = {
     "summary": "experimental_summary",
     "neutral_labels": "experimental_neutral_labels",
 }
+REQUIRED_OBJECT_COLUMNS = ("object_id", "cluster_id", "row_min", "row_max", "col_min", "col_max")
+REQUIRED_CLUSTER_COLUMNS = ("cluster_id",)
 
 
 class ClassifierStage(Stage):
@@ -89,15 +91,30 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
     hypercube = np.load(hypercube_path).astype(np.float32)
     with Image.open(anomaly_path) as image:
         anomaly = np.array(image, dtype=np.float32)
+    _validate_classifier_arrays(hypercube=hypercube, anomaly=anomaly)
+
     object_rows = _read_csv_rows(objects_path)
     cluster_rows = _read_csv_rows(clusters_path)
+    _validate_csv_columns(path=objects_path, rows=object_rows, required_columns=REQUIRED_OBJECT_COLUMNS)
+    _validate_csv_columns(path=clusters_path, rows=cluster_rows, required_columns=REQUIRED_CLUSTER_COLUMNS)
 
     classifications: list[dict[str, object]] = []
     for row in object_rows:
-        row_min = int(row["row_min"])
-        row_max = int(row["row_max"])
-        col_min = int(row["col_min"])
-        col_max = int(row["col_max"])
+        object_id = _parse_required_int(row, "object_id")
+        cluster_id = _parse_required_int(row, "cluster_id")
+        row_min = _parse_required_int(row, "row_min")
+        row_max = _parse_required_int(row, "row_max")
+        col_min = _parse_required_int(row, "col_min")
+        col_max = _parse_required_int(row, "col_max")
+        _validate_object_bounds(
+            object_id=object_id,
+            row_min=row_min,
+            row_max=row_max,
+            col_min=col_min,
+            col_max=col_max,
+            height=int(hypercube.shape[0]),
+            width=int(hypercube.shape[1]),
+        )
         patch = hypercube[row_min : row_max + 1, col_min : col_max + 1, :]
         valid_values = _valid_feature_values(patch)
         anomaly_patch = anomaly[row_min : row_max + 1, col_min : col_max + 1]
@@ -110,8 +127,8 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
         classification = classify_feature_vector(feature_vector)
         classifications.append(
             {
-                "object_id": int(row["object_id"]),
-                "cluster_id": int(row["cluster_id"]),
+                "object_id": object_id,
+                "cluster_id": cluster_id,
                 "row_min": row_min,
                 "row_max": row_max,
                 "col_min": col_min,
@@ -120,17 +137,20 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
                 "class_score": round(float(classification.class_score), 6),
                 "class_family": classification.class_family,
                 "classifier_version": classification.classifier_version,
+                "classifier_quality": "input_contract_validated",
             }
         )
 
     counts = Counter(row["class_id"] for row in classifications)
     summary = {
         "classifier_stage": "core",
+        "classifier_quality": "input_contract_validated",
         "object_count": len(classifications),
         "cluster_count": len(cluster_rows),
         "class_counts": dict(sorted(counts.items())),
         "classifier_version": classifications[0]["classifier_version"] if classifications else CORE_CLASSIFIER_VERSION,
         "output_contract": "core_classifier_outputs_v1",
+        "input_contract": "classifier_inputs_v1",
         "legacy_aliases": list(LEGACY_CLASSIFIER_ARTIFACTS.values()),
     }
     return classifications, summary
@@ -198,12 +218,62 @@ def _build_neutral_labels(classifications: list[dict[str, object]], summary: dic
     ]
     return {
         "classifier_stage": summary.get("classifier_stage", "core"),
+        "classifier_quality": summary.get("classifier_quality", "input_contract_validated"),
         "classifier_version": summary.get("classifier_version", CORE_CLASSIFIER_VERSION),
         "object_count": int(summary.get("object_count", len(object_labels))),
         "cluster_count": int(summary.get("cluster_count", len(cluster_labels))),
         "object_labels": object_labels,
         "cluster_labels": cluster_labels,
     }
+
+
+def _validate_classifier_arrays(*, hypercube: np.ndarray, anomaly: np.ndarray) -> None:
+    if hypercube.ndim != 3:
+        raise StageError(f"Classifier hypercube must be HWC, got shape {hypercube.shape}.")
+    if hypercube.shape[-1] < 1:
+        raise StageError("Classifier hypercube must contain at least one band.")
+    if anomaly.ndim != 2:
+        raise StageError(f"Classifier anomaly map must be 2D, got shape {anomaly.shape}.")
+    if tuple(hypercube.shape[:2]) != tuple(anomaly.shape):
+        raise StageError(
+            f"Classifier input shape mismatch: hypercube={hypercube.shape[:2]}, anomaly={anomaly.shape}."
+        )
+
+
+def _validate_csv_columns(*, path: Path, rows: list[dict[str, str]], required_columns: tuple[str, ...]) -> None:
+    if not rows:
+        return
+    missing = [column for column in required_columns if column not in rows[0]]
+    if missing:
+        raise StageError(f"Classifier input {path.name} is missing required columns: {', '.join(missing)}")
+
+
+def _parse_required_int(row: dict[str, str], column: str) -> int:
+    try:
+        return int(row[column])
+    except KeyError as exc:
+        raise StageError(f"Classifier object row is missing required column: {column}") from exc
+    except (TypeError, ValueError) as exc:
+        raise StageError(f"Classifier object row has invalid integer value for {column}: {row.get(column)!r}") from exc
+
+
+def _validate_object_bounds(
+    *,
+    object_id: int,
+    row_min: int,
+    row_max: int,
+    col_min: int,
+    col_max: int,
+    height: int,
+    width: int,
+) -> None:
+    if row_min > row_max or col_min > col_max:
+        raise StageError(f"Classifier object {object_id} has inverted bounds.")
+    if row_min < 0 or col_min < 0 or row_max >= height or col_max >= width:
+        raise StageError(
+            f"Classifier object {object_id} bounds exceed raster shape: "
+            f"rows={row_min}-{row_max}, cols={col_min}-{col_max}, shape={height}x{width}."
+        )
 
 
 def _valid_feature_values(patch: np.ndarray) -> np.ndarray:
