@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "=== Patch paid imagery export wiring ==="
 
-python - <<'PY'
+$pythonPatch = @'
 from pathlib import Path
 
 path = Path("app/services/v6_app_flow.py")
@@ -88,9 +88,17 @@ s = s.replace(old_loader, new_loader, 1)
 
 path.write_text(s, encoding="utf-8")
 print("PATCHED app/services/v6_app_flow.py")
-PY
+'@
+
+$pythonPatch | python -
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
 
 if ($RunTests) {
     Write-Host "=== Run paid imagery export wiring tests ==="
     pytest tests/unit/test_v6_paid_imagery_export_wiring.py tests/unit/test_v6_app_flow.py tests/unit/test_v6_local_package_input.py
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 }
