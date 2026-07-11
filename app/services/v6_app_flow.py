@@ -78,6 +78,10 @@ def generate_private_v6_package(
 
     input_path = _private_input_path(settings, run_id)
     if not input_path.is_file():
+        from app.services.v6_local_package_input import ensure_local_v6_package_input
+
+        ensure_local_v6_package_input(settings=settings, run_id=run_id)
+    if not input_path.is_file():
         return _observe_and_return(
             action="generate",
             settings=settings,
@@ -238,11 +242,31 @@ def load_v6_real_package_inputs(path: str | Path) -> V6RealPackageInputs:
 
     candidates = tuple(_candidate_from_mapping(row) for row in candidates_raw)
     zones = tuple(_zone_from_mapping(row) for row in zones_raw)
+    optional_kwargs: dict[str, Any] = {}
+    for key in (
+        "source_mode",
+        "score_basis",
+        "geometry_basis",
+        "package_provenance",
+        "placeholder_map_label",
+    ):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            optional_kwargs[key] = value.strip()
+    for key in (
+        "fallback_score_used",
+        "fallback_geometry_used",
+        "frozen_notebook_parity_claimed",
+    ):
+        value = payload.get(key)
+        if isinstance(value, bool):
+            optional_kwargs[key] = value
     return V6RealPackageInputs(
         run_id=_required_str(payload.get("run_id"), "run_id"),
         timestamp=_required_str(payload.get("timestamp"), "timestamp"),
         scored_candidates=candidates,
         request_zones=zones,
+        **optional_kwargs,
     )
 
 
