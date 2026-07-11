@@ -10,11 +10,12 @@ from app.errors import ActiveRunConflictError
 
 
 ACTIVE_RUN_STATUSES = (RunStatus.QUEUED, RunStatus.RUNNING)
+STALE_ON_STARTUP_STATUSES = (RunStatus.RUNNING,)
 
 
 async def mark_stale_running_runs(session: AsyncSession) -> int:
     try:
-        result = await session.execute(select(Run).where(Run.status.in_(ACTIVE_RUN_STATUSES)))
+        result = await session.execute(select(Run).where(Run.status.in_(STALE_ON_STARTUP_STATUSES)))
     except OperationalError as exc:
         if _is_missing_runs_table_error(exc):
             await session.rollback()

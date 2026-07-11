@@ -38,7 +38,7 @@ def test_normal_classifier_stage_is_integration_wrapper() -> None:
 
     stage = ClassifierStage()
     assert stage.name == "classifier"
-    assert stage.parity_reason == "Runs the previously isolated neutral classifier as a normal pipeline stage."
+    assert stage.parity_reason == "Runs the core neutral classifier as a normal pipeline stage."
 
 
 def _clear_experimental_modules() -> None:

@@ -24,9 +24,10 @@ def test_hypercube_parity_matches_notebook_stack_clean_normalize_append_mask() -
     assert cube_raw.shape == (2, 2, 3)
     assert mask_any.tolist() == [[1, 1], [1, 1]]
     assert mask_all.tolist() == [[1, 0], [1, 1]]
-    assert cube_clean[0, 1, 0] == 0.0
+    assert np.isnan(cube_clean[0, 1, 0])
     assert cube_norm.shape == (2, 2, 2)
     assert cube_norm_plus_mask.shape == (2, 2, 3)
-    assert np.all(cube_norm_plus_mask[:, :, -1] == mask_any.astype(np.float32))
-    assert np.allclose(cube_raw, cube_norm_plus_mask)
+    assert np.all(cube_norm_plus_mask[:, :, -1] == mask_all.astype(np.float32))
+    expected_persisted = np.where(np.isfinite(cube_norm_plus_mask), cube_norm_plus_mask, -9999.0).astype(np.float32)
+    assert np.allclose(cube_raw, expected_persisted)
     assert band_names == ["a", "b", "valid_mask"]

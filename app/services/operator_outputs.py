@@ -142,7 +142,9 @@ def is_safe_operator_output_relative_path(relative_path: str) -> bool:
 
 def is_operator_visible_relative_path(relative_path: str) -> bool:
     normalized = relative_path.replace("\\", "/")
-    return is_safe_operator_output_relative_path(normalized)
+    if not is_safe_operator_output_relative_path(normalized):
+        return False
+    return any(fnmatchcase(normalized, pattern) for pattern in OPERATOR_VISIBLE_PATTERNS)
 
 
 def _to_output_file(*, run_id: str, run_dir: Path, path: Path) -> OperatorOutputFilePublic:

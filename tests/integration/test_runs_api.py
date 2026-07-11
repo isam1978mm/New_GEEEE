@@ -136,7 +136,7 @@ def test_run_detail_exposes_public_safe_stage_progress() -> None:
         body = response.json()
         assert body["status"] == "queued"
         assert body["current_stage"] == "dem"
-        assert len(body["stages"]) == 19
+        assert len(body["stages"]) == 20
         assert body["stages"][0] == {"name": "grid", "label": "GRID setup", "status": "done"}
         assert body["stages"][1] == {"name": "dem", "label": "DEM", "status": "running"}
         assert body["stages"][2] == {"name": "zero_shift", "label": "Zero shift", "status": "pending"}

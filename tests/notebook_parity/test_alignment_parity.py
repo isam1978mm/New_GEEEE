@@ -8,7 +8,7 @@ from PIL import Image
 
 from app.pipeline._base import ParityCategory
 from app.pipeline.stages.alignment_qa import AlignmentQaStage, build_alignment_reports
-from app.pipeline.stages.dem import write_raster_sidecar
+from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import build_run_grid
 
 
@@ -33,7 +33,7 @@ def test_alignment_parity_matches_notebook_style_grid_audit_and_center_offset_ch
 
 
 def _write_raster(path: Path, array: np.ndarray, grid_spec) -> None:
-    Image.fromarray(array.astype(np.float32)).save(path, format="TIFF")
+    write_georeferenced_raster(path, array.astype(np.float32, copy=False), grid_spec)
     write_raster_sidecar(
         path,
         grid_manifest=grid_spec.manifest,

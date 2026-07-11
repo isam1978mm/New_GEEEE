@@ -235,7 +235,7 @@ def test_notebook_compatible_csv_and_json_schema_contract() -> None:
 
         alignment_summary_text = (run_dir / "alignment_qa.json").read_text(encoding="utf-8")
         alignment_summary = json.loads(alignment_summary_text)
-        assert set(alignment_summary) == {"pass", "checked_raster_count", "failing_artifacts", "max_center_offset_px", "threshold_px"}
+        assert set(alignment_summary) == {"pass", "checked_raster_count", "failing_artifacts", "max_center_offset_px", "metadata_source", "threshold_px"}
         _assert_no_sensitive_text(alignment_summary_text, run_dir)
 
         with (run_dir / "alignment_audit.csv").open("r", encoding="utf-8", newline="") as handle:
@@ -250,6 +250,8 @@ def test_notebook_compatible_csv_and_json_schema_contract() -> None:
             "edge_valid_fraction",
             "center_offset_px",
             "passes_alignment",
+            "metadata_source",
+            "sidecar_present",
         }
         _assert_no_sensitive_text((run_dir / "alignment_audit.csv").read_text(encoding="utf-8"), run_dir)
 

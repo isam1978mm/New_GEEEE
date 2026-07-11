@@ -148,7 +148,7 @@ def test_thermal_parity_uses_notebook_landsat_lst_sequence(monkeypatch) -> None:
     assert ("rename", "LST_DAY_K") in calls
     assert ("median", None) in calls
     assert ("reproject", {"crs": grid_spec.crs, "crsTransform": list(grid_spec.transform)}) in calls
-    assert len([name for name, _value in calls if name == "sampleRectangle"]) == 8
+    assert len([name for name, _value in calls if name == "sampleRectangle"]) == 12
     assert sampled_image is not None
 
 

@@ -8,13 +8,15 @@ from tempfile import TemporaryDirectory
 
 import numpy as np
 import pytest
+import rasterio
+from affine import Affine
 from PIL import Image
 
 from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError
 from app.pipeline._base import StageContext
 from app.pipeline.stages.alignment_qa import AlignmentQaStage, build_alignment_reports, collect_raster_sidecars
-from app.pipeline.stages.dem import write_raster_sidecar
+from app.pipeline.stages.dem import write_georeferenced_raster, write_raster_sidecar
 from app.pipeline.stages.grid import build_run_grid
 
 
@@ -99,10 +101,13 @@ def test_alignment_qa_stage_raises_on_transform_drift() -> None:
         grid_spec = build_run_grid(35.59499, 36.12694)
         _write_raster(run_dir / "dem.tif", np.ones((grid_spec.size, grid_spec.size), dtype=np.float32), grid_spec)
         _write_raster(run_dir / "pca_anomaly.tif", np.full((grid_spec.size, grid_spec.size), 0.8, dtype=np.float32), grid_spec)
-        sidecar_path = run_dir / "pca_anomaly.tif.meta.json"
-        payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
-        payload["transform"][2] = float(payload["transform"][2]) + 1.0
-        sidecar_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        pca_path = run_dir / "pca_anomaly.tif"
+        with rasterio.open(pca_path) as dataset:
+            data = dataset.read(1)
+            profile = dataset.profile
+        profile["transform"] = profile["transform"] * Affine.translation(1, 0)
+        with rasterio.open(pca_path, "w", **profile) as dataset:
+            dataset.write(data, 1)
         context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
 
         with pytest.raises(GridDriftError):
@@ -138,7 +143,7 @@ def test_alignment_qa_stage_raises_on_transform_drift() -> None:
 
 def _write_raster(path: Path, array: np.ndarray, grid_spec) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(array.astype(np.float32)).save(path, format="TIFF")
+    write_georeferenced_raster(path, array.astype(np.float32, copy=False), grid_spec)
     write_raster_sidecar(
         path,
         grid_manifest=grid_spec.manifest,

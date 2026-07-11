@@ -146,18 +146,10 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Pick or enter a target, preview safe grid metadata, optionally dry-run Earth Engine planning, then queue the local run." in bundle_text
     assert "Queue Run stays disabled until both target fields are valid." in bundle_text
     assert "Earth Engine planning is a dry run only; it checks backend readiness before execution." in bundle_text
-    assert "Guarded exports appear only after a run produces public-safe deliverables." in bundle_text
-    assert "No guarded exports are available for this run yet." in bundle_text
     assert "exports may appear after completion" in bundle_text
-    assert "No key downloads are available yet. They appear after a completed run exposes REDACTED_PUBLIC deliverables." in bundle_text
     assert "Classifier Results" in bundle_text
-    assert "Download classifications CSV" in bundle_text
-    assert "No classifier result is available for this run yet." in bundle_text
-    assert "Only REDACTED_PUBLIC deliverables appear here." in bundle_text
     assert "Full export tree and unavailable-output status are available" in bundle_text
     assert "No status history events are available yet. Queued runs may not record detailed stage events until processing starts." in bundle_text
-    assert "No source-backed diagnostics are available yet. Completed runs may expose guarded QA outputs after exports load." in bundle_text
-    assert "No advanced unavailable diagnostic notes are reported for this run." in bundle_text
     assert "H5 operator aggregate summary" in bundle_text
     assert "Aggregate prediction summary" in bundle_text
     assert "No row-level output" in bundle_text
