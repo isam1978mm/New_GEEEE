@@ -12,6 +12,9 @@ export interface ClassifierDownloadLink {
   downloadUrl: string;
 }
 
+const SUMMARY_ARTIFACT_NAME = "experimental_summary";
+const SUMMARY_FILENAME = "summary.json";
+
 const CLASSIFIER_ARTIFACTS = [
   {
     artifactName: "experimental_classifications",
@@ -19,8 +22,8 @@ const CLASSIFIER_ARTIFACTS = [
     label: "Download classifications CSV",
   },
   {
-    artifactName: "experimental_summary",
-    filename: "summary.json",
+    artifactName: SUMMARY_ARTIFACT_NAME,
+    filename: SUMMARY_FILENAME,
     label: "Download summary JSON",
   },
   {
@@ -38,7 +41,7 @@ interface ClassifierSummaryDto {
 }
 
 export async function fetchClassifierSummary(runId: string): Promise<ClassifierSummary> {
-  const response = await fetch(classifierArtifactUrl(runId, "experimental_summary"));
+  const response = await fetch(classifierDownloadUrl(runId, SUMMARY_ARTIFACT_NAME, SUMMARY_FILENAME));
   if (!response.ok) {
     throw new Error("Classifier results are unavailable.");
   }
