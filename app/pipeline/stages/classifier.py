@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
 from collections import Counter
 from pathlib import Path
 
@@ -11,48 +12,67 @@ from PIL import Image
 from app.db.models.enums import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
+from app.pipeline.stages.classifier_core import CORE_CLASSIFIER_VERSION, NeutralFeatureVector, classify_feature_vector
 from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
 from app.pipeline.stages.object_extract import CLUSTERS_SUMMARY_NAME, OBJECTS_INDEX_NAME
 from app.pipeline.stages.pca_anomaly import PCA_ANOMALY_TIF_NAME
-from app.pipeline.stages_experimental.classifier import NeutralFeatureVector, classify_feature_vector
-from app.pipeline.stages_experimental.outputs import CLASSIFICATIONS_CSV_NAME, NEUTRAL_LABELS_JSON_NAME, SUMMARY_JSON_NAME
 
-CLASSIFIER_OUTPUT_DIRNAME = "experimental"
+CLASSIFIER_OUTPUT_DIRNAME = "classifier"
+LEGACY_CLASSIFIER_OUTPUT_DIRNAME = "experimental"
+CLASSIFICATIONS_CSV_NAME = "classifications.csv"
+SUMMARY_JSON_NAME = "summary.json"
+NEUTRAL_LABELS_JSON_NAME = "neutral_target_labels.json"
+
+CORE_CLASSIFIER_ARTIFACTS = {
+    "classifications": "classifier_classifications",
+    "summary": "classifier_summary",
+    "neutral_labels": "classifier_neutral_labels",
+}
+LEGACY_CLASSIFIER_ARTIFACTS = {
+    "classifications": "experimental_classifications",
+    "summary": "experimental_summary",
+    "neutral_labels": "experimental_neutral_labels",
+}
 
 
 class ClassifierStage(Stage):
     name = "classifier"
     parity_category = ParityCategory.PARITY_REPLACES
-    parity_reason = "Runs the previously isolated neutral classifier as a normal pipeline stage."
+    parity_reason = "Runs the core neutral classifier as a normal pipeline stage."
 
     async def run(self, context: StageContext) -> StageResult:
         classifications, summary = build_classifier_results(context.run_dir)
         outputs = write_classifier_outputs(context.run_dir, classifications, summary)
+        artifacts = []
+        for key, artifact_name in CORE_CLASSIFIER_ARTIFACTS.items():
+            path = outputs[key]
+            artifacts.append(
+                build_stage_artifact(
+                    name=artifact_name,
+                    relative_path=path.relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                    size_bytes=path.stat().st_size,
+                )
+            )
+        for key, artifact_name in LEGACY_CLASSIFIER_ARTIFACTS.items():
+            path = outputs[f"legacy_{key}"]
+            artifacts.append(
+                build_stage_artifact(
+                    name=artifact_name,
+                    relative_path=path.relative_to(context.run_dir).as_posix(),
+                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                    size_bytes=path.stat().st_size,
+                    metadata={"alias_for": CORE_CLASSIFIER_ARTIFACTS[key], "deprecated": True},
+                )
+            )
         return StageResult(
-            artifacts=[
-                build_stage_artifact(
-                    name="experimental_classifications",
-                    relative_path=outputs["classifications"].relative_to(context.run_dir).as_posix(),
-                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
-                    size_bytes=outputs["classifications"].stat().st_size,
-                ),
-                build_stage_artifact(
-                    name="experimental_summary",
-                    relative_path=outputs["summary"].relative_to(context.run_dir).as_posix(),
-                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
-                    size_bytes=outputs["summary"].stat().st_size,
-                ),
-                build_stage_artifact(
-                    name="experimental_neutral_labels",
-                    relative_path=outputs["neutral_labels"].relative_to(context.run_dir).as_posix(),
-                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
-                    size_bytes=outputs["neutral_labels"].stat().st_size,
-                ),
-            ],
+            artifacts=artifacts,
             metadata={
                 "object_count": summary["object_count"],
                 "cluster_count": summary["cluster_count"],
                 "classifier_version": summary["classifier_version"],
+                "classifier_stage": summary["classifier_stage"],
+                "legacy_aliases_published": True,
             },
         )
 
@@ -105,17 +125,23 @@ def build_classifier_results(run_dir: Path) -> tuple[list[dict[str, object]], di
 
     counts = Counter(row["class_id"] for row in classifications)
     summary = {
+        "classifier_stage": "core",
         "object_count": len(classifications),
         "cluster_count": len(cluster_rows),
         "class_counts": dict(sorted(counts.items())),
-        "classifier_version": classifications[0]["classifier_version"] if classifications else "experimental_v1",
+        "classifier_version": classifications[0]["classifier_version"] if classifications else CORE_CLASSIFIER_VERSION,
+        "output_contract": "core_classifier_outputs_v1",
+        "legacy_aliases": list(LEGACY_CLASSIFIER_ARTIFACTS.values()),
     }
     return classifications, summary
 
 
 def write_classifier_outputs(run_dir: Path, classifications: list[dict[str, object]], summary: dict[str, object]) -> dict[str, Path]:
     output_dir = run_dir / CLASSIFIER_OUTPUT_DIRNAME
+    legacy_output_dir = run_dir / LEGACY_CLASSIFIER_OUTPUT_DIRNAME
     output_dir.mkdir(parents=True, exist_ok=True)
+    legacy_output_dir.mkdir(parents=True, exist_ok=True)
+
     classifications_path = output_dir / CLASSIFICATIONS_CSV_NAME
     summary_path = output_dir / SUMMARY_JSON_NAME
     neutral_labels_path = output_dir / NEUTRAL_LABELS_JSON_NAME
@@ -129,7 +155,22 @@ def write_classifier_outputs(run_dir: Path, classifications: list[dict[str, obje
 
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     neutral_labels_path.write_text(json.dumps(_build_neutral_labels(classifications, summary), indent=2, sort_keys=True), encoding="utf-8")
-    return {"classifications": classifications_path, "summary": summary_path, "neutral_labels": neutral_labels_path}
+
+    legacy_classifications_path = legacy_output_dir / CLASSIFICATIONS_CSV_NAME
+    legacy_summary_path = legacy_output_dir / SUMMARY_JSON_NAME
+    legacy_neutral_labels_path = legacy_output_dir / NEUTRAL_LABELS_JSON_NAME
+    shutil.copyfile(classifications_path, legacy_classifications_path)
+    shutil.copyfile(summary_path, legacy_summary_path)
+    shutil.copyfile(neutral_labels_path, legacy_neutral_labels_path)
+
+    return {
+        "classifications": classifications_path,
+        "summary": summary_path,
+        "neutral_labels": neutral_labels_path,
+        "legacy_classifications": legacy_classifications_path,
+        "legacy_summary": legacy_summary_path,
+        "legacy_neutral_labels": legacy_neutral_labels_path,
+    }
 
 
 def _build_neutral_labels(classifications: list[dict[str, object]], summary: dict[str, object]) -> dict[str, object]:
@@ -156,7 +197,8 @@ def _build_neutral_labels(classifications: list[dict[str, object]], summary: dic
         for cluster_id, class_ids in sorted(labels_by_cluster.items())
     ]
     return {
-        "classifier_version": summary.get("classifier_version", "experimental_v1"),
+        "classifier_stage": summary.get("classifier_stage", "core"),
+        "classifier_version": summary.get("classifier_version", CORE_CLASSIFIER_VERSION),
         "object_count": int(summary.get("object_count", len(object_labels))),
         "cluster_count": int(summary.get("cluster_count", len(cluster_labels))),
         "object_labels": object_labels,
