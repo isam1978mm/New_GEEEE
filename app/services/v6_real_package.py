@@ -26,6 +26,7 @@ from app.services.v6_generator_package import (
 )
 from app.services.v6_real_scoring import V6ScoredCandidate
 from app.services.v6_real_zones import V6RequestZone, request_zones_to_geojson
+from app.services.v6_zip_readiness import build_v6_zip_readiness_report
 
 
 _TIMESTAMP_PATTERN = re.compile(r"^\d{8}T\d{6}Z$")
@@ -146,6 +147,11 @@ def generate_v6_package_from_real_outputs(
             archive.writestr(name, content)
         archive.writestr(inventory_path.name, inventory_bytes)
 
+    zip_readiness = build_v6_zip_readiness_report(
+        zip_path=zip_path,
+        inventory_path=inventory_path,
+        payload_records=records,
+    )
     validation_report = validate_generated_v6_payload_shape(
         payloads=payloads,
         inventory_filename=inventory_path.name,
@@ -159,8 +165,15 @@ def generate_v6_package_from_real_outputs(
             "package_sha256": _sha256_path(zip_path),
             "real_output_feed": True,
             "package_provenance": provenance,
+            "zip_ready": bool(zip_readiness["zip_ready"]),
+            "zip_readiness": zip_readiness,
         }
     )
+    if not zip_readiness["zip_ready"]:
+        issues = list(validation_report.get("issues", []))
+        issues.extend(f"zip_readiness:{issue}" for issue in zip_readiness["issues"])
+        validation_report["issues"] = sorted(set(issues))
+        validation_report["validation_status"] = GENERATOR_STATUS_INVALID
     write_text_atomic(
         validation_report_path,
         json.dumps(validation_report, indent=2, sort_keys=True) + "\n",
