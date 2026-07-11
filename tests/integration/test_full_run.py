@@ -28,6 +28,7 @@ from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.report_640 import Report640Stage
+from app.pipeline.stages.run_quality import RunQualityStage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -65,9 +66,13 @@ def test_full_core_run_completes_and_app_serves_safe_outputs(monkeypatch) -> Non
         assert {artifact["name"] for artifact in run_detail.json()["artifacts"]} >= {
             "objects_index",
             "alignment_qa",
+            "classifier_classifications",
+            "classifier_summary",
+            "classifier_neutral_labels",
             "experimental_classifications",
             "experimental_summary",
             "experimental_neutral_labels",
+            "run_quality_summary",
         }
         assert root.status_code == 200
         assert "GEE Screening Dashboard Design" in root.text
@@ -135,11 +140,12 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             ObjectExtractStage(grid_spec=grid_spec),
             ClassifierStage(),
             AlignmentQaStage(grid_spec=grid_spec),
+            RunQualityStage(),
         ],
     )
     records = await orchestrator.run_run(run_id)
 
-    assert len(records) == 19
+    assert len(records) == 20
 
     async with session_factory() as session:
         run = await session.scalar(select(Run).where(Run.id == run_id))
@@ -147,7 +153,10 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
         objects_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "objects_index"))
         alignment_artifact = await session.scalar(select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "alignment_qa"))
         classifier_artifact = await session.scalar(
-            select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "experimental_summary")
+            select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "classifier_summary")
+        )
+        run_quality_artifact = await session.scalar(
+            select(Artifact).where(Artifact.run_id == run_id, Artifact.name == "run_quality_summary")
         )
 
     assert run is not None
@@ -156,5 +165,6 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
     assert objects_artifact is not None and objects_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
     assert alignment_artifact is not None and alignment_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
     assert classifier_artifact is not None and classifier_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
+    assert run_quality_artifact is not None and run_quality_artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
 
     await engine.dispose()
