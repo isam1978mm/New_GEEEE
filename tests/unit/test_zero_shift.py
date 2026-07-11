@@ -7,6 +7,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
+import rasterio
+from rasterio.transform import Affine
 
 from app.db.models.enums import ArtifactClass
 from app.errors import GridDriftError
@@ -42,7 +44,7 @@ def test_zero_shift_stage_accepts_grid_locked_outputs() -> None:
         assert all(row["passes_alignment"] == "true" for row in rows)
 
 
-def test_zero_shift_stage_raises_grid_drift_error_for_half_pixel_shift() -> None:
+def test_zero_shift_stage_ignores_sidecar_transform_when_real_tif_is_grid_locked() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
         grid_spec = build_run_grid(35.59499, 36.12694)
@@ -53,6 +55,23 @@ def test_zero_shift_stage_raises_grid_drift_error_for_half_pixel_shift() -> None
         metadata = read_manifest(sidecar_path)
         metadata["transform"][2] = metadata["transform"][2] + 5.0
         sidecar_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+
+        result = asyncio.run(ZeroShiftStage(grid_spec=grid_spec).run(context))
+        assert result.metadata["status"] == "grid_locked"
+
+        summary = json.loads((run_dir / "QA" / "grid_dem" / "zero_shift_summary.json").read_text(encoding="utf-8"))
+        assert summary["status"] == "grid_locked"
+        assert "dem.tif" not in summary["failing_artifacts"]
+
+
+def test_zero_shift_stage_raises_grid_drift_error_for_real_tif_half_pixel_shift() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+        _shift_tif_transform(run_dir / "dem.tif", dx=5.0, dy=0.0)
 
         with pytest.raises(GridDriftError):
             asyncio.run(ZeroShiftStage(grid_spec=grid_spec).run(context))
@@ -65,6 +84,23 @@ def test_zero_shift_stage_raises_grid_drift_error_for_half_pixel_shift() -> None
         dem_row = next(row for row in rows if row["artifact_name"] == "dem.tif")
         assert dem_row["passes_alignment"] == "false"
         assert "half_pixel_shift" in dem_row["issues"]
+
+
+def _shift_tif_transform(path: Path, *, dx: float, dy: float) -> None:
+    with rasterio.open(path) as dataset:
+        data = dataset.read()
+        profile = dataset.profile.copy()
+        transform = dataset.transform
+    profile["transform"] = Affine(
+        transform.a,
+        transform.b,
+        transform.c + dx,
+        transform.d,
+        transform.e,
+        transform.f + dy,
+    )
+    with rasterio.open(path, "w", **profile) as dataset:
+        dataset.write(data)
 
 
 def _settings(run_dir: Path):
