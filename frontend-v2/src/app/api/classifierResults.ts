@@ -26,24 +26,26 @@ export interface ClassifierDownloadLink {
   downloadUrl: string;
 }
 
-const SUMMARY_ARTIFACT_NAME = "experimental_summary";
+const SUMMARY_ARTIFACT_NAME = "classifier_summary";
+const LEGACY_SUMMARY_ARTIFACT_NAME = "experimental_summary";
 const SUMMARY_FILENAME = "summary.json";
-const CLASSIFICATIONS_ARTIFACT_NAME = "experimental_classifications";
+const CLASSIFICATIONS_ARTIFACT_NAME = "classifier_classifications";
+const LEGACY_CLASSIFICATIONS_ARTIFACT_NAME = "experimental_classifications";
 const CLASSIFICATIONS_FILENAME = "classifications.csv";
 
 const CLASSIFIER_ARTIFACTS = [
   {
     artifactName: CLASSIFICATIONS_ARTIFACT_NAME,
     filename: CLASSIFICATIONS_FILENAME,
-    label: "Download classifications CSV",
+    label: "Download classifier CSV",
   },
   {
     artifactName: SUMMARY_ARTIFACT_NAME,
     filename: SUMMARY_FILENAME,
-    label: "Download summary JSON",
+    label: "Download classifier summary JSON",
   },
   {
-    artifactName: "experimental_neutral_labels",
+    artifactName: "classifier_neutral_labels",
     filename: "neutral_target_labels.json",
     label: "Download neutral target labels JSON",
   },
@@ -57,7 +59,10 @@ interface ClassifierSummaryDto {
 }
 
 export async function fetchClassifierSummary(runId: string): Promise<ClassifierSummary> {
-  const response = await fetch(classifierDownloadUrl(runId, SUMMARY_ARTIFACT_NAME, SUMMARY_FILENAME));
+  const response = await fetchWithLegacyFallback(
+    classifierDownloadUrl(runId, SUMMARY_ARTIFACT_NAME, SUMMARY_FILENAME),
+    classifierDownloadUrl(runId, LEGACY_SUMMARY_ARTIFACT_NAME, SUMMARY_FILENAME),
+  );
   if (!response.ok) {
     throw new Error("Classifier results are unavailable.");
   }
@@ -66,7 +71,10 @@ export async function fetchClassifierSummary(runId: string): Promise<ClassifierS
 }
 
 export async function fetchClassifierObjects(runId: string): Promise<ClassifierObjectRow[]> {
-  const response = await fetch(classifierDownloadUrl(runId, CLASSIFICATIONS_ARTIFACT_NAME, CLASSIFICATIONS_FILENAME));
+  const response = await fetchWithLegacyFallback(
+    classifierDownloadUrl(runId, CLASSIFICATIONS_ARTIFACT_NAME, CLASSIFICATIONS_FILENAME),
+    classifierDownloadUrl(runId, LEGACY_CLASSIFICATIONS_ARTIFACT_NAME, CLASSIFICATIONS_FILENAME),
+  );
   if (!response.ok) {
     throw new Error("Classifier object rows are unavailable.");
   }
@@ -87,6 +95,14 @@ function classifierArtifactUrl(runId: string, artifactName: string): string {
 
 function classifierDownloadUrl(runId: string, artifactName: string, filename: string): string {
   return `${classifierArtifactUrl(runId, artifactName)}/download/${encodeURIComponent(filename)}`;
+}
+
+async function fetchWithLegacyFallback(primaryUrl: string, legacyUrl: string): Promise<Response> {
+  const primary = await fetch(primaryUrl);
+  if (primary.ok || primary.status !== 404) {
+    return primary;
+  }
+  return fetch(legacyUrl);
 }
 
 function mapClassifierSummary(payload: ClassifierSummaryDto): ClassifierSummary {
@@ -200,14 +216,18 @@ function splitCsvLine(line: string): string[] {
     if (char === '"' && line[index + 1] === '"') {
       current += '"';
       index += 1;
-    } else if (char === '"') {
+      continue;
+    }
+    if (char === '"') {
       quoted = !quoted;
-    } else if (char === "," && !quoted) {
+      continue;
+    }
+    if (char === "," && !quoted) {
       values.push(current);
       current = "";
-    } else {
-      current += char;
+      continue;
     }
+    current += char;
   }
   values.push(current);
   return values;
@@ -241,7 +261,7 @@ function requiredNumber(value: unknown): number {
 }
 
 function requiredString(value: unknown): string {
-  if (typeof value !== "string" || value.length === 0) {
+  if (typeof value !== "string" || !value) {
     throw new Error("Classifier summary is unavailable.");
   }
   return value;
