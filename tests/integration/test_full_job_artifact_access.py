@@ -28,6 +28,7 @@ from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.report_640 import Report640Stage
+from app.pipeline.stages.run_quality import RunQualityStage
 from app.pipeline.stages.s2_indices import S2IndicesStage, deterministic_s2_cube_fetcher
 from app.pipeline.stages.sar_rtc import SAR_NPY_OUTPUT_DIR, SarRtcStage, deterministic_radar_cube_fetcher
 from app.pipeline.stages.secret_layers import SecretLayersStage
@@ -85,12 +86,16 @@ def test_full_job_outputs_are_not_publicly_listed_or_served_unless_redacted(monk
         assert {
             "objects_index",
             "clusters_summary",
+            "classifier_classifications",
+            "classifier_summary",
+            "classifier_neutral_labels",
             "experimental_classifications",
             "experimental_summary",
             "experimental_neutral_labels",
             "alignment_qa",
             "alignment_audit",
             "alignment_mask_selection",
+            "run_quality_summary",
         } <= public_names
         assert "grid_guard_summary" not in public_names
         assert "sar_npy_VV_dB" not in public_names
@@ -150,9 +155,13 @@ async def _assert_internal_artifacts_present(settings: Settings, run_id: str) ->
     assert name_to_path["gps_point_comparison_json"] == "full_job/gps/gps_point_comparison.json"
     assert name_to_path["gps_point_comparison_csv"] == "full_job/gps/gps_point_comparison.csv"
     assert name_to_path["object_mask"] == "objects/object_mask.npy"
+    assert name_to_path["classifier_classifications"] == "classifier/classifications.csv"
+    assert name_to_path["classifier_summary"] == "classifier/summary.json"
+    assert name_to_path["classifier_neutral_labels"] == "classifier/neutral_target_labels.json"
     assert name_to_path["experimental_classifications"] == "experimental/classifications.csv"
     assert name_to_path["experimental_summary"] == "experimental/summary.json"
     assert name_to_path["experimental_neutral_labels"] == "experimental/neutral_target_labels.json"
+    assert name_to_path["run_quality_summary"] == "QA/run_quality/run_quality_summary.json"
     assert name_to_path["parity_qa_summary"] == "QA/parity/parity_qa_summary.json"
     assert name_to_path["thermal_summary"] == "QA/stacks/thermal_summary.json"
     assert name_to_path["st_b10_raw"] == ".internal/st_b10_raw.npy"
@@ -211,6 +220,7 @@ async def _run_full_core_pipeline(settings: Settings, *, run_id: str) -> None:
             ObjectExtractStage(grid_spec=grid_spec),
             ClassifierStage(),
             AlignmentQaStage(grid_spec=grid_spec),
+            RunQualityStage(),
         ],
     )
     await orchestrator.run_run(run_id)
