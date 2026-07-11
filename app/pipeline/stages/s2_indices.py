@@ -769,7 +769,7 @@ def write_mask_raster(path: Path, mask: np.ndarray, grid_spec: GridSpec) -> None
         height=int(data.shape[0]),
         width=int(data.shape[1]),
         count=1,
-        dtype="float32",
+        dtype="uint8",
         crs=grid_spec.crs,
         transform=Affine(*grid_spec.transform),
         nodata=0,
@@ -1044,7 +1044,7 @@ def write_s2_outputs(run_dir: Path, grid_spec: GridSpec, outputs: dict[str, np.n
         write_raster_sidecar(
             tif_path,
             grid_manifest=grid_spec.manifest,
-            nodata=0.0,
+            nodata=grid_spec.nodata,
             dtype="float32",
             shape=array.shape,
         )
