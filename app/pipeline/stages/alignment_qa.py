@@ -25,16 +25,15 @@ ALIGNMENT_EXCLUDED_NAMES = {"hypercube.tif"}
 ALIGNMENT_EXCLUDED_DIR_PARTS = {"PRIVATE", "experimental"}
 
 
-def collect_raster_sidecars(run_dir: Path) -> list[tuple[Path, Path]]:
-    raster_pairs: list[tuple[Path, Path]] = []
+def collect_raster_sidecars(run_dir: Path) -> list[tuple[Path, Path | None]]:
+    raster_pairs: list[tuple[Path, Path | None]] = []
     for raster_path in sorted(run_dir.rglob("*.tif")):
         if _is_alignment_excluded_raster(run_dir=run_dir, raster_path=raster_path):
             continue
         sidecar_path = raster_sidecar_path(raster_path)
-        if sidecar_path.is_file():
-            raster_pairs.append((raster_path, sidecar_path))
+        raster_pairs.append((raster_path, sidecar_path if sidecar_path.is_file() else None))
     if not raster_pairs:
-        raise StageError("Alignment QA requires raster outputs with sidecar metadata.")
+        raise StageError("Alignment QA requires raster outputs.")
     return raster_pairs
 
 
@@ -55,29 +54,56 @@ def _safe_artifact_label(run_dir: Path, raster_path: Path) -> str:
         return raster_path.name
 
 
-def _read_alignment_raster(path: Path) -> np.ndarray:
-    """Read a representative 2D band for grid QA, including multiband GeoTIFFs."""
+def _read_alignment_raster_and_metadata(path: Path) -> tuple[np.ndarray, dict[str, object]]:
+    """Read a representative 2D band and real GeoTIFF metadata for grid QA."""
+
     with rasterio.open(path) as dataset:
         if dataset.count < 1:
             raise StageError(f"Alignment QA raster has no bands: {path.name}")
-        return dataset.read(1).astype(np.float32, copy=False)
+        transform = dataset.transform
+        metadata = {
+            "crs": dataset.crs.to_string() if dataset.crs is not None else "",
+            "dtype": str(dataset.dtypes[0]),
+            "height": int(dataset.height),
+            "width": int(dataset.width),
+            "nodata": dataset.nodata,
+            "transform": [
+                float(transform.a),
+                float(transform.b),
+                float(transform.c),
+                float(transform.d),
+                float(transform.e),
+                float(transform.f),
+            ],
+        }
+        return dataset.read(1).astype(np.float32, copy=False), metadata
 
 
-def _sidecar_nodata_matches_alignment_contract(sidecar: dict[str, object], grid_spec: GridSpec) -> bool:
+def _raster_nodata_matches_alignment_contract(raster_metadata: dict[str, object], grid_spec: GridSpec) -> bool:
     """Mask rasters use uint8/0 semantics; analytic rasters use the grid nodata sentinel."""
-    dtype = str(sidecar.get("dtype", "")).casefold()
+    dtype = str(raster_metadata.get("dtype", "")).casefold()
     if dtype in {"uint8", "bool", "boolean"}:
         return True
-    return float(sidecar["nodata"]) == float(grid_spec.nodata)
+    nodata = raster_metadata.get("nodata")
+    return nodata is not None and float(nodata) == float(grid_spec.nodata)
 
 
-def _edge_valid_fraction(array: np.ndarray, nodata: float) -> float:
+def _metadata_nodata_value(raster_metadata: dict[str, object], grid_spec: GridSpec) -> float | None:
+    nodata = raster_metadata.get("nodata")
+    if nodata is None:
+        return 0.0 if str(raster_metadata.get("dtype", "")).casefold() in {"uint8", "bool", "boolean"} else float(grid_spec.nodata)
+    return float(nodata)
+
+
+def _edge_valid_fraction(array: np.ndarray, nodata: float | None) -> float:
     top = array[0, :]
     bottom = array[-1, :]
     left = array[:, 0]
     right = array[:, -1]
     edge = np.concatenate([top, bottom, left, right]).astype(np.float32)
-    valid = np.isfinite(edge) & (edge != nodata)
+    valid = np.isfinite(edge)
+    if nodata is not None:
+        valid &= edge != nodata
     return float(valid.mean()) if valid.size else 0.0
 
 
@@ -90,35 +116,38 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
     expected_center = pixel_center_from_transform(grid_spec.transform, row=0, col=0)
     for raster_path, sidecar_path in collect_raster_sidecars(run_dir):
         artifact_label = _safe_artifact_label(run_dir, raster_path)
-        sidecar = read_manifest(sidecar_path)
+        sidecar_present = sidecar_path is not None
+        if sidecar_path is not None:
+            read_manifest(sidecar_path)
         try:
-            array = _read_alignment_raster(raster_path)
+            array, raster_metadata = _read_alignment_raster_and_metadata(raster_path)
         except Exception as exc:
             raise StageError(f"Failed to inspect raster for alignment QA: {artifact_label}") from exc
 
-        raster_transform = tuple(float(value) for value in sidecar["transform"])
+        raster_transform = tuple(float(value) for value in raster_metadata["transform"])
         raster_center = pixel_center_from_transform(raster_transform, row=0, col=0)
         scale_x = float(grid_spec.transform[0])
         scale_y = abs(float(grid_spec.transform[4]))
         row_offset_px = abs(raster_center[1] - expected_center[1]) / max(scale_y, 1e-12)
         col_offset_px = abs(raster_center[0] - expected_center[0]) / max(abs(scale_x), 1e-12)
         center_offset_px = max(row_offset_px, col_offset_px)
-        nodata_matches = _sidecar_nodata_matches_alignment_contract(sidecar, grid_spec)
+        nodata_matches = _raster_nodata_matches_alignment_contract(raster_metadata, grid_spec)
 
         passes = (
-            sidecar["crs"] == grid_spec.crs
-            and (int(sidecar["height"]), int(sidecar["width"])) == (grid_spec.size, grid_spec.size)
-            and [float(value) for value in sidecar["transform"]] == [float(value) for value in grid_spec.manifest.crs_transform]
+            raster_metadata["crs"] == grid_spec.crs
+            and (int(raster_metadata["height"]), int(raster_metadata["width"])) == (grid_spec.size, grid_spec.size)
+            and [float(value) for value in raster_metadata["transform"]] == [float(value) for value in grid_spec.manifest.crs_transform]
             and nodata_matches
             and center_offset_px <= ALIGNMENT_MAX_CENTER_OFFSET_PX
         )
         if not passes:
             failing_files.append(artifact_label)
 
+        nodata = _metadata_nodata_value(raster_metadata, grid_spec)
         finite = np.isfinite(array)
-        valid = finite & (array != float(sidecar["nodata"]))
+        valid = finite if nodata is None else finite & (array != nodata)
         valid_fraction = float(valid.mean()) if valid.size else 0.0
-        edge_valid_fraction = _edge_valid_fraction(array, float(sidecar["nodata"]))
+        edge_valid_fraction = _edge_valid_fraction(array, nodata)
         if valid_fraction > best_anchor_score:
             best_anchor_score = valid_fraction
             best_anchor_name = artifact_label
@@ -126,9 +155,11 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
         audit_rows.append(
             {
                 "artifact_name": artifact_label,
-                "dtype": str(sidecar["dtype"]),
-                "height": int(sidecar["height"]),
-                "width": int(sidecar["width"]),
+                "metadata_source": "real_geotiff",
+                "sidecar_present": str(sidecar_present).lower(),
+                "dtype": str(raster_metadata["dtype"]),
+                "height": int(raster_metadata["height"]),
+                "width": int(raster_metadata["width"]),
                 "valid_fraction": round(valid_fraction, 6),
                 "edge_valid_fraction": round(edge_valid_fraction, 6),
                 "center_offset_px": round(center_offset_px, 6),
@@ -142,6 +173,7 @@ def build_alignment_reports(run_dir: Path, grid_spec: GridSpec) -> tuple[list[di
         "failing_artifacts": failing_files,
         "max_center_offset_px": max(float(row["center_offset_px"]) for row in audit_rows),
         "threshold_px": ALIGNMENT_MAX_CENTER_OFFSET_PX,
+        "metadata_source": "real_geotiff",
     }
     mask_selection = {
         "anchor_artifact": best_anchor_name,
@@ -177,6 +209,7 @@ def write_alignment_outputs(
         "failing_artifacts": list(summary["failing_artifacts"]),
         "max_center_offset_px": float(summary["max_center_offset_px"]),
         "threshold_px": float(summary["threshold_px"]),
+        "metadata_source": str(summary.get("metadata_source", "")),
         "anchor_artifact": str(mask_selection["anchor_artifact"]),
         "anchor_valid_fraction": float(mask_selection["anchor_valid_fraction"]),
         "selection_rule": str(mask_selection["selection_rule"]),
