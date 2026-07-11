@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -123,6 +124,12 @@ class InvalidRunsQueryError(AppError):
     public_message = "Run query is invalid."
 
 
+class InvalidRunCreateError(AppError):
+    status_code = 422
+    public_code = "validation_error"
+    public_message = "Request could not be processed."
+
+
 @router.post("/runs", response_model=RunPublic, status_code=201)
 async def create_run(
     payload: RunCreate,
@@ -130,6 +137,7 @@ async def create_run(
     settings: Settings = Depends(get_settings_from_request),
     session: AsyncSession = Depends(get_db_session),
 ) -> RunPublic:
+    _validate_public_run_name(payload.name)
     await ensure_single_active_run(session)
 
     run = Run(
@@ -152,6 +160,18 @@ async def create_run(
 
     background_tasks.add_task(enqueue_core_pipeline_run, run.id, settings)
     return _to_run_public(run)
+
+
+def _validate_public_run_name(name: str | None) -> None:
+    if name is None:
+        return
+    stripped = name.strip()
+    if not stripped:
+        return
+    if re.search(r"\b-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+\b", stripped):
+        raise InvalidRunCreateError()
+    if re.search(r"(?i)([A-Z]:\\|/Users/|/home/|/tmp/|\.\.|[/\\])", stripped):
+        raise InvalidRunCreateError()
 
 
 @router.get("/runs", response_model=list[RunPublic])

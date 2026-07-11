@@ -98,3 +98,12 @@ def build_experimental_results(inputs: ExperimentalInputs) -> tuple[list[dict[st
 
 def _normalize_feature(value: float) -> float:
     return max(0.0, min(1.0, round(float(value), 6)))
+
+def main() -> int:
+    args = build_parser().parse_args()
+    return asyncio.run(run_cli(run_id=args.run_id))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

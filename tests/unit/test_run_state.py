@@ -24,7 +24,7 @@ from app.errors import ActiveRunConflictError
 from app.services.run_state import ensure_single_active_run, mark_stale_running_runs
 
 
-def test_mark_stale_running_runs_transitions_queued_and_running() -> None:
+def test_mark_stale_running_runs_transitions_running_only() -> None:
     asyncio.run(_run_mark_stale_running_runs_case())
 
 
@@ -51,7 +51,7 @@ async def _run_mark_stale_running_runs_case() -> None:
             async with session_factory() as session:
                 changed = await mark_stale_running_runs(session)
 
-            assert changed == 3
+            assert changed == 2
 
             # Re-open a fresh session to prove the change persisted to the DB.
             async with session_factory() as session:
@@ -66,7 +66,7 @@ async def _run_mark_stale_running_runs_case() -> None:
 
     assert statuses["run-running-a"] == RunStatus.STALE_FAILED
     assert statuses["run-running-b"] == RunStatus.STALE_FAILED
-    assert statuses["run-queued"] == RunStatus.STALE_FAILED
+    assert statuses["run-queued"] == RunStatus.QUEUED
     assert statuses["run-done"] == RunStatus.DONE
     assert statuses["run-failed"] == RunStatus.FAILED
     assert statuses["run-stale"] == RunStatus.STALE_FAILED

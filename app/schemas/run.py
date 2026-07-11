@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-import re
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -16,16 +15,7 @@ class RunCreate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_private_local_name(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        stripped = value.strip()
-        if not stripped:
-            return None
-        if re.search(r"\b-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+\b", stripped):
-            raise ValueError("invalid run name")
-        if re.search(r"(?i)([A-Z]:\\|/Users/|/home/|/tmp/|\.\.|[/\\])", stripped):
-            raise ValueError("invalid run name")
-        return stripped
+        return value
 
 
 class RunPublic(BaseModel):

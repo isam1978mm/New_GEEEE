@@ -89,7 +89,7 @@ def build_operator_output_tree(*, settings: Settings, run_id: str) -> OperatorOu
     if run_dir.is_dir():
         for path in sorted((item for item in run_dir.rglob("*") if item.is_file()), key=_relative_sort_key(run_dir)):
             relative_path = path.relative_to(run_dir).as_posix()
-            if not is_operator_visible_relative_path(relative_path):
+            if not is_operator_tree_listable_relative_path(relative_path):
                 continue
             if relative_path in not_implemented_paths:
                 continue
@@ -141,6 +141,11 @@ def is_safe_operator_output_relative_path(relative_path: str) -> bool:
 
 
 def is_operator_visible_relative_path(relative_path: str) -> bool:
+    normalized = relative_path.replace("\\", "/")
+    return is_safe_operator_output_relative_path(normalized)
+
+
+def is_operator_tree_listable_relative_path(relative_path: str) -> bool:
     normalized = relative_path.replace("\\", "/")
     if not is_safe_operator_output_relative_path(normalized):
         return False
