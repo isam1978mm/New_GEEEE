@@ -18,7 +18,7 @@ from app.pipeline.stages.object_extract import CLUSTERS_SUMMARY_NAME, OBJECTS_IN
 from app.pipeline.stages.pca_anomaly import PCA_ANOMALY_TIF_NAME
 
 
-def test_classifier_stage_writes_redacted_public_artifacts(tmp_path: Path) -> None:
+def test_classifier_stage_writes_core_artifacts_with_legacy_aliases(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "gee_screening.db")
@@ -33,6 +33,9 @@ def test_classifier_stage_writes_redacted_public_artifacts(tmp_path: Path) -> No
 
     artifacts = {artifact.name: artifact for artifact in result.artifacts}
     expected_paths = {
+        "classifier_classifications": "classifier/classifications.csv",
+        "classifier_summary": "classifier/summary.json",
+        "classifier_neutral_labels": "classifier/neutral_target_labels.json",
         "experimental_classifications": "experimental/classifications.csv",
         "experimental_summary": "experimental/summary.json",
         "experimental_neutral_labels": "experimental/neutral_target_labels.json",
@@ -42,21 +45,30 @@ def test_classifier_stage_writes_redacted_public_artifacts(tmp_path: Path) -> No
         assert artifact.artifact_class == ArtifactClass.REDACTED_PUBLIC
         assert artifact.http_servable is True
         assert (run_dir / artifact.relative_path).is_file()
+    assert artifacts["experimental_summary"].metadata == {"alias_for": "classifier_summary", "deprecated": True}
 
     classifications = list(
-        csv.DictReader((run_dir / "experimental" / "classifications.csv").open("r", encoding="utf-8", newline=""))
+        csv.DictReader((run_dir / "classifier" / "classifications.csv").open("r", encoding="utf-8", newline=""))
     )
     assert len(classifications) == 2
     assert all(row["class_id"].startswith("Class_") for row in classifications)
+    assert all(row["classifier_version"] == "core_v1" for row in classifications)
     assert all("lat" not in {key.casefold() for key in row} for row in classifications)
 
-    summary = json.loads((run_dir / "experimental" / "summary.json").read_text(encoding="utf-8"))
+    summary = json.loads((run_dir / "classifier" / "summary.json").read_text(encoding="utf-8"))
+    assert summary["classifier_stage"] == "core"
+    assert summary["classifier_version"] == "core_v1"
+    assert summary["output_contract"] == "core_classifier_outputs_v1"
     assert summary["object_count"] == 2
     assert summary["cluster_count"] == 1
 
+    legacy_summary = json.loads((run_dir / "experimental" / "summary.json").read_text(encoding="utf-8"))
+    assert legacy_summary == summary
+
     neutral_labels = json.loads(
-        (run_dir / "experimental" / "neutral_target_labels.json").read_text(encoding="utf-8")
+        (run_dir / "classifier" / "neutral_target_labels.json").read_text(encoding="utf-8")
     )
+    assert neutral_labels["classifier_stage"] == "core"
     assert len(neutral_labels["object_labels"]) == 2
     assert neutral_labels["cluster_labels"][0]["dominant_class_id"].startswith("Class_")
 
