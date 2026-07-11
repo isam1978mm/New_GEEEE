@@ -2,7 +2,9 @@ import { Download, Info, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   classifierDownloadLinks,
+  fetchClassifierObjects,
   fetchClassifierSummary,
+  type ClassifierObjectRow,
   type ClassifierSummary,
 } from "../api/classifierResults";
 
@@ -10,8 +12,11 @@ interface ClassifierResultsPanelProps {
   runId: string;
 }
 
+const NOTEBOOK_TERMINOLOGY = "ENTRANCE_SHAFT_TRACE, COMPACT_CHAMBER_POINT, CHAMBER_VOID_AREA, RING_CONTEXT_AREA, WEAK_CONTEXT_AREA, and BACKGROUND_AREA";
+
 export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
   const [summary, setSummary] = useState<ClassifierSummary | null>(null);
+  const [objects, setObjects] = useState<ClassifierObjectRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const downloadLinks = useMemo(() => classifierDownloadLinks(runId), [runId]);
@@ -19,14 +24,19 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSummary() {
+    async function loadClassifierResults() {
       setLoading(true);
       setUnavailable(false);
       setSummary(null);
+      setObjects([]);
       try {
-        const nextSummary = await fetchClassifierSummary(runId);
+        const [nextSummary, nextObjects] = await Promise.all([
+          fetchClassifierSummary(runId),
+          fetchClassifierObjects(runId).catch(() => []),
+        ]);
         if (!cancelled) {
           setSummary(nextSummary);
+          setObjects(nextObjects);
         }
       } catch (_error) {
         if (!cancelled) {
@@ -39,15 +49,15 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
       }
     }
 
-    void loadSummary();
+    void loadClassifierResults();
     return () => {
       cancelled = true;
     };
   }, [runId]);
 
-  const classCountEntries = Object.entries(summary?.classCounts ?? {}).sort(([left], [right]) =>
-    left.localeCompare(right),
-  );
+  const scoreLevelEntries = Object.entries(summary?.classCounts ?? {})
+    .filter(([, count]) => count > 0)
+    .sort(([left], [right]) => left.localeCompare(right));
 
   return (
     <section
@@ -104,33 +114,50 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
 
         {summary && (
           <>
+            <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+              Screening-confidence view: rows use notebook terminology from score plus simple row/column shape. Treat this as an early review aid, about a 30% signal.
+            </div>
+
             <dl className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-              <Metric label="object_count" value={String(summary.objectCount)} />
-              <Metric label="cluster_count" value={String(summary.clusterCount)} />
+              <Metric label="objects_found" value={String(summary.objectCount)} />
+              <Metric label="clusters_found" value={String(summary.clusterCount)} />
               <Metric label="classifier_version" value={summary.classifierVersion} />
             </dl>
 
             <div>
-              <div
-                className="font-mono mb-1.5"
-                style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}
-              >
-                class_counts
+              <SectionLabel>score levels</SectionLabel>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))" }}>
+                {scoreLevelEntries.map(([classId]) => (
+                  <div key={classId} className="font-mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--gs-navy)" }}>
+                    {scoreLevelLabel(classId)}
+                  </div>
+                ))}
               </div>
-              {classCountEntries.length === 0 ? (
+            </div>
+
+            <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.1)" }}>
+              <SectionLabel>notebook terminology labels</SectionLabel>
+              <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+                Labels use the notebook structural language: {NOTEBOOK_TERMINOLOGY}.
+              </div>
+            </div>
+
+            <div>
+              <SectionLabel>score level counts</SectionLabel>
+              {scoreLevelEntries.length === 0 ? (
                 <div style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-                  No class_counts entries reported.
+                  No score-level entries reported.
                 </div>
               ) : (
-                <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))" }}>
-                  {classCountEntries.map(([classId, count]) => (
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+                  {scoreLevelEntries.map(([classId, count]) => (
                     <div
                       key={classId}
                       className="rounded px-2 py-1.5 flex items-center justify-between"
                       style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.1)" }}
                     >
                       <span className="font-mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--gs-navy)" }}>
-                        {classId}
+                        {scoreLevelLabel(classId)}
                       </span>
                       <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)" }}>
                         {count}
@@ -140,6 +167,52 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                 </div>
               )}
             </div>
+
+            <details open>
+              <summary className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em", cursor: "pointer" }}>
+                All objects, sorted by score ({objects.length})
+              </summary>
+              <div className="mt-2 overflow-auto" style={{ maxHeight: "460px", border: "1px solid rgba(28,43,94,0.12)", borderRadius: "4px" }}>
+                <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "1080px" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "var(--accent)" }}>
+                      {[
+                        "Object #",
+                        "Cluster #",
+                        "Score",
+                        "Score level",
+                        "Notebook label",
+                        "Rule reason",
+                        "Review order",
+                        "Row start",
+                        "Row end",
+                        "Column start",
+                        "Column end",
+                      ].map((header) => (
+                        <th key={header} className="font-mono" style={tableHeaderStyle}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {objects.map((row) => (
+                      <tr key={`${row.objectId}-${row.clusterId}`}>
+                        <td style={tableCellStyle}>{row.objectId}</td>
+                        <td style={tableCellStyle}>{row.clusterId}</td>
+                        <td style={tableCellStyle}>{row.score.toFixed(3)}</td>
+                        <td style={tableCellStyle}>{row.scoreLevel}</td>
+                        <td style={tableCellStyle}>{row.notebookLabel}</td>
+                        <td style={tableCellStyle}>{row.ruleReason}</td>
+                        <td style={tableCellStyle}>{row.reviewOrder}</td>
+                        <td style={tableCellStyle}>{row.rowStart}</td>
+                        <td style={tableCellStyle}>{row.rowEnd}</td>
+                        <td style={tableCellStyle}>{row.columnStart}</td>
+                        <td style={tableCellStyle}>{row.columnEnd}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           </>
         )}
 
@@ -184,3 +257,42 @@ function Metric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="font-mono mb-1.5" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+      {children}
+    </div>
+  );
+}
+
+function scoreLevelLabel(classId: string): string {
+  const labels: Record<string, string> = {
+    Class_A: "Very high (Class_A)",
+    Class_B: "High (Class_B)",
+    Class_C: "Strong (Class_C)",
+    Class_D: "Medium-high (Class_D)",
+    Class_E: "Medium (Class_E)",
+    Class_F: "Lower-medium (Class_F)",
+    Class_G: "Background (Class_G)",
+  };
+  return labels[classId] || classId;
+}
+
+const tableHeaderStyle = {
+  padding: "7px 8px",
+  borderBottom: "1px solid rgba(28,43,94,0.14)",
+  textAlign: "left",
+  fontSize: "10px",
+  color: "var(--gs-navy)",
+  whiteSpace: "nowrap",
+} as const;
+
+const tableCellStyle = {
+  padding: "6px 8px",
+  borderBottom: "1px solid rgba(28,43,94,0.08)",
+  fontSize: "11px",
+  color: "var(--gs-slate)",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  whiteSpace: "nowrap",
+} as const;
