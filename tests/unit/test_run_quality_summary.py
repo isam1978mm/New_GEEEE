@@ -39,6 +39,7 @@ def test_run_quality_summary_passes_when_required_gates_pass() -> None:
             "s2_masks",
             "zero_shift",
             "alignment_qa",
+            "classifier",
         }
 
 
@@ -56,6 +57,7 @@ def test_run_quality_summary_blocks_when_required_summary_is_missing_after_other
         assert summary["is_usable"] is False
         assert "missing_s2_indices_summary" in summary["blocking_reasons"]
         assert "missing_alignment_qa_summary" in summary["blocking_reasons"]
+        assert "missing_classifier_summary" in summary["blocking_reasons"]
 
 
 def test_run_quality_summary_blocks_failed_alignment_and_zero_shift() -> None:
@@ -76,6 +78,50 @@ def test_run_quality_summary_blocks_failed_alignment_and_zero_shift() -> None:
         assert summary["status"] == "BLOCKED"
         assert "zero_shift_not_grid_locked" in summary["blocking_reasons"]
         assert "alignment_qa_failed" in summary["blocking_reasons"]
+
+
+def test_run_quality_summary_blocks_non_core_classifier_contract() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        _write_required_quality_inputs(run_dir)
+        _write_json(
+            run_dir / "classifier" / "summary.json",
+            {
+                "classifier_stage": "experimental",
+                "classifier_quality": "unchecked",
+                "classifier_version": "experimental_v1",
+                "input_contract": "legacy",
+                "object_count": 2,
+            },
+        )
+
+        summary = build_run_quality_summary(run_dir)
+
+        assert summary["status"] == "BLOCKED"
+        assert "classifier_not_core_stage" in summary["blocking_reasons"]
+        assert "classifier_input_contract_not_validated" in summary["blocking_reasons"]
+
+
+def test_run_quality_summary_warns_when_classifier_has_no_objects() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        _write_required_quality_inputs(run_dir)
+        _write_json(
+            run_dir / "classifier" / "summary.json",
+            {
+                "classifier_stage": "core",
+                "classifier_quality": "input_contract_validated",
+                "classifier_version": "core_v1",
+                "input_contract": "classifier_inputs_v1",
+                "object_count": 0,
+            },
+        )
+
+        summary = build_run_quality_summary(run_dir)
+
+        assert summary["status"] == "WARNING"
+        assert summary["is_usable"] is True
+        assert "classifier_no_objects_classified" in summary["warnings"]
 
 
 def test_run_quality_summary_warns_for_low_but_above_minimum_s2_coverage() -> None:
@@ -155,6 +201,16 @@ def _write_required_quality_inputs(
     _write_json(
         run_dir / "alignment_qa.json",
         {"pass": True, "checked_raster_count": 3, "failing_artifacts": []},
+    )
+    _write_json(
+        run_dir / "classifier" / "summary.json",
+        {
+            "classifier_stage": "core",
+            "classifier_quality": "input_contract_validated",
+            "classifier_version": "core_v1",
+            "input_contract": "classifier_inputs_v1",
+            "object_count": 2,
+        },
     )
 
 
