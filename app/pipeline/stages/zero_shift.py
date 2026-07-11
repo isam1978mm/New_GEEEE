@@ -5,12 +5,12 @@ import json
 from pathlib import Path
 
 import numpy as np
+import rasterio
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline.qa_paths import ensure_run_qa_dir
 from app.pipeline._base import build_stage_artifact
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult
-from app.pipeline.stages.dem import raster_sidecar_path
 from app.pipeline.stages.grid import GridSpec, pixel_center_from_transform
 from app.errors import GridDriftError
 
@@ -20,10 +20,23 @@ HALF_PIXEL_TOLERANCE_M = 0.01
 
 
 def read_raster_metadata(raster_path: Path) -> dict[str, object]:
-    sidecar_path = raster_sidecar_path(raster_path)
-    if not sidecar_path.is_file():
-        raise GridDriftError(f"Missing raster metadata sidecar for {raster_path.name}.")
-    return json.loads(sidecar_path.read_text(encoding="utf-8"))
+    """Read alignment metadata from the real GeoTIFF, not from sidecar JSON."""
+
+    with rasterio.open(raster_path) as dataset:
+        transform = dataset.transform
+        return {
+            "crs": dataset.crs.to_string() if dataset.crs is not None else "",
+            "width": int(dataset.width),
+            "height": int(dataset.height),
+            "transform": [
+                float(transform.a),
+                float(transform.b),
+                float(transform.c),
+                float(transform.d),
+                float(transform.e),
+                float(transform.f),
+            ],
+        }
 
 
 def inspect_raster_alignment(raster_path: Path, grid_spec: GridSpec) -> list[str]:
