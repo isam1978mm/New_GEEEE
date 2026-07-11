@@ -28,6 +28,7 @@ from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
+from app.pipeline.stages.run_quality import RunQualityStage
 from app.pipeline.stages.report_640 import (
     Report640Stage,
     create_ee_notebook_report_mass_fetcher,
@@ -87,6 +88,7 @@ SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("object_extract", "Object extraction"),
     ("classifier", "Classifier"),
     ("alignment_qa", "Alignment QA"),
+    ("run_quality", "Run quality"),
 )
 SAFE_STAGE_STATUSES = {"pending", "running", "done", "failed", "skipped"}
 
@@ -410,6 +412,7 @@ async def run_core_pipeline_for_run(
                     ObjectExtractStage(grid_spec=grid_spec),
                     ClassifierStage(),
                     AlignmentQaStage(grid_spec=grid_spec),
+                    RunQualityStage(),
                 ],
             )
             await orchestrator.run_run(run_id)
