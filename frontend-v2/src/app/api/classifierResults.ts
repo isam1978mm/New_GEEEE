@@ -59,10 +59,11 @@ interface ClassifierSummaryDto {
 }
 
 export async function fetchClassifierSummary(runId: string): Promise<ClassifierSummary> {
-  const response = await fetchWithLegacyFallback(
+  const response = await fetchWithFallbacks([
     classifierDownloadUrl(runId, SUMMARY_ARTIFACT_NAME, SUMMARY_FILENAME),
     classifierDownloadUrl(runId, LEGACY_SUMMARY_ARTIFACT_NAME, SUMMARY_FILENAME),
-  );
+    outputDownloadUrl(runId, `experimental/${SUMMARY_FILENAME}`),
+  ]);
   if (!response.ok) {
     throw new Error("Classifier results are unavailable.");
   }
@@ -71,10 +72,11 @@ export async function fetchClassifierSummary(runId: string): Promise<ClassifierS
 }
 
 export async function fetchClassifierObjects(runId: string): Promise<ClassifierObjectRow[]> {
-  const response = await fetchWithLegacyFallback(
+  const response = await fetchWithFallbacks([
     classifierDownloadUrl(runId, CLASSIFICATIONS_ARTIFACT_NAME, CLASSIFICATIONS_FILENAME),
     classifierDownloadUrl(runId, LEGACY_CLASSIFICATIONS_ARTIFACT_NAME, CLASSIFICATIONS_FILENAME),
-  );
+    outputDownloadUrl(runId, `experimental/${CLASSIFICATIONS_FILENAME}`),
+  ]);
   if (!response.ok) {
     throw new Error("Classifier object rows are unavailable.");
   }
@@ -83,10 +85,26 @@ export async function fetchClassifierObjects(runId: string): Promise<ClassifierO
 }
 
 export function classifierDownloadLinks(runId: string): ClassifierDownloadLink[] {
-  return CLASSIFIER_ARTIFACTS.map((artifact) => ({
-    ...artifact,
-    downloadUrl: classifierDownloadUrl(runId, artifact.artifactName, artifact.filename),
-  }));
+  return [
+    {
+      artifactName: LEGACY_CLASSIFICATIONS_ARTIFACT_NAME,
+      filename: CLASSIFICATIONS_FILENAME,
+      label: "Download classifier CSV",
+      downloadUrl: outputDownloadUrl(runId, `experimental/${CLASSIFICATIONS_FILENAME}`),
+    },
+    {
+      artifactName: LEGACY_SUMMARY_ARTIFACT_NAME,
+      filename: SUMMARY_FILENAME,
+      label: "Download classifier summary JSON",
+      downloadUrl: outputDownloadUrl(runId, `experimental/${SUMMARY_FILENAME}`),
+    },
+    {
+      artifactName: "experimental_neutral_labels",
+      filename: "neutral_target_labels.json",
+      label: "Download neutral target labels JSON",
+      downloadUrl: outputDownloadUrl(runId, "experimental/neutral_target_labels.json"),
+    },
+  ];
 }
 
 function classifierArtifactUrl(runId: string, artifactName: string): string {
@@ -97,12 +115,23 @@ function classifierDownloadUrl(runId: string, artifactName: string, filename: st
   return `${classifierArtifactUrl(runId, artifactName)}/download/${encodeURIComponent(filename)}`;
 }
 
-async function fetchWithLegacyFallback(primaryUrl: string, legacyUrl: string): Promise<Response> {
-  const primary = await fetch(primaryUrl);
-  if (primary.ok || primary.status !== 404) {
-    return primary;
+function outputDownloadUrl(runId: string, relativePath: string): string {
+  return `/runs/${encodeURIComponent(runId)}/outputs/download/${relativePath
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
+}
+
+async function fetchWithFallbacks(urls: string[]): Promise<Response> {
+  let lastResponse: Response | null = null;
+  for (const url of urls) {
+    const response = await fetch(url);
+    if (response.ok || response.status !== 404) {
+      return response;
+    }
+    lastResponse = response;
   }
-  return fetch(legacyUrl);
+  return lastResponse || fetch(urls[0]);
 }
 
 function mapClassifierSummary(payload: ClassifierSummaryDto): ClassifierSummary {
