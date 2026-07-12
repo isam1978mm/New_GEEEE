@@ -224,7 +224,11 @@ def _median_3x3_grid(array: np.ndarray, *, nodata: float) -> np.ndarray:
     filled = np.where(valid, array, np.nan).astype(np.float32)
     padded = np.pad(filled, 1, mode="edge")
     windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
-    median = np.nanmedian(windows, axis=(-2, -1)).astype(np.float32)
+    valid_counts = np.isfinite(windows).sum(axis=(-2, -1))
+    median = np.full(array.shape, nodata, dtype=np.float32)
+    has_valid = valid_counts > 0
+    if np.any(has_valid):
+        median[has_valid] = np.nanmedian(windows[has_valid], axis=(-2, -1)).astype(np.float32)
     return np.where(np.isfinite(median), median, nodata).astype(np.float32)
 
 

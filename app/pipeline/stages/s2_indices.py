@@ -231,7 +231,7 @@ def build_aix_extra_tensor_image(grid_spec: GridSpec):
             ]
         )
 
-    topo_dem = ee.ImageCollection("COPERNICUS/DEM/GLO30").filterBounds(region).first().select("DEM")
+    topo_dem = ee.ImageCollection("COPERNICUS/DEM/GLO30_2024_1").filterBounds(region).first().select("DEM")
     slope = ee.Terrain.slope(topo_dem)
     aspect = ee.Terrain.aspect(topo_dem)
     hillshade = ee.Terrain.hillshade(topo_dem)

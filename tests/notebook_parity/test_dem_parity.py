@@ -79,7 +79,7 @@ def test_dem_parity_uses_notebook_gee_ingest_flow(monkeypatch) -> None:
 
     assert tile.shape == (DEM_TILE_SIZE, DEM_TILE_SIZE)
     assert tile[0, 0] == 7.0
-    assert ("ImageCollection", "COPERNICUS/DEM/GLO30") in calls
+    assert ("ImageCollection", "COPERNICUS/DEM/GLO30_2024_1") in calls
     assert ("mosaic", None) in calls
     assert ("select", "DEM") in calls
     assert ("toFloat", None) in calls

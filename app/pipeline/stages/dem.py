@@ -122,7 +122,7 @@ def build_grid_region(grid_spec: GridSpec):
 
 def build_ee_dem_image(grid_spec: GridSpec):
     return (
-        ee.ImageCollection("COPERNICUS/DEM/GLO30")
+        ee.ImageCollection("COPERNICUS/DEM/GLO30_2024_1")
         .mosaic()
         .select("DEM")
         .clip(build_grid_region(grid_spec))
