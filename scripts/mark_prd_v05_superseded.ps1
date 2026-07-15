@@ -17,10 +17,10 @@ if (-not (Test-Path $prdPath)) {
 $text = Get-Content -Raw -Encoding UTF8 $prdPath
 $notice = @'
 
-> **Supersession notice — 2026-07-15:** This PRD v0.5 is historical context only. It is not the active source of truth for current audits regarding classifier placement, classifier API/frontend visibility, public-SaaS severity assumptions, or the local-private core-classifier execution model. Future audits must read `docs/LOCAL_PRIVATE_CORE_CLASSIFIER_EXECUTION_PLAN_2026-07-15.md` and `AUDIT_DO_NOT_BREAK_CONTRACTS.md` before using this PRD.
+> **Supersession notice - 2026-07-15:** This PRD v0.5 is historical context only. It is not the active source of truth for current audits regarding classifier placement, classifier API/frontend visibility, public-SaaS severity assumptions, or the local-private core-classifier execution model. Future audits must read `docs/LOCAL_PRIVATE_CORE_CLASSIFIER_EXECUTION_PLAN_2026-07-15.md` and `AUDIT_DO_NOT_BREAK_CONTRACTS.md` before using this PRD.
 '@
 
-if ($text -like "*Supersession notice — 2026-07-15*") {
+if ($text -like "*Supersession notice - 2026-07-15*") {
     Write-Host "PRD already contains supersession notice."
 } else {
     $marker = "**Storage backend:** SQLite (PostgreSQL/Supabase deferred to v2)`r`n"
