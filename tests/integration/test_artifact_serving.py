@@ -84,6 +84,9 @@ def test_public_download_filename_mapping_is_safe_and_keeps_unknown_names() -> N
     assert public_download_filename("alignment_qa") == "alignment_qa.json"
     assert public_download_filename("alignment_audit") == "alignment_audit.json"
     assert public_download_filename("alignment_mask_selection") == "alignment_mask_selection.json"
+    assert public_download_filename("classifier_classifications") == "classifications.csv"
+    assert public_download_filename("classifier_summary") == "summary.json"
+    assert public_download_filename("classifier_neutral_labels") == "neutral_target_labels.json"
     assert public_download_filename("unknown_artifact") == "unknown_artifact"
     assert is_expected_download_filename(artifact_name="objects_index", download_filename="objects_index.csv") is True
     assert is_expected_download_filename(artifact_name="objects_index", download_filename="objects_index") is False
@@ -113,6 +116,41 @@ def test_known_logical_json_artifact_download_uses_public_filename_with_extensio
                 expected_filename="alignment_qa.json",
             )
         )
+
+
+def test_core_classifier_artifacts_download_with_public_filenames() -> None:
+    cases = [
+        (
+            "classifier_classifications",
+            "classifier/classifications.csv",
+            "object_id,class_id,class_score\n1,Class_A,0.95\n",
+            "classifications.csv",
+        ),
+        (
+            "classifier_summary",
+            "classifier/summary.json",
+            '{"object_count": 1}\n',
+            "summary.json",
+        ),
+        (
+            "classifier_neutral_labels",
+            "classifier/neutral_target_labels.json",
+            '{"object_labels": []}\n',
+            "neutral_target_labels.json",
+        ),
+    ]
+
+    for artifact_name, relative_path, expected_body, expected_filename in cases:
+        with TemporaryDirectory() as temp_dir:
+            asyncio.run(
+                _run_known_artifact_filename_test(
+                    Path(temp_dir),
+                    artifact_name=artifact_name,
+                    relative_path=relative_path,
+                    expected_body=expected_body,
+                    expected_filename=expected_filename,
+                )
+            )
 
 
 def test_new_download_route_accepts_safe_filename_and_old_route_still_works() -> None:
@@ -284,7 +322,9 @@ async def _run_known_artifact_filename_test(
         run_id = "run-1"
         run_dir = data_dir / "runs" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / relative_path).write_text(expected_body, encoding="utf-8")
+        artifact_path = run_dir / relative_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(expected_body, encoding="utf-8")
 
         async with session_factory() as session:
             await seed_artifact(
@@ -297,10 +337,17 @@ async def _run_known_artifact_filename_test(
 
         with TestClient(app, raise_server_exceptions=False) as client:
             response = client.get(f"/runs/{run_id}/artifacts/{artifact_name}")
+            download_response = client.get(
+                f"/runs/{run_id}/artifacts/{artifact_name}/download/{expected_filename}"
+            )
 
         assert response.status_code == 200
         assert response.text.replace("\r\n", "\n") == expected_body
         assert f'filename="{expected_filename}"' in response.headers["content-disposition"]
+
+        assert download_response.status_code == 200
+        assert download_response.text.replace("\r\n", "\n") == expected_body
+        assert f'filename="{expected_filename}"' in download_response.headers["content-disposition"]
     finally:
         await engine.dispose()
 
