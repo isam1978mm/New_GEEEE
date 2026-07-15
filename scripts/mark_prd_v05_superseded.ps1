@@ -30,7 +30,13 @@ if ($text -like "*Supersession notice - 2026-07-15*") {
     if (-not $text.Contains($marker)) {
         throw "Could not find PRD metadata insertion point."
     }
-    $text = $text.Replace($marker, $marker + $notice, 1)
+
+    $index = $text.IndexOf($marker)
+    if ($index -lt 0) {
+        throw "Could not find PRD metadata insertion point."
+    }
+    $insertAt = $index + $marker.Length
+    $text = $text.Substring(0, $insertAt) + $notice + $text.Substring($insertAt)
     Set-Content -Encoding UTF8 -NoNewline -Path $prdPath -Value $text
     Write-Host "Inserted supersession notice into docs\PRD_v0.5.md"
 }
