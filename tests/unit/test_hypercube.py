@@ -23,6 +23,8 @@ from app.pipeline.stages.hypercube import (
     NOTEBOOK_STACK_OUTPUT_DIR,
     HypercubeStage,
     build_hypercube_products,
+    collect_hypercube_sources,
+    is_allowed_hypercube_source,
     write_notebook_final_tesla_outputs,
 )
 from app.pipeline.stages.dem import DemStage, deterministic_dem_tile
@@ -120,6 +122,27 @@ def test_hypercube_stage_writes_classified_grid_aligned_outputs() -> None:
             "status": "not_implemented_no_source_equivalent",
             "reason": NOTEBOOK_PATCHED_14B_REASON,
         }
+
+
+def test_hypercube_sources_use_manifest_order_and_block_downstream_reports() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        _write_source_raster(run_dir / "NDVI.tif", np.full((grid_spec.size, grid_spec.size), 0.4, dtype=np.float32), grid_spec)
+        _write_source_raster(run_dir / "VV_dB.tif", np.full((grid_spec.size, grid_spec.size), -12.0, dtype=np.float32), grid_spec)
+        _write_source_raster(
+            run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif",
+            np.full((grid_spec.size, grid_spec.size), 99.0, dtype=np.float32),
+            grid_spec,
+        )
+        _write_source_raster(run_dir / "pca_anomaly.tif", np.full((grid_spec.size, grid_spec.size), 88.0, dtype=np.float32), grid_spec)
+
+        sources = collect_hypercube_sources(run_dir)
+
+        assert [path.name for path in sources] == ["VV_dB.tif", "NDVI.tif"]
+        assert is_allowed_hypercube_source(run_dir / "VV_dB.tif") is True
+        assert is_allowed_hypercube_source(run_dir / "REPORT_640_FINAL_Zero_Point_Targets.tif") is False
+        assert is_allowed_hypercube_source(run_dir / "pca_anomaly.tif") is False
 
 
 def test_hypercube_stage_writes_notebook_final_tesla_outputs_when_sources_exist() -> None:

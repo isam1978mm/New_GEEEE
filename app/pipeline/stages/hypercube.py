@@ -68,7 +68,29 @@ NOTEBOOK_PATCHED_14B_BAND_DESCRIPTIONS: tuple[str, ...] = (
     "DEM_Roughness",
 )
 NOTEBOOK_PATCHED_14B_ACTUAL_BAND_COUNT = len(NOTEBOOK_PATCHED_14B_LAYER_ORDER)
-EXCLUDED_TIFS = {HYPERCUBE_TIF_NAME, "pca_anomaly.tif"}
+HYPERCUBE_SOURCE_MANIFEST: tuple[str, ...] = (
+    "VV_dB.tif",
+    "VH_dB.tif",
+    "logRatio_dB.tif",
+    "angle.tif",
+    "NDVI.tif",
+    "NDWI.tif",
+    "NDMI.tif",
+    "NBR.tif",
+)
+BLOCKED_HYPERCUBE_SOURCE_PREFIXES = (
+    "REPORT_640_",
+    "pca_",
+    "threshold_",
+    "classifier_",
+)
+BLOCKED_HYPERCUBE_SOURCE_NAMES = {
+    HYPERCUBE_TIF_NAME,
+    "pca_anomaly.tif",
+    "object_mask.tif",
+    "objects_mask.tif",
+    "threshold_mask.tif",
+}
 EPS = 1e-6
 VALID_MASK_POLICY = "all_feature_channels_finite"
 
@@ -78,8 +100,17 @@ def _read_single_band_tif(path: Path) -> np.ndarray:
         return np.array(image, dtype=np.float32)
 
 
+def is_allowed_hypercube_source(path: Path) -> bool:
+    name = path.name
+    if name in BLOCKED_HYPERCUBE_SOURCE_NAMES:
+        return False
+    if any(name.startswith(prefix) for prefix in BLOCKED_HYPERCUBE_SOURCE_PREFIXES):
+        return False
+    return name in HYPERCUBE_SOURCE_MANIFEST
+
+
 def collect_hypercube_sources(run_dir: Path) -> list[Path]:
-    return sorted(path for path in run_dir.glob("*.tif") if path.name not in EXCLUDED_TIFS)
+    return [run_dir / filename for filename in HYPERCUBE_SOURCE_MANIFEST if is_allowed_hypercube_source(run_dir / filename) and (run_dir / filename).is_file()]
 
 
 def _validate_source_sidecar(path: Path, grid_spec: GridSpec) -> dict[str, object]:
