@@ -1,4 +1,4 @@
-# Product Requirements Document — GEE Screening Web App
+﻿# Product Requirements Document — GEE Screening Web App
 
 **Status:** Draft v0.5
 **Author:** Project owner, with Claude as orchestrator/validator
@@ -7,6 +7,7 @@
 **Deployment surface:** Local only (`127.0.0.1` bind, VPS deferred pending legal review)
 **Storage backend:** SQLite (PostgreSQL/Supabase deferred to v2)
 
+> **Supersession notice - 2026-07-15:** This PRD v0.5 is historical context only. It is not the active source of truth for current audits regarding classifier placement, classifier API/frontend visibility, public-SaaS severity assumptions, or the local-private core-classifier execution model. Future audits must read `docs/LOCAL_PRIVATE_CORE_CLASSIFIER_EXECUTION_PLAN_2026-07-15.md` and `AUDIT_DO_NOT_BREAK_CONTRACTS.md` before using this PRD.
 ---
 
 ## Changelog from v0.4
