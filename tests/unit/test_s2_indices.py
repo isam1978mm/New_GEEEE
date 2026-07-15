@@ -36,6 +36,7 @@ from app.pipeline.stages.s2_indices import (
     compute_s2_indices,
     create_ee_s2_cube_fetcher,
     deterministic_s2_cube_fetcher,
+    validate_s2_index_coverage,
 )
 from app.services.storage import read_manifest
 
@@ -219,6 +220,46 @@ def test_s2_indices_stage_rejects_all_nodata_source_cube() -> None:
             asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=all_nodata_s2_cube_fetcher).run(context))
 
 
+def test_s2_indices_stage_rejects_zero_valid_required_source_band() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+
+        def zero_b12_s2_cube_fetcher(*, grid_spec):
+            cube = deterministic_s2_cube_fetcher(grid_spec=grid_spec)
+            cube[:, :, 5] = grid_spec.nodata
+            return cube
+
+        with pytest.raises(StageError, match="S2 source band B12 has zero valid pixels"):
+            asyncio.run(S2IndicesStage(grid_spec=grid_spec, s2_cube_fetcher=zero_b12_s2_cube_fetcher).run(context))
+
+
+def test_s2_index_coverage_rejects_zero_valid_derived_index() -> None:
+    nodata = -9999.0
+    outputs = {name: np.ones((2, 2), dtype=np.float32) for name in INDEX_NAMES}
+    outputs["NBR"][:, :] = nodata
+    masks = {
+        "raw_valid_mask": np.ones((2, 2), dtype=np.uint8),
+        "index_valid_mask": np.ones((2, 2), dtype=np.uint8),
+    }
+
+    with pytest.raises(StageError, match="S2 derived index NBR has zero valid pixels"):
+        validate_s2_index_coverage(outputs, masks, nodata=nodata)
+
+
+def test_s2_index_coverage_rejects_zero_shared_valid_pixels() -> None:
+    nodata = -9999.0
+    outputs = {name: np.ones((2, 2), dtype=np.float32) for name in INDEX_NAMES}
+    masks = {
+        "raw_valid_mask": np.ones((2, 2), dtype=np.uint8),
+        "index_valid_mask": np.zeros((2, 2), dtype=np.uint8),
+    }
+
+    with pytest.raises(StageError, match="zero shared valid pixels"):
+        validate_s2_index_coverage(outputs, masks, nodata=nodata)
+
+
 def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
     with TemporaryDirectory() as temp_dir:
         run_dir = Path(temp_dir)
@@ -259,6 +300,10 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         assert all(artifact.http_servable is False for artifact in result.artifacts if artifact.name.startswith("s2_") and artifact.name not in INDEX_NAMES)
         assert result.metadata["band_names"] == list(INDEX_NAMES)
         assert result.metadata["source_valid_fraction"] == 1.0
+        assert result.metadata["source_shared_valid_fraction"] == 1.0
+        assert result.metadata["index_shared_valid_fraction"] == 1.0
+        assert set(result.metadata["source_band_summaries"]) == set(S2_SOURCE_BANDS)
+        assert set(result.metadata["index_band_summaries"]) == set(INDEX_NAMES)
         assert result.metadata["mask_names"] == ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"]
         assert result.metadata["aix_extra_tensor_stack"] == AIX_EXTRA_TENSORS_STACK_NPY
         assert result.metadata["aix_extra_tensor_bands"] == list(AIX_EXTRA_TENSOR_BANDS)
@@ -352,6 +397,7 @@ def test_s2_indices_stage_writes_classified_grid_aligned_outputs() -> None:
         assert summary["source_valid_fraction"] == 1.0
         assert summary["index_bands"] == list(INDEX_NAMES)
         assert summary["source_bands"] == list(S2_SOURCE_BANDS)
+        assert summary["index_summaries"]["NDVI"]["valid_px"] == grid_spec.size * grid_spec.size
 
         mask_manifest = json.loads((run_dir / S2_MASK_OUTPUT_DIR / S2_DEM_MATCHED_MASK_MANIFEST_JSON).read_text(encoding="utf-8"))
         assert mask_manifest["schema"] == "s2_dem_matched_masks_v1"

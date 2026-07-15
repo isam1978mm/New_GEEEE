@@ -782,9 +782,59 @@ def _finite_or_nodata(array: np.ndarray, *, nodata: float) -> np.ndarray:
     return np.where(np.isfinite(array), array, nodata).astype(np.float32)
 
 
+def _valid_mask(array: np.ndarray, *, nodata: float) -> np.ndarray:
+    return np.isfinite(array) & (array != nodata)
+
+
 def _valid_fraction(array: np.ndarray, *, nodata: float) -> float:
-    valid = np.isfinite(array) & (array != nodata)
-    return float(valid.mean())
+    return float(_valid_mask(array, nodata=nodata).mean())
+
+
+def validate_s2_source_band_coverage(cube: np.ndarray, *, nodata: float) -> dict[str, object]:
+    band_summaries: dict[str, dict[str, int | float]] = {}
+    for band_index, band_name in enumerate(S2_SOURCE_BANDS):
+        valid = _valid_mask(cube[:, :, band_index], nodata=nodata)
+        valid_px = int(valid.sum())
+        if valid_px == 0:
+            raise StageError(f"S2 source band {band_name} has zero valid pixels.")
+        band_summaries[band_name] = {
+            "valid_px": valid_px,
+            "valid_fraction": round(float(valid.mean()), 6),
+        }
+
+    shared_valid = np.isfinite(cube).all(axis=-1) & (cube != nodata).all(axis=-1)
+    shared_valid_px = int(shared_valid.sum())
+    if shared_valid_px == 0:
+        raise StageError("S2 source cube has zero shared valid pixels across required bands.")
+
+    return {
+        "source_band_summaries": band_summaries,
+        "source_shared_valid_px": shared_valid_px,
+        "source_shared_valid_fraction": round(float(shared_valid.mean()), 6),
+    }
+
+
+def validate_s2_index_coverage(outputs: dict[str, np.ndarray], masks: dict[str, np.ndarray], *, nodata: float) -> dict[str, object]:
+    index_summaries: dict[str, dict[str, int | float]] = {}
+    for name in INDEX_NAMES:
+        valid = _valid_mask(outputs[name], nodata=nodata)
+        valid_px = int(valid.sum())
+        if valid_px == 0:
+            raise StageError(f"S2 derived index {name} has zero valid pixels.")
+        index_summaries[name] = {
+            "valid_px": valid_px,
+            "valid_fraction": round(float(valid.mean()), 6),
+        }
+
+    shared_valid_px = int(masks["index_valid_mask"].sum())
+    if shared_valid_px == 0:
+        raise StageError("S2 derived indices have zero shared valid pixels.")
+
+    return {
+        "index_band_summaries": index_summaries,
+        "index_shared_valid_px": shared_valid_px,
+        "index_shared_valid_fraction": round(float(masks["index_valid_mask"].mean()), 6),
+    }
 
 
 def validate_source_cube(
@@ -1134,9 +1184,10 @@ def write_s2_summary(
     index_summaries = {}
     for name in INDEX_NAMES:
         array = outputs[name]
-        valid = array != nodata
+        valid = _valid_mask(array, nodata=nodata)
         values = array[valid]
         index_summaries[name] = {
+            "valid_px": int(valid.sum()),
             "valid_fraction": round(float(valid.mean()), 6),
             "min": round(float(values.min()), 6) if values.size else None,
             "max": round(float(values.max()), 6) if values.size else None,
@@ -1206,8 +1257,10 @@ class S2IndicesStage(Stage):
             source_name="S2 source cube",
             expected_bands=len(S2_SOURCE_BANDS),
         )
+        source_coverage = validate_s2_source_band_coverage(cube, nodata=self.grid_spec.nodata)
         outputs = compute_s2_indices(cube, nodata=self.grid_spec.nodata)
         masks = compute_s2_dem_matched_masks(cube, outputs, nodata=self.grid_spec.nodata)
+        index_coverage = validate_s2_index_coverage(outputs, masks, nodata=self.grid_spec.nodata)
         written_paths = write_s2_outputs(context.run_dir, self.grid_spec, outputs)
         mask_outputs = write_s2_mask_outputs(
             context.run_dir,
@@ -1391,6 +1444,12 @@ class S2IndicesStage(Stage):
                 "source_bands": list(S2_SOURCE_BANDS),
                 "shape": [self.grid_spec.size, self.grid_spec.size],
                 "source_valid_fraction": round(float(source_valid_fraction), 6),
+                "source_band_summaries": source_coverage["source_band_summaries"],
+                "source_shared_valid_px": source_coverage["source_shared_valid_px"],
+                "source_shared_valid_fraction": source_coverage["source_shared_valid_fraction"],
+                "index_band_summaries": index_coverage["index_band_summaries"],
+                "index_shared_valid_px": index_coverage["index_shared_valid_px"],
+                "index_shared_valid_fraction": index_coverage["index_shared_valid_fraction"],
                 "mask_names": ["s2_raw_valid_mask_640", "s2_index_valid_mask_640"],
                 "aix_extra_tensor_stack": AIX_EXTRA_TENSORS_STACK_NPY,
                 "aix_extra_tensor_bands": list(AIX_EXTRA_TENSOR_BANDS),
