@@ -437,6 +437,24 @@ def test_build_final_radar_image_keeps_stage_error_for_insufficient_pairs(monkey
         build_final_radar_image(grid_spec, start_date="2026-01-01", end_date="2026-03-01")
 
 
+def test_select_pairs_finds_feasible_matching_when_nearest_greedy_would_block_pair() -> None:
+    asc_items = [
+        {"id": "ASC_FLEXIBLE", "ms": 2_000_000},
+        {"id": "ASC_CONSTRAINED", "ms": 0},
+    ]
+    desc_items = [
+        {"id": "DESC_ONLY_FOR_CONSTRAINED", "ms": 0},
+        {"id": "DESC_FLEXIBLE_BACKUP", "ms": 5_000_000},
+    ]
+
+    selected = select_pairs(asc_items, desc_items, max_orbit_dt_days=1, max_pair_dt_hours=1, min_pairs=2)
+
+    assert {(pair.asc_id, pair.desc_id) for pair in selected} == {
+        ("ASC_CONSTRAINED", "DESC_ONLY_FOR_CONSTRAINED"),
+        ("ASC_FLEXIBLE", "DESC_FLEXIBLE_BACKUP"),
+    }
+
+
 def test_select_pairs_uses_cell25_pixel_export_profile_not_cell21_master_units() -> None:
     asc_items = [
         _sar_item("S1C_IW_GRDH_1SDV_20260118T153231_20260118T153256_005960_00BF44_900B", "2026-01-18T15:32:31"),
@@ -479,6 +497,24 @@ def test_select_pairs_uses_36_hour_pair_cap() -> None:
 
     assert [(pair.asc_id, pair.desc_id) for pair in selected] == []
     assert [(pair.asc_id, pair.desc_id) for pair in cell21_profile_selected] == [("ASC_42H", "DESC_42H")]
+
+
+def test_sar_rtc_stage_rejects_all_nodata_outputs() -> None:
+    with TemporaryDirectory() as temp_dir:
+        run_dir = Path(temp_dir)
+        grid_spec = build_run_grid(35.59499, 36.12694)
+        context = StageContext(run_id="run-1", settings=_settings(run_dir), run_dir=run_dir)
+        asyncio.run(DemStage(grid_spec=grid_spec, tile_fetcher=deterministic_dem_tile).run(context))
+
+        def all_nodata_radar_cube_fetcher(*, grid_spec):
+            return np.full(
+                (grid_spec.size, grid_spec.size, len(RADAR_BANDS)),
+                grid_spec.nodata,
+                dtype=np.float32,
+            )
+
+        with pytest.raises(StageError, match="SAR RTC output VV_dB has zero valid pixels"):
+            asyncio.run(SarRtcStage(grid_spec=grid_spec, radar_cube_fetcher=all_nodata_radar_cube_fetcher).run(context))
 
 
 def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
@@ -575,6 +611,8 @@ def test_sar_rtc_stage_writes_classified_grid_aligned_outputs() -> None:
             "QA/sar/sar_alignment_summary.json",
         }
         assert result.metadata["band_names"] == ["VV_dB", "VH_dB", "logRatio_dB", "incidence"]
+        assert set(result.metadata["output_coverage"]) == {"VV_dB", "VH_dB", "logRatio_dB", "incidence"}
+        assert result.metadata["output_coverage"]["VV_dB"]["valid_fraction"] == 1.0
         assert result.metadata["sar_npy_artifact_names"] == [
             "sar_npy_VV_dB",
             "sar_npy_VH_dB",

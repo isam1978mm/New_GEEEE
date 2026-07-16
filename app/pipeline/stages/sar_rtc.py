@@ -176,40 +176,71 @@ def apply_orbit_window(items: list[dict[str, Any]], max_dt_ms: int) -> tuple[lis
     return ([item for item in items if abs(item["ms"] - mid) <= max_dt_ms], mid)
 
 
-def greedy_pairs_with_cap(
+def _sar_pair_from_items(asc_item: dict[str, Any], desc_item: dict[str, Any], dt_ms: int) -> SarPair:
+    return SarPair(
+        asc_id=str(asc_item["id"]),
+        desc_id=str(desc_item["id"]),
+        dt_ms=dt_ms,
+        asc_ms=int(asc_item["ms"]),
+        desc_ms=int(desc_item["ms"]),
+    )
+
+
+def feasible_pairs_with_cap(
     asc_list: list[dict[str, Any]],
     desc_list: list[dict[str, Any]],
     *,
     max_pairs: int,
     max_dt_ms: int,
 ) -> list[SarPair]:
-    used_desc: set[int] = set()
-    pairs: list[SarPair] = []
+    if max_pairs <= 0:
+        return []
+
+    candidates_by_asc: list[list[tuple[int, int, dict[str, Any]]]] = []
     for asc in asc_list:
-        best_match: tuple[dict[str, Any], dict[str, Any], int, int] | None = None
+        candidates: list[tuple[int, int, dict[str, Any]]] = []
         for desc_index, desc in enumerate(desc_list):
+            dt_ms = abs(int(asc["ms"]) - int(desc["ms"]))
+            if dt_ms <= max_dt_ms:
+                candidates.append((dt_ms, desc_index, desc))
+        candidates.sort(key=lambda item: (item[0], int(item[2]["ms"]), str(item[2]["id"])))
+        candidates_by_asc.append(candidates)
+
+    selected_solution: list[SarPair] | None = None
+
+    def _search(asc_index: int, used_desc: set[int], selected: list[SarPair]) -> bool:
+        nonlocal selected_solution
+        if len(selected) == max_pairs:
+            selected_solution = list(selected)
+            return True
+
+        remaining_asc = len(asc_list) - asc_index
+        needed = max_pairs - len(selected)
+        if remaining_asc < needed:
+            return False
+        if asc_index >= len(asc_list):
+            return False
+
+        asc = asc_list[asc_index]
+        for dt_ms, desc_index, desc in candidates_by_asc[asc_index]:
             if desc_index in used_desc:
                 continue
-            dt_ms = abs(int(asc["ms"]) - int(desc["ms"]))
-            if dt_ms > max_dt_ms:
-                continue
-            if best_match is None or dt_ms < best_match[2]:
-                best_match = (asc, desc, dt_ms, desc_index)
-        if best_match is not None:
-            asc_item, desc_item, dt_ms, desc_index = best_match
             used_desc.add(desc_index)
-            pairs.append(
-                SarPair(
-                    asc_id=asc_item["id"],
-                    desc_id=desc_item["id"],
-                    dt_ms=dt_ms,
-                    asc_ms=int(asc_item["ms"]),
-                    desc_ms=int(desc_item["ms"]),
-                )
-            )
-        if len(pairs) >= max_pairs:
-            break
-    pairs.sort(key=lambda item: item.dt_ms)
+            selected.append(_sar_pair_from_items(asc, desc, dt_ms))
+            if _search(asc_index + 1, used_desc, selected):
+                return True
+            selected.pop()
+            used_desc.remove(desc_index)
+
+        if remaining_asc - 1 >= needed and _search(asc_index + 1, used_desc, selected):
+            return True
+        return False
+
+    if not _search(0, set(), []):
+        return []
+
+    pairs = selected_solution or []
+    pairs.sort(key=lambda item: (item.dt_ms, item.asc_ms or -1, item.desc_ms or -1, item.asc_id, item.desc_id))
     return pairs
 
 
@@ -228,13 +259,15 @@ def select_pairs(
     max_pairs_possible = min(len(asc_windowed), len(desc_windowed))
     targets = [target for target in MAX_PAIRS_TARGETS if target <= max_pairs_possible]
     for target in targets:
-        pairs = greedy_pairs_with_cap(asc_windowed, desc_windowed, max_pairs=target, max_dt_ms=pair_ms)
+        pairs = feasible_pairs_with_cap(asc_windowed, desc_windowed, max_pairs=target, max_dt_ms=pair_ms)
         if len(pairs) >= target:
             return pairs
-    fallback = greedy_pairs_with_cap(asc_windowed, desc_windowed, max_pairs=max_pairs_possible, max_dt_ms=pair_ms)
-    if len(fallback) < min_pairs:
-        raise StageError("Not enough ASC/DESC SAR pairs within the notebook constraints.")
-    return fallback
+    fallback_targets = list(range(min(max_pairs_possible, MAX_PAIRS), min_pairs - 1, -1))
+    for target in fallback_targets:
+        pairs = feasible_pairs_with_cap(asc_windowed, desc_windowed, max_pairs=target, max_dt_ms=pair_ms)
+        if len(pairs) >= target:
+            return pairs
+    raise StageError("Not enough ASC/DESC SAR pairs within the notebook constraints.")
 
 
 def img_by_id(image_id: str, grid_spec: GridSpec):
@@ -584,11 +617,30 @@ def _notebook_sar_intermediate_artifact_name(path: Path) -> str:
     return f"notebook_sar_intermediate_post_rtc_{band_name}"
 
 
+def _sar_valid_mask(array: np.ndarray, *, nodata: float) -> np.ndarray:
+    return np.isfinite(array) & (array != nodata)
+
+
+def validate_sar_output_coverage(outputs: dict[str, np.ndarray], *, nodata: float) -> dict[str, dict[str, int | float]]:
+    coverage: dict[str, dict[str, int | float]] = {}
+    for band_name in OUTPUT_BANDS:
+        array = outputs[band_name]
+        valid_mask = _sar_valid_mask(array, nodata=nodata)
+        valid_count = int(valid_mask.sum())
+        if valid_count == 0:
+            raise StageError(f"SAR RTC output {band_name} has zero valid pixels.")
+        coverage[band_name] = {
+            "valid_count": valid_count,
+            "valid_fraction": round(float(valid_mask.mean()), 6),
+        }
+    return coverage
+
+
 def build_band_summary_rows(outputs: dict[str, np.ndarray], *, nodata: float) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for band_name in OUTPUT_BANDS:
         array = outputs[band_name]
-        valid_mask = array != nodata
+        valid_mask = _sar_valid_mask(array, nodata=nodata)
         valid_values = array[valid_mask]
         valid_count = int(valid_mask.sum())
         nodata_count = int(array.size - valid_count)
@@ -613,14 +665,15 @@ def build_nodata_audit_rows(outputs: dict[str, np.ndarray], *, nodata: float) ->
     rows: list[dict[str, str]] = []
     for band_name in OUTPUT_BANDS:
         array = outputs[band_name]
-        nodata_count = int((array == nodata).sum())
+        valid_count = int(_sar_valid_mask(array, nodata=nodata).sum())
+        nodata_count = int(array.size - valid_count)
         rows.append(
             {
                 "band_name": band_name,
                 "total_pixels": str(int(array.size)),
                 "nodata_count": str(nodata_count),
                 "nodata_fraction": f"{(nodata_count / array.size):.6f}",
-                "all_nodata": str(nodata_count == int(array.size)).lower(),
+                "all_nodata": str(valid_count == 0).lower(),
             }
         )
     return rows
@@ -805,6 +858,7 @@ class SarRtcStage(Stage):
             nodata=self.grid_spec.nodata,
             scale_m=float(self.grid_spec.manifest.scale_m),
         )
+        output_coverage = validate_sar_output_coverage(outputs, nodata=self.grid_spec.nodata)
         written_paths = write_sar_outputs(context.run_dir, self.grid_spec, outputs)
         notebook_tif_paths = write_notebook_sar_geotiff_outputs(context.run_dir, self.grid_spec, outputs)
         npy_paths = write_sar_npy_outputs(context.run_dir, outputs)
@@ -881,6 +935,7 @@ class SarRtcStage(Stage):
             metadata={
                 "band_names": list(OUTPUT_BANDS),
                 "sar_shape": list(outputs["VV_dB"].shape),
+                "output_coverage": output_coverage,
                 "start_date": self.start_date,
                 "end_date": self.end_date,
                 "sar_npy_artifact_names": [SAR_NPY_ARTIFACT_NAMES[path.stem] for path in npy_paths],
