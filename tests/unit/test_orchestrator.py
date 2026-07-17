@@ -96,13 +96,27 @@ async def _run_orchestrator_test(tmp_path: Path) -> None:
     assert records[0].stage_name == "demo"
     assert records[0].status == "done"
 
+    rerun_records = await orchestrator.run_run("run-1")
+    assert len(rerun_records) == 1
+    assert rerun_records[0].stage_name == "demo"
+    assert rerun_records[0].status == "done"
+
     async with session_factory() as session:
         run_status = await session.scalar(select(Run.status).where(Run.id == "run-1"))
         assert run_status == RunStatus.DONE
 
-        artifact = await session.scalar(select(Artifact).where(Artifact.run_id == "run-1"))
-        assert artifact is not None
-        assert artifact.artifact_class == ArtifactClass.LOCAL_SENSITIVE
+        artifacts = list(
+            (
+                await session.scalars(
+                    select(Artifact).where(
+                        Artifact.run_id == "run-1",
+                        Artifact.name == "demo",
+                    )
+                )
+            ).all()
+        )
+        assert len(artifacts) == 1
+        assert artifacts[0].artifact_class == ArtifactClass.LOCAL_SENSITIVE
 
     manifest = read_manifest(settings.data_dir / "runs" / "run-1" / "stage_demo.manifest.json")
     assert manifest["status"] == "done"

@@ -126,18 +126,31 @@ class Orchestrator:
 
     async def _record_artifacts(self, run_id: str, result: StageResult) -> None:
         async with self.session_factory() as session:
-            for artifact in result.artifacts:
-                session.add(
-                    Artifact(
-                        run_id=run_id,
-                        name=artifact.name,
-                        relative_path=artifact.relative_path,
-                        size_bytes=artifact.size_bytes,
-                        sha256=artifact.sha256,
-                        artifact_class=artifact.artifact_class,
-                        http_servable=artifact.http_servable,
+            for stage_artifact in result.artifacts:
+                artifact = await session.scalar(
+                    select(Artifact).where(
+                        Artifact.run_id == run_id,
+                        Artifact.name == stage_artifact.name,
                     )
                 )
+                if artifact is None:
+                    artifact = Artifact(
+                        run_id=run_id,
+                        name=stage_artifact.name,
+                        relative_path=stage_artifact.relative_path,
+                        size_bytes=stage_artifact.size_bytes,
+                        sha256=stage_artifact.sha256,
+                        artifact_class=stage_artifact.artifact_class,
+                        http_servable=stage_artifact.http_servable,
+                    )
+                    session.add(artifact)
+                    continue
+
+                artifact.relative_path = stage_artifact.relative_path
+                artifact.size_bytes = stage_artifact.size_bytes
+                artifact.sha256 = stage_artifact.sha256
+                artifact.artifact_class = stage_artifact.artifact_class
+                artifact.http_servable = stage_artifact.http_servable
             await session.commit()
 
     async def _persist_stage_status(
