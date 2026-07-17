@@ -1,9 +1,4 @@
-"""A5 unit tests for stale active-run cleanup and active-run locking.
-
-Verifies ``mark_stale_running_runs`` transitions orphan QUEUED and RUNNING
-runs to STALE_FAILED, persists the change, returns the count of changed runs,
-and tolerates a missing ``runs`` table (fresh DB before migrations).
-"""
+"""Unit tests for startup active-run recovery and single-active-run locking."""
 
 from __future__ import annotations
 
@@ -15,20 +10,29 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import Settings
 from app.db.models.enums import RunStatus
 from app.db.models.run import Run
 from app.errors import ActiveRunConflictError
-from app.services.run_state import ensure_single_active_run, mark_stale_running_runs
+from app.services.run_state import (
+    ensure_single_active_run,
+    is_single_active_run_integrity_error,
+    mark_stale_active_runs,
+    mark_stale_running_runs,
+)
 
 
-def test_mark_stale_running_runs_transitions_running_only() -> None:
-    asyncio.run(_run_mark_stale_running_runs_case())
+@pytest.mark.parametrize("active_status", [RunStatus.QUEUED, RunStatus.RUNNING])
+def test_mark_stale_active_runs_transitions_each_active_status(
+    active_status: RunStatus,
+) -> None:
+    asyncio.run(_run_mark_stale_active_case(active_status))
 
 
-async def _run_mark_stale_running_runs_case() -> None:
+async def _run_mark_stale_active_case(active_status: RunStatus) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
         _upgrade_database(settings)
@@ -38,9 +42,7 @@ async def _run_mark_stale_running_runs_case() -> None:
             async with session_factory() as session:
                 session.add_all(
                     [
-                        _run("run-running-a", RunStatus.RUNNING),
-                        _run("run-running-b", RunStatus.RUNNING),
-                        _run("run-queued", RunStatus.QUEUED),
+                        _run("run-active", active_status),
                         _run("run-done", RunStatus.DONE),
                         _run("run-failed", RunStatus.FAILED),
                         _run("run-stale", RunStatus.STALE_FAILED),
@@ -49,11 +51,10 @@ async def _run_mark_stale_running_runs_case() -> None:
                 await session.commit()
 
             async with session_factory() as session:
-                changed = await mark_stale_running_runs(session)
+                changed = await mark_stale_active_runs(session)
 
-            assert changed == 2
+            assert changed == 1
 
-            # Re-open a fresh session to prove the change persisted to the DB.
             async with session_factory() as session:
                 statuses = {
                     run_id: status
@@ -64,15 +65,42 @@ async def _run_mark_stale_running_runs_case() -> None:
         finally:
             await engine.dispose()
 
-    assert statuses["run-running-a"] == RunStatus.STALE_FAILED
-    assert statuses["run-running-b"] == RunStatus.STALE_FAILED
-    assert statuses["run-queued"] == RunStatus.QUEUED
+    assert statuses["run-active"] == RunStatus.STALE_FAILED
     assert statuses["run-done"] == RunStatus.DONE
     assert statuses["run-failed"] == RunStatus.FAILED
     assert statuses["run-stale"] == RunStatus.STALE_FAILED
 
 
-def test_mark_stale_running_runs_returns_zero_with_no_active_runs() -> None:
+def test_mark_stale_running_runs_preserves_running_only_contract() -> None:
+    asyncio.run(_run_running_only_compatibility_case())
+
+
+async def _run_running_only_compatibility_case() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        engine = create_async_engine(settings.database_url, future=True)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with session_factory() as session:
+                session.add(_run("run-queued", RunStatus.QUEUED))
+                await session.commit()
+
+            async with session_factory() as session:
+                changed = await mark_stale_running_runs(session)
+
+            async with session_factory() as session:
+                status = await session.scalar(
+                    select(Run.status).where(Run.id == "run-queued")
+                )
+        finally:
+            await engine.dispose()
+
+    assert changed == 0
+    assert status == RunStatus.QUEUED
+
+
+def test_mark_stale_active_runs_returns_zero_with_no_active_runs() -> None:
     asyncio.run(_run_no_active_case())
 
 
@@ -93,54 +121,49 @@ async def _run_no_active_case() -> None:
                 await session.commit()
 
             async with session_factory() as session:
-                changed = await mark_stale_running_runs(session)
+                changed = await mark_stale_active_runs(session)
         finally:
             await engine.dispose()
 
     assert changed == 0
 
 
-def test_mark_stale_running_runs_tolerates_missing_runs_table() -> None:
+def test_mark_stale_active_runs_tolerates_missing_runs_table() -> None:
     asyncio.run(_run_missing_table_case())
 
 
 async def _run_missing_table_case() -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
-        # Note: no migration is applied, so the ``runs`` table does not exist.
         engine = create_async_engine(settings.database_url, future=True)
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         try:
             async with session_factory() as session:
-                changed = await mark_stale_running_runs(session)
+                changed = await mark_stale_active_runs(session)
         finally:
             await engine.dispose()
 
     assert changed == 0
 
 
-def test_ensure_single_active_run_blocks_on_queued_and_running() -> None:
-    asyncio.run(_run_active_lock_case())
+@pytest.mark.parametrize("active_status", [RunStatus.QUEUED, RunStatus.RUNNING])
+def test_ensure_single_active_run_blocks_each_active_status(
+    active_status: RunStatus,
+) -> None:
+    asyncio.run(_run_active_lock_case(active_status))
 
 
-async def _run_active_lock_case() -> None:
+async def _run_active_lock_case(active_status: RunStatus) -> None:
     with TemporaryDirectory() as temp_dir:
         settings = _settings(Path(temp_dir))
         _upgrade_database(settings)
         engine = create_async_engine(settings.database_url, future=True)
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         try:
-            # No active runs -> no conflict.
             async with session_factory() as session:
-                session.add(_run("run-done", RunStatus.DONE))
+                session.add(_run("run-active", active_status))
                 await session.commit()
-            async with session_factory() as session:
-                await ensure_single_active_run(session)
 
-            # A QUEUED run blocks.
-            async with session_factory() as session:
-                session.add(_run("run-queued", RunStatus.QUEUED))
-                await session.commit()
             async with session_factory() as session:
                 with pytest.raises(ActiveRunConflictError):
                     await ensure_single_active_run(session)
@@ -148,8 +171,39 @@ async def _run_active_lock_case() -> None:
             await engine.dispose()
 
 
+def test_database_rejects_second_active_run() -> None:
+    asyncio.run(_run_database_guard_case())
+
+
+async def _run_database_guard_case() -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        engine = create_async_engine(settings.database_url, future=True)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with session_factory() as session:
+                session.add(_run("run-queued", RunStatus.QUEUED))
+                await session.commit()
+
+            async with session_factory() as session:
+                session.add(_run("run-running", RunStatus.RUNNING))
+                with pytest.raises(IntegrityError) as exc_info:
+                    await session.commit()
+                assert is_single_active_run_integrity_error(exc_info.value)
+                await session.rollback()
+        finally:
+            await engine.dispose()
+
+
 def _run(run_id: str, status: RunStatus) -> Run:
-    return Run(id=run_id, name="fixture", status=status, latitude=10.0, longitude=20.0)
+    return Run(
+        id=run_id,
+        name="fixture",
+        status=status,
+        latitude=10.0,
+        longitude=20.0,
+    )
 
 
 def _settings(root: Path) -> Settings:
@@ -161,5 +215,8 @@ def _settings(root: Path) -> Settings:
 def _upgrade_database(settings: Settings) -> None:
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
     cfg = Config("alembic.ini")
-    cfg.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+    cfg.set_main_option(
+        "sqlalchemy.url",
+        settings.database_url.replace("+aiosqlite", ""),
+    )
     command.upgrade(cfg, "head")

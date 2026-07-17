@@ -9,6 +9,7 @@ from uuid import uuid4
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -17,6 +18,14 @@ from app.db.models import Artifact, ArtifactClass, Run, RunStatus
 from app.main import create_app
 from app.services.run_history import append_run_event
 from app.services.storage import write_stage_manifest
+
+
+@pytest.fixture(autouse=True)
+def _disable_startup_active_run_recovery(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.main.mark_stale_active_runs",
+        _noop_startup_active_run_recovery,
+    )
 
 
 def test_post_runs_accepts_lat_lon_and_hides_them_in_public_surfaces(monkeypatch) -> None:
@@ -91,6 +100,45 @@ def test_post_runs_rejects_second_active_run_with_public_safe_conflict(monkeypat
 
         with TestClient(create_app(settings), raise_server_exceptions=False) as client:
             response = client.post("/runs", json={"lat": 35.59499, "lon": 36.12694, "name": "blocked"})
+
+        assert response.status_code == 409
+        assert response.json() == {
+            "error": "active_run_exists",
+            "message": "Another run is already active.",
+        }
+        _assert_no_sensitive_public_fields(response.text)
+
+
+def test_post_runs_maps_database_active_run_race_to_conflict(monkeypatch) -> None:
+    with TemporaryDirectory() as temp_dir:
+        settings = _settings(Path(temp_dir))
+        _upgrade_database(settings)
+        asyncio.run(
+            _seed_run(
+                settings,
+                run_id="active-run",
+                status=RunStatus.QUEUED,
+                name="active",
+            )
+        )
+        monkeypatch.setattr(
+            "app.api.runs.ensure_single_active_run",
+            _allow_active_run_precheck,
+        )
+        monkeypatch.setattr(
+            "app.api.runs.enqueue_core_pipeline_run",
+            _fake_background_runner_factory(settings),
+        )
+
+        with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+            response = client.post(
+                "/runs",
+                json={
+                    "lat": 35.59499,
+                    "lon": 36.12694,
+                    "name": "racing",
+                },
+            )
 
         assert response.status_code == 409
         assert response.json() == {
@@ -900,6 +948,15 @@ async def _seed_deletion_audit_record(settings: Settings, *, run_name: str, free
         )
         await session.commit()
     await engine.dispose()
+
+
+async def _noop_startup_active_run_recovery(session: AsyncSession) -> int:
+    del session
+    return 0
+
+
+async def _allow_active_run_precheck(session: AsyncSession) -> None:
+    del session
 
 
 async def _failing_run_core_pipeline(*, run_id: str, settings: Settings, grid_spec_override=None) -> None:

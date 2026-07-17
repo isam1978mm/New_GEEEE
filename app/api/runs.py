@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -60,7 +61,7 @@ from app.schemas.run import (
 )
 from app.services.run_history import append_run_event, build_run_event, read_run_history_events
 from app.services.operator_outputs import build_operator_output_tree
-from app.services.run_state import ensure_single_active_run
+from app.services.run_state import ensure_single_active_run, is_single_active_run_integrity_error
 from app.services.storage import delete_run_directory, initialize_run_storage, read_manifest, get_run_dir, summarize_run_directory
 
 router = APIRouter()
@@ -147,7 +148,13 @@ async def create_run(
         longitude=float(payload.lon),
     )
     session.add(run)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        if is_single_active_run_integrity_error(exc):
+            raise ActiveRunConflictError() from exc
+        raise
 
     run_dir = initialize_run_storage(settings, run.id)
     del run_dir

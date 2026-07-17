@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import BigInteger, DateTime, Enum, Float, Integer, String
+from sqlalchemy import BigInteger, DateTime, Enum, Float, Index, Integer, String, literal_column, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -12,6 +12,14 @@ from app.db.models.enums import RunStatus
 
 class Run(Base):
     __tablename__ = "runs"
+    __table_args__ = (
+        Index(
+            "uq_runs_single_active",
+            literal_column("1"),
+            unique=True,
+            sqlite_where=text("status IN ('QUEUED', 'RUNNING')"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)

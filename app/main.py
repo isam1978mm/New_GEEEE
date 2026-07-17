@@ -22,7 +22,7 @@ from app.config import Settings, get_settings
 from app.db.session import create_engine, create_session_factory
 from app.logging_config import configure_logging
 from app.services.redaction import verify_redacted
-from app.services.run_state import mark_stale_running_runs
+from app.services.run_state import mark_stale_active_runs
 from app.services.storage import ensure_data_dirs
 
 
@@ -38,7 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.engine = create_engine(settings)
         app.state.session_factory = create_session_factory(settings, engine=app.state.engine)
         async with app.state.session_factory() as session:
-            await mark_stale_running_runs(session)
+            await mark_stale_active_runs(session)
         try:
             yield
         finally:
