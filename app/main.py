@@ -50,19 +50,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.middleware("http")
     async def verify_public_json_responses(request, call_next):
         response = await call_next(request)
+        content_type = response.headers.get("content-type", "")
+        content_disposition = response.headers.get("content-disposition", "")
+
+        if (
+            "application/json" not in content_type
+            or "attachment" in content_disposition.casefold()
+        ):
+            return response
+
         body = b""
         async for chunk in response.body_iterator:
             body += chunk
-
-        content_type = response.headers.get("content-type", "")
-        if "application/json" not in content_type:
-            return Response(
-                content=body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-                background=response.background,
-            )
 
         try:
             payload = json.loads(body)
