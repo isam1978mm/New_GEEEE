@@ -25,6 +25,7 @@ Verified source facts:
 - targets were installed during construction and accurately geolocated with a theodolite;
 - target depths were calculated from independently surveyed target and surface elevations, not estimated from the GPR response;
 - multiple pipe layers occur at different depths and in different host materials;
+- follow-on literature reports pipe layers at approximately 0.9 m, 1.5 m, and 2.1 m, pending confirmation of whether those values mean depth-to-top, center depth, or another reference;
 - 67 GPR profiles were recorded along eleven parallel lines with several radar systems and antenna frequencies;
 - raw files are publicly available under CC BY 4.0.
 
@@ -94,7 +95,89 @@ Required extraction work:
 4. treat all seven lines as one physical-site group unless independent construction areas are documented;
 5. assess satellite-pixel separability before creating any app calibration record.
 
-## Candidate P3 — Guangzhou University GPR dataset
+## Candidate P3 — Texas A&M University–Corpus Christi geophysical test site
+
+Sources:
+
+- construction article DOI `10.1190/tle40030208.1`
+- official university project description dated November 2020
+
+Verified source facts:
+
+- controlled 50 m by 50 m university field site;
+- construction included a pre-installation survey, excavation, and placement of known targets;
+- benign targets include steel drums, plastic drums, plastic buckets, steel pipes, and well covers;
+- targets are distributed along seven lines and grouped by material;
+- the published site description reports target depths from approximately 0.5 m to 3.0 m;
+- the article reportedly documents target types, locations, orientations, and depths.
+
+Current classification:
+
+```text
+physical_depth_provenance = installed_known_depth
+real_field_data = yes
+benign_targets = yes
+site_scale = 50_m_by_50_m
+multiple_depth_levels = yes
+raw_public_dataset_confirmed = no
+machine_readable_target_table = not_yet
+sentinel_1_included = no
+direct_app_training_approval = pending_table_access_and_scale_match
+priority = 1
+```
+
+Required extraction work:
+
+1. obtain the article table or figure containing target-level depths and orientations;
+2. confirm whether each depth means depth-to-top, center, base, or excavation depth;
+3. request any available radar, resistivity, magnetic, or other survey files and acquisition dates;
+4. treat the full field as one physical-site group;
+5. evaluate whether the 50 m by 50 m area supports any defensible satellite-scale window without mixing multiple targets.
+
+## Candidate P4 — Ahmadu Bello University geophysics test site
+
+Sources:
+
+- open depth-comparison article DOI `10.1016/j.envc.2024.100910`
+- controlled-site development review DOI `10.1007/s11600-023-01096-3`
+- related controlled-site studies referenced by the open article
+
+Verified source facts:
+
+- controlled 55 m by 55 m field site on lateritic-clay soil;
+- targets were physically installed with known materials, properties, geometries, orientations, and depths;
+- published sources describe a site depth range of approximately 0.6 m to 3.0 m;
+- benign targets include floor tile, concrete blocks, metallic pipes, plastic buckets, steel drums, and an engine block;
+- the 2024 open study evaluates eight buried targets against their actual depths;
+- the same site has been surveyed using multiple geophysical methods, including electrical resistivity, VLF-EM, magnetic, and seismic methods;
+- datasets from the depth study are available from the authors on request rather than as a public archive.
+
+Current classification:
+
+```text
+physical_depth_provenance = installed_known_depth
+real_field_data = yes
+benign_targets = yes
+site_scale = 55_m_by_55_m
+multiple_depth_levels = yes
+multi_method_measurements = yes
+public_target_level_depth_table = not_yet_extracted
+raw_data_access = author_request
+sentinel_1_included = no
+direct_app_training_approval = pending_table_data_and_scale_match
+priority = 1
+```
+
+Required extraction work:
+
+1. extract the actual-depth column for the eight evaluated targets from the open paper;
+2. map each actual depth to target type, dimensions, profile, and orientation;
+3. contact the authors for the underlying datasets and target construction sheet;
+4. confirm the depth reference definition and installation uncertainty;
+5. treat the whole 55 m by 55 m field as one physical-site group;
+6. evaluate satellite-scale separability before importing an app calibration record.
+
+## Candidate P5 — Guangzhou University GPR dataset
 
 Source: DOI `10.5281/zenodo.14637589`
 
@@ -126,7 +209,7 @@ Required extraction work:
 4. obtain acquisition dates and grouping metadata;
 5. reject depth labels that are derived only from the same GPR scans.
 
-## Candidate P4 — Hacimusalar multi-method survey
+## Candidate P6 — Hacimusalar multi-method survey
 
 Sources:
 
@@ -155,7 +238,7 @@ Use rule:
 
 This may support cross-method consistency research. It must not be entered as a `known_depth_positive` unless excavation, survey, or another independently reviewed source confirms the depth-to-top reference.
 
-## Candidate P5 — Morocco utilities and voids dataset
+## Candidate P7 — Morocco utilities and voids dataset
 
 Source: DOI `10.17632/ww7fd9t325.1`
 
@@ -171,7 +254,7 @@ depth_calibration = not_approved
 priority = 3
 ```
 
-## Candidate P6 — MERL-GPR
+## Candidate P8 — MERL-GPR
 
 Source: DOI `10.5281/zenodo.8145084`
 
@@ -215,22 +298,28 @@ direct_app_calibration_usable
 
 1. extract TU1208 numerical target depths from the published cross-section figures;
 2. obtain the IAG/USP actual-depth table and public-data availability details;
-3. inspect the complete Guangzhou archive metadata or contact the authors;
-4. seek independent excavation confirmation for Hacimusalar;
-5. perform satellite-scale separability checks before importing any target as an app calibration row;
-6. continue searching for additional independent physical sites so holdout validation is possible.
+3. obtain the Texas A&M–Corpus Christi target-level construction table;
+4. extract the Ahmadu Bello actual-depth table and request the underlying datasets;
+5. inspect the complete Guangzhou archive metadata or contact the authors;
+6. seek independent excavation confirmation for Hacimusalar;
+7. perform satellite-scale separability checks before importing any target as an app calibration row;
+8. continue searching for additional independent physical sites and confirmed no-target/background cases.
 
 ## Checklist
 
 - [x] Establish a structured candidate register.
 - [x] Identify TU1208 as independently surveyed physical-depth evidence.
 - [x] Identify IAG/USP as installed known-depth evidence.
+- [x] Identify Texas A&M–Corpus Christi as installed known-depth evidence.
+- [x] Identify Ahmadu Bello University as installed known-depth evidence.
+- [x] Reach at least three independent controlled physical-site candidates for screening.
 - [x] Keep Hacimusalar as interpreted-depth evidence only.
 - [x] Keep simulated data separate from real calibration.
 - [ ] Extract TU1208 target-depth values and depth-reference definitions.
 - [ ] Extract IAG/USP actual-depth values and target metadata.
-- [ ] Confirm raw-data access and machine-readable mapping for IAG/USP.
+- [ ] Obtain Texas A&M–Corpus Christi target-level depths and data-access information.
+- [ ] Extract Ahmadu Bello target-level actual depths and request data.
 - [ ] Complete Guangzhou metadata inspection or author inquiry.
-- [ ] Add at least three independent physical-site groups.
+- [ ] Find independently documented confirmed no-target/background cases.
 - [ ] Run scale and approved-feature compatibility screening.
 - [ ] Import only verified, supportable records into the private pack.
