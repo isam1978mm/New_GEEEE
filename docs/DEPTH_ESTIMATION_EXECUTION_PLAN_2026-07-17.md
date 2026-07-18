@@ -132,7 +132,7 @@ Acceptance:
 
 Goal: create examples where the true depth is already known.
 
-A numerical model requires known-depth reference cases. These may come from controlled test sites, engineering records, published benchmark datasets, or other lawful documented sources.
+A numerical model requires known-depth reference cases. These may come from controlled test sites, engineering records, published benchmark datasets, or other independently documented sources.
 
 Each calibration record should include:
 
