@@ -1,6 +1,6 @@
 # Depth Sentinel-1 Coverage Check Execution Plan
 
-Status: coverage-check implementation and software verification complete on `main`; first private-site execution is pending.
+Status: coverage-check implementation and software verification complete on `main`; private polygon-helper implementation complete with local verification pending.
 
 ## Purpose
 
@@ -8,15 +8,16 @@ The evidence search has identified controlled physical sites with independently 
 
 This slice does not estimate depth, fit a model, import calibration rows, or enable app output.
 
-## Implemented scope
+## Implemented coverage checker
 
-Added a private local utility:
+Added:
 
 ```text
 scripts/check_depth_s1_coverage.py
+tests/unit/test_depth_s1_coverage_check.py
 ```
 
-The utility now:
+The utility:
 
 1. reads one private GeoJSON site polygon from outside Git;
 2. rejects repository-local geometry files;
@@ -29,12 +30,6 @@ The utility now:
 9. returns aggregate acquisition counts, first and last dates, orbit-direction counts, relative-orbit counts, platform counts, and pre/post counts;
 10. never prints coordinates, the private geometry, private paths, or image identifiers;
 11. optionally writes the aggregate summary only to a path outside Git.
-
-Added focused tests:
-
-```text
-tests/unit/test_depth_s1_coverage_check.py
-```
 
 ## Owner verification
 
@@ -52,17 +47,44 @@ warnings: 4 non-blocking
 
 The warnings were the existing NumPy entropy warnings, the existing rasterio non-georeferenced test warning, and a pytest cache-write access warning. They did not affect the passing result.
 
+## Implemented private polygon helper
+
+Added:
+
+```text
+scripts/create_depth_site_polygon.py
+tests/unit/test_depth_site_polygon.py
+```
+
+The helper:
+
+- accepts runtime center latitude and longitude plus width and height in metres;
+- hard-codes no candidate coordinates in Git;
+- validates finite coordinate and dimension inputs;
+- supports latitudes only within a conservative non-polar range;
+- creates a closed rectangular GeoJSON Polygon with empty properties;
+- runs as dry-run unless `--write` is supplied;
+- refuses repository-local output;
+- refuses to overwrite an existing private file;
+- makes no Earth Engine or other network request;
+- prints no coordinates or private path;
+- marks the output as a screening footprint requiring local visual review.
+
+The public literature gives an approximate center for the first controlled site and the official university description confirms a 50 m by 50 m field near the Thomas J. Henry Tennis Center. The exact coordinate is supplied only at local runtime and is not committed.
+
 ## Privacy and scientific boundaries
 
 - The geometry remains local and private.
 - Site coordinates and exact polygons are not committed.
+- A generated rectangle is a screening footprint, not a surveyed boundary.
+- The footprint must be visually reviewed before `--execute`.
 - Output is acquisition metadata only; it is not a signal or depth result.
 - Acquisition availability does not prove that the site is detectable.
 - Multiple images from one site remain one physical-site group.
 - `--execute` performs only coverage discovery. It does not export imagery or features.
 - The current app depth output remains `not_available`.
 
-## Output behavior
+## Coverage output behavior
 
 Dry-run status:
 
@@ -105,25 +127,59 @@ training_started = false
 app_depth_enabled = false
 ```
 
-## Private polygon helper decision
+## Verification commands for the polygon helper
 
-The controlled-site literature provides a public approximate site center and a documented 50 m by 50 m site size for the first candidate. To avoid hand-writing GeoJSON, the next repository slice is a dry-run-first helper that accepts a center latitude, center longitude, width, height, and an output path outside Git.
+From an updated `main` checkout:
 
-The helper must:
+```powershell
+python -m pytest tests/unit/test_depth_site_polygon.py -v
+python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
+python -m pytest tests/unit -q
+```
 
-- keep all coordinates out of normal output;
-- refuse repository-local output;
-- refuse overwrite of an existing private file;
-- write only after explicit `--write`;
-- create a closed GeoJSON Polygon with empty properties;
-- make no Earth Engine request;
-- mark the polygon as a screening footprint requiring local visual review before execution.
+## First polygon workflow
 
-The helper will not hard-code candidate coordinates in Git.
+Run the helper first without `--write` using the reviewed public center and documented 50 m by 50 m size:
 
-## First private dry run
+```powershell
+python .\scripts\create_depth_site_polygon.py `
+  --center-lat <PRIVATE_RUNTIME_VALUE> `
+  --center-lon <PRIVATE_RUNTIME_VALUE> `
+  --width-m 50 `
+  --height-m 50 `
+  --output "C:\private\candidate_site.geojson"
+```
 
-After the private polygon exists, run without `--execute`:
+Expected status:
+
+```text
+private_site_polygon_dry_run_ready
+output_written = false
+```
+
+Only after that succeeds:
+
+```powershell
+python .\scripts\create_depth_site_polygon.py `
+  --center-lat <PRIVATE_RUNTIME_VALUE> `
+  --center-lon <PRIVATE_RUNTIME_VALUE> `
+  --width-m 50 `
+  --height-m 50 `
+  --output "C:\private\candidate_site.geojson" `
+  --write
+```
+
+Expected status:
+
+```text
+private_site_polygon_written
+output_written = true
+screening_footprint_requires_visual_review = true
+```
+
+## First private coverage dry run
+
+After visually reviewing the polygon, run without `--execute`:
 
 ```powershell
 python .\scripts\check_depth_s1_coverage.py `
@@ -162,6 +218,8 @@ The first candidate event date is the documented Texas A&M–Corpus Christi comp
 
 The coverage-check software slice is complete because the targeted tests, C1 privacy tests, and full unit suite passed.
 
+The polygon-helper slice is complete when its focused tests, C1 privacy tests, and full unit suite pass.
+
 A passing coverage query means only that suitable Sentinel-1 acquisitions exist. It does not approve evidence import or a depth claim.
 
 ## Checklist
@@ -171,13 +229,17 @@ A passing coverage query means only that suitable Sentinel-1 acquisitions exist.
 - [x] Define aggregate-only output.
 - [x] Keep private geometry outside Git.
 - [x] Implement the coverage checker.
-- [x] Add focused unit tests.
+- [x] Add focused coverage-check tests.
 - [x] Recover the first event date: Texas A&M–Corpus Christi completed 2020-03-04.
 - [x] Run targeted coverage-check tests: 10 passed.
 - [x] Run C1 privacy tests: 3 passed.
 - [x] Run the full unit suite: 950 passed.
 - [x] Record verification results.
-- [ ] Implement and test the private polygon helper.
+- [x] Implement the private polygon helper.
+- [x] Add focused polygon-helper tests.
+- [ ] Run polygon-helper targeted tests.
+- [ ] Run C1 privacy tests after the polygon-helper change.
+- [ ] Run the full unit suite after the polygon-helper change.
 - [ ] Create the first private screening polygon.
 - [ ] Visually review the polygon against the public campus description.
 - [ ] Run the dry coverage check.
