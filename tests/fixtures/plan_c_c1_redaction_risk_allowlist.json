@@ -226,6 +226,9 @@
     "scripts/r1_locate_report640_reference_root.py": {
       "possible_absolute_private_root": 1
     },
+    "scripts/validate_depth_calibration_pack.py": {
+      "possible_absolute_private_root": 1
+    },
     "scripts/validate_private_i2_readiness.py": {
       "possible_absolute_private_root": 1
     }
