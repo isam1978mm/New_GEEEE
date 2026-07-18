@@ -14,7 +14,10 @@
       "candidate_id": "iag_usp_line4_public_v1",
       "physical_site_group": "iag_usp_controlled_site",
       "source_doi": "10.4236/ijg.2017.85040",
-      "supporting_doi": "10.1590/S0102-261X2006000100004",
+      "supporting_dois": [
+        "10.1590/S0102-261X2006000100004",
+        "10.1190/1.2783412"
+      ],
       "evidence_method": "controlled_site_installed_known_depth",
       "depth_reference": "target_top_or_apex_supported_by_site_description",
       "reference_uncertainty_m": null,
@@ -22,14 +25,69 @@
       "satellite_feature_compatibility": "pending",
       "private_pack_import_approved": false,
       "records": [
-        {"public_target_label": "A", "known_depth_top_m": 1.97},
-        {"public_target_label": "B", "known_depth_top_m": 0.50},
-        {"public_target_label": "C", "known_depth_top_m": 0.98},
-        {"public_target_label": "D", "known_depth_top_m": 0.50},
-        {"public_target_label": "E", "known_depth_top_m": 0.90},
-        {"public_target_label": "F", "known_depth_top_m": 0.97},
-        {"public_target_label": "G", "known_depth_top_m": 1.00},
-        {"public_target_label": "H", "known_depth_top_m": 1.98}
+        {
+          "public_target_label": "A",
+          "known_depth_top_m": 1.97,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "horizontal",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        },
+        {
+          "public_target_label": "B",
+          "known_depth_top_m": 0.50,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "horizontal",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        },
+        {
+          "public_target_label": "C",
+          "known_depth_top_m": 0.98,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "horizontal",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        },
+        {
+          "public_target_label": "D",
+          "known_depth_top_m": 0.50,
+          "target_material_or_structure": "metallic_reference_pipe",
+          "target_orientation": "horizontal",
+          "target_diameter_m": 0.04
+        },
+        {
+          "public_target_label": "E",
+          "known_depth_top_m": 0.90,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "horizontal",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        },
+        {
+          "public_target_label": "F",
+          "known_depth_top_m": 0.97,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "horizontal",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        },
+        {
+          "public_target_label": "G",
+          "known_depth_top_m": 1.00,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "vertical",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        },
+        {
+          "public_target_label": "H",
+          "known_depth_top_m": 1.98,
+          "target_material_or_structure": "steel_drum_empty",
+          "target_orientation": "vertical",
+          "target_diameter_m": 0.59,
+          "target_length_m": 0.86
+        }
       ]
     },
     {
