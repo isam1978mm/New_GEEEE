@@ -81,6 +81,8 @@ def finalize_manifest(
             "dataset_version": resolved_dataset_version,
             "created_at": manifest.get("created_at") or now,
             "updated_at": now,
+            "build_commit": manifest.get("build_commit") or _single_value(rows, "pipeline_commit"),
+            "build_procedure": manifest.get("build_procedure") or "scripts/finalize_depth_calibration_manifest.py",
             "record_count": len(rows),
             "positive_count": counts["positive_count"],
             "negative_count": counts["negative_count"],
