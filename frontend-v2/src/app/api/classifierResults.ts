@@ -1,8 +1,29 @@
+export interface RankedAreaFinding {
+  findingLabel: string;
+  findingScore: number;
+  scoreType: string;
+  supportingCandidateCount: number;
+}
+
+export interface FinalAreaFindingsSummary {
+  summaryVersion: string;
+  runId: string;
+  resultStatus: string;
+  bestFinding: string | null;
+  bestFindingScore: number | null;
+  scoreType: string;
+  rankedFindings: RankedAreaFinding[];
+  dataQualityStatus: string;
+  summaryTextEasyEnglish: string;
+  depthStatus: string;
+}
+
 export interface ClassifierSummary {
   objectCount: number;
   clusterCount: number;
   classifierVersion: string;
   classCounts: Record<string, number>;
+  finalAreaFindings: FinalAreaFindingsSummary | null;
 }
 
 export interface ClassifierObjectRow {
@@ -10,8 +31,8 @@ export interface ClassifierObjectRow {
   clusterId: string;
   score: number;
   scoreLevel: string;
-  notebookLabel: string;
-  ruleReason: string;
+  findingLabel: string;
+  findingReason: string;
   reviewOrder: string;
   rowStart: string;
   rowEnd: string;
@@ -56,6 +77,7 @@ interface ClassifierSummaryDto {
   cluster_count?: unknown;
   classifier_version?: unknown;
   class_counts?: unknown;
+  final_area_findings?: unknown;
 }
 
 export async function fetchClassifierSummary(runId: string): Promise<ClassifierSummary> {
@@ -140,6 +162,55 @@ function mapClassifierSummary(payload: ClassifierSummaryDto): ClassifierSummary 
     clusterCount: requiredNumber(payload.cluster_count),
     classifierVersion: requiredString(payload.classifier_version),
     classCounts: mapClassCounts(payload.class_counts),
+    finalAreaFindings: mapFinalAreaFindings(payload.final_area_findings),
+  };
+}
+
+function mapFinalAreaFindings(value: unknown): FinalAreaFindingsSummary | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const payload = value as Record<string, unknown>;
+  const rankedValue = payload.ranked_findings;
+  const rankedFindings = Array.isArray(rankedValue)
+    ? rankedValue
+        .map(mapRankedFinding)
+        .filter((item): item is RankedAreaFinding => item !== null)
+    : [];
+
+  return {
+    summaryVersion: optionalString(payload.summary_version, "legacy_frontend_fallback"),
+    runId: optionalString(payload.run_id, ""),
+    resultStatus: optionalString(payload.result_status, "unclear_result"),
+    bestFinding: nullableString(payload.best_finding),
+    bestFindingScore: nullableNumber(payload.best_finding_score),
+    scoreType: optionalString(payload.score_type, "app_score"),
+    rankedFindings,
+    dataQualityStatus: optionalString(payload.data_quality_status, "unknown"),
+    summaryTextEasyEnglish: optionalString(
+      payload.summary_text_easy_english,
+      "The final area findings summary is unavailable for this run.",
+    ),
+    depthStatus: optionalString(payload.depth_status, "not_available"),
+  };
+}
+
+function mapRankedFinding(value: unknown): RankedAreaFinding | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const item = value as Record<string, unknown>;
+  const findingLabel = nullableString(item.finding_label);
+  const findingScore = nullableNumber(item.finding_score);
+  const supportingCandidateCount = nullableNumber(item.supporting_candidate_count);
+  if (!findingLabel || findingScore === null || supportingCandidateCount === null) {
+    return null;
+  }
+  return {
+    findingLabel,
+    findingScore,
+    scoreType: optionalString(item.score_type, "app_score"),
+    supportingCandidateCount,
   };
 }
 
@@ -157,19 +228,20 @@ function mapClassCounts(value: unknown): Record<string, number> {
 }
 
 function mapClassifierObjectRow(row: Record<string, string>): ClassifierObjectRow {
-  const score = asNumber(row.class_score);
+  const score = asNumber(firstValue(row, ["finding_score", "class_score"]));
   const rowStart = firstValue(row, ["row_min", "row_start"]);
   const rowEnd = firstValue(row, ["row_max", "row_end"]);
   const columnStart = firstValue(row, ["col_min", "column_start", "col_start"]);
   const columnEnd = firstValue(row, ["col_max", "column_end", "col_end"]);
+  const fallback = deriveAreaFinding(score, rowStart, rowEnd, columnStart, columnEnd);
   return {
     objectId: firstValue(row, ["object_id", "object"]),
     clusterId: firstValue(row, ["cluster_id", "cluster"]),
     score,
     scoreLevel: scoreLevel(row.class_id),
-    notebookLabel: notebookLabel(row.class_id),
-    ruleReason: ruleReason(score, rowStart, rowEnd, columnStart, columnEnd),
-    reviewOrder: reviewOrder(score),
+    findingLabel: firstValue(row, ["finding_label"]) || fallback.findingLabel,
+    findingReason: firstValue(row, ["finding_reason"]) || fallback.findingReason,
+    reviewOrder: firstValue(row, ["review_order"]) || fallback.reviewOrder,
     rowStart,
     rowEnd,
     columnStart,
@@ -190,34 +262,167 @@ function scoreLevel(classId: string | undefined): string {
   return labels[classId || ""] || (classId || "Unlabeled");
 }
 
-function notebookLabel(classId: string | undefined): string {
-  const labels: Record<string, string> = {
-    Class_A: "ENTRANCE_SHAFT_TRACE",
-    Class_B: "CHAMBER_VOID_AREA",
-    Class_C: "COMPACT_CHAMBER_POINT",
-    Class_D: "RING_CONTEXT_AREA",
-    Class_E: "WEAK_CONTEXT_AREA",
-    Class_F: "BACKGROUND_AREA",
-    Class_G: "BACKGROUND_AREA",
-  };
-  return labels[classId || ""] || "BACKGROUND_AREA";
+interface DerivedAreaFinding {
+  findingLabel: string;
+  findingReason: string;
+  reviewOrder: string;
 }
 
-function reviewOrder(score: number): string {
-  if (score >= 0.75) {
-    return "01_CORE_REVIEW";
-  }
-  if (score >= 0.5) {
-    return "02_SECONDARY_REVIEW";
-  }
-  return "03_BACKGROUND_REVIEW";
-}
-
-function ruleReason(score: number, rowStart: string, rowEnd: string, columnStart: string, columnEnd: string): string {
+function deriveAreaFinding(
+  score: number,
+  rowStart: string,
+  rowEnd: string,
+  columnStart: string,
+  columnEnd: string,
+): DerivedAreaFinding {
   const height = Math.max(1, asInteger(rowEnd) - asInteger(rowStart) + 1);
   const width = Math.max(1, asInteger(columnEnd) - asInteger(columnStart) + 1);
-  const shape = height <= 3 && width <= 3 ? "compact" : "area-like";
-  return `score=${score.toFixed(3)}; shape=${height}x${width}; ${shape}`;
+  const longSide = Math.max(height, width);
+  const shortSide = Math.max(1, Math.min(height, width));
+  const elongated = longSide / shortSide >= 3;
+  const compact = longSide <= 3;
+
+  if (score >= 0.7 && elongated) {
+    return {
+      findingLabel: "ENTRANCE_SHAFT_TRACE",
+      findingReason: `app_score=${score.toFixed(3)}; shape=${height}x${width}; elongated`,
+      reviewOrder: "01_CORE_REVIEW",
+    };
+  }
+  if (score >= 0.7 && compact) {
+    return {
+      findingLabel: "COMPACT_CHAMBER_POINT",
+      findingReason: `app_score=${score.toFixed(3)}; shape=${height}x${width}; compact`,
+      reviewOrder: "01_CORE_REVIEW",
+    };
+  }
+  if (score >= 0.7) {
+    return {
+      findingLabel: "CHAMBER_VOID_AREA",
+      findingReason: `app_score=${score.toFixed(3)}; shape=${height}x${width}; area-like`,
+      reviewOrder: "01_CORE_REVIEW",
+    };
+  }
+  if (score >= 0.6 && elongated) {
+    return {
+      findingLabel: "POSSIBLE_ENTRANCE_SHAFT",
+      findingReason: `app_score=${score.toFixed(3)}; shape=${height}x${width}; elongated`,
+      reviewOrder: "02_SECOND_REVIEW",
+    };
+  }
+  if (score >= 0.6) {
+    return {
+      findingLabel: "POSSIBLE_CHAMBER_STRUCTURE_AREA",
+      findingReason: `app_score=${score.toFixed(3)}; shape=${height}x${width}; area-like`,
+      reviewOrder: "02_SECOND_REVIEW",
+    };
+  }
+  if (score >= 0.5) {
+    return {
+      findingLabel: "RING_CONTEXT_AREA",
+      findingReason: `app_score=${score.toFixed(3)}; compare cluster context`,
+      reviewOrder: "03_CONTEXT_REVIEW",
+    };
+  }
+  if (score >= 0.4) {
+    return {
+      findingLabel: "WEAK_CONTEXT_AREA",
+      findingReason: `app_score=${score.toFixed(3)}; use only near stronger objects`,
+      reviewOrder: "04_LATE_REVIEW",
+    };
+  }
+  return {
+    findingLabel: "BACKGROUND_AREA",
+    findingReason: `app_score=${score.toFixed(3)}`,
+    reviewOrder: "05_BACKGROUND",
+  };
+}
+
+export function buildLegacyFinalAreaFindings(
+  objects: ClassifierObjectRow[],
+  runId: string,
+): FinalAreaFindingsSummary | null {
+  if (objects.length === 0) {
+    return null;
+  }
+  const grouped = new Map<string, RankedAreaFinding>();
+  for (const row of objects) {
+    const existing = grouped.get(row.findingLabel);
+    if (existing) {
+      existing.findingScore = Math.max(existing.findingScore, row.score);
+      existing.supportingCandidateCount += 1;
+    } else {
+      grouped.set(row.findingLabel, {
+        findingLabel: row.findingLabel,
+        findingScore: row.score,
+        scoreType: "app_score",
+        supportingCandidateCount: 1,
+      });
+    }
+  }
+  const rankedFindings = [...grouped.values()].sort(
+    (left, right) =>
+      right.findingScore - left.findingScore ||
+      right.supportingCandidateCount - left.supportingCandidateCount ||
+      left.findingLabel.localeCompare(right.findingLabel),
+  );
+  const top = rankedFindings[0];
+  const topPercent = Math.round(top.findingScore * 100);
+  let resultStatus = "result_available";
+  let bestFinding: string | null = top.findingLabel;
+  let bestFindingScore: number | null = top.findingScore;
+  let summaryTextEasyEnglish: string;
+
+  if (top.findingScore < 0.4) {
+    resultStatus = "no_strong_result";
+    bestFinding = null;
+    bestFindingScore = null;
+    summaryTextEasyEnglish =
+      `No strong result was found. The highest app score was ${topPercent}%, which is in the background range.`;
+  } else if (top.findingScore < 0.6) {
+    resultStatus = "unclear_result";
+    summaryTextEasyEnglish =
+      `The result is unclear. The strongest pattern was ${easyFindingName(top.findingLabel)} ` +
+      `with an app score of ${topPercent}%, but it is only a context-level result.`;
+  } else {
+    summaryTextEasyEnglish =
+      `The strongest result is ${easyFindingName(top.findingLabel)} with an app score of ${topPercent}%. ` +
+      `${top.supportingCandidateCount} ${top.supportingCandidateCount === 1 ? "object supports" : "objects support"} this finding.`;
+    if (rankedFindings.length > 1) {
+      const second = rankedFindings[1];
+      summaryTextEasyEnglish +=
+        ` The next result is ${easyFindingName(second.findingLabel)} ` +
+        `with an app score of ${Math.round(second.findingScore * 100)}%.`;
+    }
+    summaryTextEasyEnglish += " The strongest result is the first one to review.";
+  }
+
+  return {
+    summaryVersion: "legacy_frontend_fallback",
+    runId,
+    resultStatus,
+    bestFinding,
+    bestFindingScore,
+    scoreType: "app_score",
+    rankedFindings,
+    dataQualityStatus: "legacy_output_derived",
+    summaryTextEasyEnglish,
+    depthStatus: "not_available",
+  };
+}
+
+export function easyFindingName(label: string): string {
+  const names: Record<string, string> = {
+    ENTRANCE_SHAFT_TRACE: "an entrance or shaft-like trace",
+    COMPACT_CHAMBER_POINT: "a compact chamber-like point",
+    CHAMBER_VOID_AREA: "a chamber or void-like area",
+    POSSIBLE_ENTRANCE_SHAFT: "a possible entrance or shaft-like trace",
+    POSSIBLE_CHAMBER_STRUCTURE_AREA: "a possible chamber or structure-like area",
+    RING_CONTEXT_AREA: "a ring or context area",
+    WEAK_CONTEXT_AREA: "a weak context area",
+    BACKGROUND_AREA: "background variation",
+  };
+  return names[label] || label.replaceAll("_", " ").toLowerCase();
 }
 
 function parseCsv(text: string): Record<string, string>[] {
@@ -294,4 +499,16 @@ function requiredString(value: unknown): string {
     throw new Error("Classifier summary is unavailable.");
   }
   return value;
+}
+
+function optionalString(value: unknown, fallback: string): string {
+  return typeof value === "string" && value ? value : fallback;
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
+}
+
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

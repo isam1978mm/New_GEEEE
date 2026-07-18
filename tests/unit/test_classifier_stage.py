@@ -13,7 +13,11 @@ from app.config import Settings
 from app.db.models import ArtifactClass
 from app.errors import StageError
 from app.pipeline._base import StageContext
-from app.pipeline.stages.classifier import ClassifierStage
+from app.pipeline.stages.classifier import (
+    ClassifierStage,
+    build_final_area_findings_summary,
+    classify_area_finding,
+)
 from app.pipeline.stages.grid import build_run_grid
 from app.pipeline.stages.hypercube import HYPERCUBE_NPY_NAME
 from app.pipeline.stages.object_extract import CLUSTERS_SUMMARY_NAME, OBJECTS_INDEX_NAME
@@ -62,10 +66,16 @@ def test_classifier_stage_writes_core_artifacts_with_legacy_aliases(tmp_path: Pa
     assert summary["classifier_stage"] == "core"
     assert summary["classifier_quality"] == "input_contract_validated"
     assert summary["classifier_version"] == "core_v1"
-    assert summary["output_contract"] == "core_classifier_outputs_v1"
+    assert summary["output_contract"] == "core_classifier_outputs_v2"
     assert summary["input_contract"] == "classifier_inputs_v1"
     assert summary["object_count"] == 2
     assert summary["cluster_count"] == 1
+    final_findings = summary["final_area_findings"]
+    assert final_findings["summary_version"] == "final_area_findings_v1"
+    assert final_findings["score_type"] == "app_score"
+    assert final_findings["depth_status"] == "not_available"
+    assert final_findings["ranked_findings"]
+    assert "app score" in final_findings["summary_text_easy_english"]
 
     legacy_summary = json.loads((run_dir / "experimental" / "summary.json").read_text(encoding="utf-8"))
     assert legacy_summary == summary
@@ -168,3 +178,78 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, object]])
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
+
+
+def test_classify_area_finding_uses_score_and_shape() -> None:
+    elongated = classify_area_finding(
+        score=0.82,
+        row_min=1,
+        row_max=1,
+        col_min=1,
+        col_max=6,
+    )
+    compact = classify_area_finding(
+        score=0.82,
+        row_min=1,
+        row_max=2,
+        col_min=1,
+        col_max=2,
+    )
+    area_like = classify_area_finding(
+        score=0.82,
+        row_min=1,
+        row_max=5,
+        col_min=1,
+        col_max=5,
+    )
+
+    assert elongated["finding_label"] == "ENTRANCE_SHAFT_TRACE"
+    assert compact["finding_label"] == "COMPACT_CHAMBER_POINT"
+    assert area_like["finding_label"] == "CHAMBER_VOID_AREA"
+
+
+def test_final_area_findings_summary_uses_app_score_not_probability() -> None:
+    summary = build_final_area_findings_summary(
+        [
+            {
+                "finding_label": "CHAMBER_VOID_AREA",
+                "finding_score": 0.82,
+            },
+            {
+                "finding_label": "POSSIBLE_ENTRANCE_SHAFT",
+                "finding_score": 0.66,
+            },
+            {
+                "finding_label": "CHAMBER_VOID_AREA",
+                "finding_score": 0.74,
+            },
+        ],
+        run_id="run-test",
+        data_quality_status="input_contract_validated",
+    )
+
+    assert summary["result_status"] == "result_available"
+    assert summary["best_finding"] == "CHAMBER_VOID_AREA"
+    assert summary["best_finding_score"] == 0.82
+    assert summary["score_type"] == "app_score"
+    assert summary["ranked_findings"][0]["supporting_candidate_count"] == 2
+    assert "82%" in summary["summary_text_easy_english"]
+    assert "probability" not in summary["summary_text_easy_english"].casefold()
+
+
+def test_final_area_findings_summary_reports_no_strong_result() -> None:
+    summary = build_final_area_findings_summary(
+        [
+            {
+                "finding_label": "BACKGROUND_AREA",
+                "finding_score": 0.31,
+            }
+        ],
+        run_id="run-test",
+        data_quality_status="input_contract_validated",
+    )
+
+    assert summary["result_status"] == "no_strong_result"
+    assert summary["best_finding"] is None
+    assert summary["best_finding_score"] is None
+    assert summary["depth_status"] == "not_available"

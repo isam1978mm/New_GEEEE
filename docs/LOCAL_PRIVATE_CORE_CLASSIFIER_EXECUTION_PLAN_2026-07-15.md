@@ -79,9 +79,9 @@ Required operator-facing result:
 
 Example:
 
-> The strongest result in this area is a metal-like target with an app probability of 72%. A cavity or chamber is the second possibility at 19%. Natural ground variation is 9%. The metal-like target is the main result to review.
+> The strongest result is a chamber or void-like area with an app score of 82%. Two objects support this finding. The next result is a possible entrance or shaft-like trace with an app score of 66%. The strongest result is the first one to review.
 
-The probability or score must be presented as the app's result, not silently changed, normalized, or replaced by invented certainty.
+The app score must be presented as the app's result, not renamed as a measured probability, silently changed, normalized, or replaced by invented certainty.
 
 ## Remaining issues to execute
 
@@ -438,6 +438,31 @@ Acceptance:
 
 ### Phase 9 — Final area findings summary
 
+**Status: implemented and regression-tested on 2026-07-18.**
+
+Implementation:
+
+- Backend: `app/pipeline/stages/classifier.py`
+- Frontend loader: `frontend-v2/src/app/api/classifierResults.ts`
+- Frontend panel: `frontend-v2/src/app/components/ClassifierResultsPanel.tsx`
+- Unit coverage: `tests/unit/test_classifier_stage.py`
+- Static frontend coverage: `tests/integration/test_frontend_static.py`
+- Classifier output contract: `core_classifier_outputs_v2`
+- Summary schema version: `final_area_findings_v1`
+
+Implemented score semantics:
+
+1. The classifier produces one normalized app score per object.
+2. A deterministic score-and-shape rule assigns the operator-facing finding label.
+3. The score is not a measured probability.
+4. Findings are grouped by label.
+5. Each grouped finding uses the highest supporting object app score.
+6. Ties are ordered by supporting candidate count and then label.
+7. Older completed runs use a frontend fallback based on the same score-and-shape
+   rule.
+8. Numerical depth remains unavailable.
+
+
 Goal: turn detailed classifier output into a clear end-of-run conclusion for the private operator.
 
 Required implementation:
@@ -472,8 +497,17 @@ summary_text_easy_english
 Required tests:
 
 ```powershell
-pytest tests/unit/test_classifier_stage.py tests/integration/test_frontend_static.py tests/integration/test_classifier_legacy_ui_fallback_contract.py
+python -m pytest `
+  tests/unit/test_classifier_stage.py `
+  tests/integration/test_frontend_static.py `
+  tests/integration/test_artifact_serving.py `
+  tests/integration/test_full_job_artifact_access.py `
+  tests/integration/test_full_run.py `
+  -q
 ```
+
+Recorded result on 2026-07-18: `30 passed`; the only warning was the known local
+Windows `.pytest_cache` access warning.
 
 Acceptance:
 

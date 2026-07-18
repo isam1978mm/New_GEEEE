@@ -20,6 +20,34 @@ Future audits must preserve the following operator-facing behavior:
 
 This contract defines how results are summarized. It does not turn classifier output into physical confirmation or a validated scientific measurement.
 
+### Implemented Item 8 contract — 2026-07-18
+
+The final area findings summary is now implemented in classifier output contract
+`core_classifier_outputs_v2`.
+
+Future audits must preserve these exact semantics:
+
+- `class_score` and `finding_score` are **app scores**, not measured probabilities.
+- Finding labels are produced by a deterministic rule using the app score and the
+  object's bounding-box shape.
+- The summary groups objects by finding label and ranks labels by their highest app
+  score, then supporting candidate count.
+- The summary is stored under `final_area_findings` in `classifier/summary.json`.
+- New classifier rows include `finding_label`, `finding_score`, `score_type`,
+  `finding_reason`, and `review_order`.
+- Existing `classifier/*` artifacts remain available.
+- Identical legacy copies under `experimental/*` remain available.
+- The frontend derives the same score-and-shape summary for older completed runs
+  whose summary JSON predates `final_area_findings`.
+- The unsupported hard-coded “about a 30% signal” wording must not be restored.
+- The frontend must say that app screening scores are not measured probabilities or
+  physical confirmation.
+- `depth_status` remains `not_available`, and the UI displays no depth in metres.
+
+The current rule does not calculate competing class probabilities such as “72% metal,
+19% chamber, 9% natural ground.” Audits must not require or display that type of
+distribution unless a future validated classifier actually produces it.
+
 ## Non-negotiable rule
 
 Do not make CI green by removing behavior that real existing runs depend on.

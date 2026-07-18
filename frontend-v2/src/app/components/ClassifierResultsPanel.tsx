@@ -1,7 +1,9 @@
 import { Download, Info, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  buildLegacyFinalAreaFindings,
   classifierDownloadLinks,
+  easyFindingName,
   fetchClassifierObjects,
   fetchClassifierSummary,
   type ClassifierObjectRow,
@@ -12,7 +14,6 @@ interface ClassifierResultsPanelProps {
   runId: string;
 }
 
-const NOTEBOOK_TERMINOLOGY = "ENTRANCE_SHAFT_TRACE, COMPACT_CHAMBER_POINT, CHAMBER_VOID_AREA, RING_CONTEXT_AREA, WEAK_CONTEXT_AREA, and BACKGROUND_AREA";
 
 export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
   const [summary, setSummary] = useState<ClassifierSummary | null>(null);
@@ -20,6 +21,10 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const downloadLinks = useMemo(() => classifierDownloadLinks(runId), [runId]);
+  const finalAreaFindings = useMemo(
+    () => summary?.finalAreaFindings ?? buildLegacyFinalAreaFindings(objects, runId),
+    [objects, runId, summary],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -115,7 +120,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
         {summary && (
           <>
             <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-              Screening-confidence view: rows use notebook terminology from score plus simple row/column shape. Treat this as an early review aid, about a 30% signal.
+              App screening scores rank objects for review. They are not measured probabilities or physical confirmation.
             </div>
 
             <dl className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
@@ -123,6 +128,39 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
               <Metric label="clusters_found" value={String(summary.clusterCount)} />
               <Metric label="classifier_version" value={summary.classifierVersion} />
             </dl>
+
+            {finalAreaFindings && (
+              <div
+                className="rounded px-3 py-3"
+                style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.14)" }}
+              >
+                <SectionLabel>Final area findings summary</SectionLabel>
+                <div style={{ fontSize: "12px", color: "var(--gs-navy)", lineHeight: "1.6", fontWeight: 600 }}>
+                  {finalAreaFindings.summaryTextEasyEnglish}
+                </div>
+                {finalAreaFindings.rankedFindings.length > 0 && (
+                  <div className="mt-2 grid gap-1.5">
+                    {finalAreaFindings.rankedFindings.slice(0, 5).map((finding, index) => (
+                      <div
+                        key={finding.findingLabel}
+                        className="flex items-center justify-between gap-3 rounded px-2 py-1.5"
+                        style={{ backgroundColor: "var(--card)", border: "1px solid rgba(28,43,94,0.1)" }}
+                      >
+                        <span style={{ fontSize: "11px", color: "var(--gs-navy)" }}>
+                          {index + 1}. {easyFindingName(finding.findingLabel)}
+                        </span>
+                        <span className="font-mono" style={{ fontSize: "11px", color: "var(--gs-slate)", whiteSpace: "nowrap" }}>
+                          App score {Math.round(finding.findingScore * 100)}% · {finding.supportingCandidateCount} candidate{finding.supportingCandidateCount === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-2" style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
+                  Depth estimate: not available.
+                </div>
+              </div>
+            )}
 
             <div>
               <SectionLabel>score levels</SectionLabel>
@@ -132,13 +170,6 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                     {scoreLevelLabel(classId)}
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.1)" }}>
-              <SectionLabel>notebook terminology labels</SectionLabel>
-              <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-                Labels use the notebook structural language: {NOTEBOOK_TERMINOLOGY}.
               </div>
             </div>
 
@@ -181,8 +212,8 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                         "Cluster #",
                         "Score",
                         "Score level",
-                        "Notebook label",
-                        "Rule reason",
+                        "Finding label",
+                        "Finding reason",
                         "Review order",
                         "Row start",
                         "Row end",
@@ -200,8 +231,8 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                         <td style={tableCellStyle}>{row.clusterId}</td>
                         <td style={tableCellStyle}>{row.score.toFixed(3)}</td>
                         <td style={tableCellStyle}>{row.scoreLevel}</td>
-                        <td style={tableCellStyle}>{row.notebookLabel}</td>
-                        <td style={tableCellStyle}>{row.ruleReason}</td>
+                        <td style={tableCellStyle}>{row.findingLabel}</td>
+                        <td style={tableCellStyle}>{row.findingReason}</td>
                         <td style={tableCellStyle}>{row.reviewOrder}</td>
                         <td style={tableCellStyle}>{row.rowStart}</td>
                         <td style={tableCellStyle}>{row.rowEnd}</td>

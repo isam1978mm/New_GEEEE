@@ -148,6 +148,10 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Earth Engine planning is a dry run only; it checks backend readiness before execution." in bundle_text
     assert "exports may appear after completion" in bundle_text
     assert "Classifier Results" in bundle_text
+    assert "Final area findings summary" in bundle_text
+    assert "App score" in bundle_text
+    assert "about a 30% signal" not in bundle_text
+    assert "Depth estimate: not available." in bundle_text
     assert "Full export tree and unavailable-output status are available" in bundle_text
     assert "No status history events are available yet. Queued runs may not record detailed stage events until processing starts." in bundle_text
     assert "H5 operator aggregate summary" in bundle_text
