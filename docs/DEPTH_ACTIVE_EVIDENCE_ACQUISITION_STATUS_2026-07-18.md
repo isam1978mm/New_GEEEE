@@ -44,10 +44,12 @@ A gate is not a stop-work order. It prevents unsupported output while research c
 
 ## Evidence search findings so far
 
-### Verified physical-depth evidence candidates
+### Verified installed or surveyed physical-depth candidates
 
-- **TU1208 / IFSTTAR Nantes controlled test site**: targets were physically installed, geolocated with a theodolite, and assigned depths from surveyed target and surface elevations. Public raw GPR data and a detailed site paper are available. Published follow-on work reports three pipe layers at approximately 0.9 m, 1.5 m, and 2.1 m, but the depth-to-top versus center-depth definition still requires extraction from the original site figures.
-- **IAG/USP controlled geophysics test site**: targets were installed at known positions and depths. Published work reports seven target lines spanning approximately 0.5 m to 2.5 m, including a GPR study of precisely buried drums from approximately 0.5 m to 2.0 m. Actual target tables and raw-data access still require extraction.
+- **TU1208 / IFSTTAR Nantes**: independently surveyed controlled targets and public raw GPR data. Target-level depth-reference extraction is still in progress.
+- **IAG/USP**: installed controlled targets with an open table of eight real depths. The extracted values are now stored in a repository-safe machine-readable candidate file, with material, orientation, and dimensions added for the Line 4 drums and reference pipe.
+- **Texas A&M University–Corpus Christi**: controlled 50 m by 50 m site with known target types, orientations, and depths from approximately 0.5 m to 3.0 m. Target-level construction tables and raw measurements still need to be obtained.
+- **Ahmadu Bello University**: controlled 55 m by 55 m site with an open table of eight explicit depth-to-top values from 0.5 m to 1.2 m. The values are now stored in the candidate file; underlying field datasets are available from the authors on request.
 
 ### Candidates still under review
 
@@ -57,6 +59,41 @@ A gate is not a stop-work order. It prevents unsupported output while research c
 - Simulated GPR datasets with exact generated depths. Useful for software and baseline testing only, not real calibration evidence.
 
 None of these candidates should be rejected merely because they are not immediately ready. Each candidate moves through a qualification workflow.
+
+## Extracted public evidence
+
+Repository-safe public candidate evidence now contains:
+
+```text
+physical_site_groups_with_extracted_tables = 2
+candidate_target_rows = 16
+explicit_depth_to_top_rows = 8
+controlled_real_depth_rows_with_target_top_support = 8
+reported_reference_uncertainty_rows = 0
+private_pack_import_approved_rows = 0
+```
+
+The missing uncertainty values remain an active evidence-recovery task. They were not guessed or replaced with invented defaults.
+
+## Satellite-scale finding
+
+Official Sentinel-1 IW GRD High Resolution products have approximately 20 m by 22 m independent spatial resolution with 10 m pixel spacing.
+
+The compact controlled sites therefore do not support one satellite sample per buried object. Individual targets, trenches, and neighboring objects mix within the same resolution footprints.
+
+The active satellite path is now:
+
+```text
+whole_physical_site_or_large_isolated_section_pre_post_experiment
+```
+
+not:
+
+```text
+individual_small_target_satellite_depth_row
+```
+
+Texas A&M–Corpus Christi is the strongest immediate pre/post candidate because its construction occurred during the Sentinel-1 mission era and an official pre-installation survey is documented. Ahmadu Bello is also a priority after its exact installation dates are recovered. TU1208 and IAG/USP remain valuable for ground-method truth and later post-installation satellite sanity checks.
 
 ## Qualification workflow
 
@@ -99,17 +136,24 @@ Do not describe the overall project as blocked while evidence search, source ins
 - [x] Search online and identify initial candidate datasets.
 - [x] Inspect the public Guangzhou archive preview.
 - [x] Inspect the Hacimusalar dataset description and related publications.
-- [x] Identify TU1208 as independently surveyed physical-depth evidence.
-- [x] Identify IAG/USP as installed known-depth evidence.
-- [x] Build a candidate-evidence register with provenance, depth fields, site groups, licences, and suitability decisions.
-- [ ] Extract TU1208 target-level depth-to-top values from the original site figures.
-- [ ] Extract IAG/USP actual target depths and target metadata from the published tables.
-- [ ] Confirm raw-data access and machine-readable target mapping for IAG/USP.
-- [ ] Complete Guangzhou metadata inspection or contact the authors for the depth map.
-- [ ] Find independent confirmation for Hacimusalar or keep it as supporting evidence only.
-- [ ] Expand the search to additional independent physical sites so holdout validation is possible.
-- [ ] Run satellite-scale and approved-feature compatibility screening.
-- [ ] Import the first verified, supportable record into the private calibration pack.
+- [x] Identify four independently installed or surveyed physical-site candidates.
+- [x] Build a candidate-evidence register.
+- [x] Extract IAG/USP real target depths and target mapping.
+- [x] Extract Ahmadu Bello explicit depth-to-top values.
+- [x] Create a machine-readable public candidate file.
+- [x] Implement an aggregate-only candidate evidence validator.
+- [x] Add candidate-validator regression tests.
+- [x] Run the first satellite-scale compatibility screen.
+- [ ] Run the new candidate-validator targeted tests and full unit suite.
+- [ ] Extract TU1208 target-level depth-to-top definitions.
+- [ ] Obtain Texas A&M–Corpus Christi target-level construction tables and raw-data availability.
+- [ ] Recover reference-depth uncertainty for IAG/USP and Ahmadu Bello.
+- [ ] Recover exact construction dates for the satellite-era controlled sites.
+- [ ] Verify Sentinel-1 acquisition coverage and observation geometry.
+- [ ] Define private whole-site and background windows.
+- [ ] Run matched pre/post approved-feature extraction.
+- [ ] Add independently documented confirmed-background records.
+- [ ] Import only records that satisfy the complete private calibration contract.
 - [ ] Run the relative-depth experiment when the private pack reaches contract readiness.
 
 ## Current decision
@@ -119,8 +163,12 @@ overall_depth_work = active_evidence_acquisition
 software_work = active
 online_search = active
 candidate_screening = active
-independent_depth_sources_found = 2
+independent_depth_sources_found = 4
+physical_site_groups_with_extracted_target_tables = 2
+public_candidate_target_rows = 16
 candidate_register = created
+candidate_validator = implemented_tests_pending
+satellite_scale_screen = complete_first_pass
 private_pack_record_count = 0
 relative_model_claim = not_yet_supported
 numerical_model_claim = not_yet_supported
