@@ -12,7 +12,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_DIR = REPO_ROOT / "templates" / "depth_calibration"
-DEFAULT_DESTINATION = Path(r"C:\Dev\New_GEE_PRIVATE\DEPTH_CALIBRATION\dataset_v001")
+PRIVATE_ROOT = REPO_ROOT.parent / f"{REPO_ROOT.name}_PRIVATE"
+DEFAULT_DESTINATION = PRIVATE_ROOT / "DEPTH_CALIBRATION" / "dataset_v001"
 REQUIRED_FILES = (
     "calibration_records.csv",
     "calibration_manifest.json",
