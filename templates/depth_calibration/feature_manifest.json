@@ -1,0 +1,21 @@
+{
+  "schema_version": "depth_feature_manifest_v1",
+  "status": "template_only_not_frozen",
+  "feature_manifest_version": null,
+  "pipeline_commit": null,
+  "created_at": null,
+  "features": [],
+  "required_context_fields": [],
+  "prohibited_inputs": [
+    "classifier_class",
+    "classifier_score",
+    "classifier_probability",
+    "classifier_final_finding_summary",
+    "pca_target_decision",
+    "target_mask_or_geometry_from_same_decision_pipeline",
+    "app_generated_depth_label",
+    "notebook_generated_depth_label",
+    "unknown_provenance_depth_array"
+  ],
+  "template_notice": "Copy this file outside Git. Freeze the exact approved feature names, units, formulas, preprocessing, order, nodata rules, and source versions before fitting."
+}
