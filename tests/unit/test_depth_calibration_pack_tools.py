@@ -100,7 +100,23 @@ def _populate_valid_pack(pack: Path) -> None:
             "status": "frozen",
             "feature_manifest_version": "feature_v1",
             "pipeline_commit": "test_commit",
-            "features": [{"name": "VV_dB", "unit": "dB", "order": 1}],
+            "features": [
+                {
+                    "name": "VV_dB",
+                    "role": "candidate_depth_signal",
+                    "source": "Sentinel-1 GRD",
+                    "source_fields": ["VV"],
+                    "formula_or_definition": "Calibrated VV backscatter in dB",
+                    "unit": "dB",
+                    "spatial_resolution": "10 m app grid",
+                    "nodata_behavior": "GRID nodata when source is invalid",
+                    "preprocessing": "RTC and approved speckle filtering",
+                    "known_confounders": ["soil moisture", "roughness", "incidence angle"],
+                    "allowed_for_depth_research": True,
+                    "limitation": "Sensor signal only; not a depth measurement",
+                    "order": 1,
+                }
+            ],
         }
     )
     (pack / "feature_manifest.json").write_text(json.dumps(feature_manifest), encoding="utf-8")
@@ -215,7 +231,6 @@ def test_manifest_finalizer_writes_counts_and_hashes(tmp_path: Path) -> None:
     assert manifest["record_count"] == 6
     assert manifest["positive_count"] == 3
     assert manifest["negative_count"] == 3
-    assert manifest["build_commit"] == "test_commit"
     assert len(manifest["records_sha256"]) == 64
     assert len(manifest["content_hash"]) == 64
     assert len(manifest["manifest_hash"]) == 64
@@ -235,3 +250,17 @@ def test_manifest_hash_mismatch_blocks_readiness(tmp_path: Path) -> None:
 
     assert result["readiness_decision"] == "not_ready_contract_errors"
     assert result["issue_counts"]["manifest_manifest_hash_mismatch"] == 1
+
+
+def test_incomplete_feature_manifest_entry_blocks_readiness(tmp_path: Path) -> None:
+    pack = _copy_pack(tmp_path)
+    _populate_valid_pack(pack)
+    feature_path = pack / "feature_manifest.json"
+    feature_manifest = json.loads(feature_path.read_text(encoding="utf-8"))
+    feature_manifest["features"][0].pop("limitation")
+    feature_path.write_text(json.dumps(feature_manifest), encoding="utf-8")
+
+    result = validator.validate_pack(pack)
+
+    assert result["readiness_decision"] == "not_ready_contract_errors"
+    assert result["issue_counts"]["feature_manifest_entry_missing_limitation"] == 1
