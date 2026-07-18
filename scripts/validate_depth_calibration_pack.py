@@ -53,7 +53,8 @@ LABEL_QUALITIES = {
 }
 FIT_LABEL_QUALITIES = {"measured_independent", "reviewed_independent", "reviewed_adjudicated"}
 SPLITS = {"train", "validation", "holdout", "excluded"}
-ACTIVE_SPLITS = {"train", "validation", "holdout"}
+ACTIVE_SPLIT_ORDER = ("train", "validation", "holdout")
+ACTIVE_SPLITS = set(ACTIVE_SPLIT_ORDER)
 REQUIRED_EVIDENCE_FIELDS = (
     "depth_reference_method", "evidence_source_type", "evidence_source_reference",
     "evidence_source_version", "evidence_review_method", "reviewer_reference",
@@ -123,6 +124,10 @@ def validate_pack(dataset_dir: Path) -> dict[str, Any]:
         "record_count": len(rows),
         "positive_count": counts["positive_count"],
         "negative_count": counts["negative_count"],
+        "eligible_positive_count": counts["eligible_positive_count"],
+        "eligible_confirmed_negative_count": counts["eligible_confirmed_negative_count"],
+        "eligible_positive_by_split": counts["eligible_positive_by_split"],
+        "eligible_confirmed_negative_by_split": counts["eligible_confirmed_negative_by_split"],
         "excluded_or_uncertain_count": counts["excluded_or_uncertain_count"],
         "included_relative_count": counts["included_relative_count"],
         "included_numerical_count": counts["included_numerical_count"],
@@ -189,7 +194,9 @@ def _validate_rows(
 
         if status == "known_depth_positive":
             top = _parse_nonnegative_float(row.get("known_depth_top_m", ""), issues, "invalid_positive_top_depth")
-            bottom = _parse_optional_nonnegative_float(row.get("known_depth_bottom_m", ""), issues, "invalid_positive_bottom_depth")
+            bottom = _parse_optional_nonnegative_float(
+                row.get("known_depth_bottom_m", ""), issues, "invalid_positive_bottom_depth"
+            )
             uncertainty = _parse_nonnegative_float(
                 row.get("depth_reference_uncertainty_m", ""), issues, "invalid_or_missing_depth_uncertainty"
             )
@@ -197,7 +204,10 @@ def _validate_rows(
                 issues["bottom_depth_less_than_top_depth"] += 1
             del uncertainty
         elif status == "confirmed_no_target":
-            if any(row.get(key, "").strip() for key in ("known_depth_top_m", "known_depth_bottom_m", "depth_reference_uncertainty_m")):
+            if any(
+                row.get(key, "").strip()
+                for key in ("known_depth_top_m", "known_depth_bottom_m", "depth_reference_uncertainty_m")
+            ):
                 issues["negative_row_contains_depth_value"] += 1
 
         if status in {"known_depth_positive", "confirmed_no_target"}:
@@ -375,21 +385,63 @@ def _readiness_decision(
         return "not_ready_no_positive_records"
     if counts["negative_count"] == 0:
         return "not_ready_no_confirmed_negative_records"
-    if any(counts["split_counts"].get(split, 0) == 0 for split in ("train", "validation", "holdout")):
+    if any(counts["split_counts"].get(split, 0) == 0 for split in ACTIVE_SPLIT_ORDER):
         return "not_ready_missing_group_separated_split"
+    eligibility_failure = _eligible_readiness_failure(counts)
+    if eligibility_failure is not None:
+        return eligibility_failure
     if feature_manifest.get("status") != "frozen":
         return "not_ready_feature_manifest_not_frozen"
     return "ready_for_relative_depth_research"
+
+
+def _is_eligible_row(row: dict[str, str]) -> bool:
+    return (
+        row.get("reference_status", "").strip() in {"known_depth_positive", "confirmed_no_target"}
+        and row.get("label_quality", "").strip() in FIT_LABEL_QUALITIES
+        and _bool_without_issue(row.get("include_for_relative_depth", ""))
+        and row.get("split", "").strip() in ACTIVE_SPLITS
+    )
+
+
+def _eligible_readiness_failure(counts: dict[str, Any]) -> str | None:
+    if counts["eligible_positive_count"] == 0:
+        return "not_ready_no_eligible_positive_records"
+    if counts["eligible_confirmed_negative_count"] == 0:
+        return "not_ready_no_eligible_confirmed_negative_records"
+    for split in ACTIVE_SPLIT_ORDER:
+        if counts["eligible_positive_by_split"].get(split, 0) == 0:
+            return "not_ready_missing_eligible_split_coverage"
+        if counts["eligible_confirmed_negative_by_split"].get(split, 0) == 0:
+            return "not_ready_missing_eligible_split_coverage"
+    return None
 
 
 def _aggregate_counts(rows: list[dict[str, str]]) -> dict[str, Any]:
     status_counts = Counter(row.get("reference_status", "").strip() or "missing" for row in rows)
     split_counts = Counter(row.get("split", "").strip() or "missing" for row in rows)
     quality_counts = Counter(row.get("label_quality", "").strip() or "missing" for row in rows)
+    eligible_positive_by_split = {split: 0 for split in ACTIVE_SPLIT_ORDER}
+    eligible_confirmed_negative_by_split = {split: 0 for split in ACTIVE_SPLIT_ORDER}
+
+    for row in rows:
+        if not _is_eligible_row(row):
+            continue
+        split = row.get("split", "").strip()
+        status = row.get("reference_status", "").strip()
+        if status == "known_depth_positive":
+            eligible_positive_by_split[split] += 1
+        elif status == "confirmed_no_target":
+            eligible_confirmed_negative_by_split[split] += 1
+
     return {
         "record_count": len(rows),
         "positive_count": status_counts.get("known_depth_positive", 0),
         "negative_count": status_counts.get("confirmed_no_target", 0),
+        "eligible_positive_count": sum(eligible_positive_by_split.values()),
+        "eligible_confirmed_negative_count": sum(eligible_confirmed_negative_by_split.values()),
+        "eligible_positive_by_split": eligible_positive_by_split,
+        "eligible_confirmed_negative_by_split": eligible_confirmed_negative_by_split,
         "excluded_or_uncertain_count": status_counts.get("excluded", 0) + status_counts.get("uncertain_reference", 0),
         "included_relative_count": sum(_bool_without_issue(row.get("include_for_relative_depth", "")) for row in rows),
         "included_numerical_count": sum(_bool_without_issue(row.get("include_for_numerical_depth", "")) for row in rows),
