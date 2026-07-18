@@ -10,6 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import finalize_depth_calibration_manifest as finalizer
 import init_depth_calibration_pack as initializer
 import validate_depth_calibration_pack as validator
 
@@ -177,3 +178,44 @@ def test_group_leakage_blocks_readiness(tmp_path: Path) -> None:
 def test_validator_rejects_repository_dataset_path() -> None:
     with pytest.raises(validator.PackValidationError, match="outside"):
         validator.validate_pack(validator.REPO_ROOT / "templates" / "depth_calibration")
+
+
+def test_manifest_finalizer_dry_run_does_not_write(tmp_path: Path) -> None:
+    pack = _copy_pack(tmp_path)
+    _populate_valid_pack(pack)
+    before = (pack / "calibration_manifest.json").read_text(encoding="utf-8")
+
+    result = finalizer.finalize_manifest(
+        pack,
+        dataset_id="dataset_v1",
+        dataset_version="v1",
+        write=False,
+    )
+
+    assert result["status"] == "manifest_dry_run_ready"
+    assert result["manifest_written"] is False
+    assert (pack / "calibration_manifest.json").read_text(encoding="utf-8") == before
+
+
+def test_manifest_finalizer_writes_counts_and_hashes(tmp_path: Path) -> None:
+    pack = _copy_pack(tmp_path)
+    _populate_valid_pack(pack)
+
+    result = finalizer.finalize_manifest(
+        pack,
+        dataset_id="dataset_v1",
+        dataset_version="v1",
+        write=True,
+    )
+    validated = validator.validate_pack(pack)
+    manifest = json.loads((pack / "calibration_manifest.json").read_text(encoding="utf-8"))
+
+    assert result["status"] == "manifest_written"
+    assert result["manifest_written"] is True
+    assert manifest["record_count"] == 6
+    assert manifest["positive_count"] == 3
+    assert manifest["negative_count"] == 3
+    assert len(manifest["records_sha256"]) == 64
+    assert len(manifest["content_hash"]) == 64
+    assert len(manifest["manifest_hash"]) == 64
+    assert validated["status"] == "validation_passed"
