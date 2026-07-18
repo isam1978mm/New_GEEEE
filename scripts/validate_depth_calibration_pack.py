@@ -69,6 +69,13 @@ REQUIRED_PROHIBITED_INPUTS = {
     "target_mask_or_geometry_from_same_decision_pipeline", "app_generated_depth_label",
     "notebook_generated_depth_label", "unknown_provenance_depth_array",
 }
+FEATURE_REQUIRED_FIELDS = (
+    "name", "role", "source", "source_fields", "formula_or_definition", "unit",
+    "spatial_resolution", "nodata_behavior", "preprocessing", "known_confounders",
+    "allowed_for_depth_research", "limitation", "order",
+)
+FEATURE_ROLES = {"candidate_depth_signal", "context", "confounder_control", "quality_gate"}
+PROHIBITED_FEATURE_TOKENS = ("classifier", "pca", "target_mask", "generated_depth", "finding_summary")
 COORDINATE_PATTERN = re.compile(r"(?i)(POINT\s*\(|-?\d{1,2}\.\d+\s*[,;/_ ]\s*-?\d{1,3}\.\d+)")
 
 
@@ -244,6 +251,34 @@ def _validate_feature_manifest(feature_manifest: dict[str, Any], rows: list[dict
             issues["feature_manifest_version_missing"] += 1
         if not isinstance(features, list) or not features:
             issues["feature_manifest_features_empty"] += 1
+        else:
+            names: list[str] = []
+            orders: list[int] = []
+            for feature in features:
+                if not isinstance(feature, dict):
+                    issues["feature_manifest_entry_not_object"] += 1
+                    continue
+                for key in FEATURE_REQUIRED_FIELDS:
+                    if feature.get(key) in (None, "", []):
+                        issues[f"feature_manifest_entry_missing_{key}"] += 1
+                name = str(feature.get("name") or "").strip()
+                role = str(feature.get("role") or "").strip()
+                if name:
+                    names.append(name)
+                    lowered = name.casefold()
+                    if any(token in lowered for token in PROHIBITED_FEATURE_TOKENS):
+                        issues["feature_manifest_contains_prohibited_feature_name"] += 1
+                if role and role not in FEATURE_ROLES:
+                    issues["feature_manifest_invalid_role"] += 1
+                if feature.get("allowed_for_depth_research") is not True:
+                    issues["feature_manifest_entry_not_approved_for_research"] += 1
+                order = feature.get("order")
+                if isinstance(order, int) and order > 0:
+                    orders.append(order)
+                else:
+                    issues["feature_manifest_invalid_order"] += 1
+            issues["feature_manifest_duplicate_name"] += _duplicate_count(names)
+            issues["feature_manifest_duplicate_order"] += _duplicate_count([str(value) for value in orders])
         if version and any(row.get("feature_manifest_version", "").strip() != version for row in included_rows):
             issues["row_feature_manifest_version_mismatch"] += 1
     _remove_zero_issues(issues)
