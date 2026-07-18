@@ -298,8 +298,28 @@ def _validate_manifest(
     if content_hash is not None and content_hash != _combined_hash(expected_hashes.values()):
         issues["manifest_content_hash_mismatch"] += 1
 
-    if rows and manifest.get("status") == "template_only_not_populated":
-        issues["populated_rows_with_template_manifest_status"] += 1
+    if rows:
+        required_manifest_values = (
+            "dataset_id", "dataset_version", "created_at", "updated_at", "build_commit",
+            "build_procedure", "feature_manifest_version", "records_sha256",
+            "source_index_sha256", "exclusions_sha256", "content_hash", "manifest_hash",
+            "storage_location_reference", "redaction_policy",
+        )
+        for key in required_manifest_values:
+            if manifest.get(key) in (None, ""):
+                issues[f"manifest_required_value_missing_{key}"] += 1
+        if manifest.get("status") != "populated_private_dataset":
+            issues["populated_rows_with_invalid_manifest_status"] += 1
+        if manifest.get("artifact_class") not in {"LOCAL_SENSITIVE", "FILESYSTEM_ONLY"}:
+            issues["manifest_artifact_class_invalid"] += 1
+        if not isinstance(manifest.get("known_limitations"), list):
+            issues["manifest_known_limitations_not_list"] += 1
+        manifest_hash = manifest.get("manifest_hash")
+        if manifest_hash:
+            canonical = dict(manifest)
+            canonical["manifest_hash"] = None
+            if manifest_hash != _manifest_hash(canonical):
+                issues["manifest_manifest_hash_mismatch"] += 1
     if sources and _duplicate_count([row.get("source_reference", "").strip() for row in sources]):
         issues["source_index_not_unique"] += 1
     if exclusions and _duplicate_count([row.get("record_id", "").strip() for row in exclusions]):
@@ -421,6 +441,11 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _manifest_hash(manifest: dict[str, Any]) -> str:
+    payload = json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
 def _combined_hash(values: Any) -> str:
