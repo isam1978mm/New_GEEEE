@@ -37,8 +37,8 @@ Examples of current inputs that may be investigated:
 - SAR coherence or temporal stability, when available
 - optical and thermal anomaly strength
 - DEM and terrain derivatives
-- object size, shape, compactness, and connected-component features
-- classifier score and finding family
+- independently documented target size or structure, when available
+- classifier and object outputs only to identify candidate sampling windows, not as depth evidence
 - valid-pixel and data-quality metrics
 
 ## Hard boundary
@@ -252,8 +252,7 @@ docs/DEPTH_METHOD_CARD.md
 
 Inputs:
 
-- completed classifier candidates
-- connected-component masks
+- candidate identifiers and sampling windows from completed classifier/object stages, used for routing only
 - approved independent sensor features
 - run-quality metadata
 - calibration model and method manifest
@@ -275,6 +274,7 @@ The stage must:
 5. Write model, feature, and calibration versions.
 6. Never silently substitute a proxy ratio for metres.
 7. Remain compatible with old runs that have no depth output.
+8. Exclude classifier scores, classifier classes, target-mask geometry, and PCA target decisions from the depth feature vector.
 
 ## Phase 7 — Easy-English presentation
 
