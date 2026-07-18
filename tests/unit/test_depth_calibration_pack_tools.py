@@ -142,18 +142,18 @@ def test_empty_pack_reports_no_records_without_leaking_rows(tmp_path: Path) -> N
     assert "site_id" not in json.dumps(result)
 
 
-def test_valid_synthetic_pack_passes_contract_validation(tmp_path: Path) -> None:
+def test_populated_pack_remains_blocked_until_manifest_is_finalized(tmp_path: Path) -> None:
     pack = _copy_pack(tmp_path)
     _populate_valid_pack(pack)
 
     result = validator.validate_pack(pack)
 
-    assert result["status"] == "validation_passed"
-    assert result["readiness_decision"] == "ready_for_relative_depth_research"
+    assert result["status"] == "validation_failed"
+    assert result["readiness_decision"] == "not_ready_contract_errors"
     assert result["record_count"] == 6
     assert result["positive_count"] == 3
     assert result["negative_count"] == 3
-    assert result["issue_counts"] == {}
+    assert result["issue_counts"]["manifest_required_value_missing_records_sha256"] == 1
     assert result["scientific_validation_run"] is False
     assert result["training_started"] is False
 
@@ -215,7 +215,23 @@ def test_manifest_finalizer_writes_counts_and_hashes(tmp_path: Path) -> None:
     assert manifest["record_count"] == 6
     assert manifest["positive_count"] == 3
     assert manifest["negative_count"] == 3
+    assert manifest["build_commit"] == "test_commit"
     assert len(manifest["records_sha256"]) == 64
     assert len(manifest["content_hash"]) == 64
     assert len(manifest["manifest_hash"]) == 64
     assert validated["status"] == "validation_passed"
+
+
+def test_manifest_hash_mismatch_blocks_readiness(tmp_path: Path) -> None:
+    pack = _copy_pack(tmp_path)
+    _populate_valid_pack(pack)
+    finalizer.finalize_manifest(pack, dataset_id="dataset_v1", dataset_version="v1", write=True)
+    manifest_path = pack / "calibration_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["manifest_hash"] = "0" * 64
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = validator.validate_pack(pack)
+
+    assert result["readiness_decision"] == "not_ready_contract_errors"
+    assert result["issue_counts"]["manifest_manifest_hash_mismatch"] == 1
