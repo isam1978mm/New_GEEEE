@@ -1,0 +1,100 @@
+{
+  "schema_version": "depth_public_evidence_candidate_v1",
+  "status": "candidate_evidence_not_approved_for_private_pack_import",
+  "created_at": "2026-07-18",
+  "rules": {
+    "truth_source": "installed_or_independently_recorded_physical_depth_only",
+    "geophysical_estimates_as_labels": false,
+    "classifier_or_notebook_labels_allowed": false,
+    "physical_site_group_must_remain_unsplit": true,
+    "app_depth_enabled": false
+  },
+  "sources": [
+    {
+      "candidate_id": "iag_usp_line4_public_v1",
+      "physical_site_group": "iag_usp_controlled_site",
+      "source_doi": "10.4236/ijg.2017.85040",
+      "supporting_doi": "10.1590/S0102-261X2006000100004",
+      "evidence_method": "controlled_site_installed_known_depth",
+      "depth_reference": "target_top_or_apex_supported_by_site_description",
+      "reference_uncertainty_m": null,
+      "raw_data_access": "not_yet_confirmed",
+      "satellite_feature_compatibility": "pending",
+      "private_pack_import_approved": false,
+      "records": [
+        {"public_target_label": "A", "known_depth_top_m": 1.97},
+        {"public_target_label": "B", "known_depth_top_m": 0.50},
+        {"public_target_label": "C", "known_depth_top_m": 0.98},
+        {"public_target_label": "D", "known_depth_top_m": 0.50},
+        {"public_target_label": "E", "known_depth_top_m": 0.90},
+        {"public_target_label": "F", "known_depth_top_m": 0.97},
+        {"public_target_label": "G", "known_depth_top_m": 1.00},
+        {"public_target_label": "H", "known_depth_top_m": 1.98}
+      ]
+    },
+    {
+      "candidate_id": "ahmadu_bello_public_v1",
+      "physical_site_group": "ahmadu_bello_controlled_site",
+      "source_doi": "10.1016/j.envc.2024.100910",
+      "supporting_dois": [
+        "10.1007/s11600-023-01096-3",
+        "10.1007/s44288-024-00058-6"
+      ],
+      "evidence_method": "controlled_site_installed_known_depth",
+      "depth_reference": "explicit_depth_to_top",
+      "reference_uncertainty_m": null,
+      "raw_data_access": "available_from_authors_on_request",
+      "satellite_feature_compatibility": "pending",
+      "private_pack_import_approved": false,
+      "records": [
+        {
+          "public_target_label": "six_empty_plastic_buckets",
+          "known_depth_top_m": 0.80,
+          "target_material_or_structure": "plastic_buckets_empty"
+        },
+        {
+          "public_target_label": "one_horizontal_empty_steel_drum",
+          "known_depth_top_m": 0.80,
+          "target_material_or_structure": "steel_drum_empty_horizontal"
+        },
+        {
+          "public_target_label": "two_horizontal_empty_steel_drums",
+          "known_depth_top_m": 1.00,
+          "target_material_or_structure": "steel_drums_empty_horizontal"
+        },
+        {
+          "public_target_label": "one_vertical_empty_steel_drum",
+          "known_depth_top_m": 0.60,
+          "target_material_or_structure": "steel_drum_empty_vertical"
+        },
+        {
+          "public_target_label": "six_water_filled_plastic_buckets",
+          "known_depth_top_m": 0.80,
+          "target_material_or_structure": "plastic_buckets_water_filled"
+        },
+        {
+          "public_target_label": "four_cylinder_engine_block",
+          "known_depth_top_m": 1.20,
+          "target_material_or_structure": "engine_block"
+        },
+        {
+          "public_target_label": "concrete_block",
+          "known_depth_top_m": 0.80,
+          "target_material_or_structure": "concrete_block"
+        },
+        {
+          "public_target_label": "two_horizontal_pipes",
+          "known_depth_top_m": 0.50,
+          "target_material_or_structure": "metallic_pipes_horizontal"
+        }
+      ]
+    }
+  ],
+  "aggregate": {
+    "physical_site_group_count": 2,
+    "candidate_record_count": 16,
+    "record_count_with_explicit_depth_to_top_source_wording": 8,
+    "record_count_with_reported_reference_uncertainty": 0,
+    "private_pack_import_approved_count": 0
+  }
+}
