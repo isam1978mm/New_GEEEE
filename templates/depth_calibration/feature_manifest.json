@@ -4,6 +4,27 @@
   "feature_manifest_version": null,
   "pipeline_commit": null,
   "created_at": null,
+  "feature_schema_required_fields": [
+    "name",
+    "role",
+    "source",
+    "source_fields",
+    "formula_or_definition",
+    "unit",
+    "spatial_resolution",
+    "nodata_behavior",
+    "preprocessing",
+    "known_confounders",
+    "allowed_for_depth_research",
+    "limitation",
+    "order"
+  ],
+  "allowed_roles": [
+    "candidate_depth_signal",
+    "context",
+    "confounder_control",
+    "quality_gate"
+  ],
   "features": [],
   "required_context_fields": [],
   "prohibited_inputs": [
@@ -17,5 +38,5 @@
     "notebook_generated_depth_label",
     "unknown_provenance_depth_array"
   ],
-  "template_notice": "Copy this file outside Git. Freeze the exact approved feature names, units, formulas, preprocessing, order, nodata rules, and source versions before fitting."
+  "template_notice": "Copy outside Git. Freeze exact approved feature names, roles, sources, formulas, units, ordering, preprocessing, nodata rules, limitations, and source versions before fitting."
 }
