@@ -137,7 +137,7 @@ A record may count as calibration truth only when the depth evidence is independ
 
 Allowed evidence sources may include:
 
-- controlled lawful test sites with measured placement depth;
+- controlled test sites with measured placement depth;
 - engineering or construction records with documented depth;
 - authoritative external benchmark datasets;
 - documented survey or excavation records;
@@ -301,13 +301,15 @@ exclusions.csv
 DATASET_CARD.md
 ```
 
-Optional evidence documents remain in a separate private evidence directory and are referenced by stable identifiers rather than copied into git.
+Optional evidence documents remain in a separate private evidence directory and are referenced by stable identifiers rather than copied into Git.
 
 ## Calibration manifest requirements
 
 ```text
 dataset_id
+dataset_version
 schema_version
+status
 created_at
 updated_at
 build_commit
@@ -316,6 +318,8 @@ record_count
 positive_count
 negative_count
 excluded_count
+included_relative_count
+included_numerical_count
 label_quality_counts
 evidence_source_counts
 finding_family_counts
@@ -330,6 +334,9 @@ split_counts
 site_counts_by_split
 feature_manifest_version
 data_source_list
+records_sha256
+source_index_sha256
+exclusions_sha256
 content_hash
 manifest_hash
 storage_location_reference
@@ -340,13 +347,14 @@ frontend_visible
 downloadable_via_api
 redaction_policy
 known_limitations
+relative_depth_boundaries_m
 ```
 
 The manifest must verify that no `site_id`, `feature_id`, or `group_id` appears in more than one active split.
 
 ## Storage and privacy
 
-The populated dataset, source documents, coordinate-bearing metadata, chips, arrays, and evidence must stay outside git under an owner-controlled private dataset root.
+The populated dataset, source documents, coordinate-bearing metadata, chips, arrays, and evidence must stay outside Git under an owner-controlled private dataset root.
 
 Required storage classification:
 
@@ -358,7 +366,7 @@ frontend_visible = false
 downloadable_via_api = false
 ```
 
-Only this empty schema and policy document may be committed to the repository.
+Only the empty schema, empty templates, aggregate-only tooling, synthetic tests, and policy documents may be committed to the repository.
 
 Exact coordinates, geometry, source-document paths, private identifiers, and coordinate proxies must not be written into repository documentation or normal logs.
 
@@ -366,16 +374,34 @@ Exact coordinates, geometry, source-document paths, private identifiers, and coo
 
 - Dataset IDs and schema versions are immutable once used for an evaluation.
 - Any record change creates a new dataset version.
-- The manifest must include a deterministic content hash over the canonical record and source-index files.
+- The manifest must include deterministic hashes over the record, source-index, and exclusion files.
+- The combined content hash must be derived from those file hashes.
 - Feature values must record the pipeline commit and feature-manifest version.
 - Evidence-source revisions must be recorded rather than overwritten silently.
 - Calibration and holdout evaluation must name the exact dataset version.
+
+## Repository tooling
+
+The repository provides:
+
+```text
+scripts/init_depth_calibration_pack.py
+scripts/validate_depth_calibration_pack.py
+scripts/finalize_depth_calibration_manifest.py
+```
+
+These tools:
+
+- operate only on a private folder outside the repository;
+- print aggregate results only;
+- refuse repository-local private datasets;
+- do not fit a model or enable app depth output.
 
 ## Dataset QA checklist
 
 Before any relative-depth fitting:
 
-- [ ] At least one lawful, traceable independent known-depth source has been identified.
+- [ ] At least one traceable independent known-depth source has been identified.
 - [ ] Positive known-depth records exist.
 - [ ] Confirmed negative/background records exist.
 - [ ] Every usable record has independent evidence metadata.
@@ -388,8 +414,9 @@ Before any relative-depth fitting:
 - [ ] Circular and target-derived features are excluded.
 - [ ] Feature normalization is fit on training data only.
 - [ ] Dataset and manifest hashes are recorded.
-- [ ] Storage remains private and outside git.
+- [ ] Storage remains private and outside Git.
 - [ ] Limitations and missing coverage are documented.
+- [ ] The aggregate validator passes.
 
 Before numerical metre-range research, the relative-depth baseline must first beat preregistered baselines on held-out physical sites with acceptable stability and abstention behavior.
 
@@ -400,12 +427,13 @@ Current decision:
 ```text
 Phase 2 schema: defined
 Phase 2 records: absent
+Calibration tooling: implemented
 Calibration dataset: not ready
 Relative-depth fitting: blocked
 Numerical depth fitting: blocked
 App implementation: blocked
 ```
 
-The next valid action is to collect or identify lawful, documented, independently measured known-depth reference cases and enter them into a private dataset pack that follows this contract.
+The next valid action is to enter independently measured or independently documented known-depth reference cases into the private dataset pack and validate that pack against this contract.
 
 No model, backend stage, frontend field, relative-depth output, or numerical depth output is approved by this document.
