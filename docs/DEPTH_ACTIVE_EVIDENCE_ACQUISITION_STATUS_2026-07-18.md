@@ -95,6 +95,29 @@ individual_small_target_satellite_depth_row
 
 Texas A&M–Corpus Christi is the strongest immediate pre/post candidate because its construction occurred during the Sentinel-1 mission era and an official pre-installation survey is documented. Ahmadu Bello is also a priority after its exact installation dates are recovered. TU1208 and IAG/USP remain valuable for ground-method truth and later post-installation satellite sanity checks.
 
+## Software verification
+
+The owner ran the committed validator and tests on Windows with Python 3.13.5.
+
+Observed results:
+
+```text
+public-candidate validator = validation_passed
+candidate readiness = candidate_evidence_structurally_valid_not_import_approved
+candidate source count = 2
+candidate physical-site groups = 2
+candidate target rows = 16
+candidate validator tests = 7 passed
+C1 redaction-risk tests = 3 passed
+full unit suite = 940 passed
+failures = 0
+warnings = 4 non-blocking
+```
+
+The warnings were the existing NumPy entropy warnings, one expected raster georeferencing warning, and the local pytest cache-write access warning. They did not affect the passing result.
+
+The public candidate file remains correctly unapproved for private-pack import because no reference-uncertainty rows are yet documented and the satellite support experiment has not passed.
+
 ## Qualification workflow
 
 For every candidate source:
@@ -144,7 +167,10 @@ Do not describe the overall project as blocked while evidence search, source ins
 - [x] Implement an aggregate-only candidate evidence validator.
 - [x] Add candidate-validator regression tests.
 - [x] Run the first satellite-scale compatibility screen.
-- [ ] Run the new candidate-validator targeted tests and full unit suite.
+- [x] Run the candidate validator: structurally valid and correctly not import-approved.
+- [x] Run candidate-validator tests: 7 passed.
+- [x] Run C1 privacy tests: 3 passed.
+- [x] Run the full unit suite: 940 passed.
 - [ ] Extract TU1208 target-level depth-to-top definitions.
 - [ ] Obtain Texas A&M–Corpus Christi target-level construction tables and raw-data availability.
 - [ ] Recover reference-depth uncertainty for IAG/USP and Ahmadu Bello.
@@ -167,7 +193,9 @@ independent_depth_sources_found = 4
 physical_site_groups_with_extracted_target_tables = 2
 public_candidate_target_rows = 16
 candidate_register = created
-candidate_validator = implemented_tests_pending
+candidate_validator = implemented_and_verified
+candidate_validator_tests = 7_passed
+full_unit_suite = 940_passed
 satellite_scale_screen = complete_first_pass
 private_pack_record_count = 0
 relative_model_claim = not_yet_supported
