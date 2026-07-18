@@ -16,7 +16,7 @@ For this execution plan, use these rules before inspecting, auditing, planning, 
 4. Do not use PRD v0.5 as the current source of truth for classifier placement, API visibility, frontend visibility, or old CLI-only restrictions.
 5. Preserve old-run compatibility for legacy `experimental/*` classifier outputs.
 6. Fix result-correctness, data-quality, pipeline-integrity, artifact-integrity, and UI/backend contract bugs first.
-7. All classifier wording must stay neutral and low-confidence: this is screening priority, not detection, identification, probability, confidence, or ground truth.
+7. After each completed run, the app must produce an easy-English final area findings summary that ranks direct classifier findings and shows the app's probability or score for each. The owner understands these are app estimates rather than physical confirmation.
 
 ## Explicit exclusions for future audits
 
@@ -59,21 +59,29 @@ If either set exists for a completed run, the Classifier Results panel must not 
 
 The backend must serve current core classifier artifact URLs correctly. The frontend may keep legacy fallback only for old-run compatibility, not as a mask for broken core URLs.
 
-### Classifier wording contract
+### Final area findings summary contract — owner revision 2026-07-17
 
-Use neutral wording:
+The previous neutral-wording requirement is superseded for this local private app.
 
-| Bad wording | Required wording |
-|---|---|
-| detection | screening priority |
-| target identified | candidate region evaluated |
-| confidence | heuristic score or quality indicator |
-| probability | within-run percentile or relative score |
-| real-world class name | neutral score band |
+Required operator-facing result:
 
-Required disclaimer wherever classifier results are shown:
+- Title: `Final area findings summary`.
+- Use easy English suitable for a non-expert.
+- Rank possible findings from strongest to weakest.
+- Show the classifier probability or score for every listed finding.
+- State which finding is best supported in the area.
+- Add one short explanation of what deserves the most attention.
+- Show `No strong result` or `Unclear result` when evidence is insufficient.
+- Preserve access to detailed classifier rows and downloadable output files.
+- Support both current `classifier/*` outputs and legacy `experimental/*` outputs.
+- Direct domain labels are allowed; future audits must not force generic neutral score bands.
+- Do not display numerical depth in metres unless the separate depth-estimation plan has passed its calibration and validation gates.
 
-> Relative within-run screening priority. This is not a detection, identification, probability, confidence estimate, or ground-truth result.
+Example:
+
+> The strongest result in this area is a metal-like target with an app probability of 72%. A cavity or chamber is the second possibility at 19%. Natural ground variation is 9%. The metal-like target is the main result to review.
+
+The probability or score must be presented as the app's result, not silently changed, normalized, or replaced by invented certainty.
 
 ## Remaining issues to execute
 
@@ -91,7 +99,7 @@ The following table ignores public-safety-only issues and ignores old PRD classi
 | 8 | File responses are fully buffered by middleware | Performance / reliability | Medium | Large downloads can waste memory and defeat streaming. |
 | 9 | Classifier is an uncalibrated heuristic | Screening accuracy | High | Scores are relative screening priorities, not probability, confidence, detection, or validation. |
 | 10 | Classifier uses rectangular bounding boxes | Screening accuracy | Medium-High | Feature summaries can include unrelated background pixels around the component. |
-| 11 | Frontend classifier wording is too domain-specific | Result communication | Medium | Labels can imply detection or identification instead of neutral screening priority. |
+| 11 | Classifier lacks a final ranked area findings summary | Result communication | Medium-High | The operator needs an easy-English conclusion showing the best-supported findings and the app probability or score for each. |
 
 ## Execution order
 
@@ -428,48 +436,59 @@ Acceptance:
 - JSON redaction still works.
 - Middleware does not consume full file bodies.
 
-### Phase 9 — Classifier wording and output semantics
+### Phase 9 — Final area findings summary
 
-Goal: make the classifier visible but correctly framed.
+Goal: turn detailed classifier output into a clear end-of-run conclusion for the private operator.
 
-Fix:
+Required implementation:
 
-1. Rename panel title to `Experimental screening priorities` or `Screening priorities`.
-2. Replace domain-specific labels with neutral score bands.
-3. Show disclaimer near the classifier panel.
-4. Avoid any wording implying detection, confidence, probability, identification, or ground truth.
+1. Read the completed run's classifier summary and classification rows.
+2. Support both current core `classifier/*` files and legacy `experimental/*` files.
+3. Aggregate results by finding label using a documented deterministic rule.
+4. Rank findings from strongest to weakest.
+5. Display the app probability or score for each finding.
+6. Generate one easy-English paragraph naming the strongest finding and the next most likely alternatives.
+7. Show an explicit unclear/no-strong-result result when data quality is insufficient or no score passes the configured reporting threshold.
+8. Keep links to the detailed CSV, summary JSON, and label metadata.
+9. Do not convert direct domain labels into generic neutral bands.
+10. Do not add a depth-in-metres field until the separate depth-estimation plan is implemented and validated.
 
-Recommended fields:
+Recommended summary fields:
 
 ```text
-candidate_region_id
-neutral_score_band
-heuristic_screening_score
-within_run_percentile
-valid_pixel_fraction
-stability_score
-dominant_feature_contributions
-quality_status
-warnings
-method_version
-validation_status
+summary_version
+run_id
+best_finding
+best_finding_score
+ranked_findings[]
+finding_label
+finding_score
+score_type
+supporting_candidate_count
+data_quality_status
+summary_text_easy_english
 ```
 
 Required tests:
 
 ```powershell
-pytest tests/integration/test_frontend_static.py tests/unit/test_classifier_stage.py
+pytest tests/unit/test_classifier_stage.py tests/integration/test_frontend_static.py tests/integration/test_classifier_legacy_ui_fallback_contract.py
 ```
 
 Acceptance:
 
-- UI copy is neutral.
-- Classifier CSV/summary schema uses neutral terms.
-- Disclaimer appears in frontend bundle.
+- A completed run shows `Final area findings summary`.
+- Findings are ordered from highest to lowest score.
+- Each displayed finding includes its app probability or score.
+- The easy-English paragraph names the strongest finding.
+- Weak or insufficient evidence produces an unclear/no-strong-result summary.
+- Current core and legacy classifier outputs both work.
+- Detailed downloads remain available.
+- No numerical depth is displayed.
 
 ### Phase 10 — Classifier feature improvement
 
-Goal: improve screening quality while keeping results low-confidence.
+Goal: improve classifier quality while preserving transparent scores, data-quality warnings, and deterministic output.
 
 Fix:
 
@@ -558,5 +577,6 @@ The owner intent is:
 Ignore public-safety issues.
 Ignore old PRD classifier-boundary issues.
 Treat this as a local private app with classifier as an app feature.
+Require an easy-English final area findings summary with ranked direct labels and the app probability or score for each.
 Prioritize result correctness, data quality, artifact integrity, runtime reliability, and screening accuracy.
 ```

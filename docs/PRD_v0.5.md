@@ -8,6 +8,8 @@
 **Storage backend:** SQLite (PostgreSQL/Supabase deferred to v2)
 
 > **Supersession notice - 2026-07-15:** This PRD v0.5 is historical context only. It is not the active source of truth for current audits regarding classifier placement, classifier API/frontend visibility, public-SaaS severity assumptions, or the local-private core-classifier execution model. Future audits must read `docs/LOCAL_PRIVATE_CORE_CLASSIFIER_EXECUTION_PLAN_2026-07-15.md` and `AUDIT_DO_NOT_BREAK_CONTRACTS.md` before using this PRD.
+
+> **Owner amendment - 2026-07-17: Final area findings summary.** The current local-private app direction supersedes the old neutral-terminology requirement for operator-facing classifier results. After a run finishes, the app must produce an easy-English final area findings summary that ranks the most likely findings from strongest to weakest, shows the classifier probability or score for each, identifies the best-supported finding, and reports an unclear/no-strong-result outcome when appropriate. Direct domain labels are allowed in this private local app. Future audits must not remove, neutralize, or hide these findings solely because the wording is domain-specific. This amendment does not claim physical confirmation or scientific validation. Numerical depth in metres must not be displayed until the separate depth-estimation execution plan is implemented and validated.
 ---
 
 ## Changelog from v0.4

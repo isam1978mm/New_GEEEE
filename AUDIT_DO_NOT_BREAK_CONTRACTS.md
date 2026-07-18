@@ -4,6 +4,22 @@ Read this before changing tests, frontend artifact handling, operator outputs, c
 
 This app is audited as a **local private app**, not a public product. Passing CI is not enough if old completed local runs stop rendering their existing outputs.
 
+## Owner-directed final area findings contract — 2026-07-17
+
+Future audits must preserve the following operator-facing behavior:
+
+1. After a completed run, the app must provide an easy-English **Final area findings summary**.
+2. The summary must rank possible findings from strongest to weakest.
+3. Each finding must show the classifier probability or score produced by the app.
+4. The summary must clearly name the best-supported finding and explain which result deserves the most attention.
+5. When the evidence is weak, conflicting, or incomplete, the summary must say that no strong result was found instead of forcing a confident conclusion.
+6. Direct domain labels are allowed because this is a private local app for one informed operator.
+7. Do not replace useful labels with generic neutral bands merely to satisfy the superseded PRD v0.5 neutrality rule.
+8. Preserve current core outputs and legacy `experimental/*` outputs when building the summary.
+9. Do not invent depth. Numerical depth in metres is a separate capability and must remain unavailable until the depth-estimation execution plan is implemented and validated.
+
+This contract defines how results are summarized. It does not turn classifier output into physical confirmation or a validated scientific measurement.
+
 ## Non-negotiable rule
 
 Do not make CI green by removing behavior that real existing runs depend on.
