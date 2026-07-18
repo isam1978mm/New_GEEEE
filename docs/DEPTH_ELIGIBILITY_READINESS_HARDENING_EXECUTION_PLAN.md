@@ -1,6 +1,6 @@
 # Depth Eligibility Readiness Hardening Execution Plan
 
-Status: implementation complete on branch `claude/depth-blocked-calibration-6kn6v4`; test execution remains pending because direct branch commits have no attached CI runner. This document does not supply private calibration records, fit a model, or enable app depth output.
+Status: implementation and targeted testing complete on branch `claude/depth-blocked-calibration-6kn6v4`; the full unit suite requires one retest after a C1 redaction-baseline remediation. This document does not supply private calibration records, fit a model, or enable app depth output.
 
 ## Problem
 
@@ -74,23 +74,77 @@ eligible_confirmed_negative_by_split
 
 Direct readiness-helper tests avoid unfinished manifest fields masking the intended result. The end-to-end finalizer test verifies refusal leaves the manifest unchanged.
 
+## First test execution
+
+The owner ran:
+
+```powershell
+python -m pytest tests/unit/test_depth_calibration_pack_tools.py -v
+```
+
+Observed result:
+
+```text
+19 passed
+1 pytest cache warning
+```
+
+The warning was limited to pytest being unable to write `.pytest_cache`; it did not affect the test results.
+
+The owner then ran:
+
+```powershell
+python -m pytest tests/unit -q
+```
+
+Observed result:
+
+```text
+923 passed
+2 failed
+5 warnings
+```
+
+Both failures came from `tests/unit/test_plan_c_redaction_risk_allowlist.py`. They were not readiness-logic failures. The C1 scanner found the generic default private root in:
+
+```text
+scripts/init_depth_calibration_pack.py
+scripts/validate_depth_calibration_pack.py
+```
+
+## Collateral C1 remediation
+
+The initializer now derives its default adjacent private folder from `REPO_ROOT` instead of storing the absolute root as a source-code literal. This preserves the effective default location for a checkout at `C:\Dev\New_GEE` while removing the unapproved literal from that script.
+
+The validator retains its deliberate default private dataset location. One occurrence is now explicitly approved in the existing C1 redaction-risk allowlist, following the repository's established allowlist policy. No private row, coordinate, source path, depth value, or user-specific home path was added.
+
+Required retest:
+
+```powershell
+python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
+python -m pytest tests/unit -q
+```
+
 ## Files changed
 
 ```text
 docs/DEPTH_ELIGIBILITY_READINESS_HARDENING_EXECUTION_PLAN.md
+scripts/init_depth_calibration_pack.py
 scripts/validate_depth_calibration_pack.py
 scripts/finalize_depth_calibration_manifest.py
 tests/unit/test_depth_calibration_pack_tools.py
+tests/fixtures/plan_c_c1_redaction_risk_allowlist.json
 ```
 
 No template schema, app stage, API, frontend, model, or private data changes are part of this patch.
 
 ## Verification commands
 
-Run from the repository root after switching to the branch:
+Run from the repository root after updating the branch:
 
 ```powershell
-git switch claude/depth-blocked-calibration-6kn6v4
+git pull --ff-only
+python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
 python -m pytest tests/unit/test_depth_calibration_pack_tools.py -v
 python -m pytest tests/unit -q
 ```
@@ -111,6 +165,9 @@ ac607d2f841ecedce40fe00c9c84b133308e45e7  docs: plan eligible-split depth readin
 b2ee75c5dd64ecc69ed3d37a317b402fb71fa770  fix: gate depth readiness on eligible records per split
 4a70af812ca62d5f9b954c3e73c5bab1b7dcc177  fix: apply eligible-split gate in depth manifest finalizer
 aec640f2339358348f85aa8323b7091df2c84b3c  test: guard eligible-split depth readiness gate
+a5eba9a2413543b07ad9d3f9d8754ff3584248f0  docs: record depth readiness hardening implementation status
+1dff738b31f7a7f6ebd900ec36da40fe31e260a8  fix: derive private calibration path from repo location
+478326222260f269dc1419f0df3986a6c027820e  test: approve depth validator private-root default
 ```
 
 ## Checklist
@@ -122,10 +179,13 @@ aec640f2339358348f85aa8323b7091df2c84b3c  test: guard eligible-split depth readi
 - [x] Implement validator hardening.
 - [x] Implement finalizer hardening.
 - [x] Add regression tests.
-- [x] Verify branch diff contains only the planned files.
-- [ ] Run targeted tests on a repository checkout.
-- [ ] Run the full unit suite.
-- [ ] Record test results.
+- [x] Run the targeted depth-calibration tests: 19 passed.
+- [x] Run the first full unit-suite attempt: 923 passed, 2 C1 failures.
+- [x] Diagnose the C1 failures.
+- [x] Commit the C1 remediation.
+- [ ] Rerun the C1 redaction-risk tests.
+- [ ] Rerun the full unit suite.
+- [ ] Record the final passing result.
 - [ ] Decide whether to merge or open a PR.
 
 ## Current decision
@@ -134,8 +194,10 @@ aec640f2339358348f85aa8323b7091df2c84b3c  test: guard eligible-split depth readi
 execution_plan = documented
 implementation = complete_on_branch
 static_review = complete
-targeted_tests = pending_external_runner
-full_unit_suite = pending_external_runner
+targeted_depth_tests = passed_19_of_19
+first_full_unit_run = 923_passed_2_c1_failed
+c1_remediation = committed
+full_unit_retest = pending_owner_runner
 private_calibration_records = absent
 scientific_validation = blocked
 app_depth_output = not_available
