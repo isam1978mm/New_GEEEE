@@ -48,7 +48,9 @@ def finalize_manifest(
     if not rows:
         issues["no_records"] += 1
     if issues:
-        raise ManifestFinalizeError(f"private pack has contract issues: {json.dumps(dict(sorted(issues.items())), sort_keys=True)}")
+        raise ManifestFinalizeError(
+            f"private pack has contract issues: {json.dumps(dict(sorted(issues.items())), sort_keys=True)}"
+        )
 
     resolved_dataset_id = (dataset_id or manifest.get("dataset_id") or "").strip()
     resolved_dataset_version = (dataset_version or manifest.get("dataset_version") or "").strip()
@@ -56,16 +58,27 @@ def finalize_manifest(
         raise ManifestFinalizeError("dataset_id and dataset_version are required")
 
     counts = validator._aggregate_counts(rows)
-    if counts["positive_count"] <= 0 or counts["negative_count"] <= 0:
-        raise ManifestFinalizeError("positive and confirmed negative records are both required")
-    if any(counts["split_counts"].get(split, 0) <= 0 for split in ("train", "validation", "holdout")):
-        raise ManifestFinalizeError("train, validation, and holdout records are required")
+    eligibility_failure = validator._eligible_readiness_failure(counts)
+    if eligibility_failure == "not_ready_no_eligible_positive_records":
+        raise ManifestFinalizeError("at least one eligible known-depth positive record is required")
+    if eligibility_failure == "not_ready_no_eligible_confirmed_negative_records":
+        raise ManifestFinalizeError("at least one eligible confirmed-negative record is required")
+    if eligibility_failure == "not_ready_missing_eligible_split_coverage":
+        raise ManifestFinalizeError(
+            "each active split requires at least one eligible positive and one eligible confirmed-negative record"
+        )
+    if eligibility_failure is not None:
+        raise ManifestFinalizeError(f"eligible readiness failed: {eligibility_failure}")
 
     now = datetime.now(timezone.utc).isoformat()
     records_hash = validator._sha256(paths["calibration_records.csv"])
     source_hash = validator._sha256(paths["source_index.csv"])
     exclusions_hash = validator._sha256(paths["exclusions.csv"])
-    positive_depths = [float(row["known_depth_top_m"]) for row in rows if row["reference_status"] == "known_depth_positive"]
+    positive_depths = [
+        float(row["known_depth_top_m"])
+        for row in rows
+        if row["reference_status"] == "known_depth_positive"
+    ]
     uncertainties = [
         float(row["depth_reference_uncertainty_m"])
         for row in rows
@@ -128,6 +141,10 @@ def finalize_manifest(
         "record_count": len(rows),
         "positive_count": counts["positive_count"],
         "negative_count": counts["negative_count"],
+        "eligible_positive_count": counts["eligible_positive_count"],
+        "eligible_confirmed_negative_count": counts["eligible_confirmed_negative_count"],
+        "eligible_positive_by_split": counts["eligible_positive_by_split"],
+        "eligible_confirmed_negative_by_split": counts["eligible_confirmed_negative_by_split"],
         "included_relative_count": counts["included_relative_count"],
         "included_numerical_count": counts["included_numerical_count"],
         "split_counts": counts["split_counts"],
