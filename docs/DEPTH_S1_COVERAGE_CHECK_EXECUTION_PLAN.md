@@ -1,6 +1,6 @@
 # Depth Sentinel-1 Coverage Check Execution Plan
 
-Status: implementation complete on `main`; local verification and first private-site execution are pending.
+Status: coverage-check implementation and software verification complete on `main`; first private-site execution is pending.
 
 ## Purpose
 
@@ -35,6 +35,22 @@ Added focused tests:
 ```text
 tests/unit/test_depth_s1_coverage_check.py
 ```
+
+## Owner verification
+
+The owner ran the focused and complete unit suites on Windows with Python 3.13.5.
+
+Observed results:
+
+```text
+coverage-check tests: 10 passed
+C1 redaction-risk tests: 3 passed
+full unit suite: 950 passed
+failures: 0
+warnings: 4 non-blocking
+```
+
+The warnings were the existing NumPy entropy warnings, the existing rasterio non-georeferenced test warning, and a pytest cache-write access warning. They did not affect the passing result.
 
 ## Privacy and scientific boundaries
 
@@ -89,21 +105,25 @@ training_started = false
 app_depth_enabled = false
 ```
 
-## Verification commands
+## Private polygon helper decision
 
-From an updated `main` checkout:
+The controlled-site literature provides a public approximate site center and a documented 50 m by 50 m site size for the first candidate. To avoid hand-writing GeoJSON, the next repository slice is a dry-run-first helper that accepts a center latitude, center longitude, width, height, and an output path outside Git.
 
-```powershell
-python -m pytest tests/unit/test_depth_s1_coverage_check.py -v
-python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
-python -m pytest tests/unit -q
-```
+The helper must:
 
-The assistant execution container could not download the public checkout because DNS resolution was unavailable. The owner checkout remains the authoritative runner.
+- keep all coordinates out of normal output;
+- refuse repository-local output;
+- refuse overwrite of an existing private file;
+- write only after explicit `--write`;
+- create a closed GeoJSON Polygon with empty properties;
+- make no Earth Engine request;
+- mark the polygon as a screening footprint requiring local visual review before execution.
+
+The helper will not hard-code candidate coordinates in Git.
 
 ## First private dry run
 
-Create one private site GeoJSON polygon outside Git. Then run without `--execute`:
+After the private polygon exists, run without `--execute`:
 
 ```powershell
 python .\scripts\check_depth_s1_coverage.py `
@@ -124,7 +144,7 @@ No Earth Engine request occurs in this mode.
 
 ## First executed query
 
-After the dry run succeeds and the private polygon is reviewed:
+After the dry run succeeds and the private polygon is visually reviewed:
 
 ```powershell
 python .\scripts\check_depth_s1_coverage.py `
@@ -140,7 +160,7 @@ The first candidate event date is the documented Texas A&M–Corpus Christi comp
 
 ## Completion gate
 
-The software slice is complete when the targeted tests, C1 privacy tests, and full unit suite pass.
+The coverage-check software slice is complete because the targeted tests, C1 privacy tests, and full unit suite passed.
 
 A passing coverage query means only that suitable Sentinel-1 acquisitions exist. It does not approve evidence import or a depth claim.
 
@@ -153,10 +173,13 @@ A passing coverage query means only that suitable Sentinel-1 acquisitions exist.
 - [x] Implement the coverage checker.
 - [x] Add focused unit tests.
 - [x] Recover the first event date: Texas A&M–Corpus Christi completed 2020-03-04.
-- [ ] Run targeted coverage-check tests.
-- [ ] Run C1 privacy tests.
-- [ ] Run the full unit suite.
-- [ ] Create private polygons for approved candidate sites.
+- [x] Run targeted coverage-check tests: 10 passed.
+- [x] Run C1 privacy tests: 3 passed.
+- [x] Run the full unit suite: 950 passed.
+- [x] Record verification results.
+- [ ] Implement and test the private polygon helper.
+- [ ] Create the first private screening polygon.
+- [ ] Visually review the polygon against the public campus description.
 - [ ] Run the dry coverage check.
 - [ ] Execute the aggregate coverage query.
 - [ ] Record acquisition and orbit support decisions.
