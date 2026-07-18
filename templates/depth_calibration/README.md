@@ -66,6 +66,35 @@ Validation checks include:
 
 A successful dataset-contract check does not prove that depth estimation works. Scientific holdout validation remains a later phase.
 
+## Calculate manifest counts and hashes
+
+After the private rows pass the structural checks, preview the derived manifest values:
+
+```powershell
+python .\scripts\finalize_depth_calibration_manifest.py `
+  --dataset-id "depth-calibration-v001" `
+  --dataset-version "v001"
+```
+
+The preview does not write anything.
+
+To update only the private `calibration_manifest.json` file:
+
+```powershell
+python .\scripts\finalize_depth_calibration_manifest.py `
+  --dataset-id "depth-calibration-v001" `
+  --dataset-version "v001" `
+  --write
+```
+
+The finalizer calculates aggregate counts, split totals, depth-range summaries, file hashes, the combined content hash, and the manifest hash. It does not print private rows or start model work.
+
+Run the validator again after finalization:
+
+```powershell
+python .\scripts\validate_depth_calibration_pack.py
+```
+
 ## Template pack contents
 
 ```text
@@ -149,7 +178,8 @@ The repository may contain only empty templates, synthetic test fixtures, toolin
 - [x] Dataset-card template exists.
 - [x] Safe private-pack initializer exists.
 - [x] Aggregate-only validator exists.
-- [x] Synthetic unit tests cover initialization, empty state, valid data, leakage, and repository-path rejection.
+- [x] Manifest count-and-hash finalizer exists.
+- [x] Synthetic tests cover initialization, empty state, valid data, leakage, repository-path rejection, dry-run finalization, and manifest writing.
 - [ ] Run the initializer on the owner computer.
 - [ ] Enter the first independently measured or independently documented record.
 - [ ] Enter confirmed no-target or background records.
@@ -157,9 +187,11 @@ The repository may contain only empty templates, synthetic test fixtures, toolin
 - [ ] Add exclusion-ledger entries for rejected or deferred records.
 - [ ] Freeze the approved feature manifest.
 - [ ] Assign group-separated train, validation, and holdout splits.
-- [ ] Calculate counts and hashes.
+- [ ] Run the aggregate validator.
+- [ ] Run the manifest finalizer in dry-run mode.
+- [ ] Write the private manifest counts and hashes.
 - [ ] Complete the private dataset card.
-- [ ] Run the aggregate validator on the populated private pack.
+- [ ] Run the aggregate validator again.
 - [ ] Validate the populated dataset against `docs/DEPTH_CALIBRATION_DATASET_CONTRACT.md`.
 
 ## Current decision
@@ -168,6 +200,7 @@ The repository may contain only empty templates, synthetic test fixtures, toolin
 Repository intake pack: complete
 Private-pack initializer: implemented
 Aggregate validator: implemented
+Manifest finalizer: implemented
 Private dataset folder: not verified
 Known-depth records: still absent
 Dataset scientific validation: blocked
