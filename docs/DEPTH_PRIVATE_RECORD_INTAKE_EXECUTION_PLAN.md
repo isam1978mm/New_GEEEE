@@ -1,6 +1,6 @@
 # Depth Private Record Intake Execution Plan
 
-Status: implementation complete on `main`; targeted and full-suite execution are pending on the owner checkout.
+Status: implementation and software verification complete on `main`; real private calibration records remain absent.
 
 ## Purpose
 
@@ -72,28 +72,34 @@ The tool supplies no depth defaults. A known-depth positive must contain a user-
 - manifest invalidation after write;
 - aggregate-only results containing no record identifier, source reference, depth value, or private path.
 
-## Verification commands
+## Owner verification
 
-Run from an updated `main` checkout:
+The owner ran the targeted and complete unit suites on Windows with Python 3.13.5.
 
-```powershell
-python -m pytest tests/unit/test_depth_calibration_record_intake.py -v
-python -m pytest tests/unit/test_depth_calibration_pack_tools.py -v
-python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
-python -m pytest tests/unit -q
+Observed results:
+
+```text
+private intake tests: 8 passed
+existing depth-pack tests: 19 passed
+C1 redaction-risk tests: 3 passed
+full unit suite: 933 passed
+failures: 0
+warnings: 4 non-blocking
 ```
 
-This execution environment could not clone the repository because outbound network access was unavailable. The committed files received a source-level review, but the owner checkout remains the authoritative test runner.
+The warnings were existing numerical/raster warnings plus pytest cache-write access warnings. They did not affect the passing result.
+
+The owner also created the blank private intake payload successfully. The following dry-run and write attempts returned:
+
+```text
+intake supports only known-depth positives and confirmed negatives
+```
+
+That refusal is expected because the newly created payload is blank. No record or source was written.
 
 ## First real-record workflow
 
-After tests pass:
-
-```powershell
-python .\scripts\add_depth_calibration_record.py --create-template
-```
-
-Edit the private `record_intake.json` file locally, then dry-run:
+The blank private payload now exists. Edit `record_intake.json` in the private calibration folder with one real independently supported positive or confirmed-negative record, then run:
 
 ```powershell
 python .\scripts\add_depth_calibration_record.py
@@ -109,7 +115,7 @@ Then validate the whole private pack. Do not use `--write` with invented, guesse
 
 ## Completion gate
 
-The software slice is complete when its targeted tests and the full unit suite pass. Depth estimation remains blocked until real records are entered, the pack is finalized, and the relative-depth scientific experiment passes untouched-site validation.
+The software slice is complete because its targeted tests and the full unit suite passed. Depth estimation remains blocked until real records are entered, the pack is finalized, and the relative-depth scientific experiment passes untouched-site validation.
 
 ## Checklist
 
@@ -119,10 +125,11 @@ The software slice is complete when its targeted tests and the full unit suite p
 - [x] Add unit tests.
 - [x] Document the owner-local workflow.
 - [x] Complete source-level review.
-- [ ] Run targeted intake tests.
-- [ ] Run existing depth-pack and C1 privacy tests.
-- [ ] Run the full unit suite.
-- [ ] Record results.
-- [ ] Create the first blank private intake payload.
+- [x] Run targeted intake tests: 8 passed.
+- [x] Run existing depth-pack and C1 privacy tests: 22 passed.
+- [x] Run the full unit suite: 933 passed.
+- [x] Record results.
+- [x] Create the first blank private intake payload.
 - [ ] Enter real private records outside Git.
 - [ ] Finalize and validate the populated pack.
+- [ ] Run the relative-depth scientific experiment.
