@@ -44,12 +44,17 @@ A gate is not a stop-work order. It prevents unsupported output while research c
 
 ## Evidence search findings so far
 
-Current candidates include:
+### Verified physical-depth evidence candidates
 
-- Guangzhou University GPR data with underground pipelines described at different layouts and depths; archive inspection is required to find an explicit depth table.
-- Hacimusalar geophysical survey data over a shallow buried wall; the associated article and numerical ground-truth details require verification.
-- Real GPR and non-destructive-testing databases with concrete cover depth or laboratory specimens; useful for method development but not automatically transferable to buried-field Sentinel-1 estimation.
-- Simulated GPR datasets with exact generated depths; useful for software and baseline testing only, not real calibration evidence.
+- **TU1208 / IFSTTAR Nantes controlled test site**: targets were physically installed, geolocated with a theodolite, and assigned depths from surveyed target and surface elevations. Public raw GPR data and a detailed site paper are available. Published follow-on work reports three pipe layers at approximately 0.9 m, 1.5 m, and 2.1 m, but the depth-to-top versus center-depth definition still requires extraction from the original site figures.
+- **IAG/USP controlled geophysics test site**: targets were installed at known positions and depths. Published work reports seven target lines spanning approximately 0.5 m to 2.5 m, including a GPR study of precisely buried drums from approximately 0.5 m to 2.0 m. Actual target tables and raw-data access still require extraction.
+
+### Candidates still under review
+
+- Guangzhou University GPR data with underground pipelines described at different layouts and depths. The public archive preview exposes many raw files but no obvious depth table or README.
+- Hacimusalar multi-method survey data over a buried wall. A publication reports an interpreted depth of approximately 1.2 m, but independent excavation or engineering confirmation has not yet been found.
+- Morocco utilities and voids GPR data. Useful for detection and classification, but public metadata does not establish independently documented numerical depths.
+- Simulated GPR datasets with exact generated depths. Useful for software and baseline testing only, not real calibration evidence.
 
 None of these candidates should be rejected merely because they are not immediately ready. Each candidate moves through a qualification workflow.
 
@@ -92,12 +97,19 @@ Do not describe the overall project as blocked while evidence search, source ins
 - [x] Harden readiness to require eligible positives and negatives in each split.
 - [x] Implement dry-run-first private record intake.
 - [x] Search online and identify initial candidate datasets.
-- [ ] Inspect the Guangzhou archive structure for explicit pipeline-depth metadata.
-- [ ] Inspect Hacimusalar files and related publication for numerical wall depth and uncertainty.
-- [ ] Screen real GPR cover-depth and laboratory datasets as supporting evidence.
-- [ ] Expand the search to utility-owner, civil-engineering, archaeological, and infrastructure repositories.
-- [ ] Build a candidate-evidence register with provenance, depth fields, site groups, licences, and suitability decisions.
-- [ ] Import the first verified record into the private calibration pack.
+- [x] Inspect the public Guangzhou archive preview.
+- [x] Inspect the Hacimusalar dataset description and related publications.
+- [x] Identify TU1208 as independently surveyed physical-depth evidence.
+- [x] Identify IAG/USP as installed known-depth evidence.
+- [x] Build a candidate-evidence register with provenance, depth fields, site groups, licences, and suitability decisions.
+- [ ] Extract TU1208 target-level depth-to-top values from the original site figures.
+- [ ] Extract IAG/USP actual target depths and target metadata from the published tables.
+- [ ] Confirm raw-data access and machine-readable target mapping for IAG/USP.
+- [ ] Complete Guangzhou metadata inspection or contact the authors for the depth map.
+- [ ] Find independent confirmation for Hacimusalar or keep it as supporting evidence only.
+- [ ] Expand the search to additional independent physical sites so holdout validation is possible.
+- [ ] Run satellite-scale and approved-feature compatibility screening.
+- [ ] Import the first verified, supportable record into the private calibration pack.
 - [ ] Run the relative-depth experiment when the private pack reaches contract readiness.
 
 ## Current decision
@@ -107,6 +119,8 @@ overall_depth_work = active_evidence_acquisition
 software_work = active
 online_search = active
 candidate_screening = active
+independent_depth_sources_found = 2
+candidate_register = created
 private_pack_record_count = 0
 relative_model_claim = not_yet_supported
 numerical_model_claim = not_yet_supported
