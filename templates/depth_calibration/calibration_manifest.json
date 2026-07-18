@@ -1,0 +1,22 @@
+{
+  "schema_version": "depth_calibration_manifest_v1",
+  "status": "template_only_not_populated",
+  "dataset_version": null,
+  "created_at": null,
+  "record_count": null,
+  "included_relative_count": null,
+  "included_numerical_count": null,
+  "excluded_count": null,
+  "split_policy_version": null,
+  "feature_manifest_version": null,
+  "records_sha256": null,
+  "source_index_sha256": null,
+  "exclusions_sha256": null,
+  "privacy": {
+    "filesystem_only": true,
+    "http_servable": false,
+    "frontend_visible": false,
+    "downloadable_via_api": false
+  },
+  "template_notice": "Copy this file outside Git and replace null values only after the private dataset is populated and validated."
+}
