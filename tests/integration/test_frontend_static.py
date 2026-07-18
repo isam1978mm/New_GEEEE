@@ -151,6 +151,7 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Final area findings summary" in bundle_text
     assert "App score" in bundle_text
     assert "about a 30% signal" not in bundle_text
+    assert "tied for the highest app score" in bundle_text
     assert "Depth estimate: not available." in bundle_text
     assert "Full export tree and unavailable-output status are available" in bundle_text
     assert "No status history events are available yet. Queued runs may not record detailed stage events until processing starts." in bundle_text

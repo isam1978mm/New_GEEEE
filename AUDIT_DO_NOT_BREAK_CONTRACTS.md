@@ -32,6 +32,9 @@ Future audits must preserve these exact semantics:
   object's bounding-box shape.
 - The summary groups objects by finding label and ranks labels by their highest app
   score, then supporting candidate count.
+- When two or more findings share the highest app score, the summary must say
+  they are tied and explain that support count determines the displayed order.
+- A tied result must not be described as one uniquely strongest finding.
 - The summary is stored under `final_area_findings` in `classifier/summary.json`.
 - New classifier rows include `finding_label`, `finding_score`, `score_type`,
   `finding_reason`, and `review_order`.

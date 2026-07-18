@@ -368,6 +368,9 @@ export function buildLegacyFinalAreaFindings(
   );
   const top = rankedFindings[0];
   const topPercent = Math.round(top.findingScore * 100);
+  const tiedTopFindings = rankedFindings.filter(
+    (finding) => Math.abs(finding.findingScore - top.findingScore) <= 1e-9,
+  );
   let resultStatus = "result_available";
   let bestFinding: string | null = top.findingLabel;
   let bestFindingScore: number | null = top.findingScore;
@@ -384,6 +387,15 @@ export function buildLegacyFinalAreaFindings(
     summaryTextEasyEnglish =
       `The result is unclear. The strongest pattern was ${easyFindingName(top.findingLabel)} ` +
       `with an app score of ${topPercent}%, but it is only a context-level result.`;
+  } else if (tiedTopFindings.length > 1) {
+    resultStatus = "tied_top_result";
+    const bestName = easyFindingName(top.findingLabel);
+    const sentenceBestName = bestName.charAt(0).toUpperCase() + bestName.slice(1);
+    summaryTextEasyEnglish =
+      `The top findings are tied for the highest app score at ${topPercent}%. ` +
+      `${sentenceBestName} ranks first because ${top.supportingCandidateCount} ` +
+      `${top.supportingCandidateCount === 1 ? "object supports" : "objects support"} it, ` +
+      "the highest support count among the tied findings. Review all tied top findings.";
   } else {
     summaryTextEasyEnglish =
       `The strongest result is ${easyFindingName(top.findingLabel)} with an app score of ${topPercent}%. ` +

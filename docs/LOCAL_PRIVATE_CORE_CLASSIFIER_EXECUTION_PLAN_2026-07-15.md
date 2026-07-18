@@ -458,9 +458,11 @@ Implemented score semantics:
 4. Findings are grouped by label.
 5. Each grouped finding uses the highest supporting object app score.
 6. Ties are ordered by supporting candidate count and then label.
-7. Older completed runs use a frontend fallback based on the same score-and-shape
+7. When multiple findings share the highest app score, the easy-English text
+   explicitly reports a tie and explains why one appears first.
+8. Older completed runs use a frontend fallback based on the same score-and-shape
    rule.
-8. Numerical depth remains unavailable.
+9. Numerical depth remains unavailable.
 
 
 Goal: turn detailed classifier output into a clear end-of-run conclusion for the private operator.

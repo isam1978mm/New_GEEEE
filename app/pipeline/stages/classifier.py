@@ -314,6 +314,11 @@ def build_final_area_findings_summary(
     )
     top = ranked_findings[0] if ranked_findings else None
     top_score = float(top["finding_score"]) if top else 0.0
+    tied_top_findings = [
+        item
+        for item in ranked_findings
+        if abs(float(item["finding_score"]) - top_score) <= 1e-9
+    ]
 
     if not classifications:
         result_status = "no_objects"
@@ -338,22 +343,36 @@ def build_final_area_findings_summary(
             "but it is only a context-level result."
         )
     else:
-        result_status = "result_available"
         best_finding = str(top["finding_label"])
         best_score = round(top_score, 6)
         support_count = int(top["supporting_candidate_count"])
-        summary_text = (
-            f"The strongest result is {_easy_finding_name(best_finding)} with an app score of "
-            f"{top_score * 100:.0f}%. {support_count} "
-            f"{'object supports' if support_count == 1 else 'objects support'} this finding."
-        )
-        if len(ranked_findings) > 1:
-            second = ranked_findings[1]
-            summary_text += (
-                f" The next result is {_easy_finding_name(str(second['finding_label']))} "
-                f"with an app score of {float(second['finding_score']) * 100:.0f}%."
+        best_name = _easy_finding_name(best_finding)
+        sentence_best_name = best_name[:1].upper() + best_name[1:]
+
+        if len(tied_top_findings) > 1:
+            result_status = "tied_top_result"
+            summary_text = (
+                f"The top findings are tied for the highest app score at "
+                f"{top_score * 100:.0f}%. {sentence_best_name} ranks first because "
+                f"{support_count} "
+                f"{'object supports' if support_count == 1 else 'objects support'} it, "
+                "the highest support count among the tied findings. "
+                "Review all tied top findings."
             )
-        summary_text += " The strongest result is the first one to review."
+        else:
+            result_status = "result_available"
+            summary_text = (
+                f"The strongest result is {best_name} with an app score of "
+                f"{top_score * 100:.0f}%. {support_count} "
+                f"{'object supports' if support_count == 1 else 'objects support'} this finding."
+            )
+            if len(ranked_findings) > 1:
+                second = ranked_findings[1]
+                summary_text += (
+                    f" The next result is {_easy_finding_name(str(second['finding_label']))} "
+                    f"with an app score of {float(second['finding_score']) * 100:.0f}%."
+                )
+            summary_text += " The strongest result is the first one to review."
 
     return {
         "summary_version": FINAL_FINDINGS_SUMMARY_VERSION,

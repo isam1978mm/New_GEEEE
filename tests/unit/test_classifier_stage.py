@@ -253,3 +253,40 @@ def test_final_area_findings_summary_reports_no_strong_result() -> None:
     assert summary["best_finding"] is None
     assert summary["best_finding_score"] is None
     assert summary["depth_status"] == "not_available"
+
+
+def test_final_area_findings_summary_reports_tied_top_scores() -> None:
+    summary = build_final_area_findings_summary(
+        [
+            {
+                "finding_label": "ENTRANCE_SHAFT_TRACE",
+                "finding_score": 1.0,
+            },
+            {
+                "finding_label": "ENTRANCE_SHAFT_TRACE",
+                "finding_score": 1.0,
+            },
+            {
+                "finding_label": "ENTRANCE_SHAFT_TRACE",
+                "finding_score": 1.0,
+            },
+            {
+                "finding_label": "CHAMBER_VOID_AREA",
+                "finding_score": 1.0,
+            },
+            {
+                "finding_label": "CHAMBER_VOID_AREA",
+                "finding_score": 1.0,
+            },
+        ],
+        run_id="run-test",
+        data_quality_status="input_contract_validated",
+    )
+
+    assert summary["result_status"] == "tied_top_result"
+    assert summary["best_finding"] == "ENTRANCE_SHAFT_TRACE"
+    assert summary["best_finding_score"] == 1.0
+    assert "tied for the highest app score at 100%" in summary["summary_text_easy_english"]
+    assert "ranks first because 3 objects support it" in summary["summary_text_easy_english"]
+    assert "Review all tied top findings." in summary["summary_text_easy_english"]
+    assert "The strongest result is" not in summary["summary_text_easy_english"]
