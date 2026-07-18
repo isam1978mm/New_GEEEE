@@ -14,17 +14,59 @@ C:\Dev\New_GEE_PRIVATE\DEPTH_CALIBRATION\dataset_v001\
 
 The private folder remains local, outside Git, not HTTP-served, and not visible in the normal frontend.
 
-## Copy the complete pack
+## Safe initialization command
 
-Copy every file from:
+From the repository root, run:
 
-```text
-templates/depth_calibration\
+```powershell
+python .\scripts\init_depth_calibration_pack.py
 ```
 
-into the private dataset folder.
+The command:
 
-The template pack contains:
+- copies all empty template files to the default private folder;
+- refuses to write inside the repository;
+- refuses to overwrite a non-empty destination;
+- writes no records, coordinates, depths, or model files.
+
+To use another private folder:
+
+```powershell
+python .\scripts\init_depth_calibration_pack.py --destination "C:\private\depth_dataset_v001"
+```
+
+## Validate the private pack
+
+After adding or editing private records, run:
+
+```powershell
+python .\scripts\validate_depth_calibration_pack.py
+```
+
+Or specify another private folder:
+
+```powershell
+python .\scripts\validate_depth_calibration_pack.py --dataset-dir "C:\private\depth_dataset_v001"
+```
+
+The validator prints aggregate counts and issue codes only. It does not print rows, IDs, coordinates, source paths, depth values, or feature values.
+
+Validation checks include:
+
+- required files and columns;
+- valid statuses, split names, and label-quality values;
+- positive depth and uncertainty rules;
+- no depth values on confirmed negative rows;
+- source-index linkage;
+- duplicate record or source identifiers;
+- site, feature, and group leakage across splits;
+- frozen feature-manifest requirements;
+- prohibited classifier, PCA, target-mask, and generated-label inputs;
+- manifest privacy flags, counts, and optional hashes.
+
+A successful dataset-contract check does not prove that depth estimation works. Scientific holdout validation remains a later phase.
+
+## Template pack contents
 
 ```text
 calibration_records.csv
@@ -41,7 +83,7 @@ Do not enter real records into the repository copies.
 ## What each file does
 
 - `calibration_records.csv`: one row per physical reference feature or confirmed no-target case.
-- `calibration_manifest.json`: private dataset version, counts, split policy, hashes, and privacy settings.
+- `calibration_manifest.json`: dataset version, counts, split policy, hashes, privacy settings, and limitations.
 - `feature_manifest.json`: exact approved feature names, units, formulas, order, preprocessing, and prohibited inputs.
 - `source_index.csv`: private mapping from neutral source references to real documents or measurements.
 - `exclusions.csv`: records rejected, deferred, or retained only for audit, with the reason.
@@ -95,20 +137,20 @@ trained model files
 site-level predictions
 ```
 
-The repository may contain only empty templates, synthetic test fixtures, and redacted aggregate methodology.
+The repository may contain only empty templates, synthetic test fixtures, tooling, and redacted aggregate methodology.
 
-## Private dataset checklist
+## Checklist
 
 - [x] Empty calibration-record CSV template exists.
 - [x] Empty source-index template exists.
 - [x] Empty exclusion-ledger template exists.
-- [x] Calibration-manifest template exists.
+- [x] Full calibration-manifest template exists.
 - [x] Feature-manifest template exists.
 - [x] Dataset-card template exists.
-- [x] Private-folder location is defined.
-- [x] First-record intake order is defined.
-- [x] App-generated and guessed labels are prohibited.
-- [ ] Copy the complete template folder into private storage.
+- [x] Safe private-pack initializer exists.
+- [x] Aggregate-only validator exists.
+- [x] Synthetic unit tests cover initialization, empty state, valid data, leakage, and repository-path rejection.
+- [ ] Run the initializer on the owner computer.
 - [ ] Enter the first independently measured or independently documented record.
 - [ ] Enter confirmed no-target or background records.
 - [ ] Add private source-index entries.
@@ -117,15 +159,18 @@ The repository may contain only empty templates, synthetic test fixtures, and re
 - [ ] Assign group-separated train, validation, and holdout splits.
 - [ ] Calculate counts and hashes.
 - [ ] Complete the private dataset card.
+- [ ] Run the aggregate validator on the populated private pack.
 - [ ] Validate the populated dataset against `docs/DEPTH_CALIBRATION_DATASET_CONTRACT.md`.
 
 ## Current decision
 
 ```text
 Repository intake pack: complete
+Private-pack initializer: implemented
+Aggregate validator: implemented
 Private dataset folder: not verified
 Known-depth records: still absent
-Dataset validation: blocked
+Dataset scientific validation: blocked
 Relative-depth fitting: blocked
 Numerical-depth fitting: blocked
 App depth output: not_available
