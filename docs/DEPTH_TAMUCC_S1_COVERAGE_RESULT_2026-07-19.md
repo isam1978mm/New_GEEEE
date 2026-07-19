@@ -1,6 +1,6 @@
 # Texas A&M–Corpus Christi Sentinel-1 Coverage Result — 2026-07-19
 
-Status: first aggregate Earth Engine coverage query completed successfully. Coverage availability is confirmed. Matched clean pre/post relative-orbit qualification requires one rerun with the conservative construction-exclusion window.
+Status: first aggregate Earth Engine coverage query completed successfully. Coverage availability and reusable relative-orbit support across the event-date split are confirmed. Matched clean pre/post qualification requires one rerun with the conservative construction-exclusion window.
 
 This document records acquisition metadata only. It does not report a signal difference, estimate depth, import calibration records, train a model, or enable app output.
 
@@ -69,15 +69,37 @@ relative_orbit = 107
 platform = A
 ```
 
-This makes relative orbit 107 the leading candidate for a matched pre/post experiment.
+Relative orbit 107 is mathematically guaranteed to occur in both event-date periods:
 
-## What this result does not yet establish
+```text
+all non-107 acquisitions = 2
+pre-event acquisitions = 85
+post-event acquisitions = 84
+```
 
-The first summary counted observations before and after 2020-03-04, but it did not break relative-orbit counts down by period.
+Even if both non-107 acquisitions fell in the same period, relative orbit 107 would still have at least:
 
-It also treated observations after the completion date as post-event even when they occurred during March 2020. The documented construction policy excludes all February and March 2020 observations because excavation, placement, grading, and restoration may have occurred during that interval.
+```text
+pre-event orbit-107 count >= 83
+post-event orbit-107 count >= 82
+```
 
-Therefore the first result alone does not prove that relative orbit 107 has nonzero observations in both clean periods:
+Therefore:
+
+```text
+event_date_split_reusable_relative_orbit = 107
+event_date_split_relative_orbit_support = confirmed
+```
+
+This is a logical consequence of the reported aggregate counts, not an assumed distribution.
+
+## What still requires qualification
+
+The event-date split is not the final scientific comparison window.
+
+The first summary treated observations after 2020-03-04 as post-event even when they occurred during March 2020. The documented construction policy excludes all February and March 2020 observations because excavation, placement, grading, and restoration may have occurred during that interval.
+
+The final coverage screen must use:
 
 ```text
 clean_pre = dates before 2020-02-01
@@ -85,7 +107,7 @@ transition_excluded = 2020-02-01 through 2020-03-31
 clean_post = dates on or after 2020-04-01
 ```
 
-No matched-orbit approval is inferred from aggregate totals alone.
+The aggregate totals do not provide the exact relative-orbit distribution after removing the transition observations. A conservative rerun is therefore still required.
 
 ## Checker hardening
 
@@ -114,7 +136,7 @@ pre_post_relative_orbit_support
 coverage_decision
 ```
 
-The coverage decision becomes ready only when at least one relative orbit has nonzero observations in both clean periods.
+The conservative coverage decision becomes ready only when at least one relative orbit has nonzero observations in both clean periods.
 
 ## Required rerun
 
@@ -139,7 +161,7 @@ coverage_decision = coverage_ready_for_matched_pre_post_feature_screening
 pre_post_relative_orbit_support = true
 ```
 
-The exact reusable orbit must come from the rerun output. It must not be assumed from the overall counts.
+Relative orbit 107 is the expected reusable orbit based on the event-date result, but the clean-window decision must come from the rerun output.
 
 ## Checklist
 
@@ -147,7 +169,7 @@ The exact reusable orbit must come from the rerun output. It must not be assumed
 - [x] Run the no-network dry check.
 - [x] Execute the first aggregate Earth Engine coverage query.
 - [x] Confirm nonzero overall pre-event and post-event acquisitions.
-- [x] Confirm one dominant orbit direction and relative-orbit group overall.
+- [x] Prove relative orbit 107 exists in both event-date periods from aggregate counts.
 - [x] Preserve aggregate-only private output.
 - [x] Harden the checker for conservative clean pre/transition/clean post periods.
 - [x] Add reusable-relative-orbit qualification logic.
