@@ -38,15 +38,36 @@ def _parse_iso_date(value: str, label: str) -> date:
         raise DepthS1CoverageError(f"{label} must use YYYY-MM-DD") from exc
 
 
-def validate_date_window(start_date: str, end_date: str, event_date: str | None = None) -> tuple[date, date, date | None]:
+def validate_date_window(
+    start_date: str,
+    end_date: str,
+    event_date: str | None = None,
+    pre_end_exclusive: str | None = None,
+    post_start: str | None = None,
+) -> tuple[date, date, date | None, date | None, date | None]:
     start = _parse_iso_date(start_date, "start date")
     end = _parse_iso_date(end_date, "end date")
     if end <= start:
         raise DepthS1CoverageError("end date must be later than start date")
+
     event = _parse_iso_date(event_date, "event date") if event_date else None
     if event is not None and not (start <= event < end):
         raise DepthS1CoverageError("event date must fall inside the requested date window")
-    return start, end, event
+
+    if (pre_end_exclusive is None) != (post_start is None):
+        raise DepthS1CoverageError("pre-end-exclusive and post-start must be supplied together")
+
+    pre_end = _parse_iso_date(pre_end_exclusive, "pre end exclusive") if pre_end_exclusive else None
+    post = _parse_iso_date(post_start, "post start") if post_start else None
+    if pre_end is not None and post is not None:
+        if not (start < pre_end <= post < end):
+            raise DepthS1CoverageError(
+                "conservative analysis windows must satisfy start < pre-end-exclusive <= post-start < end"
+            )
+        if event is not None and not (pre_end <= event < post):
+            raise DepthS1CoverageError("event date must fall inside the excluded transition interval")
+
+    return start, end, event, pre_end, post
 
 
 def load_private_geometry(path: Path) -> dict[str, Any]:
@@ -102,9 +123,17 @@ def build_query_plan(
     start_date: str,
     end_date: str,
     event_date: str | None,
+    pre_end_exclusive: str | None,
+    post_start: str | None,
     resolution_meters: int,
 ) -> dict[str, Any]:
-    validate_date_window(start_date, end_date, event_date)
+    validate_date_window(
+        start_date,
+        end_date,
+        event_date,
+        pre_end_exclusive,
+        post_start,
+    )
     if resolution_meters <= 0:
         raise DepthS1CoverageError("resolution meters must be positive")
     return {
@@ -112,14 +141,51 @@ def build_query_plan(
         "start_date": start_date,
         "end_date_exclusive": end_date,
         "event_date": event_date,
+        "pre_end_exclusive": pre_end_exclusive,
+        "post_start": post_start,
+        "analysis_window_mode": (
+            "conservative_pre_transition_post"
+            if pre_end_exclusive is not None and post_start is not None
+            else "event_date_split"
+        ),
         "instrument_mode": "IW",
         "required_polarisations": ["VV", "VH"],
         "resolution_meters": resolution_meters,
     }
 
 
-def summarize_acquisitions(items: list[dict[str, Any]], event_date: str | None = None) -> dict[str, Any]:
+def _sorted_counts(counter: Counter[str]) -> dict[str, int]:
+    return dict(sorted(counter.items(), key=lambda pair: pair[0]))
+
+
+def _period_counters() -> dict[str, Counter[str]]:
+    return {
+        "orbit_pass": Counter(),
+        "relative_orbit": Counter(),
+        "platform": Counter(),
+    }
+
+
+def _count_period(counters: dict[str, Counter[str]], item: dict[str, Any]) -> None:
+    counters["orbit_pass"][item["orbit_pass"]] += 1
+    counters["relative_orbit"][item["relative_orbit"]] += 1
+    counters["platform"][item["platform"]] += 1
+
+
+def _shared_keys(left: Counter[str], right: Counter[str]) -> list[str]:
+    return sorted(key for key in set(left) & set(right) if left[key] > 0 and right[key] > 0)
+
+
+def summarize_acquisitions(
+    items: list[dict[str, Any]],
+    event_date: str | None = None,
+    pre_end_exclusive: str | None = None,
+    post_start: str | None = None,
+) -> dict[str, Any]:
     event = _parse_iso_date(event_date, "event date") if event_date else None
+    pre_end = _parse_iso_date(pre_end_exclusive, "pre end exclusive") if pre_end_exclusive else None
+    post = _parse_iso_date(post_start, "post start") if post_start else None
+
     normalized: list[dict[str, Any]] = []
     for item in items:
         try:
@@ -131,7 +197,9 @@ def summarize_acquisitions(items: list[dict[str, Any]], event_date: str | None =
             {
                 "acquired": acquired,
                 "orbit_pass": str(item.get("orbit_pass") or "UNKNOWN").upper(),
-                "relative_orbit": str(item.get("relative_orbit") if item.get("relative_orbit") is not None else "UNKNOWN"),
+                "relative_orbit": str(
+                    item.get("relative_orbit") if item.get("relative_orbit") is not None else "UNKNOWN"
+                ),
                 "platform": str(item.get("platform") or "UNKNOWN").upper(),
             }
         )
@@ -154,16 +222,78 @@ def summarize_acquisitions(items: list[dict[str, Any]], event_date: str | None =
             else:
                 post_event_count += 1
 
+    pre_analysis = _period_counters()
+    transition = _period_counters()
+    post_analysis = _period_counters()
+    pre_analysis_count = 0
+    transition_count = 0
+    post_analysis_count = 0
+
+    if pre_end is not None and post is not None:
+        for item in normalized:
+            acquired_date = item["acquired"].date()
+            if acquired_date < pre_end:
+                pre_analysis_count += 1
+                _count_period(pre_analysis, item)
+            elif acquired_date < post:
+                transition_count += 1
+                _count_period(transition, item)
+            else:
+                post_analysis_count += 1
+                _count_period(post_analysis, item)
+
+        reusable_relative_orbits = _shared_keys(
+            pre_analysis["relative_orbit"],
+            post_analysis["relative_orbit"],
+        )
+        reusable_orbit_passes = _shared_keys(
+            pre_analysis["orbit_pass"],
+            post_analysis["orbit_pass"],
+        )
+        reusable_platforms = _shared_keys(
+            pre_analysis["platform"],
+            post_analysis["platform"],
+        )
+
+        if pre_analysis_count == 0 or post_analysis_count == 0:
+            coverage_decision = "coverage_not_ready_missing_clean_pre_or_post_acquisitions"
+        elif not reusable_relative_orbits:
+            coverage_decision = "coverage_not_ready_no_reusable_relative_orbit"
+        else:
+            coverage_decision = "coverage_ready_for_matched_pre_post_feature_screening"
+    else:
+        reusable_relative_orbits = []
+        reusable_orbit_passes = []
+        reusable_platforms = []
+        coverage_decision = "coverage_metadata_collected_event_split_only"
+
     return {
         "acquisition_count": len(normalized),
         "first_acquisition_date": normalized[0]["acquired"].date().isoformat() if normalized else None,
         "last_acquisition_date": normalized[-1]["acquired"].date().isoformat() if normalized else None,
-        "orbit_pass_counts": dict(sorted(pass_counts.items())),
-        "relative_orbit_counts": dict(sorted(relative_orbit_counts.items(), key=lambda pair: pair[0])),
-        "platform_counts": dict(sorted(platform_counts.items())),
+        "orbit_pass_counts": _sorted_counts(pass_counts),
+        "relative_orbit_counts": _sorted_counts(relative_orbit_counts),
+        "platform_counts": _sorted_counts(platform_counts),
         "pre_event_count": pre_event_count if event is not None else None,
         "on_event_date_count": on_event_date_count if event is not None else None,
         "post_event_count": post_event_count if event is not None else None,
+        "pre_analysis_count": pre_analysis_count if pre_end is not None else None,
+        "transition_count": transition_count if pre_end is not None else None,
+        "post_analysis_count": post_analysis_count if pre_end is not None else None,
+        "pre_analysis_orbit_pass_counts": _sorted_counts(pre_analysis["orbit_pass"]),
+        "transition_orbit_pass_counts": _sorted_counts(transition["orbit_pass"]),
+        "post_analysis_orbit_pass_counts": _sorted_counts(post_analysis["orbit_pass"]),
+        "pre_analysis_relative_orbit_counts": _sorted_counts(pre_analysis["relative_orbit"]),
+        "transition_relative_orbit_counts": _sorted_counts(transition["relative_orbit"]),
+        "post_analysis_relative_orbit_counts": _sorted_counts(post_analysis["relative_orbit"]),
+        "pre_analysis_platform_counts": _sorted_counts(pre_analysis["platform"]),
+        "transition_platform_counts": _sorted_counts(transition["platform"]),
+        "post_analysis_platform_counts": _sorted_counts(post_analysis["platform"]),
+        "reusable_relative_orbits": reusable_relative_orbits,
+        "reusable_orbit_passes": reusable_orbit_passes,
+        "reusable_platforms": reusable_platforms,
+        "pre_post_relative_orbit_support": bool(reusable_relative_orbits),
+        "coverage_decision": coverage_decision,
     }
 
 
@@ -173,6 +303,8 @@ def run_coverage_check(
     start_date: str,
     end_date: str,
     event_date: str | None = None,
+    pre_end_exclusive: str | None = None,
+    post_start: str | None = None,
     resolution_meters: int = DEFAULT_RESOLUTION_METERS,
     execute: bool = False,
     output_path: Path | None = None,
@@ -183,6 +315,8 @@ def run_coverage_check(
         start_date=start_date,
         end_date=end_date,
         event_date=event_date,
+        pre_end_exclusive=pre_end_exclusive,
+        post_start=post_start,
         resolution_meters=resolution_meters,
     )
 
@@ -196,6 +330,7 @@ def run_coverage_check(
         "scientific_validation_run": False,
         "training_started": False,
         "app_depth_enabled": False,
+        "output_written": False,
     }
 
     if execute:
@@ -206,16 +341,21 @@ def run_coverage_check(
             end_date=end_date,
             resolution_meters=resolution_meters,
         )
-        result.update(summarize_acquisitions(items, event_date=event_date))
+        result.update(
+            summarize_acquisitions(
+                items,
+                event_date=event_date,
+                pre_end_exclusive=pre_end_exclusive,
+                post_start=post_start,
+            )
+        )
         result["status"] = "coverage_query_completed"
         result["query_executed"] = True
 
     if output_path is not None:
         _require_outside_repo(output_path, "coverage output")
-        _atomic_write_json(Path(output_path), result)
         result["output_written"] = True
-    else:
-        result["output_written"] = False
+        _atomic_write_json(Path(output_path), result)
 
     return result
 
@@ -297,6 +437,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--start-date", required=True, help="Inclusive YYYY-MM-DD start date.")
     parser.add_argument("--end-date", required=True, help="Exclusive YYYY-MM-DD end date.")
     parser.add_argument("--event-date", help="Optional installation or event date in YYYY-MM-DD form.")
+    parser.add_argument(
+        "--pre-end-exclusive",
+        help="Optional exclusive end of the clean pre-event period. Must be paired with --post-start.",
+    )
+    parser.add_argument(
+        "--post-start",
+        help="Optional inclusive start of the clean post-event period. Must be paired with --pre-end-exclusive.",
+    )
     parser.add_argument("--resolution-meters", type=int, default=DEFAULT_RESOLUTION_METERS)
     parser.add_argument("--execute", action="store_true", help="Query Earth Engine. Without this flag, validate only.")
     parser.add_argument("--output", type=Path, help="Optional aggregate JSON output path outside Git.")
@@ -311,6 +459,8 @@ def main() -> int:
             start_date=args.start_date,
             end_date=args.end_date,
             event_date=args.event_date,
+            pre_end_exclusive=args.pre_end_exclusive,
+            post_start=args.post_start,
             resolution_meters=args.resolution_meters,
             execute=args.execute,
             output_path=args.output,
