@@ -1,124 +1,96 @@
 # Depth Sentinel-1 Coverage Check Execution Plan
 
-Status: coverage-check implementation and software verification complete on `main`; private polygon-helper implementation complete with local verification pending.
+Status: coverage checker and private polygon helper are implemented and locally verified on `main`; the first private screening polygon and no-network coverage dry run are complete. Visual footprint review and the executed aggregate coverage query remain pending.
 
 ## Purpose
 
-The evidence search has identified controlled physical sites with independently installed or surveyed depth information. The next step is to verify whether each site has usable Sentinel-1 observation coverage before any pre/post feature experiment is attempted.
+The evidence search identified controlled physical sites with independently installed or surveyed depth information. This workflow checks whether a candidate site has usable Sentinel-1 acquisition coverage before any pre/post feature experiment is attempted.
 
 This slice does not estimate depth, fit a model, import calibration rows, or enable app output.
 
-## Implemented coverage checker
-
-Added:
+## Implemented tools
 
 ```text
+scripts/create_depth_site_polygon.py
 scripts/check_depth_s1_coverage.py
+tests/unit/test_depth_site_polygon.py
 tests/unit/test_depth_s1_coverage_check.py
 ```
 
-The utility:
+The polygon helper:
 
-1. reads one private GeoJSON site polygon from outside Git;
-2. rejects repository-local geometry files;
-3. accepts only Polygon or MultiPolygon site geometry;
-4. strips GeoJSON properties before the query so private labels are not transmitted;
-5. validates an explicit start date, exclusive end date, and optional installation/event date;
-6. runs as a no-network dry run unless `--execute` is supplied;
-7. queries `COPERNICUS/S1_GRD` only after explicit execution approval;
-8. filters to IW mode, VV/VH dual polarization, and the requested ground resolution;
-9. returns aggregate acquisition counts, first and last dates, orbit-direction counts, relative-orbit counts, platform counts, and pre/post counts;
-10. never prints coordinates, the private geometry, private paths, or image identifiers;
-11. optionally writes the aggregate summary only to a path outside Git.
+- accepts runtime center latitude and longitude plus width and height in metres;
+- hard-codes no candidate coordinates in Git;
+- creates a closed rectangular GeoJSON Polygon with empty properties;
+- runs as dry-run unless `--write` is supplied;
+- refuses repository-local output and refuses overwrite;
+- makes no network request;
+- prints no coordinates or private path;
+- marks the result as a screening footprint requiring visual review.
+
+The coverage checker:
+
+- reads a private Polygon or MultiPolygon outside Git;
+- strips GeoJSON properties before the query;
+- validates start, end, and optional event dates;
+- performs no Earth Engine request unless `--execute` is supplied;
+- queries `COPERNICUS/S1_GRD` in IW mode with VV/VH and the requested resolution;
+- returns aggregate acquisition, date, orbit-pass, relative-orbit, platform, and pre/post counts;
+- never prints coordinates, private geometry, private paths, or image identifiers;
+- can write only an aggregate JSON summary outside Git.
 
 ## Owner verification
 
 The owner ran the focused and complete unit suites on Windows with Python 3.13.5.
 
-Observed results:
+Observed results after the polygon-helper addition:
 
 ```text
-coverage-check tests: 10 passed
+polygon-helper tests: 10 passed
 C1 redaction-risk tests: 3 passed
-full unit suite: 950 passed
+full unit suite: 960 passed
 failures: 0
 warnings: 4 non-blocking
 ```
 
-The warnings were the existing NumPy entropy warnings, the existing rasterio non-georeferenced test warning, and a pytest cache-write access warning. They did not affect the passing result.
+The warnings were the existing NumPy entropy warnings, the existing rasterio non-georeferenced test warning, and the pytest cache-write access warning. They did not affect the passing result.
 
-## Implemented private polygon helper
-
-Added:
+Earlier coverage-check verification also passed:
 
 ```text
-scripts/create_depth_site_polygon.py
-tests/unit/test_depth_site_polygon.py
+coverage-check tests: 10 passed
 ```
 
-The helper:
+## First private polygon result
 
-- accepts runtime center latitude and longitude plus width and height in metres;
-- hard-codes no candidate coordinates in Git;
-- validates finite coordinate and dimension inputs;
-- supports latitudes only within a conservative non-polar range;
-- creates a closed rectangular GeoJSON Polygon with empty properties;
-- runs as dry-run unless `--write` is supplied;
-- refuses repository-local output;
-- refuses to overwrite an existing private file;
-- makes no Earth Engine or other network request;
-- prints no coordinates or private path;
-- marks the output as a screening footprint requiring local visual review.
+The owner successfully ran the polygon helper in dry-run and write modes using the public screening center and documented 50 m by 50 m site size.
 
-The public literature gives an approximate center for the first controlled site and the official university description confirms a 50 m by 50 m field near the Thomas J. Henry Tennis Center. The exact coordinate is supplied only at local runtime and is not committed.
-
-## Privacy and scientific boundaries
-
-- The geometry remains local and private.
-- Site coordinates and exact polygons are not committed.
-- A generated rectangle is a screening footprint, not a surveyed boundary.
-- The footprint must be visually reviewed before `--execute`.
-- Output is acquisition metadata only; it is not a signal or depth result.
-- Acquisition availability does not prove that the site is detectable.
-- Multiple images from one site remain one physical-site group.
-- `--execute` performs only coverage discovery. It does not export imagery or features.
-- The current app depth output remains `not_available`.
-
-## Coverage output behavior
-
-Dry-run status:
+Observed aggregate statuses:
 
 ```text
-coverage_query_dry_run_ready
+private_site_polygon_dry_run_ready
+output_written = false
+
+private_site_polygon_written
+output_written = true
+screening_footprint_requires_visual_review = true
 ```
 
-Executed status:
+The private polygon remains outside Git. Its coordinates and path were not printed by the tool.
+
+## First coverage dry-run result
+
+The owner ran the checker without `--execute` for the 2017-01-01 to 2023-01-01 window with event date 2020-03-04.
+
+Observed result:
 
 ```text
-coverage_query_completed
-```
-
-Aggregate fields may include:
-
-```text
-collection_id
-start_date
-end_date_exclusive
-event_date
-acquisition_count
-first_acquisition_date
-last_acquisition_date
-orbit_pass_counts
-relative_orbit_counts
-platform_counts
-pre_event_count
-on_event_date_count
-post_event_count
-```
-
-The output also states:
-
-```text
+status = coverage_query_dry_run_ready
+query_executed = false
+collection_id = COPERNICUS/S1_GRD
+instrument_mode = IW
+required_polarisations = VV, VH
+resolution_meters = 10
 coordinates_printed = false
 image_ids_printed = false
 private_paths_printed = false
@@ -127,121 +99,68 @@ training_started = false
 app_depth_enabled = false
 ```
 
-## Verification commands for the polygon helper
+No Earth Engine request occurred.
 
-From an updated `main` checkout:
+## Privacy and scientific boundaries
 
-```powershell
-python -m pytest tests/unit/test_depth_site_polygon.py -v
-python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
-python -m pytest tests/unit -q
-```
-
-## First polygon workflow
-
-Run the helper first without `--write` using the reviewed public center and documented 50 m by 50 m size:
-
-```powershell
-python .\scripts\create_depth_site_polygon.py `
-  --center-lat <PRIVATE_RUNTIME_VALUE> `
-  --center-lon <PRIVATE_RUNTIME_VALUE> `
-  --width-m 50 `
-  --height-m 50 `
-  --output "C:\private\candidate_site.geojson"
-```
-
-Expected status:
-
-```text
-private_site_polygon_dry_run_ready
-output_written = false
-```
-
-Only after that succeeds:
-
-```powershell
-python .\scripts\create_depth_site_polygon.py `
-  --center-lat <PRIVATE_RUNTIME_VALUE> `
-  --center-lon <PRIVATE_RUNTIME_VALUE> `
-  --width-m 50 `
-  --height-m 50 `
-  --output "C:\private\candidate_site.geojson" `
-  --write
-```
-
-Expected status:
-
-```text
-private_site_polygon_written
-output_written = true
-screening_footprint_requires_visual_review = true
-```
-
-## First private coverage dry run
-
-After visually reviewing the polygon, run without `--execute`:
-
-```powershell
-python .\scripts\check_depth_s1_coverage.py `
-  --site-geojson "C:\private\candidate_site.geojson" `
-  --start-date "2017-01-01" `
-  --end-date "2023-01-01" `
-  --event-date "2020-03-04"
-```
-
-Expected status:
-
-```text
-coverage_query_dry_run_ready
-query_executed = false
-```
-
-No Earth Engine request occurs in this mode.
+- The geometry remains local and private.
+- Site coordinates and exact polygons are not committed.
+- The generated rectangle is a screening footprint, not a surveyed boundary.
+- The footprint must be visually reviewed before `--execute`.
+- Acquisition availability is metadata only; it does not prove detectability.
+- Multiple acquisitions from one site remain one physical-site group.
+- The executed coverage query exports no imagery or features.
+- The current app depth output remains `not_available`.
 
 ## First executed query
 
-After the dry run succeeds and the private polygon is visually reviewed:
+After visual review of the private footprint, run:
 
 ```powershell
 python .\scripts\check_depth_s1_coverage.py `
-  --site-geojson "C:\private\candidate_site.geojson" `
+  --site-geojson "C:\Dev\New_GEE_PRIVATE\DEPTH_CALIBRATION\tamucc_site.geojson" `
   --start-date "2017-01-01" `
   --end-date "2023-01-01" `
   --event-date "2020-03-04" `
   --execute `
-  --output "C:\private\candidate_site_s1_coverage.json"
+  --output "C:\Dev\New_GEE_PRIVATE\DEPTH_CALIBRATION\tamucc_site_s1_coverage.json"
 ```
 
-The first candidate event date is the documented Texas A&M–Corpus Christi completion date, 2020-03-04. The separate event-date policy excludes February and March 2020 from the first signal comparison because construction activity occurred during those months.
+Expected status:
 
-## Completion gate
+```text
+coverage_query_completed
+query_executed = true
+```
 
-The coverage-check software slice is complete because the targeted tests, C1 privacy tests, and full unit suite passed.
+The Texas A&M–Corpus Christi completion date is 2020-03-04. The separate event policy excludes February and March 2020 from the later signal comparison because construction activity occurred during those months.
 
-The polygon-helper slice is complete when its focused tests, C1 privacy tests, and full unit suite pass.
+## Coverage decision after execution
 
-A passing coverage query means only that suitable Sentinel-1 acquisitions exist. It does not approve evidence import or a depth claim.
+The aggregate result must be reviewed for:
+
+```text
+nonzero pre-event acquisitions
+nonzero post-event acquisitions
+comparable orbit directions
+at least one reusable relative-orbit group across periods
+usable acquisition dates outside the construction-transition interval
+```
+
+A successful coverage query means only that suitable acquisitions exist. It does not approve evidence import, feature extraction, a model, or a depth claim.
 
 ## Checklist
 
-- [x] Confirm site-level coverage screening is the next safe software step.
-- [x] Define dry-run-first behavior.
-- [x] Define aggregate-only output.
-- [x] Keep private geometry outside Git.
-- [x] Implement the coverage checker.
-- [x] Add focused coverage-check tests.
-- [x] Recover the first event date: Texas A&M–Corpus Christi completed 2020-03-04.
-- [x] Run targeted coverage-check tests: 10 passed.
-- [x] Run C1 privacy tests: 3 passed.
-- [x] Run the full unit suite: 950 passed.
-- [x] Record verification results.
 - [x] Implement the private polygon helper.
-- [x] Add focused polygon-helper tests.
-- [ ] Run polygon-helper targeted tests.
-- [ ] Run C1 privacy tests after the polygon-helper change.
-- [ ] Run the full unit suite after the polygon-helper change.
-- [ ] Create the first private screening polygon.
-- [ ] Visually review the polygon against the public campus description.
-- [ ] Run the dry coverage check.
+- [x] Implement the aggregate Sentinel-1 coverage checker.
+- [x] Run polygon-helper tests: 10 passed.
+- [x] Run coverage-check tests: 10 passed.
+- [x] Run C1 privacy tests: 3 passed.
+- [x] Run the full unit suite after all changes: 960 passed.
+- [x] Create the first private screening polygon.
+- [x] Run the no-network coverage dry check.
+- [ ] Visually review the private footprint.
 - [ ] Execute the aggregate coverage query.
 - [ ] Record acquisition and orbit support decisions.
+- [ ] Define a separately screened background window.
+- [ ] Begin matched pre/post feature extraction only if coverage support passes.
