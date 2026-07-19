@@ -144,14 +144,14 @@ After updating `main`, rerun:
 
 ```powershell
 python .\scripts\check_depth_s1_coverage.py `
-  --site-geojson "C:\Dev\New_GEE_PRIVATE\DEPTH_CALIBRATION\tamucc_site.geojson" `
+  --site-geojson "<PRIVATE_DEPTH_ROOT>\tamucc_site.geojson" `
   --start-date "2017-01-01" `
   --end-date "2023-01-01" `
   --event-date "2020-03-04" `
   --pre-end-exclusive "2020-02-01" `
   --post-start "2020-04-01" `
   --execute `
-  --output "C:\Dev\New_GEE_PRIVATE\DEPTH_CALIBRATION\tamucc_site_s1_coverage_matched.json"
+  --output "<PRIVATE_DEPTH_ROOT>\tamucc_site_s1_coverage_matched.json"
 ```
 
 The desired decision is:
