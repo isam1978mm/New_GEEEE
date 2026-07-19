@@ -1,12 +1,10 @@
 # Texas A&M–Corpus Christi Sentinel-1 Coverage Result — 2026-07-19
 
-Status: first aggregate Earth Engine coverage query completed successfully. Coverage availability and reusable relative-orbit support across the event-date split are confirmed. Matched clean pre/post qualification requires one rerun with the conservative construction-exclusion window.
+Status: **qualified coverage passed** for a matched clean pre/post feature-screening experiment. This is acquisition-metadata readiness only. It does not establish a buried-feature signal, estimate depth, import calibration records, train a model, or enable app output.
 
-This document records acquisition metadata only. It does not report a signal difference, estimate depth, import calibration records, train a model, or enable app output.
+## Query contract
 
-## Executed query
-
-The owner executed the private aggregate checker for:
+The private aggregate checker was executed with:
 
 ```text
 collection = COPERNICUS/S1_GRD
@@ -16,165 +14,164 @@ resolution_meters = 10
 start_date = 2017-01-01
 end_date_exclusive = 2023-01-01
 event_date = 2020-03-04
+clean_pre_end_exclusive = 2020-02-01
+clean_post_start = 2020-04-01
 ```
 
-The private screening polygon and output remained outside Git. Coordinates, private paths, and image identifiers were not printed.
+The private screening polygon and aggregate output remained outside Git. Coordinates, private paths, geometry, and image identifiers were not printed.
 
-## Observed aggregate result
+## Software verification
+
+Before the qualified query, the owner ran:
+
+```text
+hardened coverage-check tests = 12 passed
+C1 redaction-risk tests = 3 passed
+full unit suite = 962 passed
+failures = 0
+warnings = 4 non-blocking
+```
+
+The warnings were the existing NumPy entropy warnings, the existing rasterio non-georeferenced test warning, and the pytest cache-write warning.
+
+## Qualified aggregate result
 
 ```text
 status = coverage_query_completed
 query_executed = true
+analysis_window_mode = conservative_pre_transition_post
+coverage_decision = coverage_ready_for_matched_pre_post_feature_screening
+pre_post_relative_orbit_support = true
+
 acquisition_count = 169
 first_acquisition_date = 2017-01-06
 last_acquisition_date = 2022-12-30
-pre_event_count = 85
-on_event_date_count = 0
-post_event_count = 84
 
+clean_pre_count = 82
+transition_excluded_count = 5
+clean_post_count = 82
+```
+
+### Clean pre-construction period
+
+```text
 orbit_pass_counts:
-  ASCENDING = 167
+  ASCENDING = 80
   DESCENDING = 2
 
 relative_orbit_counts:
-  107 = 167
+  107 = 80
   143 = 1
   41 = 1
 
 platform_counts:
-  A = 168
+  A = 81
   B = 1
 ```
 
-Privacy and release flags remained:
+### Excluded construction-transition period
 
 ```text
-coordinates_printed = false
-image_ids_printed = false
-private_paths_printed = false
-scientific_validation_run = false
-training_started = false
-app_depth_enabled = false
-```
-
-## What this establishes
-
-The site has substantial Sentinel-1 IW VV/VH coverage across both sides of the documented completion date.
-
-The overall metadata is strongly dominated by:
-
-```text
+observation_count = 5
 orbit_pass = ASCENDING
 relative_orbit = 107
 platform = A
 ```
 
-Relative orbit 107 is mathematically guaranteed to occur in both event-date periods:
+These five observations remain excluded from the first signal comparison.
+
+### Clean post-construction period
 
 ```text
-all non-107 acquisitions = 2
-pre-event acquisitions = 85
-post-event acquisitions = 84
+orbit_pass_counts:
+  ASCENDING = 82
+
+relative_orbit_counts:
+  107 = 82
+
+platform_counts:
+  A = 82
 ```
 
-Even if both non-107 acquisitions fell in the same period, relative orbit 107 would still have at least:
+### Reusable acquisition geometry
 
 ```text
-pre-event orbit-107 count >= 83
-post-event orbit-107 count >= 82
+reusable_orbit_passes = ASCENDING
+reusable_relative_orbits = 107
+reusable_platforms = A
 ```
 
-Therefore:
+The primary matched experiment can therefore use:
 
 ```text
-event_date_split_reusable_relative_orbit = 107
-event_date_split_relative_orbit_support = confirmed
+platform = Sentinel-1A
+orbit_pass = ASCENDING
+relative_orbit = 107
+clean_pre_available = 80
+clean_post_available = 82
 ```
 
-This is a logical consequence of the reported aggregate counts, not an assumed distribution.
-
-## What still requires qualification
-
-The event-date split is not the final scientific comparison window.
-
-The first summary treated observations after 2020-03-04 as post-event even when they occurred during March 2020. The documented construction policy excludes all February and March 2020 observations because excavation, placement, grading, and restoration may have occurred during that interval.
-
-The final coverage screen must use:
+## Decision
 
 ```text
-clean_pre = dates before 2020-02-01
-transition_excluded = 2020-02-01 through 2020-03-31
-clean_post = dates on or after 2020-04-01
+site_coverage_available = true
+clean_pre_post_coverage_available = true
+matched_relative_orbit_support = true
+selected_relative_orbit_candidate = 107
+selected_orbit_pass_candidate = ASCENDING
+selected_platform_candidate = A
+coverage_ready_for_feature_screening = true
+scientific_signal_validation_run = false
+depth_model_training_started = false
+app_depth_enabled = false
 ```
 
-The aggregate totals do not provide the exact relative-orbit distribution after removing the transition observations. A conservative rerun is therefore still required.
+The unequal 80-versus-82 selected-orbit counts do not prevent a matched experiment. The feature workflow must use only acquisition dates available for both the site and a separately screened background window, and must keep period balancing explicit.
 
-## Checker hardening
+## What this establishes
 
-The checker now supports:
+The controlled site has sufficient Sentinel-1 acquisition support to continue to a matched site-versus-background pre/post feature-screening experiment using the same platform, orbit direction, and relative orbit.
+
+This removes acquisition availability as the current stopping point.
+
+## What this does not establish
+
+This result does not show that Sentinel-1 detected the buried targets. It does not distinguish burial effects from excavation, soil disturbance, vegetation, moisture, surface change, or nearby infrastructure.
+
+The next experiment must therefore include:
+
+1. a separately reviewed background polygon;
+2. exact acquisition-time intersection between site and background;
+3. the same platform, orbit pass, and relative orbit;
+4. exclusion of the February–March 2020 transition period;
+5. approved SAR features only;
+6. explicit confounder and stability checks;
+7. no numerical depth claim.
+
+## Next execution slice
 
 ```text
---pre-end-exclusive
---post-start
+create and visually review background candidate
+→ verify background Sentinel-1 coverage
+→ intersect exact acquisition timestamps
+→ freeze matched pre and post acquisition manifests privately
+→ extract approved site and background features
+→ compare difference-in-differences and stability diagnostics
 ```
-
-It reports clean pre, transition, and clean post counts by:
-
-```text
-orbit direction
-relative orbit
-platform
-```
-
-It also reports:
-
-```text
-reusable_relative_orbits
-reusable_orbit_passes
-reusable_platforms
-pre_post_relative_orbit_support
-coverage_decision
-```
-
-The conservative coverage decision becomes ready only when at least one relative orbit has nonzero observations in both clean periods.
-
-## Required rerun
-
-After updating `main`, rerun:
-
-```powershell
-python .\scripts\check_depth_s1_coverage.py `
-  --site-geojson "<PRIVATE_DEPTH_ROOT>\tamucc_site.geojson" `
-  --start-date "2017-01-01" `
-  --end-date "2023-01-01" `
-  --event-date "2020-03-04" `
-  --pre-end-exclusive "2020-02-01" `
-  --post-start "2020-04-01" `
-  --execute `
-  --output "<PRIVATE_DEPTH_ROOT>\tamucc_site_s1_coverage_matched.json"
-```
-
-The desired decision is:
-
-```text
-coverage_decision = coverage_ready_for_matched_pre_post_feature_screening
-pre_post_relative_orbit_support = true
-```
-
-Relative orbit 107 is the expected reusable orbit based on the event-date result, but the clean-window decision must come from the rerun output.
 
 ## Checklist
 
 - [x] Create the private site screening polygon.
-- [x] Run the no-network dry check.
-- [x] Execute the first aggregate Earth Engine coverage query.
-- [x] Confirm nonzero overall pre-event and post-event acquisitions.
-- [x] Prove relative orbit 107 exists in both event-date periods from aggregate counts.
-- [x] Preserve aggregate-only private output.
-- [x] Harden the checker for conservative clean pre/transition/clean post periods.
-- [x] Add reusable-relative-orbit qualification logic.
-- [ ] Run the hardened checker tests.
-- [ ] Rerun the private coverage query with the construction interval excluded.
-- [ ] Confirm at least one reusable relative orbit across clean periods.
-- [ ] Define a separately screened background polygon.
-- [ ] Begin matched pre/post feature extraction only if the qualified coverage decision passes.
+- [x] Run the no-network coverage dry check.
+- [x] Execute the aggregate Earth Engine coverage query.
+- [x] Exclude the February–March 2020 construction interval.
+- [x] Confirm 82 clean pre and 82 clean post observations.
+- [x] Confirm reusable ascending relative orbit 107 on platform A.
+- [x] Pass the qualified coverage decision.
+- [x] Preserve aggregate-only console output.
+- [ ] Define and visually review a separate background polygon.
+- [ ] Verify background coverage using the same query contract.
+- [ ] Freeze exact matched acquisition timestamps privately.
+- [ ] Extract approved matched site/background features.
+- [ ] Run a confounder-aware feature-screening experiment.
+- [ ] Keep app depth output unavailable unless later validation gates pass.
