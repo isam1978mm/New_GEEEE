@@ -69,6 +69,20 @@ def test_invalid_or_reversed_date_windows_are_rejected() -> None:
         coverage.validate_date_window("2021-01-01", "2020-01-01")
     with pytest.raises(coverage.DepthS1CoverageError, match="inside"):
         coverage.validate_date_window("2020-01-01", "2021-01-01", "2021-01-01")
+    with pytest.raises(coverage.DepthS1CoverageError, match="supplied together"):
+        coverage.validate_date_window(
+            "2020-01-01",
+            "2021-01-01",
+            pre_end_exclusive="2020-02-01",
+        )
+    with pytest.raises(coverage.DepthS1CoverageError, match="transition interval"):
+        coverage.validate_date_window(
+            "2020-01-01",
+            "2021-01-01",
+            event_date="2020-05-01",
+            pre_end_exclusive="2020-02-01",
+            post_start="2020-04-01",
+        )
 
 
 def test_dry_run_performs_no_query_and_prints_no_private_values(tmp_path: Path) -> None:
@@ -83,6 +97,8 @@ def test_dry_run_performs_no_query_and_prints_no_private_values(tmp_path: Path) 
         start_date="2019-01-01",
         end_date="2021-01-01",
         event_date="2020-02-01",
+        pre_end_exclusive="2020-01-01",
+        post_start="2020-03-01",
         execute=False,
         query_fn=forbidden_query,
     )
@@ -90,6 +106,7 @@ def test_dry_run_performs_no_query_and_prints_no_private_values(tmp_path: Path) 
 
     assert result["status"] == "coverage_query_dry_run_ready"
     assert result["query_executed"] is False
+    assert result["analysis_window_mode"] == "conservative_pre_transition_post"
     assert result["coordinates_printed"] is False
     assert result["image_ids_printed"] is False
     assert SYNTHETIC_COORDINATE_TEXT not in rendered
@@ -135,7 +152,71 @@ def test_execute_returns_aggregate_orbit_and_pre_post_counts(tmp_path: Path) -> 
     assert result["pre_event_count"] == 1
     assert result["on_event_date_count"] == 1
     assert result["post_event_count"] == 1
+    assert result["coverage_decision"] == "coverage_metadata_collected_event_split_only"
+    assert result["pre_post_relative_orbit_support"] is False
     assert SYNTHETIC_COORDINATE_TEXT not in json.dumps(result)
+
+
+def test_conservative_windows_report_reusable_relative_orbit(tmp_path: Path) -> None:
+    path = tmp_path / "site.geojson"
+    _write_geojson(path)
+
+    def fake_query(**_: object) -> list[dict[str, object]]:
+        return [
+            {"time_start_ms": _ms("2019-12-01"), "orbit_pass": "ASCENDING", "relative_orbit": 107, "platform": "A"},
+            {"time_start_ms": _ms("2020-02-15"), "orbit_pass": "ASCENDING", "relative_orbit": 107, "platform": "A"},
+            {"time_start_ms": _ms("2020-04-10"), "orbit_pass": "ASCENDING", "relative_orbit": 107, "platform": "A"},
+            {"time_start_ms": _ms("2020-05-01"), "orbit_pass": "DESCENDING", "relative_orbit": 41, "platform": "A"},
+        ]
+
+    result = coverage.run_coverage_check(
+        site_geojson=path,
+        start_date="2019-01-01",
+        end_date="2021-01-01",
+        event_date="2020-03-04",
+        pre_end_exclusive="2020-02-01",
+        post_start="2020-04-01",
+        execute=True,
+        query_fn=fake_query,
+    )
+
+    assert result["pre_analysis_count"] == 1
+    assert result["transition_count"] == 1
+    assert result["post_analysis_count"] == 2
+    assert result["pre_analysis_relative_orbit_counts"] == {"107": 1}
+    assert result["transition_relative_orbit_counts"] == {"107": 1}
+    assert result["post_analysis_relative_orbit_counts"] == {"107": 1, "41": 1}
+    assert result["reusable_relative_orbits"] == ["107"]
+    assert result["reusable_orbit_passes"] == ["ASCENDING"]
+    assert result["reusable_platforms"] == ["A"]
+    assert result["pre_post_relative_orbit_support"] is True
+    assert result["coverage_decision"] == "coverage_ready_for_matched_pre_post_feature_screening"
+
+
+def test_conservative_windows_refuse_nonmatching_relative_orbits(tmp_path: Path) -> None:
+    path = tmp_path / "site.geojson"
+    _write_geojson(path)
+
+    def fake_query(**_: object) -> list[dict[str, object]]:
+        return [
+            {"time_start_ms": _ms("2019-12-01"), "orbit_pass": "ASCENDING", "relative_orbit": 107, "platform": "A"},
+            {"time_start_ms": _ms("2020-04-10"), "orbit_pass": "ASCENDING", "relative_orbit": 41, "platform": "A"},
+        ]
+
+    result = coverage.run_coverage_check(
+        site_geojson=path,
+        start_date="2019-01-01",
+        end_date="2021-01-01",
+        event_date="2020-03-04",
+        pre_end_exclusive="2020-02-01",
+        post_start="2020-04-01",
+        execute=True,
+        query_fn=fake_query,
+    )
+
+    assert result["reusable_relative_orbits"] == []
+    assert result["pre_post_relative_orbit_support"] is False
+    assert result["coverage_decision"] == "coverage_not_ready_no_reusable_relative_orbit"
 
 
 def test_output_path_inside_repository_is_rejected(tmp_path: Path) -> None:
@@ -165,6 +246,7 @@ def test_aggregate_output_can_be_written_outside_repository(tmp_path: Path) -> N
 
     written = json.loads(output_path.read_text(encoding="utf-8"))
     assert result["output_written"] is True
+    assert written["output_written"] is True
     assert written["status"] == "coverage_query_dry_run_ready"
     assert SYNTHETIC_COORDINATE_TEXT not in json.dumps(written)
     assert str(geometry_path) not in json.dumps(written)
