@@ -74,19 +74,14 @@ def test_repository_local_geometry_is_rejected(tmp_path: Path) -> None:
 
 
 def test_identical_site_and_background_geometry_is_rejected(tmp_path: Path) -> None:
-    site = tmp_path / "site.geojson"
-    background = tmp_path / "background.geojson"
+    kwargs = _base_kwargs(tmp_path)
+    site = Path(kwargs["site_geojson"])
+    background = Path(kwargs["background_geojson"])
     _write_geojson(site)
     _write_geojson(background)
 
     with pytest.raises(matcher.DepthS1BackgroundMatchError, match="must not be identical"):
-        matcher.run_site_background_match(
-            **{
-                **_base_kwargs(tmp_path),
-                "site_geojson": site,
-                "background_geojson": background,
-            }
-        )
+        matcher.run_site_background_match(**kwargs)
 
 
 def test_invalid_clean_windows_are_rejected(tmp_path: Path) -> None:
