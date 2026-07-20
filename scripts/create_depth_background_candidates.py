@@ -1,8 +1,8 @@
 """Create private non-overlapping background candidates around a site polygon.
 
-The default action is a dry run. Use --write to create four private GeoJSON
-files outside Git. The command makes no network request and never prints
-coordinates, geometry, or private paths.
+The default action is a dry run. Use --write to create private GeoJSON files
+outside Git. The command makes no network request and never prints coordinates,
+geometry, or private paths.
 """
 from __future__ import annotations
 
@@ -17,7 +17,9 @@ import create_depth_site_polygon as site_polygon
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CANDIDATE_NAMES = ("north", "east", "south", "west")
+CARDINAL_CANDIDATE_NAMES = ("north", "east", "south", "west")
+DIAGONAL_CANDIDATE_NAMES = ("northeast", "southeast", "southwest", "northwest")
+CANDIDATE_NAMES = CARDINAL_CANDIDATE_NAMES
 
 
 class DepthBackgroundCandidateError(ValueError):
@@ -137,6 +139,12 @@ def _validate_edge_gap(edge_gap_meters: float) -> float:
     return gap
 
 
+def _candidate_names(include_diagonals: bool) -> tuple[str, ...]:
+    if include_diagonals:
+        return CARDINAL_CANDIDATE_NAMES + DIAGONAL_CANDIDATE_NAMES
+    return CARDINAL_CANDIDATE_NAMES
+
+
 def _offset_center(
     *,
     center_latitude: float,
@@ -184,6 +192,7 @@ def build_background_candidates(
     *,
     site_rectangle: dict[str, Any],
     edge_gap_meters: float,
+    include_diagonals: bool = False,
 ) -> dict[str, dict[str, Any]]:
     gap = _validate_edge_gap(edge_gap_meters)
     width = float(site_rectangle["width_meters"])
@@ -191,16 +200,23 @@ def build_background_candidates(
     center_latitude = float(site_rectangle["center_latitude"])
     center_longitude = float(site_rectangle["center_longitude"])
 
+    north_offset = height + gap
+    east_offset = width + gap
     offsets = {
-        "north": {"north_meters": height + gap, "east_meters": 0.0},
-        "east": {"north_meters": 0.0, "east_meters": width + gap},
-        "south": {"north_meters": -(height + gap), "east_meters": 0.0},
-        "west": {"north_meters": 0.0, "east_meters": -(width + gap)},
+        "north": {"north_meters": north_offset, "east_meters": 0.0},
+        "east": {"north_meters": 0.0, "east_meters": east_offset},
+        "south": {"north_meters": -north_offset, "east_meters": 0.0},
+        "west": {"north_meters": 0.0, "east_meters": -east_offset},
+        "northeast": {"north_meters": north_offset, "east_meters": east_offset},
+        "southeast": {"north_meters": -north_offset, "east_meters": east_offset},
+        "southwest": {"north_meters": -north_offset, "east_meters": -east_offset},
+        "northwest": {"north_meters": north_offset, "east_meters": -east_offset},
     }
 
+    names = _candidate_names(include_diagonals)
     candidates: dict[str, dict[str, Any]] = {}
     site_bbox = tuple(site_rectangle["bbox"])
-    for name in CANDIDATE_NAMES:
+    for name in names:
         latitude, longitude = _offset_center(
             center_latitude=center_latitude,
             center_longitude=center_longitude,
@@ -222,11 +238,8 @@ def build_background_candidates(
     return candidates
 
 
-def _candidate_paths(output_directory: Path) -> dict[str, Path]:
-    return {
-        name: output_directory / f"background_{name}.geojson"
-        for name in CANDIDATE_NAMES
-    }
+def _candidate_paths(output_directory: Path, names: tuple[str, ...]) -> dict[str, Path]:
+    return {name: output_directory / f"background_{name}.geojson" for name in names}
 
 
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -246,17 +259,20 @@ def create_private_background_candidates(
     site_geojson: Path,
     output_directory: Path,
     edge_gap_meters: float,
+    include_diagonals: bool = False,
     write: bool = False,
 ) -> dict[str, Any]:
     output_directory = Path(output_directory)
     _require_outside_repo(output_directory, "background output directory")
     site_rectangle = load_private_site_rectangle(site_geojson)
     gap = _validate_edge_gap(edge_gap_meters)
+    names = _candidate_names(include_diagonals)
     candidates = build_background_candidates(
         site_rectangle=site_rectangle,
         edge_gap_meters=gap,
+        include_diagonals=include_diagonals,
     )
-    candidate_paths = _candidate_paths(output_directory)
+    candidate_paths = _candidate_paths(output_directory, names)
 
     existing = [path for path in candidate_paths.values() if path.exists()]
     if write and existing:
@@ -269,7 +285,8 @@ def create_private_background_candidates(
             else "private_background_candidates_dry_run_ready"
         ),
         "candidate_count": len(candidates),
-        "candidate_directions": list(CANDIDATE_NAMES),
+        "candidate_directions": list(names),
+        "diagonal_candidates_included": bool(include_diagonals),
         "edge_gap_meters": gap,
         "candidate_width_meters": round(float(site_rectangle["width_meters"]), 6),
         "candidate_height_meters": round(float(site_rectangle["height_meters"]), 6),
@@ -290,7 +307,7 @@ def create_private_background_candidates(
         output_directory.mkdir(parents=True, exist_ok=True)
         written: list[Path] = []
         try:
-            for name in CANDIDATE_NAMES:
+            for name in names:
                 path = candidate_paths[name]
                 _atomic_write_json(path, candidates[name])
                 written.append(path)
@@ -307,11 +324,16 @@ def create_private_background_candidates(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Dry-run or write four private background-screening GeoJSON candidates."
+        description="Dry-run or write private background-screening GeoJSON candidates."
     )
     parser.add_argument("--site-geojson", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--edge-gap-m", type=float, required=True)
+    parser.add_argument(
+        "--include-diagonals",
+        action="store_true",
+        help="Create northeast, southeast, southwest, and northwest candidates in addition to the four cardinal candidates.",
+    )
     parser.add_argument(
         "--write",
         action="store_true",
@@ -327,6 +349,7 @@ def main() -> int:
             site_geojson=args.site_geojson,
             output_directory=args.output_dir,
             edge_gap_meters=args.edge_gap_m,
+            include_diagonals=args.include_diagonals,
             write=args.write,
         )
     except DepthBackgroundCandidateError as exc:
