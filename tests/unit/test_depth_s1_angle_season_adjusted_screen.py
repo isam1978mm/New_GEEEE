@@ -18,7 +18,11 @@ PRIVATE_ID = "S1A_PRIVATE_CONTROLLED_SCREEN_ID"
 PRIVATE_COORDINATE_TEXT = "-97.1234"
 
 
-def _feature_stats(median_by_feature: dict[str, float], *, count: int = 25) -> dict[str, float | int | None]:
+def _feature_stats(
+    median_by_feature: dict[str, float],
+    *,
+    count: int = 25,
+) -> dict[str, float | int | None]:
     stats: dict[str, float | int | None] = {}
     for feature in extractor.FEATURE_NAMES:
         median = median_by_feature[feature]
@@ -88,7 +92,12 @@ def _payload(*, strong_shift: bool = False, angle_only_shift: bool = False) -> d
     rows: list[dict[str, object]] = []
     counter = 0
     for month in range(1, 13):
-        seasonal = math.sin(2.0 * math.pi * (month - 1) / 12.0)
+        radians = 2.0 * math.pi * (month - 1) / 12.0
+        seasonal = math.sin(radians)
+        # Keep a small deterministic second harmonic outside the fitted sine/cosine
+        # basis. This prevents the synthetic fixture from collapsing to only two
+        # tied residual values, while remaining balanced between pre and post.
+        second_harmonic = 0.2 * math.sin(2.0 * radians)
         if angle_only_shift:
             pre_angles = (-1.0, -0.5)
             post_angles = (0.5, 1.0)
@@ -105,7 +114,7 @@ def _payload(*, strong_shift: bool = False, angle_only_shift: bool = False) -> d
                 post_shift = 5.0 if strong_shift and period == "post" else 0.0
                 deltas = {
                     "incidence_deg": incidence,
-                    "vv_db": 2.0 * incidence + seasonal + post_shift,
+                    "vv_db": 2.0 * incidence + seasonal + second_harmonic + post_shift,
                     "vh_db": -1.5 * incidence + 0.5 * seasonal,
                     "vv_minus_vh_db": 0.75 * incidence - seasonal,
                     "vh_to_vv_linear_ratio": 0.1 * incidence + 0.05 * seasonal,
