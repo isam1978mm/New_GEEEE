@@ -128,6 +128,7 @@ def test_dry_run_writes_nothing_and_leaks_no_private_values(tmp_path: Path) -> N
 
     assert result["status"] == "private_background_candidates_dry_run_ready"
     assert result["candidate_count"] == 4
+    assert result["diagonal_candidates_included"] is False
     assert result["output_written"] is False
     assert not output_directory.exists()
     assert result["coordinates_printed"] is False
@@ -236,3 +237,50 @@ def test_result_never_contains_coordinates_geometry_or_private_path(tmp_path: Pa
     assert result["private_paths_printed"] is False
     assert SYNTHETIC_COORDINATE_TEXT not in rendered
     assert str(tmp_path) not in rendered
+
+
+def test_diagonal_mode_reports_eight_candidates_without_writing(tmp_path: Path) -> None:
+    site = tmp_path / "site.geojson"
+    output_directory = tmp_path / "backgrounds"
+    _write_rectangle(site)
+
+    result = candidates.create_private_background_candidates(
+        site_geojson=site,
+        output_directory=output_directory,
+        edge_gap_meters=300.0,
+        include_diagonals=True,
+        write=False,
+    )
+
+    assert result["candidate_count"] == 8
+    assert result["diagonal_candidates_included"] is True
+    assert result["candidate_directions"] == list(
+        candidates.CARDINAL_CANDIDATE_NAMES + candidates.DIAGONAL_CANDIDATE_NAMES
+    )
+    assert result["output_written"] is False
+    assert not output_directory.exists()
+
+
+def test_diagonal_mode_writes_eight_non_overlapping_private_files(tmp_path: Path) -> None:
+    site = tmp_path / "site.geojson"
+    output_directory = tmp_path / "backgrounds"
+    _write_rectangle(site)
+    site_rectangle = candidates.load_private_site_rectangle(site)
+
+    result = candidates.create_private_background_candidates(
+        site_geojson=site,
+        output_directory=output_directory,
+        edge_gap_meters=300.0,
+        include_diagonals=True,
+        write=True,
+    )
+
+    names = candidates.CARDINAL_CANDIDATE_NAMES + candidates.DIAGONAL_CANDIDATE_NAMES
+    assert result["candidate_count"] == 8
+    assert result["output_written"] is True
+    site_bbox = tuple(site_rectangle["bbox"])
+    for direction in names:
+        path = output_directory / f"background_{direction}.geojson"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        assert candidates._bboxes_overlap(site_bbox, _bbox(payload)) is False
+        assert payload["properties"] == {}
