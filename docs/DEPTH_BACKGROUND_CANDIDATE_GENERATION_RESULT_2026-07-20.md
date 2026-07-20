@@ -1,12 +1,12 @@
 # Depth Background Candidate Generation Result — 2026-07-20
 
-Status: private candidate generation completed successfully. Visual review and candidate selection remain pending.
+Status: second private candidate generation completed successfully. The first four candidates were visually rejected; visual review of the new eight-candidate set remains pending.
 
 This result records software and workflow status only. It does not approve any candidate as a valid background, create a confirmed no-target record, calculate a signal difference, estimate depth, train a model, import calibration rows, or enable app depth output.
 
 ## Software verification
 
-The owner ran the focused and complete unit suites on Windows with Python 3.13.5.
+The owner ran the focused and complete unit suites on Windows with Python 3.13.5 for the original four-direction generator.
 
 Observed results:
 
@@ -18,9 +18,17 @@ failures = 0
 warnings = 4 non-blocking
 ```
 
-The warnings were the existing NumPy entropy warnings, the existing rasterio non-georeferenced test warning, and the pytest cache-write warning.
+After the generator was extended with optional diagonal directions, the owner ran the focused generator suite again:
 
-## Private generation result
+```text
+background candidate tests = 13 passed
+failures = 0
+warning = pytest cache-write warning only
+```
+
+The C1 privacy test and full unit suite have not yet been rerun after the diagonal-mode extension.
+
+## First private generation result
 
 The owner ran the candidate generator first in dry-run mode and then in explicit write mode.
 
@@ -54,6 +62,40 @@ comparison_window_only = true
 confirmed_no_target_record = false
 ```
 
+## First visual review result
+
+The first four candidates were displayed over local satellite imagery and rejected:
+
+```text
+north = rejected
+ east = rejected
+south = rejected
+ west = rejected
+```
+
+Reasons included industrial or treatment infrastructure, buildings or paved areas, roads, residential development, and roundabout or transport surfaces. None was accepted as a reasonable open-ground comparison window.
+
+## Second private generation result
+
+The owner generated a second set using the extended eight-direction mode.
+
+Observed result:
+
+```text
+status = private_background_candidates_written
+candidate_count = 8
+candidate_directions = north, east, south, west, northeast, southeast, southwest, northwest
+candidate_width_meters = 50
+candidate_height_meters = 50
+edge_gap_meters = 300
+diagonal_candidates_included = true
+output_written = true
+network_request_made = false
+visual_review_required = true
+comparison_window_only = true
+confirmed_no_target_record = false
+```
+
 Privacy and release flags remained:
 
 ```text
@@ -69,8 +111,10 @@ app_depth_enabled = false
 
 ```text
 candidate_generation_software_verified = true
-private_candidate_files_created = true
-candidate_count = 4
+first_private_candidate_set_created = true
+first_private_candidate_set_rejected = true
+second_private_candidate_set_created = true
+second_candidate_count = 8
 background_selected = false
 background_approved = false
 site_background_match_started = false
@@ -78,7 +122,7 @@ scientific_signal_validation_run = false
 app_depth_enabled = false
 ```
 
-The four generated rectangles are screening candidates only. Their 100-metre edge gap is a workflow spacing choice, not a scientific approval threshold.
+The 300-metre edge gap is a workflow spacing choice, not a scientific approval threshold.
 
 ## Manual review gate
 
@@ -95,24 +139,26 @@ The review must use the local private candidate files. Coordinates and geometry 
 ## Next permitted action
 
 ```text
-open the private site polygon and all four candidates in a local map viewer
-→ compare north, east, south, and west candidates against imagery
-→ choose one candidate or reject all four
-→ record only the selected direction in repository documentation
+load the eight second-set candidates over local satellite imagery
+→ compare them against the site polygon
+→ select one candidate or reject all eight
+→ only after selection, create the canonical private background file
 → run the no-network site-background matcher dry run
 ```
 
-If all four candidates are unsuitable, generate a new set using a different explicit edge gap rather than approving a poor background.
-
 ## Checklist
 
-- [x] Run focused candidate-generator tests: 11 passed.
-- [x] Run C1 privacy tests: 3 passed.
-- [x] Run full unit suite: 982 passed.
-- [x] Run private dry generation check.
-- [x] Create four private candidate files.
-- [x] Preserve aggregate-only console output.
-- [ ] Visually review all four private candidates.
-- [ ] Select one candidate or reject all four.
+- [x] Run original focused candidate-generator tests: 11 passed.
+- [x] Run original C1 privacy tests: 3 passed.
+- [x] Run original full unit suite: 982 passed.
+- [x] Create first four private candidate files.
+- [x] Visually review and reject the first four candidates.
+- [x] Extend the generator with optional diagonal directions.
+- [x] Run extended focused generator tests: 13 passed.
+- [x] Create the second eight-candidate private set.
+- [ ] Rerun C1 privacy tests after the extension.
+- [ ] Rerun the full unit suite after the extension.
+- [ ] Visually review the second eight-candidate set.
+- [ ] Select one candidate or reject all eight.
 - [ ] Run the no-network site-background match dry run.
 - [ ] Execute exact acquisition matching only after explicit background review.
