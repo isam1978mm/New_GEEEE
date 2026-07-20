@@ -36,6 +36,124 @@ def _chunk_rows(rows: list[dict[str, str]], batch_size: int) -> list[list[dict[s
     return [rows[index : index + batch_size] for index in range(0, len(rows), batch_size)]
 
 
+def build_percentile_count_reducer(ee: Any) -> Any:
+    """Build the five-band summary reducer with the Earth Engine API contract.
+
+    ``Reducer.combine`` accepts ``outputPrefix`` before ``sharedInputs``. Use
+    explicit keyword arguments so a boolean can never be misrouted into the
+    string prefix parameter.
+    """
+
+    return ee.Reducer.percentile(
+        [25, 50, 75],
+        ["p25", "median", "p75"],
+    ).combine(
+        reducer2=ee.Reducer.count(),
+        outputPrefix="",
+        sharedInputs=True,
+    )
+
+
+def query_exact_s1_feature_summaries_fixed(
+    *,
+    manifest_rows: list[dict[str, str]],
+    site_geometry_payload: dict[str, Any],
+    background_geometry_payload: dict[str, Any],
+    resolution_meters: int,
+) -> list[dict[str, Any]]:
+    """Query one batch using the corrected reducer-combine call."""
+
+    try:
+        import ee
+
+        from app.config import get_settings
+        from app.services.ee_session import initialize_ee_session
+
+        initialize_ee_session(get_settings())
+        site_geometry = extractor._as_ee_geometry(ee, site_geometry_payload)
+        background_geometry = extractor._as_ee_geometry(ee, background_geometry_payload)
+        reducer = build_percentile_count_reducer(ee)
+
+        features = []
+        for row in manifest_rows:
+            image = ee.Image(
+                f"{extractor.S1_COLLECTION_ID}/{row['image_id']}"
+            ).select(["VV", "VH", "angle"])
+            mask = (
+                image.select("VV").gt(-35)
+                .And(image.select("VH").gt(-42))
+                .And(image.select("angle").gt(29))
+                .And(image.select("angle").lt(46))
+            )
+            image = image.updateMask(mask)
+            vv = image.select("VV").rename("vv_db")
+            vh = image.select("VH").rename("vh_db")
+            angle = image.select("angle").rename("incidence_deg")
+            difference = vv.subtract(vh).rename("vv_minus_vh_db")
+            ratio = ee.Image(10).pow(
+                vh.subtract(vv).divide(10.0)
+            ).rename("vh_to_vv_linear_ratio")
+            feature_image = ee.Image.cat(
+                [vv, vh, angle, difference, ratio]
+            ).toFloat()
+            site_stats = feature_image.reduceRegion(
+                reducer=reducer,
+                geometry=site_geometry,
+                scale=resolution_meters,
+                maxPixels=100000,
+                bestEffort=False,
+                tileScale=2,
+            )
+            background_stats = feature_image.reduceRegion(
+                reducer=reducer,
+                geometry=background_geometry,
+                scale=resolution_meters,
+                maxPixels=100000,
+                bestEffort=False,
+                tileScale=2,
+            )
+            features.append(
+                ee.Feature(
+                    None,
+                    {
+                        "image_id": row["image_id"],
+                        "timestamp": row["timestamp"],
+                        "site": site_stats,
+                        "background": background_stats,
+                    },
+                )
+            )
+
+        response = ee.FeatureCollection(features).getInfo()
+    except Exception as exc:
+        raise extractor.DepthS1MatchedFeatureError(
+            "Earth Engine matched feature query failed after reducer setup"
+        ) from exc
+
+    returned = response.get("features") if isinstance(response, dict) else None
+    if not isinstance(returned, list):
+        raise extractor.DepthS1MatchedFeatureError(
+            "Earth Engine matched feature query returned an invalid response"
+        )
+
+    rows: list[dict[str, Any]] = []
+    for feature in returned:
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        if not isinstance(properties, dict):
+            raise extractor.DepthS1MatchedFeatureError(
+                "Earth Engine matched feature query returned an invalid row"
+            )
+        rows.append(
+            {
+                "image_id": properties.get("image_id"),
+                "timestamp": properties.get("timestamp"),
+                "site": properties.get("site"),
+                "background": properties.get("background"),
+            }
+        )
+    return rows
+
+
 def query_exact_s1_feature_summaries_batched(
     *,
     manifest_rows: list[dict[str, str]],
@@ -52,7 +170,7 @@ def query_exact_s1_feature_summaries_batched(
         return []
 
     batches = _chunk_rows(manifest_rows, size)
-    active_query = single_batch_query_fn or extractor.query_exact_s1_feature_summaries
+    active_query = single_batch_query_fn or query_exact_s1_feature_summaries_fixed
     combined: list[dict[str, Any]] = []
 
     for batch_index, batch in enumerate(batches, start=1):
@@ -113,6 +231,7 @@ def run_batched_matched_feature_extraction(
             "batch_size": size,
             "planned_batch_count": planned_batch_count,
             "executed_batch_count": planned_batch_count if result["query_executed"] else 0,
+            "reducer_combine_argument_fix": True,
         }
     )
     return result
@@ -150,6 +269,7 @@ def main() -> int:
                     "error": str(exc),
                     "batching_enabled": True,
                     "batch_size": args.batch_size,
+                    "reducer_combine_argument_fix": True,
                     "coordinates_printed": False,
                     "geometry_printed": False,
                     "private_paths_printed": False,
