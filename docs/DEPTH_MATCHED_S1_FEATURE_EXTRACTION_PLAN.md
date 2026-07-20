@@ -1,6 +1,6 @@
 # Depth Matched Sentinel-1 Feature Extraction Plan
 
-Status: implementation planned on `main` after the exact site–background acquisition-match gate passed.
+Status: implementation complete on `main`; local software verification and the first private extraction are pending.
 
 ## Purpose
 
@@ -9,6 +9,15 @@ The reviewed controlled site and south-background polygon have 80 exact shared c
 The next slice extracts the same neutral Sentinel-1 GRD summary features from the site and background for every frozen image. This is an exploratory feasibility dataset only.
 
 This slice does not estimate depth, classify targets, prove a buried-feature effect, train a model, import calibration records, expose coordinates or image identities in console output, or enable app depth output.
+
+## Implemented utility
+
+```text
+scripts/extract_depth_s1_matched_features.py
+tests/unit/test_depth_s1_matched_feature_extract.py
+```
+
+The utility runs as a no-network dry run by default. `--execute` requires a private detailed output outside Git.
 
 ## Inputs
 
@@ -35,7 +44,7 @@ Only `matched_pre` and `matched_post` are analyzed. The transition rows are coun
 
 ## Exact acquisition contract
 
-The extractor must preserve the frozen manifest contract:
+The extractor preserves the frozen manifest contract:
 
 ```text
 collection = COPERNICUS/S1_GRD
@@ -150,22 +159,23 @@ matched_s1_feature_extraction_incomplete
 
 A complete extraction means only that the private per-image feature table was produced. It does not mean the site differs from the background.
 
-## Implementation boundaries
+## Implemented boundaries
 
-The utility will:
+The utility:
 
-1. run as a no-network dry run unless `--execute` is supplied;
-2. require all paths to remain outside the repository;
-3. validate and deduplicate manifest image identities;
-4. reject overlap between pre and post image sets;
-5. exclude transition rows from analysis;
-6. sanitize GeoJSON properties;
-7. load exact Sentinel-1 images by identity;
-8. compute the same features and reducers for both polygons;
-9. write detailed values only to a private output;
-10. print no identities, values, geometry, coordinates, or paths.
+1. runs as a no-network dry run unless `--execute` is supplied;
+2. requires all paths to remain outside the repository;
+3. validates and deduplicates manifest image identities;
+4. rejects overlap between pre, transition, and post image sets;
+5. excludes transition rows from analysis;
+6. sanitizes GeoJSON properties;
+7. loads exact Sentinel-1 images by identity;
+8. applies the same border/angle usability mask to site and background;
+9. computes the same features and reducers for both polygons;
+10. writes detailed values only to a private output;
+11. prints no identities, values, geometry, coordinates, or paths.
 
-The utility will not use:
+The utility does not use:
 
 - classifier scores or classes;
 - target masks or generated labels;
@@ -174,20 +184,52 @@ The utility will not use:
 - coherence, because `COPERNICUS/S1_GRD` does not directly provide interferometric coherence;
 - numerical depth claims.
 
-## Focused tests
+## Focused test coverage
 
-Tests must cover:
+The focused tests cover:
 
 - repository-local input/output rejection;
+- identical geometry rejection;
 - wrong manifest schema or status rejection;
 - empty clean-pre or clean-post rejection;
 - duplicate and overlapping image identities;
-- transition rows excluded;
+- transition rows excluded from the query;
 - no-network/no-write dry run;
+- execute-without-private-output refusal;
 - exact private-row construction from injected synthetic query results;
-- missing-statistic incomplete decision;
+- missing-statistic and missing-image incomplete decisions;
+- unexpected image-identity rejection;
 - private output isolation;
-- aggregate-only privacy-safe result.
+- aggregate-only privacy-safe results.
+
+## Verification commands
+
+```powershell
+python -m pytest tests/unit/test_depth_s1_matched_feature_extract.py -v
+python -m pytest tests/unit/test_plan_c_redaction_risk_allowlist.py -v
+python -m pytest tests/unit -q
+```
+
+## First private dry run
+
+```powershell
+python .\scripts\extract_depth_s1_matched_features.py `
+  --site-geojson "<PRIVATE_DEPTH_ROOT>\tamucc_site.geojson" `
+  --background-geojson "<PRIVATE_DEPTH_ROOT>\tamucc_background.geojson" `
+  --match-manifest "<PRIVATE_DEPTH_ROOT>\tamucc_site_background_matched_images.json" `
+  --output "<PRIVATE_DEPTH_ROOT>\tamucc_matched_s1_features.json"
+```
+
+Expected:
+
+```text
+status = matched_s1_feature_extraction_dry_run_ready
+query_executed = false
+manifest_pre_count = 80
+manifest_post_count = 82
+transition_rows_excluded = 5
+private_output_written = false
+```
 
 ## Completion gate
 
@@ -206,8 +248,9 @@ Only after the software gate passes may the real private extraction run.
 - [x] Freeze exact matched image identities privately.
 - [x] Define the first neutral feature family.
 - [x] Define private detailed-output boundaries.
-- [ ] Implement the manifest-driven extractor.
-- [ ] Add focused tests.
+- [x] Implement the manifest-driven extractor.
+- [x] Add focused tests.
 - [ ] Run targeted and full verification.
+- [ ] Run the no-network private dry run.
 - [ ] Execute private feature extraction.
 - [ ] Assess feature completeness before any effect analysis.
