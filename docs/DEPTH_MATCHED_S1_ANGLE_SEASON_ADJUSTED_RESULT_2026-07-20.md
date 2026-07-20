@@ -12,7 +12,11 @@ Fix commit:
 c0de34134a73d5c0d99502d1b89c78e2f0c1d613
 ```
 
-The corrected focused tests still require local confirmation.
+The corrected focused suite was then confirmed locally:
+
+```text
+7 passed, 1 non-blocking pytest-cache warning
+```
 
 ## Private controlled-screen execution
 
