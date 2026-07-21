@@ -6,9 +6,11 @@ Status: Stage 1 active. Watson Johnson Landfill, Pennsylvania, is retained as `c
 
 - EPA identifies a 56-acre site with a 32-acre landfill area.
 - EPA started landfill-cap construction in summer 2017 and completed it in spring 2019.
-- The remedy includes a multi-layer cap, drainage, vegetation, and moving waste found outside the landfill beneath the cap.
+- The construction procurement described a 21.4-acre multi-layer landfill cap.
+- The remedy includes drainage, vegetation, and moving waste found outside the landfill beneath the cap.
 - EPA records site construction completion on March 25, 2019.
-- A first five-year review was completed on May 13, 2021; the next review is scheduled for 2026.
+- A first five-year review was completed on May 13, 2021.
+- The review confirms the remedy and cap are in operation and maintenance, but the publicly indexed text does not provide certified as-built cap elevations, explicit survey accuracy, or a survey-grade settlement table.
 
 ## Classification
 
@@ -29,14 +31,17 @@ R5_radar_linkage = not_tested_pending_stage_3
 
 ## Decision
 
-Retain Watson Johnson as the second strongest modern candidate after North Sanitary. Do not promote it until the construction-completion report or five-year review yields certified cap elevations, explicit survey accuracy, and later settlement or topographic evidence.
+Retain Watson Johnson as the second strongest modern candidate after North Sanitary.
 
-The EPA five-year-review PDF timed out through the available public interface during this pass, so no survey or settlement values were inferred.
+Do not promote it. The five-year review confirms the cap exists and is maintained, but it does not close the calibration-contract gaps.
+
+The EPA PDF endpoint repeatedly timed out. Search-indexed text was reviewed instead, and no missing depth, uncertainty, or settlement values were inferred.
 
 ## Waiting for
 
 ```text
-as_built_cap_elevations
+remedial_action_completion_or_as_built_report
++ certified_cap_elevations
 + explicit_survey_accuracy
 + layer_thickness_verification
 + settlement_or_later_topography
@@ -44,11 +49,12 @@ as_built_cap_elevations
 
 ## Next step
 
-Recover the 2021 five-year review and any remedial-action completion/as-built report through the EPA document ID or a smaller indexed copy. If those records remain inaccessible or lack the required fields, keep the site under review and continue to a third modern cap candidate.
+Keep Watson Johnson under review and continue screening modern whole-cell cap candidates with smaller accessible construction packages.
 
 ## Public references
 
 - EPA cleanup page: `https://cumulis.epa.gov/supercpad/SiteProfiles/index.cfm?fuseaction=second.cleanup&id=0301517`
 - EPA schedule page: `https://cumulis.epa.gov/supercpad/SiteProfiles/index.cfm?fuseaction=second.schedule&id=0301517`
-- EPA reports page: `https://cumulis.epa.gov/supercpad/cursites/cscdocument.cfm?colid=30868&doc=Y&id=0301517`
-- EPA five-year-review document ID: `2329154`
+- EPA five-year-review PDF: `https://semspub.epa.gov/work/03/2329154.pdf`
+- EPA administrative-record collection: `https://semspub.epa.gov/src/collection/03/AR6546`
+- Federal cap procurement: `https://sam.gov/opp/dd887620e852ece66744086fdd616e76/view`
