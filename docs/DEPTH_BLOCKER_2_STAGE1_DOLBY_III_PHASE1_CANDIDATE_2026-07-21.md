@@ -11,9 +11,9 @@ Status: Stage 1 active. Dolby III Phase 1 final-cover upgrade, East Millinocket,
 - Those plans identify later aerial topography dated 4 May 2021 for landfill areas outside Phases 2 through 4. This should include the older Phase 1 footprint, but the exact polygon must still be verified from the native drawings.
 - The same site plans state a vertical datum of `NAVD 1929` exactly as written in the public drawing notes; this datum wording requires verification because standard naming is normally NGVD 1929 or NAVD 88.
 - The official 2025 Post-Closure Monitoring and Maintenance Plan states that topographic surveys of Dolby II and Dolby III are performed once every five years and that the most recent survey was completed in 2022.
-- Public search-indexed records therefore establish a pre-construction 2015 surface, a 2016 cap event, later 2021 aerial topography, and a 2022 five-year topographic survey requirement/completion record.
-- The certified 2016 as-built final-cover surface, native 2021/2022 survey points, explicit survey accuracy, and an elevation-difference or settlement map have not yet been retrieved.
-- Attempts to render the large annual-report PDFs and drawing screenshots through the available public crawler failed despite the files being publicly listed. No unrendered figure or table was interpreted visually.
+- Maine's official Dolby document page lists the 2022 and 2023 annual reports only as very large archive files and directs inquiries to the Landfill Manager. It does not expose a normal downloadable link for either archive.
+- Focused public searches did not locate a separately posted 2016 Phase 1 final CQA report, closure certification, certified as-built surface, 2022 survey point file, or elevation-difference map.
+- The linked 2017 annual report, 2021 annual report, post-closure plan, and site-plan PDFs could not be rendered through the available public crawler because of file-size or server-response limitations. No inaccessible figure, table, or drawing was interpreted visually.
 
 ## Classification
 
@@ -27,14 +27,16 @@ single_recent_closure_period = pass_for_phase1_subject_to_polygon_confirmation
 waste_left_in_place = promising_but_unverified
 verified_cover_layers = pass_public_2017_report
 pre_construction_surface = pass_2015_10_15_aerial_survey
-final_as_built_surface_2016 = unresolved
+final_as_built_surface_2016 = unresolved_not_publicly_located
 later_topographic_surface_2021 = pass_public_drawing_note
 five_year_topographic_survey_2022 = pass_completion_record_only
+survey_deliverable_2022 = unresolved_archive_or_direct_request_required
 native_repeat_survey_points = unresolved
 horizontal_datum = NAD83_maine_state_coordinate_system_east_zone
 vertical_datum = public_note_says_NAVD_1929_requires_verification
 numerical_survey_accuracy = unresolved
 elevation_difference_or_settlement_map = unresolved
+public_access_status = limited_large_archives_and_unrenderable_pdfs
 later_phase_construction_confounding = avoidable_for_2016_to_2021_window_subject_to_polygon_check
 clean_s1_experiment_unit = promising_but_unverified
 R1_depth_measurability = not_tested_pending_evidence
@@ -43,9 +45,9 @@ R5_radar_linkage = not_tested_pending_evidence
 
 ## Decision
 
-Retain Dolby III Phase 1. It is one of the strongest candidates found because it combines a Sentinel-1-era 25.2-acre cap event, a documented engineered cover thickness, a pre-construction aerial surface, later 2021 topography, and a recorded 2022 five-year topographic survey.
+Retain Dolby III Phase 1. It remains one of the strongest candidates because it combines a Sentinel-1-era 25.2-acre cap event, documented engineered cover thickness, a pre-construction aerial surface, later 2021 topography, and a recorded 2022 five-year topographic survey.
 
-Do not promote it yet. The calibration contract still requires the certified 2016 constructed surface or as-built points, the native 2021 or 2022 repeat survey, explicit horizontal and vertical accuracy, a verified common datum, and proof that the Phase 1 polygon did not include major waste relocation or later construction disturbance.
+Do not promote it. The public index proves that the later survey workflow exists, but it does not expose the certified 2016 constructed surface or the native 2022 survey deliverable needed for a direct elevation pair. This is an evidence-access blocker, not proof that the records do not exist.
 
 ## Waiting for
 
@@ -64,7 +66,7 @@ Do not promote it yet. The calibration contract still requires the certified 201
 
 ## Next step
 
-Retrieve the 2016 Phase 1 CQA/as-built package and the 2022 topographic-survey memo or native surface. Confirm the Phase 1 polygon, survey control, accuracy, dates, and whether the 2021 or 2022 surface can be differenced directly against the constructed 2016 baseline without contamination from the 2022-2024 closure phases.
+Request the 2016 Phase 1 final CQA/as-built package and the 2022 five-year topographic survey directly from the Maine Bureau of General Services or Dolby Landfill Manager. Ask specifically for native contours or point files, survey dates, control, datum, accuracy, and the Phase 1 polygon. Continue screening another candidate while that request is pending.
 
 ## Public references
 
