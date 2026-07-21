@@ -17,22 +17,28 @@ Sources:
 
 - article DOI `10.3390/rs10040530`
 - raw supplementary archive DOI `10.5281/zenodo.1211173`
+- supporting pipe-depth application DOI `10.3390/rs15082114`
 
 Verified source facts:
 
 - full-size controlled geophysical test site;
 - benign targets include pipes, artificial voids, masonry, rocks, cables, and other civil-engineering objects;
 - targets were installed during construction and accurately geolocated with a theodolite;
+- the source records points on the upper side or upper corners of targets and interpolates the local surveyed surface above them, so the resulting target depth is a surface-to-target-top or surface-to-target-upper-side reference rather than a GPR-derived center-depth estimate;
 - target depths were calculated from independently surveyed target and surface elevations, not estimated from the GPR response;
+- supporting literature explicitly reports the three Gneiss 14/20 pipe layers at approximately 0.9 m, 1.5 m, and 2.1 m;
 - multiple pipe layers occur at different depths and in different host materials;
-- follow-on literature reports pipe layers at approximately 0.9 m, 1.5 m, and 2.1 m, pending confirmation of whether those values mean depth-to-top, center depth, or another reference;
 - 67 GPR profiles were recorded along eleven parallel lines with several radar systems and antenna frequencies;
-- raw files are publicly available under CC BY 4.0.
+- raw files are publicly available under CC BY 4.0;
+- no numerical theodolite, installation, surface-interpolation, or final depth-reference uncertainty was found in the primary article or the public archive metadata reviewed during this pass.
 
 Current classification:
 
 ```text
 physical_depth_provenance = independently_surveyed
+reference_definition = surveyed_local_surface_to_target_upper_side
+verified_pipe_depth_subset_m = 0.9_1.5_2.1_gneiss_14_20
+reference_uncertainty_m = not_reported
 real_field_data = yes
 benign_targets = yes
 raw_gpr_available = yes
@@ -40,18 +46,29 @@ multiple_depth_levels = yes
 multiple_host_materials = yes
 multiple_physical_sites = no_single_test_site
 sentinel_1_included = no
-direct_app_training_approval = pending_scale_and_feature_match
+source_evidence_usable = yes_for_ground_method_truth
+method_research_usable = yes
+direct_app_calibration_usable = no_current_sentinel_1_scale
+private_pack_import_approved = no_missing_uncertainty_and_complete_record_mapping
 priority = 1
 ```
 
-Required extraction work:
+Qualification update — 2026-07-20:
 
-1. extract the numerical depth values shown in the test-site cross-section figures;
-2. map each target or target layer to the corresponding radar profile and host-material region;
-3. record whether the reported depth is depth-to-top, center depth, or another geometric reference;
-4. assign one physical-site group to prevent line-level leakage across splits;
-5. assess whether the 30 m by 5 m site and its closely spaced targets can produce any separable approved satellite feature window;
-6. if satellite separation is impossible, retain this source for GPR method validation and uncertainty research only.
+1. The depth-reference ambiguity is resolved for surveyed targets: the paper describes upper-target survey points and local surface interpolation, which supports depth to the top or upper side of the feature.
+2. The 0.9 m, 1.5 m, and 2.1 m values are retained as a verified subset for the Gneiss 14/20 pipe layers.
+3. These three values do not create three independent Sentinel-1 calibration samples; they belong to one compact physical site and one mixed satellite-scale experiment unit.
+4. The source remains strong for GPR and ground-method validation.
+5. Private calibration-pack import remains blocked because a numerical reference-uncertainty value or defensible source-backed uncertainty policy is still missing, and the remaining target-level figure values have not yet been mapped into complete contract records.
+
+Remaining extraction work:
+
+1. extract the remaining target values from the published test-site cross-section figures;
+2. map each retained target or target layer to the corresponding radar profile and host-material region;
+3. recover a source-reported survey or installation uncertainty, or document why the source cannot supply one;
+4. assign the full test site to one physical-site group to prevent line-level leakage across splits;
+5. retain the completed scale-screen result: no target-level Sentinel-1 rows from this compact mixed site;
+6. if uncertainty cannot be recovered, retain this source for GPR method validation and uncertainty research only.
 
 Important limitation:
 
@@ -296,13 +313,13 @@ direct_app_calibration_usable
 
 ## Immediate execution order
 
-1. extract TU1208 numerical target depths from the published cross-section figures;
+1. complete the remaining TU1208 target mapping and seek source-backed uncertainty;
 2. obtain the IAG/USP actual-depth table and public-data availability details;
 3. obtain the Texas A&M–Corpus Christi target-level construction table;
 4. extract the Ahmadu Bello actual-depth table and request the underlying datasets;
 5. inspect the complete Guangzhou archive metadata or contact the authors;
 6. seek independent excavation confirmation for Hacimusalar;
-7. perform satellite-scale separability checks before importing any target as an app calibration row;
+7. apply the completed satellite-scale rule before importing any target as an app calibration row;
 8. continue searching for additional independent physical sites and confirmed no-target/background cases.
 
 ## Checklist
@@ -315,11 +332,13 @@ direct_app_calibration_usable
 - [x] Reach at least three independent controlled physical-site candidates for screening.
 - [x] Keep Hacimusalar as interpreted-depth evidence only.
 - [x] Keep simulated data separate from real calibration.
-- [ ] Extract TU1208 target-depth values and depth-reference definitions.
+- [x] Resolve the TU1208 surveyed target-top depth reference.
+- [x] Extract the TU1208 Gneiss 14/20 pipe-layer subset at 0.9 m, 1.5 m, and 2.1 m.
+- [ ] Complete TU1208 remaining target mapping and recover reference uncertainty.
 - [ ] Extract IAG/USP actual-depth values and target metadata.
 - [ ] Obtain Texas A&M–Corpus Christi target-level depths and data-access information.
 - [ ] Extract Ahmadu Bello target-level actual depths and request data.
 - [ ] Complete Guangzhou metadata inspection or author inquiry.
 - [ ] Find independently documented confirmed no-target/background cases.
-- [ ] Run scale and approved-feature compatibility screening.
+- [x] Run the first scale and approved-feature compatibility screening.
 - [ ] Import only verified, supportable records into the private pack.
