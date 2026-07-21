@@ -60,14 +60,16 @@ Primary public sources:
 
 - 2017 conference abstract, `Site characterization and construction of a controlled shallow test site in central Mexico for archaeological and engineering applications`;
 - construction article, DOI `10.1016/j.jappgeo.2021.104459`;
+- 2023 international test-site review;
 - 2023 mapping article, DOI `10.1016/j.jappgeo.2023.105123`.
 
 Verified timeline:
 
-1. A December 2017 conference abstract states that the controlled shallow test site had been constructed at the UNAM Teoloyucan observatory.
-2. The 2021 paper confirms completed construction and describes the pre-construction characterization and built structures.
-3. Therefore, the site was completed no later than December 2017.
-4. The exact construction campaign date was not recovered from the public material.
+1. A December 2017 conference abstract states that an initial controlled shallow test site had been constructed at the UNAM Teoloyucan observatory.
+2. The 2023 international review lists Teoloyucan with an establishment year of 2020.
+3. The 2021 primary paper describes the completed 17-structure facility and its pre-construction characterization.
+4. The public record therefore supports phased development: an initial controlled site existed by December 2017, while the later fully documented facility may have been completed afterward and is listed as 2020 by the review.
+5. The public sources do not map the construction phases or exact campaign dates well enough to assign a single installation date.
 
 Verified site facts:
 
@@ -83,7 +85,9 @@ Classification:
 
 ```text
 post_sentinel_construction = yes
-public_completion_bound = by_2017_12
+initial_public_site_bound = by_2017_12
+review_listed_establishment_year = 2020
+final_phase_mapping = unresolved
 exact_installation_date = not_recovered
 pre_construction_characterization = yes
 open_raw_package = no
@@ -156,7 +160,7 @@ The four sites improve the evidence map but do not populate the calibration pack
 
 ```text
 Ahmadu_Bello = post_Sentinel_but_exact_date_and_open_package_missing
-Teoloyucan = constructed_by_2017_but_exact_date_and_open_package_missing
+Teoloyucan = phased_2017_to_2020_public_record_exact_dates_unresolved
 Twente = dated_large_event_but_surface_construction_confounder
 Western_Michigan = large_known_site_but_pre_Sentinel_installation
 ```
@@ -173,7 +177,7 @@ No site currently supplies all required elements:
 ## Next public-only work
 
 1. search public university, construction, and project archives for an exact Ahmadu Bello installation date;
-2. search public UNAM project and conference archives for the exact Teoloyucan construction campaign;
+2. search public UNAM project and conference archives for the Teoloyucan construction phases;
 3. search for post-2014 open-air controlled sites with isolated large installations and public as-built depths;
 4. search public civil-project as-built records for large buried structures whose surface work is independently separable;
 5. reject direct transfer from small ground-method targets to Sentinel-1 depth labels;
