@@ -1,6 +1,6 @@
 # Depth Sentinel-1 Coverage Check Execution Plan
 
-Status: coverage checker and private polygon helper are implemented and locally verified on `main`; the first private screening polygon and no-network coverage dry run are complete. Visual footprint review and the executed aggregate coverage query remain pending.
+Status: coverage checker and private polygon helper are implemented and locally verified on `main`; the first private screening polygon and no-network coverage dry run are complete. A conservative-window dry run, visual footprint review, and the executed aggregate coverage query remain pending.
 
 ## Purpose
 
@@ -32,7 +32,7 @@ The coverage checker:
 
 - reads a private Polygon or MultiPolygon outside Git;
 - strips GeoJSON properties before the query;
-- validates start, end, and optional event dates;
+- validates start, end, event, clean-pre-end, and clean-post-start dates;
 - performs no Earth Engine request unless `--execute` is supplied;
 - queries `COPERNICUS/S1_GRD` in IW mode with VV/VH and the requested resolution;
 - returns aggregate acquisition, date, orbit-pass, relative-orbit, platform, and pre/post counts;
@@ -101,6 +101,34 @@ app_depth_enabled = false
 
 No Earth Engine request occurred.
 
+That first dry run validated only the broad event-date split. It did not supply the frozen clean-pre and clean-post boundaries, so it did not yet validate the conservative analysis-window mode required for the actual coverage decision.
+
+## Required conservative-window dry run
+
+Before any executed query, rerun the checker without `--execute` using the frozen construction-exclusion policy:
+
+```powershell
+python .\scripts\check_depth_s1_coverage.py `
+  --site-geojson "<PRIVATE_DEPTH_ROOT>\tamucc_site.geojson" `
+  --start-date "2017-01-01" `
+  --end-date "2023-01-01" `
+  --event-date "2020-03-04" `
+  --pre-end-exclusive "2020-02-01" `
+  --post-start "2020-04-01"
+```
+
+Expected aggregate fields include:
+
+```text
+status = coverage_query_dry_run_ready
+analysis_window_mode = conservative_pre_transition_post
+pre_end_exclusive = 2020-02-01
+post_start = 2020-04-01
+query_executed = false
+```
+
+The event date must fall inside the excluded transition interval. The checker refuses incomplete or inconsistent conservative-window arguments.
+
 ## Privacy and scientific boundaries
 
 - The geometry remains local and private.
@@ -114,7 +142,7 @@ No Earth Engine request occurred.
 
 ## First executed query
 
-After visual review of the private footprint, run:
+After the conservative-window dry run and visual review of the private footprint, run:
 
 ```powershell
 python .\scripts\check_depth_s1_coverage.py `
@@ -122,6 +150,8 @@ python .\scripts\check_depth_s1_coverage.py `
   --start-date "2017-01-01" `
   --end-date "2023-01-01" `
   --event-date "2020-03-04" `
+  --pre-end-exclusive "2020-02-01" `
+  --post-start "2020-04-01" `
   --execute `
   --output "<PRIVATE_DEPTH_ROOT>\tamucc_site_s1_coverage.json"
 ```
@@ -131,20 +161,29 @@ Expected status:
 ```text
 coverage_query_completed
 query_executed = true
+analysis_window_mode = conservative_pre_transition_post
 ```
 
-The Texas A&M–Corpus Christi completion date is 2020-03-04. The separate event policy excludes February and March 2020 from the later signal comparison because construction activity occurred during those months.
+The Texas A&M–Corpus Christi completion date is 2020-03-04. The frozen policy excludes February and March 2020 because construction, excavation, target placement, grading, and surface restoration may have occurred during those months.
 
 ## Coverage decision after execution
 
 The aggregate result must be reviewed for:
 
 ```text
-nonzero pre-event acquisitions
-nonzero post-event acquisitions
+nonzero clean pre-event acquisitions
+nonzero clean post-event acquisitions
 comparable orbit directions
-at least one reusable relative-orbit group across periods
+at least one reusable relative-orbit group across clean periods
 usable acquisition dates outside the construction-transition interval
+```
+
+Possible checker decisions include:
+
+```text
+coverage_ready_for_matched_pre_post_feature_screening
+coverage_not_ready_missing_clean_pre_or_post_acquisitions
+coverage_not_ready_no_reusable_relative_orbit
 ```
 
 A successful coverage query means only that suitable acquisitions exist. It does not approve evidence import, feature extraction, a model, or a depth claim.
@@ -158,7 +197,9 @@ A successful coverage query means only that suitable acquisitions exist. It does
 - [x] Run C1 privacy tests: 3 passed.
 - [x] Run the full unit suite after all changes: 960 passed.
 - [x] Create the first private screening polygon.
-- [x] Run the no-network coverage dry check.
+- [x] Run the broad event-date no-network coverage dry check.
+- [x] Correct the documented command to include the frozen conservative windows.
+- [ ] Run the conservative-window no-network dry check.
 - [ ] Visually review the private footprint.
 - [ ] Execute the aggregate coverage query.
 - [ ] Record acquisition and orbit support decisions.
