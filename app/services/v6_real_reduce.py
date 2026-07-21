@@ -24,6 +24,11 @@ _SCORING_OPTIONAL_FIELDS: tuple[str, ...] = (
     "season_top25_count",
 )
 
+MODE_REDUCED_FEATURE_BANDS: tuple[str, ...] = ("worldcover_class",)
+MEAN_REDUCED_FEATURE_BANDS: tuple[str, ...] = tuple(
+    band for band in REQUIRED_V6_FEATURE_BANDS if band not in MODE_REDUCED_FEATURE_BANDS
+)
+
 
 @dataclass(frozen=True)
 class V6FeatureReductionConfig:
@@ -100,15 +105,65 @@ class V6FeatureStackReducer:
                     },
                 )
             )
-        reduced = feature_stack.reduceRegions(
-            collection=ee.FeatureCollection(features),
+
+        feature_collection = ee.FeatureCollection(features)
+        mean_reduced = feature_stack.select(list(MEAN_REDUCED_FEATURE_BANDS)).reduceRegions(
+            collection=feature_collection,
             reducer=ee.Reducer.mean(),
             scale=self.config.scale_m,
             tileScale=self.config.tile_scale,
         )
-        response = reduced.getInfo()
-        records = response.get("features", []) if isinstance(response, Mapping) else []
-        return reduced_feature_rows_from_records(records)
+        mode_reduced = feature_stack.select(list(MODE_REDUCED_FEATURE_BANDS)).reduceRegions(
+            collection=feature_collection,
+            reducer=ee.Reducer.mode(),
+            scale=self.config.scale_m,
+            tileScale=self.config.tile_scale,
+        )
+
+        mean_records = _records_from_response(mean_reduced.getInfo(), "continuous mean")
+        mode_records = _records_from_response(mode_reduced.getInfo(), "categorical mode")
+        merged_records = merge_reduced_feature_records(mean_records, mode_records)
+        return reduced_feature_rows_from_records(merged_records)
+
+
+def merge_reduced_feature_records(
+    mean_records: Sequence[Mapping[str, Any]],
+    mode_records: Sequence[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    """Merge continuous-mean and categorical-mode rows by stable cell identity."""
+
+    mode_by_cell = _index_records_by_cell_id(mode_records, "categorical mode")
+    merged: list[Mapping[str, Any]] = []
+    seen_mean_cells: set[str] = set()
+
+    for index, mean_record in enumerate(mean_records):
+        mean_properties = _record_properties(mean_record, index, "continuous mean")
+        cell_id = _required_cell_id(mean_properties, index, "continuous mean")
+        if cell_id in seen_mean_cells:
+            raise ValueError(f"continuous mean reduction contains duplicate cell_id:{cell_id}")
+        seen_mean_cells.add(cell_id)
+
+        mode_record = mode_by_cell.pop(cell_id, None)
+        if mode_record is None:
+            raise ValueError(f"categorical mode reduction is missing cell_id:{cell_id}")
+        mode_properties = _record_properties(mode_record, index, "categorical mode")
+        _validate_matching_grid_identity(cell_id, mean_properties, mode_properties)
+
+        merged_properties = dict(mean_properties)
+        for band in MODE_REDUCED_FEATURE_BANDS:
+            if band not in mode_properties:
+                raise ValueError(f"categorical mode reduction is missing {band}:{cell_id}")
+            merged_properties[band] = mode_properties[band]
+
+        merged_record = dict(mean_record)
+        merged_record["properties"] = merged_properties
+        merged.append(merged_record)
+
+    if mode_by_cell:
+        extra_cells = ",".join(sorted(mode_by_cell))
+        raise ValueError(f"categorical mode reduction contains unexpected cell_id values:{extra_cells}")
+
+    return tuple(merged)
 
 
 def reduced_feature_rows_from_records(records: Sequence[Mapping[str, Any]]) -> tuple[V6ReducedFeatureRow, ...]:
@@ -128,6 +183,60 @@ def safe_reduction_summary(rows: Sequence[V6ReducedFeatureRow]) -> dict[str, Any
         "contains_feature_values": False,
         "contains_geometry": False,
     }
+
+
+def _records_from_response(response: object, reduction_name: str) -> tuple[Mapping[str, Any], ...]:
+    if not isinstance(response, Mapping):
+        raise ValueError(f"{reduction_name} reduction returned no feature mapping")
+    records = response.get("features")
+    if not isinstance(records, Sequence) or isinstance(records, (str, bytes)):
+        raise ValueError(f"{reduction_name} reduction returned no feature list")
+    normalized: list[Mapping[str, Any]] = []
+    for index, record in enumerate(records):
+        if not isinstance(record, Mapping):
+            raise ValueError(f"{reduction_name} reduction record {index} is invalid")
+        normalized.append(record)
+    return tuple(normalized)
+
+
+def _index_records_by_cell_id(
+    records: Sequence[Mapping[str, Any]],
+    reduction_name: str,
+) -> dict[str, Mapping[str, Any]]:
+    indexed: dict[str, Mapping[str, Any]] = {}
+    for index, record in enumerate(records):
+        properties = _record_properties(record, index, reduction_name)
+        cell_id = _required_cell_id(properties, index, reduction_name)
+        if cell_id in indexed:
+            raise ValueError(f"{reduction_name} reduction contains duplicate cell_id:{cell_id}")
+        indexed[cell_id] = record
+    return indexed
+
+
+def _record_properties(record: Mapping[str, Any], index: int, reduction_name: str) -> Mapping[str, Any]:
+    properties = record.get("properties", record)
+    if not isinstance(properties, Mapping):
+        raise ValueError(f"{reduction_name} reduction record {index} has no properties mapping")
+    return properties
+
+
+def _required_cell_id(properties: Mapping[str, Any], index: int, reduction_name: str) -> str:
+    cell_id_raw = properties.get("cell_id")
+    if not isinstance(cell_id_raw, str) or not cell_id_raw.strip():
+        raise ValueError(f"{reduction_name} reduction record {index} is missing cell_id")
+    return cell_id_raw.strip()
+
+
+def _validate_matching_grid_identity(
+    cell_id: str,
+    mean_properties: Mapping[str, Any],
+    mode_properties: Mapping[str, Any],
+) -> None:
+    for field in ("grid_row", "grid_col"):
+        mean_value = mean_properties.get(field)
+        mode_value = mode_properties.get(field)
+        if mean_value is not None and mode_value is not None and mean_value != mode_value:
+            raise ValueError(f"reduction grid identity mismatch:{cell_id}:{field}")
 
 
 def _row_from_record(record: Mapping[str, Any], index: int) -> V6ReducedFeatureRow:
