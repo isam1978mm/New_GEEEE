@@ -12,6 +12,9 @@ Status: Stage 1 active. Campbell River Waste Management Centre landfill, British
 - The official site publicly lists annual Operations and Monitoring Reports for 2022 through 2025.
 - The 2023 report's Section 3.8, `Volume Survey`, states that the landfill had ceased accepting waste on May 4, 2022 and therefore annual airspace consumption was not estimated for 2023.
 - Therefore, the 2023 report does not supply the needed repeat cap-surface survey. Its general scope language about a survey with volume changes is a reporting requirement, not proof that a post-closure topographic or settlement survey was performed.
+- The official 2024 and 2025 annual-report links were checked. Both are hosted through Sync.com rather than as directly indexed CSWM PDFs. The 2024 link resolved only to a Sync share page, and the 2025 PDF-preview endpoint failed through the available public crawler.
+- Targeted public-index searches did not expose a settlement-monument table, cap-elevation comparison, deformation map, or repeat topographic survey from either report.
+- This is an access limitation, not proof that the reports contain no survey appendix.
 - The public evidence still does not expose the certified 2022 final as-built surface, survey datum and accuracy, or a later measured cap surface suitable for elevation differencing.
 
 ## Classification
@@ -31,7 +34,10 @@ final_cqa_report_publicly_verified = unresolved
 final_as_built_contours = unresolved
 numerical_survey_uncertainty = unresolved
 2023_volume_survey = fail_not_performed_for_airspace
-later_repeat_cap_surface_survey = unresolved_not_found
+2024_report_public_link = pass_sync_hosted
+2025_report_public_link = pass_sync_hosted
+2024_2025_report_contents_extractable = fail_current_public_interface
+later_repeat_cap_surface_survey = unresolved_not_verified
 clean_s1_experiment_unit = unresolved
 R1_depth_measurability = not_tested_pending_evidence
 R5_radar_linkage = not_tested_pending_evidence
@@ -39,9 +45,9 @@ R5_radar_linkage = not_tested_pending_evidence
 
 ## Decision
 
-Retain Campbell River because it now has a verified December 2021 surveyed surface tied to planned final-cover contours and a completed Sentinel-1-era closure.
+Retain Campbell River because it has a verified December 2021 surveyed surface tied to planned final-cover contours, a completed Sentinel-1-era closure, and official annual reports through 2025.
 
-Do not promote it. The 2023 annual report does not provide a repeat cap survey, and the December 2021 surface is not the final pre-cap/top-of-waste condition because filling continued into May 2022. The calibration contract still requires the certified constructed final surface and a later surface measured from comparable control.
+Do not promote it. The 2023 report does not provide a repeat cap survey, and the 2024–2025 report contents could not be extracted from their Sync-hosted public links. The December 2021 surface is also not the final pre-cap/top-of-waste condition because filling continued into May 2022. The calibration contract still requires the certified constructed final surface and a later surface measured from comparable control.
 
 ## Waiting for
 
@@ -52,6 +58,7 @@ Do not promote it. The 2023 annual report does not provide a repeat cap survey, 
 + horizontal_and_vertical_datum
 + explicit_horizontal_and_vertical_accuracy
 + verified_final_cover_thickness
++ direct_copy_of_2024_and_2025_report_appendices
 + 2024_or_2025_repeat_cap_topographic_survey
 + settlement_monument_table_or_elevation_difference_map
 + confirmation_no_major_waste_relocation
@@ -59,7 +66,7 @@ Do not promote it. The 2023 annual report does not provide a repeat cap survey, 
 
 ## Next step
 
-Inspect the 2024 and 2025 Operations and Monitoring Reports for a post-closure topographic survey, settlement monument table, cap elevation comparison, or deformation map. Separately obtain the 2022 closure CQA/as-built package so any later surface can be tied to the constructed baseline.
+Request direct downloadable copies of the 2024 and 2025 report appendices and the 2022 closure CQA/as-built package from CSWM or GHD. Ask specifically for native survey surfaces, contour drawings, survey-control notes, settlement-monitoring records, and any elevation-difference map. Continue screening another completed 2016–2021 closure in parallel rather than repeating the inaccessible Sync-link crawl.
 
 ## Public references
 
@@ -67,3 +74,5 @@ Inspect the 2024 and 2025 Operations and Monitoring Reports for a post-closure t
 - 2020 Closure and Upgrading Plan with planned final contours and survey-source notes: `https://www.cswm.ca/sites/3/files/docs/CRWMC/20200821_ghd_crwmc_closure_and_upgrading_plan-final_draft.pdf`
 - 2021 Operations and Monitoring Report with the December 3, 2021 topographic survey: `https://www.cswm.ca/sites/3/files/docs/CRWMC/11209296-rpt-07-2021_annual_report-campbell_river-final.pdf`
 - 2023 Operations and Monitoring Report, including Section 3.8 Volume Survey: `https://www.cswm.ca/sites/3/files/2024-05/2023%20CRWMC%20Operations%20and%20Monitoring%20Report.pdf`
+- 2024 Operations and Monitoring Report link: official CSWM page, Sync-hosted public share.
+- 2025 Operations and Monitoring Report link: official CSWM page, Sync-hosted public share.
