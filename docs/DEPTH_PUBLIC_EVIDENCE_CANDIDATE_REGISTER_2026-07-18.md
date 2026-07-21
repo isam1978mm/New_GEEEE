@@ -85,32 +85,57 @@ Verified source facts:
 
 - controlled university test site with targets installed at known positions and depths;
 - seven target lines contain benign archaeological, utility, concrete, drum, pipe, and cable analogues;
-- published target depths span approximately 0.5 m to 2.5 m across the site;
-- one published GPR depth study used precisely buried metallic drums at approximately 0.5 m to 2.0 m;
-- the site is explicitly used to compare measured or installed depths with geophysical estimates.
+- the construction source explicitly states that installed depths are measured relative to the top of each target;
+- the installation workflow included a topographic survey while the excavation remained open to determine target position and depth relative to the ground surface;
+- the Line 4 actual-depth table contains eight verified references: A `1.97 m`, B `0.50 m`, C `0.98 m`, D `0.50 m`, E `0.90 m`, F `0.97 m`, G `1.00 m`, and H `1.98 m`;
+- targets A, B, C, E, and F are horizontal empty steel drums, D is a metallic reference pipe, and G and H are vertical empty steel drums;
+- the site is explicitly used to compare installed depths with geophysical depth estimates;
+- geophysical measurements were collected before and after target installation, creating useful ground-method background evidence;
+- construction occurred in 2003, before Sentinel-1, so the pre-installation measurements cannot supply a same-sensor Sentinel-1 negative period;
+- no numerical topographic, placement, or final depth-reference uncertainty was found in the reviewed papers;
+- no public machine-readable raw-radar archive or target spreadsheet was found during this pass.
 
 Current classification:
 
 ```text
-physical_depth_provenance = installed_known_depth
+physical_depth_provenance = installed_and_topographically_surveyed
+reference_definition = ground_surface_to_target_top
+verified_line4_depths_m = A_1.97_B_0.50_C_0.98_D_0.50_E_0.90_F_0.97_G_1.00_H_1.98
+reference_uncertainty_m = not_reported
 real_field_data = yes
 benign_targets = yes
-raw_public_dataset_confirmed = not_yet
+raw_public_dataset_confirmed = no
+machine_readable_target_table = not_publicly_found
+pre_installation_ground_data = yes
 multiple_depth_levels = yes
 multiple_target_families = yes
 multiple_physical_sites = no_single_test_site
 sentinel_1_included = no
-direct_app_training_approval = pending_data_access_and_scale_match
+sentinel_1_pre_installation_opportunity = no_site_predates_mission
+source_evidence_usable = yes_for_ground_method_truth
+method_research_usable = yes
+direct_app_calibration_usable = no_current_sentinel_1_scale_and_missing_uncertainty
+private_pack_import_approved = no_missing_reference_uncertainty
 priority = 1
 ```
 
-Required extraction work:
+Qualification update — 2026-07-20:
 
-1. obtain the open paper tables containing actual target depths;
-2. determine whether raw radargrams or machine-readable target maps are publicly downloadable;
-3. extract target dimensions, depth-to-top definition, material, line, and host-soil context;
-4. treat all seven lines as one physical-site group unless independent construction areas are documented;
-5. assess satellite-pixel separability before creating any app calibration record.
+1. The eight candidate rows already extracted in `controlled_site_depths_v1.json` are confirmed against the published actual-depth table.
+2. The construction paper resolves the depth definition as depth to the top of the target, measured relative to the ground surface.
+3. The source is strong installed-depth truth for ground-method research.
+4. The site remains one physical group; its seven lines and repeated observations must not cross train, validation, and holdout splits.
+5. Private-pack import remains blocked because the source does not provide a numerical reference uncertainty and the public raw-data or machine-readable construction package has not been recovered.
+6. The pre-installation survey is useful ground-method background evidence but cannot be a same-sensor Sentinel-1 negative because it predates the mission.
+
+Remaining extraction work:
+
+1. recover a source-reported survey, placement, or topographic uncertainty;
+2. seek the original target spreadsheet described by the construction paper;
+3. seek any public or author-provided raw radargrams and acquisition metadata;
+4. complete source-version and evidence-review fields for each retained target record;
+5. retain the completed scale-screen result: no individual target-level Sentinel-1 calibration rows from this compact site;
+6. if uncertainty cannot be recovered, retain the source for ground-method truth and method research rather than approving private-pack import.
 
 ## Candidate P3 — Texas A&M University–Corpus Christi geophysical test site
 
@@ -314,7 +339,7 @@ direct_app_calibration_usable
 ## Immediate execution order
 
 1. complete the remaining TU1208 target mapping and seek source-backed uncertainty;
-2. obtain the IAG/USP actual-depth table and public-data availability details;
+2. seek IAG/USP reference uncertainty, the original target spreadsheet, and any raw public or author-provided data;
 3. obtain the Texas A&M–Corpus Christi target-level construction table;
 4. extract the Ahmadu Bello actual-depth table and request the underlying datasets;
 5. inspect the complete Guangzhou archive metadata or contact the authors;
@@ -335,7 +360,9 @@ direct_app_calibration_usable
 - [x] Resolve the TU1208 surveyed target-top depth reference.
 - [x] Extract the TU1208 Gneiss 14/20 pipe-layer subset at 0.9 m, 1.5 m, and 2.1 m.
 - [ ] Complete TU1208 remaining target mapping and recover reference uncertainty.
-- [ ] Extract IAG/USP actual-depth values and target metadata.
+- [x] Confirm the IAG/USP Line 4 actual-depth table and target-top definition.
+- [x] Confirm that IAG/USP installation used open-pit topographic surveying.
+- [ ] Recover IAG/USP reference uncertainty, original target spreadsheet, and raw-data availability.
 - [ ] Obtain Texas A&M–Corpus Christi target-level depths and data-access information.
 - [ ] Extract Ahmadu Bello target-level actual depths and request data.
 - [ ] Complete Guangzhou metadata inspection or author inquiry.
