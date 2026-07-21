@@ -23,6 +23,43 @@ class ClassId(str, Enum):
     Class_N = "Class_N"
 
 
+CORE_EMITTABLE_CLASS_IDS: tuple[ClassId, ...] = (
+    ClassId.Class_A,
+    ClassId.Class_B,
+    ClassId.Class_C,
+    ClassId.Class_D,
+    ClassId.Class_E,
+    ClassId.Class_F,
+    ClassId.Class_G,
+    ClassId.Class_H,
+    ClassId.Class_I,
+    ClassId.Class_J,
+)
+
+# These IDs remain part of the shared A-N compatibility vocabulary used by
+# private parity and experimental modules. The normal core selector must not
+# emit them unless a future tested scoring contract explicitly adds support.
+COMPATIBILITY_ONLY_CLASS_IDS: tuple[ClassId, ...] = (
+    ClassId.Class_K,
+    ClassId.Class_L,
+    ClassId.Class_M,
+    ClassId.Class_N,
+)
+
+
+def _validate_class_vocabulary_partition() -> None:
+    core = set(CORE_EMITTABLE_CLASS_IDS)
+    compatibility = set(COMPATIBILITY_ONLY_CLASS_IDS)
+    declared = set(ClassId)
+    if core & compatibility:
+        raise RuntimeError("core and compatibility-only classifier IDs overlap")
+    if core | compatibility != declared:
+        raise RuntimeError("classifier ID partition does not cover the declared vocabulary")
+
+
+_validate_class_vocabulary_partition()
+
+
 @dataclass(frozen=True, slots=True)
 class ClassDefinition:
     class_id: ClassId
@@ -57,6 +94,8 @@ CLASS_BY_ID: dict[ClassId, ClassDefinition] = {
 def classify_feature_vector(feature_vector: NeutralFeatureVector) -> NeutralClassification:
     score = _normalized_score(feature_vector)
     class_id = _select_class_id(score)
+    if class_id not in CORE_EMITTABLE_CLASS_IDS:
+        raise RuntimeError(f"core classifier selected compatibility-only ID: {class_id.value}")
     class_definition = CLASS_BY_ID[class_id]
     return NeutralClassification(
         class_id=class_id,
