@@ -357,3 +357,56 @@ def test_missing_image_and_unexpected_image_are_handled_safely(tmp_path: Path) -
             execute=True,
             query_fn=lambda **_: unexpected,
         )
+
+def test_zero_valid_pixel_pair_is_excluded_with_provenance(tmp_path: Path) -> None:
+    site, background, manifest, output = _base_paths(tmp_path)
+    payload = _manifest_payload()
+    assert isinstance(payload["matched_post"], list)
+    payload["matched_post"].append(
+        {
+            "image_id": "S1A_POST_ZERO",
+            "timestamp": "2021-02-01T00:00:00+00:00",
+        }
+    )
+    _write_manifest(manifest, payload)
+
+    zero_stats = {
+        key: 0 if key.endswith("_count") else None
+        for key in extractor.STATISTIC_KEYS
+    }
+    items = _complete_query_items()
+    items.append(
+        {
+            "image_id": "S1A_POST_ZERO",
+            "timestamp": "2021-02-01T00:00:00+00:00",
+            "site": dict(zero_stats),
+            "background": dict(zero_stats),
+        }
+    )
+
+    result = extractor.run_matched_feature_extraction(
+        site_geojson=site,
+        background_geojson=background,
+        match_manifest=manifest,
+        output_path=output,
+        execute=True,
+        query_fn=lambda **_: items,
+    )
+    private_payload = json.loads(output.read_text(encoding="utf-8"))
+    excluded_row = next(
+        row for row in private_payload["rows"]
+        if row["image_id"] == "S1A_POST_ZERO"
+    )
+
+    assert result["status"] == "matched_s1_feature_extraction_complete"
+    assert result["extracted_post_count"] == 2
+    assert result["usable_post_count"] == 1
+    assert result["zero_valid_pixel_rows_excluded"] == 1
+    assert result["zero_valid_pixel_post_excluded"] == 1
+    assert result["missing_statistic_count"] == 0
+    assert result["expected_statistic_count"] == 120
+    assert result["excluded_statistic_count"] == 40
+    assert result["required_statistic_count"] == 80
+    assert result["all_rows_complete"] is True
+    assert excluded_row["analysis_included"] is False
+    assert excluded_row["exclusion_reason"] == "zero_valid_pixels_after_quality_mask"

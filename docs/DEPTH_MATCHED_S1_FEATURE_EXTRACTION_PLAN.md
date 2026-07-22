@@ -254,3 +254,22 @@ Only after the software gate passes may the real private extraction run.
 - [ ] Run the no-network private dry run.
 - [ ] Execute private feature extraction.
 - [ ] Assess feature completeness before any effect analysis.
+
+## Observed zero-valid-pixel exclusion rule
+
+A completed private extraction found one clean-post acquisition with zero valid pixels
+after the same quality mask was applied to both the site and background polygons.
+For that acquisition, all five count fields were zero in both polygons and the
+percentile fields were therefore undefined.
+
+The extractor now:
+
+- keeps the acquisition row and exact image identity in the private output for provenance;
+- marks it `analysis_included = false`;
+- records `exclusion_reason = zero_valid_pixels_after_quality_mask`;
+- excludes its undefined statistics from the completeness gate;
+- reports aggregate pre/post exclusion counts without printing the image identity;
+- still fails if either clean period has no usable acquisitions remaining.
+
+A one-sided zero-pixel result, a positive count with missing percentiles, or a
+missing image remains an incomplete extraction.

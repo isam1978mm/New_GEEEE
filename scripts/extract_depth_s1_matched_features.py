@@ -21,7 +21,7 @@ import check_depth_s1_coverage as coverage
 REPO_ROOT = Path(__file__).resolve().parents[1]
 S1_COLLECTION_ID = coverage.S1_COLLECTION_ID
 MATCH_MANIFEST_SCHEMA = "depth_s1_site_background_match_v1"
-PRIVATE_OUTPUT_SCHEMA = "depth_s1_matched_feature_extract_v1"
+PRIVATE_OUTPUT_SCHEMA = "depth_s1_matched_feature_extract_v2"
 IMAGE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 FEATURE_NAMES = (
     "vv_db",
@@ -251,6 +251,11 @@ def _delta_stats(
     return deltas
 
 
+def _all_feature_counts_zero(stats: dict[str, float | int | None]) -> bool:
+    count_keys = tuple(f"{feature}_count" for feature in FEATURE_NAMES)
+    return all(stats.get(key) == 0 for key in count_keys)
+
+
 def build_private_feature_rows(
     *,
     manifest: dict[str, Any],
@@ -271,16 +276,27 @@ def build_private_feature_rows(
     missing_statistic_count = 0
     extracted_pre_count = 0
     extracted_post_count = 0
+    usable_pre_count = 0
+    usable_post_count = 0
     missing_image_count = 0
+    zero_valid_pixel_rows_excluded = 0
+    zero_valid_pixel_pre_excluded = 0
+    zero_valid_pixel_post_excluded = 0
 
     empty_stats = {key: None for key in STATISTIC_KEYS}
     for period, manifest_row in expected_rows:
         image_id = manifest_row["image_id"]
         query_row = indexed.get(image_id)
+        analysis_included = False
+        exclusion_reason: str | None = None
+
         if query_row is None:
             missing_image_count += 1
             site_stats = dict(empty_stats)
             background_stats = dict(empty_stats)
+            exclusion_reason = "missing_image"
+            missing_statistic_count += _missing_stats(site_stats)
+            missing_statistic_count += _missing_stats(background_stats)
         else:
             if query_row["timestamp"] != manifest_row["timestamp"]:
                 raise DepthS1MatchedFeatureError("feature query timestamp does not match the private manifest")
@@ -291,13 +307,33 @@ def build_private_feature_rows(
             else:
                 extracted_post_count += 1
 
-        missing_statistic_count += _missing_stats(site_stats)
-        missing_statistic_count += _missing_stats(background_stats)
+            zero_valid_pixel_pair = (
+                _all_feature_counts_zero(site_stats)
+                and _all_feature_counts_zero(background_stats)
+            )
+            if zero_valid_pixel_pair:
+                zero_valid_pixel_rows_excluded += 1
+                exclusion_reason = "zero_valid_pixels_after_quality_mask"
+                if period == "pre":
+                    zero_valid_pixel_pre_excluded += 1
+                else:
+                    zero_valid_pixel_post_excluded += 1
+            else:
+                analysis_included = True
+                if period == "pre":
+                    usable_pre_count += 1
+                else:
+                    usable_post_count += 1
+                missing_statistic_count += _missing_stats(site_stats)
+                missing_statistic_count += _missing_stats(background_stats)
+
         private_rows.append(
             {
                 "period": period,
                 "image_id": image_id,
                 "timestamp": manifest_row["timestamp"],
+                "analysis_included": analysis_included,
+                "exclusion_reason": exclusion_reason,
                 "site": site_stats,
                 "background": background_stats,
                 "site_minus_background": _delta_stats(site_stats, background_stats),
@@ -305,15 +341,29 @@ def build_private_feature_rows(
         )
 
     expected_statistic_count = len(expected_rows) * 2 * len(STATISTIC_KEYS)
-    all_rows_complete = missing_statistic_count == 0 and missing_image_count == 0
+    excluded_statistic_count = zero_valid_pixel_rows_excluded * 2 * len(STATISTIC_KEYS)
+    required_statistic_count = expected_statistic_count - excluded_statistic_count
+    all_rows_complete = (
+        missing_statistic_count == 0
+        and missing_image_count == 0
+        and usable_pre_count > 0
+        and usable_post_count > 0
+    )
     summary = {
         "manifest_pre_count": len(manifest["matched_pre"]),
         "manifest_post_count": len(manifest["matched_post"]),
         "transition_rows_excluded": len(manifest["matched_transition_excluded"]),
         "extracted_pre_count": extracted_pre_count,
         "extracted_post_count": extracted_post_count,
+        "usable_pre_count": usable_pre_count,
+        "usable_post_count": usable_post_count,
+        "zero_valid_pixel_rows_excluded": zero_valid_pixel_rows_excluded,
+        "zero_valid_pixel_pre_excluded": zero_valid_pixel_pre_excluded,
+        "zero_valid_pixel_post_excluded": zero_valid_pixel_post_excluded,
         "missing_image_count": missing_image_count,
         "expected_statistic_count": expected_statistic_count,
+        "excluded_statistic_count": excluded_statistic_count,
+        "required_statistic_count": required_statistic_count,
         "missing_statistic_count": missing_statistic_count,
         "all_rows_complete": all_rows_complete,
     }
@@ -345,8 +395,9 @@ def query_exact_s1_feature_summaries(
         site_geometry = _as_ee_geometry(ee, site_geometry_payload)
         background_geometry = _as_ee_geometry(ee, background_geometry_payload)
         reducer = ee.Reducer.percentile([25, 50, 75], ["p25", "median", "p75"]).combine(
-            ee.Reducer.count(),
-            True,
+            reducer2=ee.Reducer.count(),
+            outputPrefix="",
+            sharedInputs=True,
         )
 
         features = []
@@ -476,6 +527,13 @@ def run_matched_feature_extraction(
         ),
         "missing_statistic_count": None,
         "missing_image_count": None,
+        "usable_pre_count": None,
+        "usable_post_count": None,
+        "zero_valid_pixel_rows_excluded": None,
+        "zero_valid_pixel_pre_excluded": None,
+        "zero_valid_pixel_post_excluded": None,
+        "excluded_statistic_count": None,
+        "required_statistic_count": None,
         "all_rows_complete": False,
         "coordinates_printed": False,
         "geometry_printed": False,
