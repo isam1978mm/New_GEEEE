@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-24  
 **Branch:** `main`  
-**Status:** authorized bounded method test  
+**Status:** implementation complete; Earth Engine execution pending  
 **Broad source search:** stopped
 
 ## Plain-English goal
@@ -34,7 +34,7 @@ The paper used SNAP processing including orbit correction, thermal-noise removal
 
 ## Repository method used
 
-The test will reuse the existing app Sentinel-1 functions in:
+The test reuses the existing app Sentinel-1 functions in:
 
 ```text
 app/pipeline/stages/sar_rtc.py
@@ -77,6 +77,44 @@ Exact archaeological coordinates, geometry, and local paths must not be written 
 8. Write detailed numbers only to a local output file outside Git.
 9. Print only a redacted status summary to the terminal.
 
+## Implemented files
+
+```text
+scripts/run_buto_s1_method_screen.py
+tests/unit/test_buto_s1_method_screen.py
+```
+
+The script:
+
+- defaults to a no-network dry run;
+- requires both geometry files to stay outside the repository;
+- uses the fixed published date by default;
+- queries only neutral Sentinel-1 features;
+- keeps detailed feature values out of terminal output;
+- marks the comparison area as unconfirmed;
+- never creates a calibration record or enables app depth.
+
+## Verification completed
+
+Focused local tests:
+
+```text
+8 passed
+```
+
+The tests cover:
+
+- dry-run privacy;
+- different target and background geometry;
+- exact-date acquisition requirements;
+- same-orbit stability support;
+- incidence angle remaining a control rather than a signal feature;
+- too-few-pixel refusal;
+- repository-local output refusal;
+- detailed output staying outside Git.
+
+No GitHub status check was attached to the direct `main` commits.
+
 ## Pass and stop meanings
 
 ### Method-screen pass
@@ -91,12 +129,12 @@ It does not mean that Sentinel-1 measured depth.
 
 ### Useful positive result
 
-A useful result would show that one or more neutral features have a repeatable target-versus-background direction on the published date and supporting same-orbit dates.
+A useful result would show that two or more neutral signal features have a repeatable target-versus-background direction on the published date and supporting same-orbit dates.
 
 The interpretation remains:
 
 ```text
-spatial_radar_anomaly_supported
+spatial_agreement_supported
 ```
 
 not:
@@ -116,9 +154,19 @@ The test stops without interpretation when:
 - Earth Engine cannot be queried;
 - results depend only on one unstable feature or one image.
 
+## Current execution blocker
+
+The software is ready, but the real Earth Engine run has not occurred in this session because:
+
+- the repository uses a local Earth Engine service-account key;
+- that credential is not available in this session;
+- no approved local target and comparison GeoJSON files are available here.
+
+This is an execution-input blocker, not a need for more web searching.
+
 ## Completion boundary
 
-After implementation and local execution, the allowed conclusion is one of:
+After local execution, the allowed conclusion is one of:
 
 ```text
 spatial_agreement_supported
