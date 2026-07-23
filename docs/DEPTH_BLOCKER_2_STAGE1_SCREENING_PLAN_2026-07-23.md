@@ -217,27 +217,80 @@ Arkansas landfill rules are stronger than ordinary inventory records. Public reg
 - a site grid and permanent survey-control points;
 - construction dates, testing locations, and professional certification.
 
-This source class is still promising because top-minus-bottom elevations can provide direct cover thickness over large cells.
+This source class remains worth screening because top-minus-bottom elevations can provide direct cover thickness over large cells. Individual facilities still must pass every gate.
 
 ## Correction to ADEQ document 85246
 
 The earlier description of document 85246 was inaccurate. Document 85246 is a **March 2024 response concerning an exposed geomembrane cover at Two Pine Landfill**, not itself a completed final-cover as-built table.
 
-The correct evidence is:
+## Two Pine Landfill decision
 
-- Arkansas rules require detailed as-constructed final-cover drawings;
-- the Two Pine public facility index lists an **Exposed Geomembrane Cap Construction Quality Assurance Report Certification Report**, dated December 29, 2025;
-- the facility remained active, and the listed work concerns a cap demonstration/repair rather than a cleanly isolated completed closure cell.
+**Not good to go - rejected.**
 
-## Two Pine status
+The December 2025 listed report concerns an **exposed geomembrane cap** at an active landfill. The work is a cap demonstration or repair rather than a completed, isolatable closure cell with a separately measured depth from the final ground surface to a buried interface.
+
+First failed gate: **Gate 1 - independent buried-interface depth**.
+
+Classification:
+
+`rejected_missing_independent_depth`
+
+The active-landfill setting and continuing repair activity would also create serious isolation, negative-area, and radar-linkage problems, but those are downstream of the Gate 1 failure.
+
+## Sunray #1 Landfill decision
+
+**Not good to go - rejected.**
+
+The public CQA certification report documents a final-cover reconstruction area about **100 feet by 300 feet**, approximately **0.7 acre**, associated with a road-interchange project. Although it records an 18-inch cover requirement and total-station as-built work, the footprint is too small and narrow for the approved whole-site or large-isolated-section Sentinel-1 experiment.
+
+The work occurred in 2013 and early 2014, before a useful Sentinel-1 pre/post calibration window. The public report also says detailed survey data are available upon request rather than providing a usable numerical uncertainty in the posted package.
+
+First failed gate: **Gate 0 - scale and sensor mismatch**.
+
+Classification:
+
+`rejected_scale_or_sensor_mismatch`
+
+---
+
+# Candidate Mining - Sudbury Road Landfill, Washington
+
+## Why it advances to detailed review
+
+Washington Ecology identifies Sudbury Road as a **125-acre landfill** and states that remedial construction, including improved cover over two landfill areas, was completed in **2017**. The public document list includes a **2017 Construction Quality Assurance Certification Report**, design plans and specifications, and a **2022 periodic review**.
+
+This makes Sudbury stronger than Two Pine and Sunray because it is large, completed in the Sentinel-1 era, and has both a construction-quality report and later monitoring documentation.
+
+## Current decision
+
+**Not good to go yet - detailed review justified.**
+
+Classification:
 
 `candidate_under_review`
 
-Two Pine is not yet a positive candidate. The December 2025 CQA report must be checked for actual top/bottom elevations, numerical survey tolerance, exact area, and construction dates. Even if those fields exist, the active-landfill setting and repair activity may fail isolation, observation-date validity, negatives, or radar linkage.
+## Open checks
 
-## Arkansas next action
+1. Does the 2017 CQA report provide actual as-built top and bottom cover surfaces, rather than only design thickness or final grades?
+2. Does it provide a numerical survey tolerance, accuracy, or defensible control-network bound?
+3. What are the exact improved-cover polygons, and is there a large isolated interior away from the active lined landfill?
+4. Does the 2022 periodic review or another later survey confirm the cap surface at Sentinel-1 observation dates?
+5. Can a confirmed no-target comparison site be documented independently?
+6. Can the radar effect of cover depth be separated from grading, vegetation, drainage, and other surface changes?
 
-1. Inspect the December 29, 2025 Two Pine CQA certification report.
-2. Reject it immediately if it is only an exposed-surface repair or lacks a buried-interface depth.
-3. Use the ADEQ facility index to find completed closure cells with the same required top/bottom elevation drawings.
-4. Prefer closed/post-closure facilities with later settlement or topographic monitoring.
+Reject Sudbury at the first unrecoverable failure. Do not call it a usable calibration site until all gates pass.
+
+---
+
+# Stage 1 tally
+
+Candidate facilities entered under this Stage 1 plan: **4**
+
+- Elk Plain County Shop - **hold**
+- Two Pine Landfill - **rejected**
+- Sunray #1 Landfill - **rejected**
+- Sudbury Road Landfill - **under review**
+
+Independent site groups currently clearing Gates 0-4: **0**
+
+The hard stopping rule has not yet been reached. The immediate task is the Sudbury CQA and periodic-review extraction.
