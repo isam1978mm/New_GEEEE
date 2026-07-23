@@ -16,89 +16,118 @@ This file records screening decisions made under `DEPTH_BLOCKER_2_STAGE1_SCREENI
 | Sudbury Road Landfill, Washington | HOLD - not good to go | Actual final measured cover depths and numerical survey accuracy are not visible in the accessible public package | `evidence_verified_pending_support` |
 | Recycled Aluminum Metals Co. (RAMCO), Washington | REJECTED | The contaminated material was removed before the excavation was filled and covered; no qualifying buried target remains | `rejected_out_of_finding_family` |
 | Dryden Landfill, Washington | REJECTED | The final cover was built in 2003, before a usable Sentinel-1 pre/post construction experiment | `rejected_scale_or_sensor_mismatch` |
-| Triune Mine, Washington | UNDER REVIEW - not good to go | The 2018 completion report must show actual cover depth, uncertainty, exact repository area, and as-built dates | `candidate_under_review` |
+| Triune Mine, Washington | HOLD - not good to go | The named 2018 as-built report is public, but its measured depth, uncertainty, area, and survey dates are not visible in the accessible copy | `evidence_verified_pending_support` |
+| Landsburg Mine, Washington | REJECTED | Gate 1: two feet of soil is documented above the liner, not from the surface to the buried industrial waste | `rejected_missing_independent_depth` |
+| K Ply, Washington | REJECTED | The cleanup removed contaminated soil and backfilled excavations with clean soil; no mapped engineered buried target with measured depth remains | `rejected_out_of_finding_family` |
 
 ## Sudbury Road Landfill
-
-### What passes
-
-- The landfill is large: Washington Ecology describes the facility as about 125 acres.
-- Cover-improvement construction was completed in 2017, inside the Sentinel-1 era.
-- Public design and CQA documents require a minimum 4.8-foot soil cover and an as-built final-grade survey.
-- A 2022 periodic review confirms the remedial covers continued to appear protective.
-
-### What does not yet pass
-
-The accessible public design documents state what had to be built and surveyed, but they do not expose the completed point-by-point top and bottom surfaces or a numerical survey-accuracy value. The named 2017 final CQA certification report is the one public document that could resolve this, but it was not readable through the portal during this review.
 
 ### Decision
 
 **HOLD - not good to go.**
 
-This is a hold rather than a rejection because a clearly named public final CQA report could contain the missing measurements. Even if Gate 2 later passes, the active-landfill setting still creates isolation, negative-area, and radar-linkage risks.
+The site is large and its cover work was completed in 2017. Public design documents require a minimum 4.8-foot cover and an as-built survey. A named final CQA report may contain the missing measurements, but the accessible public package does not expose actual point-by-point depth or numerical survey accuracy.
+
+Classification: `evidence_verified_pending_support`.
 
 ## RAMCO
-
-Washington Ecology states that more than 135,000 tons of waste were removed between 2007 and 2010. The excavation was then filled and an erosion-control cover was completed in 2015.
 
 ### Decision
 
 **REJECTED - not good to go.**
 
-The cleanup removed the target material. The remaining feature is a backfilled excavation and surface cover, not a documented buried mass with a known depth to its top.
+More than 135,000 tons of waste were removed before the excavation was filled and covered. The remaining feature is not a qualifying buried target with a known depth to its top.
 
 Classification: `rejected_out_of_finding_family`.
 
 ## Dryden Landfill
 
-Washington Ecology states that final cover construction was completed in 2003 with about 30 inches of clean soil. Later periodic reviews report that the cap remains intact.
+### Decision
+
+**REJECTED - not good to go.**
+
+Final cover construction was completed in 2003, before a usable Sentinel-1 pre/post construction experiment.
+
+Classification: `rejected_scale_or_sensor_mismatch`.
+
+## Triune Mine
+
+### What is confirmed
+
+- Cleanup was completed in 2018.
+- About 5,500 cubic yards of mine tailings and waste rock were placed in an onsite consolidated waste area.
+- The area was covered with a liner and clean soil.
+- A 2023 inspection reported that the consolidated area appeared to be functioning as intended.
+- Washington Ecology publicly lists **Completion Report Triune Mine**, dated December 1, 2018, as a remedial action/as-built report.
+
+### Decision
+
+**HOLD - not good to go.**
+
+The named as-built report is a clearly relevant public document, but its detailed measurements were not exposed through the searchable public copy. Actual cover depth, numerical uncertainty, exact repository area, and survey dates therefore remain unverified.
+
+Classification: `evidence_verified_pending_support`.
+
+Triune does not count toward the required three site groups until those fields are visible and Gates 0-4 pass.
+
+## Landsburg Mine
+
+### What is confirmed
+
+- Cleanup and cap construction occurred from 2018 through 2020.
+- Industrial waste remains inside a former mine trench.
+- Clean backfill was placed, followed by a geomembrane cap.
+- Public Ecology material states that two feet of soil was placed above the geomembrane.
 
 ### Decision
 
 **REJECTED - not good to go.**
 
-The construction event occurred long before Sentinel-1. It cannot supply the required matched pre/post Sentinel-1 experiment, even though the later records help confirm long-term stability.
+The two-foot value measures soil above the liner. It does not measure depth from the final ground surface to the top of the buried industrial waste because clean backfill separates the waste from the liner. The required depth-to-target is therefore absent.
 
-Classification: `rejected_scale_or_sensor_mismatch`.
+Classification: `rejected_missing_independent_depth`.
 
-## Triune Mine - next active lead
+## K Ply
 
-Washington Ecology states that the Bureau of Land Management completed cleanup in 2018 by moving about 5,500 cubic yards of mine tailings and waste rock into an onsite consolidated waste area, then covering it with a liner and clean soil. Ecology and BLM inspected the consolidated area in 2023 and reported that it appeared to be functioning as intended.
+### What is confirmed
 
-The public site index lists **Completion Report Triune Mine**, dated December 1, 2018, as a remedial action/as-built report.
+- Cleanup construction began in 2015 and was completed in 2016.
+- More than 50,000 tons of contaminated soil were excavated and removed.
+- Excavated areas were treated and then filled with clean soil.
+- Some contamination remains under land-use and groundwater restrictions, but no public record reviewed defines it as a large engineered buried mass with a measured cover depth.
+- A construction completion report and annual monitoring reports are publicly listed.
 
-### Why it deserves one detailed check
+### Decision
 
-- Construction occurred in the Sentinel-1 era.
-- A real engineered buried mass remains onsite.
-- A later 2023 inspection exists.
-- A named as-built completion report exists.
+**REJECTED - not good to go.**
 
-### Exact next check
+This was primarily an excavation-and-removal cleanup. The remaining contamination is not documented as the required mapped buried target with a known top surface and cover depth.
 
-Inspect the 2018 completion report for:
+Classification: `rejected_out_of_finding_family`.
 
-1. actual measured cover thickness or surveyed top/bottom surfaces;
-2. numerical survey accuracy or control tolerance;
-3. exact consolidated-waste-area boundary and usable interior area;
-4. construction and survey dates;
-5. evidence that the 2023 condition supports observation-date depth;
-6. a realistic independent negative and a path to controlling surface-construction effects.
+## Next candidate rule
 
-If the report contains only planned thickness or no numerical uncertainty, reject Triune at the first failed gate.
+Candidate 10 must be screened first for the scarce properties:
+
+1. a real engineered buried mass remains onsite;
+2. construction occurred in the Sentinel-1 era;
+3. the final report contains measured top and final surfaces;
+4. numerical survey accuracy or a defensible control bound is public;
+5. a later survey or monitoring record supports observation-date depth.
+
+Do not spend detailed time on excavation-only cleanups, exposed liners, or pre-Sentinel-1 caps.
 
 ## Stage 1 tally
 
-- Independent facilities screened or entered: **7**
-- Rejected: **4**
-- Hold: **2**
-- Under review: **1**
+- Independent facilities screened: **9**
+- Rejected: **6**
+- Hold: **3**
 - Independent site groups clearing Gates 0-4: **0**
 
-The hard stopping threshold has not yet been reached because the approved plan allows up to 15 candidates. The search must still stop at 15 candidates, or earlier if the remaining public source classes clearly cannot produce three qualifying site groups.
+The hard stopping threshold has not yet been reached. The plan allows at most 15 candidates, but the search should stop earlier if the remaining public source classes cannot realistically produce three qualifying groups.
 
 ## Official source references
 
-- Washington Ecology cleanup-site pages for Elk Plain County Shop, Sudbury Road Landfill, RAMCO, Dryden Landfill, and Triune Mine.
+- Washington Ecology cleanup-site pages and public document indexes for Elk Plain County Shop, Sudbury Road Landfill, RAMCO, Dryden Landfill, Triune Mine, Landsburg Mine, and K Ply.
 - Arkansas ADEQ public facility records and final-cover certification requirements for Two Pine and Sunray #1.
-- Washington Ecology, **Completion Report Triune Mine**, December 1, 2018, listed as a remedial action/as-built report.
+- Port of Port Angeles environmental project summary for the completed K Ply excavation cleanup.
