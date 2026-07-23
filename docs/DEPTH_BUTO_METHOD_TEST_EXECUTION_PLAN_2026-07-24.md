@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-24  
 **Branch:** `main`  
-**Status:** implementation complete; Earth Engine execution pending  
+**Status:** implementation complete; approximate local geometry prepared; Earth Engine execution pending  
 **Broad source search:** stopped
 
 ## Plain-English goal
@@ -64,6 +64,23 @@ Both files must remain outside Git.
 The comparison footprint is only a background comparison. It is not a confirmed negative unless independent evidence later proves that it contains no buried feature.
 
 Exact archaeological coordinates, geometry, and local paths must not be written into Git or printed to the terminal.
+
+## Local geometry prepared
+
+A local input package was prepared outside Git containing:
+
+```text
+buto_target_figure5_approx.geojson
+buto_background_north_approx.geojson
+run_buto_dry_run.ps1
+README.md
+```
+
+The target boundary was estimated from Figure 5 and the paper's reported 128 m by 62 m size. It is not a survey-grade boundary and has an estimated centre uncertainty of about 30 m.
+
+The comparison polygon is a nearby same-size area selected only for the spatial screen. It is not a confirmed negative.
+
+These approximate files are enough for an exploratory first run, but not for calibration intake or a final scientific claim.
 
 ## Test steps
 
@@ -156,13 +173,11 @@ The test stops without interpretation when:
 
 ## Current execution blocker
 
-The software is ready, but the real Earth Engine run has not occurred in this session because:
+The software and approximate local polygons are ready.
 
-- the repository uses a local Earth Engine service-account key;
-- that credential is not available in this session;
-- no approved local target and comparison GeoJSON files are available here.
+The real Earth Engine run has not occurred in this session because the repository uses a local Earth Engine service-account key and that credential is not available here.
 
-This is an execution-input blocker, not a need for more web searching.
+This is now the only immediate execution blocker. It is not a need for more web searching.
 
 ## Completion boundary
 
