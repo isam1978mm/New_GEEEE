@@ -2,267 +2,276 @@
 
 **Date:** 2026-07-24  
 **Branch:** `main`  
-**Scope:** established datasets, registries, controlled test facilities, and named research-source groups only  
-**General candidate-site search:** remains closed
+**Scope:** named datasets, registries, test facilities, and research groups only  
+**General candidate-site search:** stopped
 
-## Decision summary
+## Plain-English decision
 
-| Source | Decision | Direct Sentinel-1 calibration status |
-|---|---|---|
-| Colorado School of Mines Geophysical Discovery Lab at Kafadar Commons | `method_research_only` | Not good to go |
-| USACE Formerly Used Defense Sites GIS | `rejected_registry_only_and_out_of_family` | Not usable |
-| National Pipeline Mapping System public data | `rejected_missing_depth_and_precision` | Not usable |
-| Buto / Tell el-Fara'in 2026 Sentinel-1 + ERT + excavation study | `evidence_verified_pending_support` | Strong hold; not good to go |
-| Nile Delta radar/GEE research thread led by Elfadaly, Abouarab, Elbehery and collaborators | `source_holder_lead_only` | Not a ready dataset |
+The broad search is over.
 
-None of these five sources supplies a ready multi-site Sentinel-1 depth-calibration dataset.
+These sources are being saved for later research. None is enough by itself to train or release a Sentinel-1 depth model.
 
-## 1. Colorado School of Mines Geophysical Discovery Lab
+| # | Source | Decision | Keep for later? |
+|---:|---|---|---|
+| 1 | Kafadar Commons Geophysical Discovery Lab | `method_research_only` | Yes |
+| 2 | USACE Formerly Used Defense Sites GIS | `rejected_registry_only_and_out_of_family` | No active use |
+| 3 | National Pipeline Mapping System public data | `rejected_missing_depth_and_precision` | No active use |
+| 4 | Buto / Tell el-Fara'in Sentinel-1, ERT, and excavation study | `evidence_verified_pending_support` | Yes - strongest lead |
+| 5 | Nile Delta radar and Google Earth Engine research group | `source_holder_lead_only` | Yes |
+| 6 | Italian buried steel-drum test site | `method_research_only` | Yes |
+| 7 | FHWA SHRP2 R01B utility investigation program | `method_research_only` | Yes |
 
-### What is real and useful
+## 1. Kafadar Commons Geophysical Discovery Lab
 
-The facility is a genuine controlled geophysical test site built beneath Kafadar Commons. Public Colorado School of Mines material documents benign engineered targets with construction-known dimensions and depths, including buried walls, pipes, a dipping concrete slab, mixed-material structures, boreholes, and a buried fiber-optic array.
+### What it provides
 
-The public record confirms, among other examples:
+- Real buried targets built for geophysical testing.
+- Construction-known depths and target dimensions.
+- Benign materials such as concrete, clay, cement, metal, PVC, walls, and cable.
 
-- a mixed-material structure about 25 ft by 25 ft with its top about 2 ft below the surface;
-- archaeological-style walls beginning about 2 ft below the surface;
-- a dipping concrete slab whose top varies from about 2 ft to about 7.2 ft;
-- a buried fiber-optic array covering roughly 30 m by 90 m;
-- an overall field reported in later Mines research as roughly 40 m by 100 m.
+### Why it is not enough
 
-These are independent construction-known references and are valuable for ground-geophysics research and controlled-method testing.
-
-### Why it does not clear the current Sentinel-1 gate
-
-1. **The useful buried targets are small relative to Sentinel-1 resolution.** Sentinel-1 Interferometric Wide Swath imagery has approximately 5 m by 20 m ground resolution before later GRD processing effects. A roughly 7.6 m by 7.6 m target does not provide a clean isolated satellite-scale depth sample.
-2. **The site contains many different nearby buried targets and utilities.** A Sentinel-1 pixel or analysis window would mix several structures and surface influences rather than represent one known depth.
-3. **The entire site is one physical group.** It cannot provide independent train, validation, and holdout groups.
-4. **No public numerical placement or survey uncertainty was found.** The public descriptions give nominal or approximate construction depths, but not a defensible numerical accuracy bound for calibration intake.
-5. **No documented Sentinel-1-scale confirmed-negative area was found.** Ordinary nearby grass cannot be assumed target-free because the field contains many buried structures and services.
-6. **The construction period is strongly confounded.** The lab was created during major campus construction, staging, trenching, and reconstruction of the field, so a pre/post satellite change would be dominated by surface works rather than depth alone.
+- Most individual targets are too small for a clean Sentinel-1 sample.
+- Many targets are close together, so the satellite signal would be mixed.
+- It is one physical site, not separate train, validation, and holdout sites.
+- No public numerical placement uncertainty was found.
+- No documented Sentinel-1-size empty comparison area was found.
+- Major construction and trenching could dominate any satellite change.
 
 ### Decision
 
 ```text
-source_evidence_usable = yes
-method_research_usable = yes
-direct_app_calibration_usable = no
 classification = method_research_only
+direct_Sentinel_1_calibration = no
 ```
 
-Kafadar Commons is useful as a controlled ground-geophysics benchmark or research-method site. It is not a direct Sentinel-1 depth-calibration site under the current contract.
-
-Do not count it toward the three required independent Sentinel-1 site groups.
+Keep it as a controlled ground-geophysics example. Do not count it as a usable calibration site.
 
 ## 2. USACE Formerly Used Defense Sites GIS
 
-### What the source contains
+### What it provides
 
-The public GIS is a national inventory of properties, projects, and program boundaries. It is useful for program-level indexing and site status.
+- A large public index of former military properties and project boundaries.
 
-### Why it is not usable here
+### Why it is not enough
 
-- The GIS is a boundary and project registry, not a measured depth-to-target dataset.
-- Site-level depth would still require separate administrative, engineering, or investigation records.
-- The relevant munitions-related records are outside the project's approved benign finding family and must not enter the active calibration pack.
-- It does not provide ready confirmed negatives, uncertainty, or independent split groups.
+- It is a boundary registry, not a measured depth dataset.
+- It does not provide ready depth, uncertainty, confirmed negatives, or independent splits.
+- Munitions-related records are outside this project's approved benign finding family.
 
 ### Decision
 
 ```text
-source_evidence_usable = registry_only
-method_research_usable = no_for_active_pack
-direct_app_calibration_usable = no
 classification = rejected_registry_only_and_out_of_family
+direct_Sentinel_1_calibration = no
 ```
 
-Do not continue site-by-site FUDS depth searching for this project.
+Do not continue site-by-site FUDS searching for this project.
 
-## 3. National Pipeline Mapping System public data
+## 3. National Pipeline Mapping System
 
-### What the public source provides
+### What it provides
 
-The public viewer gives general information about transmission pipelines and related facilities.
+- General public pipeline information.
 
-### Why it is not usable here
+### Why it is not enough
 
-- The public map is not intended to identify exact pipeline locations.
-- The published minimum geospatial accuracy is approximately plus or minus 500 ft, far too coarse for the required site matching.
-- The public attribute set does not provide a usable depth-of-cover calibration field.
-- More detailed access is restricted to eligible government and pipeline-operator users and remains limited to their jurisdiction or operations.
-- Therefore it cannot provide public measured depth, uncertainty, mapped target geometry, confirmed negatives, and independent splits.
+- The public map is not precise enough for exact site matching.
+- Public data does not provide usable depth-of-cover values.
+- Detailed access is restricted.
+- It does not provide confirmed negatives or separate site groups.
 
 ### Decision
 
 ```text
-source_evidence_usable = no_for_depth
-method_research_usable = no
-direct_app_calibration_usable = no
 classification = rejected_missing_depth_and_precision
+direct_Sentinel_1_calibration = no
 ```
 
-## 4. Buto / Tell el-Fara'in 2026 study
+## 4. Buto / Tell el-Fara'in, Egypt
 
-### Full-text status
+### What it provides
 
-The Acta Geophysica paper is open access. The full text was checked, so this is no longer a `hold_pending_full_text` case.
+- A real Sentinel-1 image date: 5 May 2018.
+- A large radar anomaly.
+- Ground electrical-resistivity work.
+- Independent excavation.
+- Excavated mudbrick wall tops at about 3.1 to 4.1 metres below the local ground surface.
 
-Paper:
+### Why it is the strongest lead
 
-**Multi-scale detection of buried archaeological elements across different occupation phases: an integrated approach using radar satellite imagery and electric resistivity tomography at Buto, northwestern Nile Delta of Egypt**, Acta Geophysica 74, article 112 (2026), DOI `10.1007/s11600-026-01809-4`.
+The buried feature was not guessed from the satellite image. It was checked with ground work and excavation.
 
-### What is independently verified
+### What is still missing
 
-- One Sentinel-1 GRD C-band acquisition is identified exactly: **5 May 2018**, descending orbit, VV/VH, processed in SNAP.
-- The Sentinel-1 analysis outlined a large oval anomaly reported as approximately **128 m by 62 m**, large enough to avoid the immediate small-target rejection that affected Kafadar Commons.
-- A quasi-3D ERT survey used 15 profiles over approximately **5,400 square metres**.
-- The ERT work used georeferenced control, repeat measurements, filtering, and 2D/3D inversion.
-- Excavation used a georeferenced **10 m by 10 m** trench, controlled 10 cm spits, a local datum, total-station mapping, and XYZ recording.
-- Excavated mudbrick walls began at reported depths of approximately **3.1 m, 3.2 m, 3.5 m, and 4.1 m** below the local ground surface in different sub-squares.
-- The excavation and ERT confirmed real buried architectural material independent of the satellite interpretation.
+- A numerical uncertainty for the excavated depth values.
+- A confirmed empty comparison area.
+- Clear control of moisture, vegetation, ground clearing, and other surface changes.
+- Proof that the Sentinel-1 signal changes with depth.
+- Two more independent physical sites.
 
-### Important depth correction
-
-The paper contains several different depth statements that must not be combined into one calibration label:
-
-- approximately 3.1-4.1 m: excavated top depths of specific mudbrick walls;
-- approximately 3-6 m: ERT anomaly depth range associated with architecture;
-- approximately 6-7 m: interpreted artificial foundation layer;
-- nearly 14 m: natural sand reached in the deepest borehole.
-
-The nearly 14 m value is **not** an excavation-confirmed buried-feature top and is not a Sentinel-1 calibration depth.
-
-### Why it is not good to go yet
-
-#### Gate 1 - depth definition
-
-The excavation gives strong depth-to-top evidence inside the 10 m by 10 m trench. However, the Sentinel-1 anomaly covers a much larger area, and the paper does not prove that one depth value applies across the full 128 m by 62 m radar footprint. The published depth variation reflects real spatial heterogeneity.
-
-#### Gate 2 - numerical uncertainty
-
-The paper reports ERT inversion RMS errors of approximately 1% to 2.5%, repeat stacks, and removal of measurements above an error threshold. Those values describe resistivity-data/model fit and measurement quality; they are **not a numerical uncertainty in metres for the excavated wall-top depth**.
-
-The excavation was conducted in 10 cm spits and mapped with a total station, but the paper does not state a numerical total-station accuracy, vertical-control tolerance, or final uncertainty for the wall-top depths.
-
-Required missing support:
-
-- published vertical survey accuracy or total-station control tolerance; or
-- the excavation XYZ/total-station data and datum-control records needed to calculate a defensible depth uncertainty.
-
-#### Gate 3 - observation-date validity
-
-The exact Sentinel-1 date is known, but the article does not give a sufficiently clear construction/excavation chronology to prove that the complete radar footprint was still undisturbed on 5 May 2018. The date relationship between the image, clearing, ERT campaigns, and excavation must be resolved before intake.
-
-#### Gate 5 - confounder control
-
-The study intentionally used a May image under dry harvest-season conditions, which is useful context. However, the radar feature is on a large archaeological mound with strong topographic, soil, moisture, vegetation, and cultural-layer variation. The paper also states that the apparent oval shape is affected by descending-orbit viewing geometry.
-
-#### Gate 7 - confirmed negative
-
-The paper compares the anomaly with surrounding ground, but it does not independently prove a Sentinel-1-scale target-free comparison area. Surrounding ground at a multilayered archaeological tell cannot be assumed empty.
-
-#### Gate 8 - radar/depth linkage
-
-The paper demonstrates a spatial association: Sentinel-1 identified a large anomaly, and ERT plus excavation confirmed buried archaeology in the investigated area. It does **not** show that Sentinel-1 backscatter varies quantitatively with known depth.
-
-Treat the paper as evidence that Sentinel-1 can help locate a ground-truthed archaeological zone under favourable conditions, not as proof of direct C-band depth estimation to 3-6 m. The paper itself cites much shallower typical C-band penetration figures for clay and dry sand.
-
-### Data availability
-
-The paper includes no downloadable code, raw ERT data, excavation XYZ data, survey-control file, or supplementary calibration package. The published data-availability statement does not provide an open dataset route.
+The paper supports detection and spatial matching. It does not yet prove numerical depth estimation from Sentinel-1.
 
 ### Decision
 
 ```text
-source_evidence_usable = yes
-method_research_usable = yes
-direct_app_calibration_usable = no_current_public_package
 classification = evidence_verified_pending_support
-full_text_check = complete
+status = strong_hold
+direct_Sentinel_1_calibration = not_yet
 ```
 
-Buto is the strongest Sentinel-1-native physical-validation lead found so far. It remains a **hold**, not a pass. It may become usable only if the missing numerical depth uncertainty, observation chronology, footprint-level depth mapping, and confirmed-negative evidence are supplied.
+Keep Buto as the first site to use in a future method test.
 
-It counts as one physical site group at most; it cannot by itself provide train, validation, and holdout.
+## 5. Nile Delta radar and Google Earth Engine research group
 
-## 5. Nile Delta radar/GEE research thread
+### What it provides
 
-### What the publication record shows
+- A real research team using radar, Google Earth Engine, ground geophysics, and archaeology across several Nile Delta locations.
+- A possible route to records from more than one physical site.
 
-The overlapping Kafrelsheikh University and NARSS research group has repeatedly applied radar, optical imagery, historic maps, GEE, ground geophysics, boreholes, and excavation across the northern Nile Delta.
+### What is still missing
 
-The public record includes:
+The published papers do not provide one ready package containing:
 
-- a 2019 Remote Sensing paper using Sentinel-1, optical imagery, and historic maps around northern Delta tells;
-- a 2022 Archaeological Prospection paper using radar imagery and GEE for Burullus paleolandscape analysis;
-- a 2025 Buto paper using geophysics, remote sensing, and excavation;
-- the 2026 Buto Sentinel-1 + ERT + excavation paper reviewed above.
+- measured depth with numerical uncertainty;
+- confirmed empty areas;
+- exact site-group separation;
+- enough complete sites for train, validation, and holdout.
 
-### What it does not yet provide
-
-The related papers do not form a ready multi-site known-depth dataset:
-
-- the 2019 work identifies several large **potential** settlement areas, but does not provide independent excavated depth-to-top labels and uncertainty for each area;
-- the 2022 Burullus work is a paleolandscape and long-term change study, not a buried-feature depth calibration package;
-- the 2025 and 2026 physical-validation papers concern the same Buto physical site and therefore cannot be split into independent train, validation, and holdout groups;
-- no shared public repository containing excavation XYZ files, survey accuracy, confirmed negatives, and aligned Sentinel-1 acquisition records was found.
-
-### Independence clarification
-
-The dataset contract requires independence by **physical site/group**, not necessarily by different author teams. The same university team could provide train, validation, and holdout groups if it supplied complete evidence from genuinely separate physical sites and the split was frozen by site.
-
-Using one research team for all sites would still create a common-method bias that should be reported and later tested with an outside holdout, but it does not automatically violate the current group-split rule.
+The sites may come from the same research team. Independence requires different physical site groups, not different authors.
 
 ### Decision
 
 ```text
-source_evidence_usable = yes_for_source_discovery
-method_research_usable = yes
-direct_app_calibration_usable = no
 classification = source_holder_lead_only
+ready_dataset = no
 ```
 
-This research group is a credible **source-holder lead**, not a dataset already available for import. Do not count its publication list as multiple independent calibration groups unless separate sites have complete independent depth, uncertainty, negative, date, and sensor evidence.
+Keep the group name for later. No outreach was performed.
+
+## 6. Italian buried steel-drum test site
+
+**Source:** Marchetti and Settimi, *Integrated geophysical measurements on a test site for detection of buried steel drums*, Annals of Geophysics, 2011.
+
+### What it provides
+
+- Twelve empty steel drums buried at about 4 to 5 metres.
+- Construction-known placement.
+- Clayey-sandy ground.
+- Magnetometry, electrical resistivity tomography, and electromagnetic-induction testing.
+
+### Important result
+
+The magnetic and electromagnetic methods detected the drums. The electrical-resistivity result mainly detected soil changes caused by digging, rather than the drums themselves.
+
+This directly supports an important warning for this project:
+
+> A geophysical or satellite signal may respond to excavation and disturbed soil instead of the buried target.
+
+### Why it is not calibration data
+
+- No Sentinel-1 data was used.
+- The footprint is too small for the approved satellite experiment.
+- It is one site.
+- No useful numerical placement uncertainty was published for this contract.
+- It does not provide a Sentinel-1-size confirmed negative.
+
+### Decision
+
+```text
+classification = method_research_only
+direct_Sentinel_1_calibration = no
+```
+
+Keep it as supporting evidence for the excavation-disturbance confounder.
+
+## 7. FHWA SHRP2 R01B - Utility Investigation Technologies
+
+**Report:** *Utility-Locating Technology Development Using Multisensor Platforms*, SHRP2 Report S2-R01B-RW-1.
+
+### What it provides
+
+- A national transportation research program.
+- Ground-based multichannel GPR and time-domain electromagnetic induction.
+- Testing and implementation work in different soils and project settings.
+- Standard procedures for collecting and processing ground-geophysical data.
+- A useful example of combining more than one ground method.
+
+### Important accuracy correction
+
+Quality Level A utility information is commonly described as having about 15 mm vertical accuracy.
+
+That accuracy applies when a utility is **physically exposed and surveyed**. It is not the accuracy of GPR, TDEMI, or Sentinel-1.
+
+Therefore the 15 mm figure cannot be copied into this project's depth-uncertainty field for a remote measurement.
+
+### Why it is not a ready dataset
+
+- It is ground-based, not Sentinel-1-based.
+- The report is about technology development and field procedures, not an open calibration table ready for this project.
+- It does not provide a complete set of Sentinel-1-size positive and negative areas.
+- It does not establish a satellite signal-to-depth relationship.
+- The implementation locations do not automatically form valid train, validation, and holdout groups for this project.
+
+### Decision
+
+```text
+classification = method_research_only
+direct_Sentinel_1_calibration = no
+```
+
+Keep it for two later uses:
+
+1. designing a proper ground-truth and exposure-survey procedure;
+2. documenting that depth uncertainty must come from the independent survey or exposure, not from a generic instrument claim.
 
 ## Final result
 
 ```text
-known_source_screening_completed = 5
-new_direct_calibration_sources = 0
+sources_screened = 7
 strong_hold_sources = 1
-method_research_only_sources = 1
 source_holder_leads = 1
+method_research_sources = 3
 rejected_sources = 2
-public_candidate_site_search = still_closed
-depth_blocker_2 = still_blocked
+ready_multi_site_depth_datasets = 0
+general_web_search = stopped
+outreach_performed = false
 ```
 
-## Best current lead
+## What may proceed now
 
-Buto / Tell el-Fara'in is the best methodological match found so far because it combines an exact Sentinel-1 acquisition, a satellite-scale anomaly, ground geophysics, controlled excavation, and measured wall-top depths.
+A limited **Buto method test** may proceed later:
 
-Its first blocking item is now clearly defined:
+- reproduce the published Sentinel-1 observation;
+- compare it with the known excavation area;
+- check whether a stable satellite-scale anomaly exists;
+- report detection or spatial agreement only;
+- do not claim that Sentinel-1 measured the wall depth.
 
-> obtain a numerical uncertainty in metres for the excavated depth reference, together with enough raw/control data to map those depths reliably to the larger Sentinel-1 footprint.
+## What may not proceed yet
 
-Even if that item is resolved, a confirmed negative and at least two more independent physical sites are still required.
+- depth-model training;
+- numerical depth prediction;
+- app depth output;
+- claims that radar intensity directly measures depth.
 
-## What remains worth looking for
+## Saved-for-later list
 
-The useful source class remains:
+Keep these four active references:
 
-> an established **multi-site benign controlled-test, excavation, or engineering dataset** containing measured depth to the top of buried features, numerical uncertainty, mapped geometry, dates, and independently documented no-target areas.
+1. Buto as the strongest Sentinel-1 plus excavation case.
+2. The Nile Delta group as a possible holder of more complete site records.
+3. The Italian steel-drum paper as evidence that digging disturbance can create the signal.
+4. SHRP2 R01B as guidance for ground truth, exposure surveys, and uncertainty handling.
 
-A named university or agency team with several separately excavated sites can qualify as a source lead. General site-by-site candidate searching remains closed.
+No further broad source search is planned.
 
-## Sources reviewed
+## Main sources reviewed
 
-- Colorado School of Mines Department of Geophysics facility pages and Geophysical Discovery Lab material.
-- ESA Sentinel-1 instrument documentation.
-- USACE official FUDS GIS and program documentation.
-- PHMSA official NPMS public-viewer and access documentation.
-- Abouarab, Elfadaly, Elbehery et al., Acta Geophysica 74, article 112 (2026), DOI `10.1007/s11600-026-01809-4`.
-- Elfadaly et al., Remote Sensing 11, 3039 (2019), DOI `10.3390/rs11243039`.
-- Elfadaly et al., Archaeological Prospection 29, 369-384 (2022), DOI `10.1002/arp.1860`.
-- Abouarab et al., Archaeological Prospection 32, 437-457 (2025), DOI `10.1002/arp.1971`.
+- Colorado School of Mines Geophysical Discovery Lab material.
+- USACE FUDS program and GIS documentation.
+- PHMSA NPMS public-viewer documentation.
+- Abouarab, Elfadaly, Elbehery and collaborators' Buto study and related Nile Delta papers.
+- Marchetti and Settimi, Annals of Geophysics, 2011.
+- National Academies SHRP2 Report S2-R01B-RW-1.
+- FHWA Subsurface Utility Engineering guidance.
