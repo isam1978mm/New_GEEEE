@@ -9,7 +9,7 @@
 
 The broad search is over.
 
-These sources are being saved for later research. None is enough by itself to train or release a Sentinel-1 depth model.
+These sources are saved for later research. None is enough to train or release a Sentinel-1 depth model.
 
 | # | Source | Decision | Keep for later? |
 |---:|---|---|---|
@@ -20,6 +20,9 @@ These sources are being saved for later research. None is enough by itself to tr
 | 5 | Nile Delta radar and Google Earth Engine research group | `source_holder_lead_only` | Yes |
 | 6 | Italian buried steel-drum test site | `method_research_only` | Yes |
 | 7 | FHWA SHRP2 R01B utility investigation program | `method_research_only` | Yes |
+| 8 | Mining subsidence studies using Sentinel-1 InSAR | `separate_mechanism_research_only` | Yes, but outside the active depth pack |
+| 9 | FERC eLibrary pipeline compliance records | `unconfirmed_source_lead_only` | Yes, as a named archive |
+| 10 | State and national karst/cave databases | `dead_end_for_active_pack` | No active use |
 
 ## 1. Kafadar Commons Geophysical Discovery Lab
 
@@ -164,7 +167,7 @@ Keep the group name for later. No outreach was performed.
 
 The magnetic and electromagnetic methods detected the drums. The electrical-resistivity result mainly detected soil changes caused by digging, rather than the drums themselves.
 
-This directly supports an important warning for this project:
+This supports an important warning:
 
 > A geophysical or satellite signal may respond to excavation and disturbed soil instead of the buried target.
 
@@ -183,7 +186,7 @@ classification = method_research_only
 direct_Sentinel_1_calibration = no
 ```
 
-Keep it as supporting evidence for the excavation-disturbance confounder.
+Keep it as supporting evidence for the excavation-disturbance problem.
 
 ## 7. FHWA SHRP2 R01B - Utility Investigation Technologies
 
@@ -195,15 +198,14 @@ Keep it as supporting evidence for the excavation-disturbance confounder.
 - Ground-based multichannel GPR and time-domain electromagnetic induction.
 - Testing and implementation work in different soils and project settings.
 - Standard procedures for collecting and processing ground-geophysical data.
-- A useful example of combining more than one ground method.
 
 ### Important accuracy correction
 
 Quality Level A utility information is commonly described as having about 15 mm vertical accuracy.
 
-That accuracy applies when a utility is **physically exposed and surveyed**. It is not the accuracy of GPR, TDEMI, or Sentinel-1.
+That accuracy applies when a utility is physically exposed and surveyed. It is not the accuracy of GPR, TDEMI, or Sentinel-1.
 
-Therefore the 15 mm figure cannot be copied into this project's depth-uncertainty field for a remote measurement.
+The 15 mm figure cannot be copied into this project's depth-uncertainty field for a remote measurement.
 
 ### Why it is not a ready dataset
 
@@ -211,7 +213,6 @@ Therefore the 15 mm figure cannot be copied into this project's depth-uncertaint
 - The report is about technology development and field procedures, not an open calibration table ready for this project.
 - It does not provide a complete set of Sentinel-1-size positive and negative areas.
 - It does not establish a satellite signal-to-depth relationship.
-- The implementation locations do not automatically form valid train, validation, and holdout groups for this project.
 
 ### Decision
 
@@ -220,33 +221,136 @@ classification = method_research_only
 direct_Sentinel_1_calibration = no
 ```
 
-Keep it for two later uses:
+Keep it for designing proper ground truth and uncertainty procedures.
 
-1. designing a proper ground-truth and exposure-survey procedure;
-2. documenting that depth uncertainty must come from the independent survey or exposure, not from a generic instrument claim.
+## 8. Mining subsidence studies using Sentinel-1 InSAR
+
+### What they provide
+
+Published mining studies often have:
+
+- known underground mining depth from mine records;
+- very large mapped working panels;
+- long Sentinel-1 time series;
+- non-mined or stable reference areas;
+- ground surveys or models used to check measured surface movement;
+- several mines or panels that may be physically separate.
+
+This makes the literature strong for studying mining-related surface deformation.
+
+### The important mismatch
+
+These studies use **InSAR phase** to measure how the ground surface moves or sinks after mining.
+
+The current project is trying to study whether ordinary Sentinel-1 backscatter features such as `VV_dB`, `VH_dB`, and simple ratios contain information about the depth of a buried feature.
+
+These are different measurements:
+
+```text
+mining_InSAR = surface movement caused by mining
+current_depth_track = backscatter or intensity differences near a buried feature
+```
+
+A strong relationship between mining depth and surface subsidence would not prove that Sentinel-1 backscatter can measure buried-feature depth.
+
+### Scope decision
+
+Under the current project contract, InSAR is not part of the active depth feature set. Adding it would require a separate feature pipeline, separate physical model, separate validation rules, and a deliberate project-scope change.
+
+### Decision
+
+```text
+classification = separate_mechanism_research_only
+active_depth_calibration_pack = no
+keep_as_future_InSAR_track = yes
+```
+
+Keep this literature for a possible future **surface-deformation** feature, not for the current buried-feature depth model.
+
+## 9. FERC eLibrary pipeline compliance records
+
+### What is confirmed
+
+- FERC eLibrary is a real public docket and filing system.
+- Pipeline construction and compliance reports are filed there.
+- Some dockets contain detailed construction-status and compliance attachments.
+
+### What is not confirmed
+
+No specific public filing has yet been verified to contain all of the following:
+
+- a usable depth-of-cover table;
+- exact mapped positions;
+- numerical survey accuracy;
+- dates that can be matched to Sentinel-1;
+- a confirmed empty comparison area;
+- enough independent sites.
+
+Search-engine checks did not identify a specific ready filing by the phrase `depth of cover survey`.
+
+### Decision
+
+```text
+classification = unconfirmed_source_lead_only
+verified_depth_dataset = no
+specific_docket_identified = no
+```
+
+Keep FERC eLibrary as a named archive for later. Do not reopen broad docket-by-docket searching now.
+
+## 10. State and national karst/cave databases
+
+### What is available
+
+The USGS national karst database maps rock areas where karst may exist or develop.
+
+### Why it is not enough
+
+It does not provide a national table of:
+
+- individual cave or void locations;
+- measured depth to each cave ceiling;
+- numerical uncertainty;
+- confirmed no-void comparison borings;
+- dates and geometry suitable for Sentinel-1 matching.
+
+### Decision
+
+```text
+classification = dead_end_for_active_pack
+direct_Sentinel_1_calibration = no
+```
+
+Do not spend more time on national karst maps for this blocker.
 
 ## Final result
 
 ```text
-sources_screened = 7
+sources_screened = 10
 strong_hold_sources = 1
 source_holder_leads = 1
+unconfirmed_archive_leads = 1
 method_research_sources = 3
-rejected_sources = 2
+separate_mechanism_tracks = 1
+rejected_or_dead_end_sources = 3
 ready_multi_site_depth_datasets = 0
 general_web_search = stopped
 outreach_performed = false
 ```
 
-## What may proceed now
+## What may proceed later
 
-A limited **Buto method test** may proceed later:
+### Buto method test
 
 - reproduce the published Sentinel-1 observation;
 - compare it with the known excavation area;
 - check whether a stable satellite-scale anomaly exists;
 - report detection or spatial agreement only;
 - do not claim that Sentinel-1 measured the wall depth.
+
+### Separate mining-InSAR study
+
+This may be planned only as a different surface-deformation project. It must not be mixed into the current buried-feature depth calibration pack.
 
 ## What may not proceed yet
 
@@ -257,12 +361,14 @@ A limited **Buto method test** may proceed later:
 
 ## Saved-for-later list
 
-Keep these four active references:
+Keep these active references:
 
 1. Buto as the strongest Sentinel-1 plus excavation case.
 2. The Nile Delta group as a possible holder of more complete site records.
 3. The Italian steel-drum paper as evidence that digging disturbance can create the signal.
-4. SHRP2 R01B as guidance for ground truth, exposure surveys, and uncertainty handling.
+4. SHRP2 R01B as guidance for ground truth and uncertainty handling.
+5. Mining InSAR as a separate future surface-deformation track.
+6. FERC eLibrary as an unconfirmed archive lead.
 
 No further broad source search is planned.
 
@@ -275,3 +381,6 @@ No further broad source search is planned.
 - Marchetti and Settimi, Annals of Geophysics, 2011.
 - National Academies SHRP2 Report S2-R01B-RW-1.
 - FHWA Subsurface Utility Engineering guidance.
+- Published Sentinel-1 InSAR mining-subsidence studies.
+- FERC eLibrary public docket records.
+- USGS national karst map and database documentation.
