@@ -28,9 +28,11 @@ Stop the public-source search if fewer than **3 independent site groups** pass G
 7. Confirmed no-target comparison areas exist at Sentinel-1 scale.
 8. Controlled radar differences actually track verified depth.
 
-Reject a candidate at the first unrecoverable failure. A hold is allowed only when a clearly obtainable public document could resolve the missing item.
+Reject a candidate at the first unrecoverable failure. A hold is allowed when a clearly obtainable public document could resolve the missing item.
 
-## Data-derived uncertainty method
+## Uncertainty routes
+
+### Route A - data-derived consistency
 
 Use **combined spatial-block resampling plus an unchanged-area accuracy floor**.
 
@@ -53,6 +55,14 @@ The result must be marked:
 
 The record must also state the block method, unchanged-area residual, registration/systematic term, and final combined uncertainty.
 
+### Route B - published survey-control bound
+
+An unchanged-area floor is preferred, but it is not the only defensible route.
+
+Gate 2 may also pass when a signed/sealed survey record or related certification gives a **numerical vertical accuracy, registration tolerance, or control-network bound**, and documents that the before and after surveys use the same project control and vertical datum.
+
+The record must cite the exact published bound and explain how it applies to the before/after surface difference. A shared firm, shared drawing, close survey dates, or a professional seal alone is not enough without a numerical bound.
+
 A before/after map alone does not automatically pass.
 
 ## Stage 1 workflow
@@ -74,8 +84,9 @@ A before/after map alone does not automatically pass.
 2. **AOC #14 Interim Action Completion Technical Memorandum**, Herrera, dated April 5, 2024.
 3. **Ecology Feedback on Survey of Cap Thickness Map**, dated June 25, 2024.
 4. **Cap Inspection Plan**, dated September 13, 2024.
+5. Washington Ecology SEPA records for the Elk Plain Crossing development and Future Park area.
 
-## Required raw-data check
+## Gate 1 - measured depth
 
 ### Before-survey elevations
 
@@ -89,40 +100,77 @@ The as-built drawing contains a panel titled **Survey of Consolidated Contaminat
 
 The drawing contains a panel titled **As-Built Survey Post Clean Soil Cap at Future Park Area** with spot elevations and contours. The technical memorandum identifies the survey date as **September 8, 2023**.
 
+### Direct depth meaning
+
+**Strong pass for the depth definition.**
+
+For this clean-soil cover, the buried interface is the surveyed pre-cap contaminated-soil surface. Therefore, post-cap surface minus pre-cap surface is a direct measurement of cover thickness and depth to the buried interface, not a design-only estimate.
+
+## Gate 2 - uncertainty
+
 ### Surveyed unchanged ground outside the cap
 
 **Not confirmed.**
 
-The drawing shows surrounding ground, roads, and slopes, but it does not label any overlapping area as unchanged and stable between the two surveys. The completion memorandum says the cap and surrounding disturbed areas were hydroseeded and describes ongoing/future grading. Therefore, the visible surrounding ground cannot safely be treated as a true zero-change control.
+The drawing shows surrounding ground, roads, and slopes, but it does not label any overlapping area as unchanged and stable between the two surveys. The completion memorandum says the cap and surrounding disturbed areas were hydroseeded and describes ongoing or future grading. The visible surround cannot safely be treated as a zero-change control.
 
-## Uncertainty-method decision
+### Published survey-control route
 
-- Spatial-block testing may be possible from the mapped thickness points.
-- The required unchanged-area accuracy floor cannot be calculated from the currently public records.
-- Block variation alone would measure precision but would remain blind to survey registration or datum offset.
+**Hold pending one focused document check.**
+
+Both survey panels appear on the same AHBL project drawing and the surveys were performed about three weeks apart. A related signed/sealed survey certification or survey-control note could provide a numerical registration or vertical-accuracy bound and confirm a shared datum.
+
+The currently posted public C1.0 copy is marked **REVIEW SET**. Its visible title block, notes, and parsed PDF text do not state a numerical survey accuracy, registration tolerance, control-network accuracy, or vertical-datum bound. That public copy does not yet clear Gate 2, but a clearly related survey-control document could still resolve it.
+
+### Gate 2 status
+
+`evidence_verified_pending_support`
+
+Do not classify Elk Plain as `rejected_missing_uncertainty` until the related survey-control notes or certification have been checked once. If no numerical bound is found and no unchanged overlap area exists, then Gate 2 becomes an unrecoverable uncertainty failure.
+
+## Gate 0 - scale and isolation
+
+**Open and potentially terminal.**
+
+Public SEPA material describes the broader Future Park area as about **2.27 acres**, approximately **0.92 hectares**. The exact capped polygon still needs confirmation from the survey boundary.
+
+This is close to, but not clearly above, a one-hectare screening threshold. Its narrow shape, nearby road, grading, slopes, and surrounding development may create mixed Sentinel-1 pixels. Elk Plain cannot count as a qualifying site group until the exact capped area and usable isolated interior are measured.
+
+Possible terminal classification:
+
+`rejected_scale_or_sensor_mismatch`
+
+## Gates 7-8 - negatives and radar linkage
+
+**High-risk and potentially terminal.**
+
+The cap and nearby ground were graded and hydroseeded. Therefore:
+
+- no adjacent area has yet been confirmed as an undisturbed no-target comparison;
+- the cap event is time-matched with major surface changes in roughness, moisture, drainage, and vegetation;
+- a Sentinel-1 change may reflect the fresh surface work rather than the depth of the buried interface.
+
+A negative would likely need to come from a separate independently documented stable site, not the immediately disturbed surround.
+
+Even with perfect depth and uncertainty records, Elk Plain must still demonstrate that adjusted radar differences track depth after controlling for the construction surface disturbance. Failure at that stage is a radar-linkage or sensor-mismatch rejection.
 
 ## Elk Plain decision
 
-**Not good to go.**
-
-Elk Plain has strong directly measured depth evidence, but the combined uncertainty method cannot be completed from the public package because no stable unchanged overlap area is documented.
+**Not good to go, but not rejected yet.**
 
 Current classification:
 
-`rejected_missing_uncertainty`
+`evidence_verified_pending_support`
 
-Keep it in the research record as a strong measured-depth example, but stop spending additional Stage 1 time on it unless a public raw survey file or a clearly documented unchanged control area appears.
+Elk Plain does **not** count toward the three required independent site groups because Gates 0-4 are not complete.
 
-## Next active task
+## Exact next checks, in order
 
-Move to other completed cap projects. Prioritize facilities with:
-
-- as-built before/after surfaces;
-- a documented stable control area or published survey accuracy;
-- a later settlement or topographic survey;
-- construction in the Sentinel-1 era;
-- a large, isolated cell;
-- independent confirmed comparison areas.
+1. Measure or confirm the exact capped footprint and determine whether it has a sufficiently large isolated interior for Sentinel-1.
+2. Check the related survey-control notes, certification, record survey, or signed/sealed version for a numerical vertical accuracy or registration bound and a common datum.
+3. If scale passes and Gate 2 can be resolved, check observation-date depth and Sentinel-1 coverage.
+4. Assess whether any independent confirmed negative exists and whether the surface-construction confound can realistically be controlled.
+5. Reject at the first unrecoverable failure using the correct gate-specific reason.
 
 ---
 
