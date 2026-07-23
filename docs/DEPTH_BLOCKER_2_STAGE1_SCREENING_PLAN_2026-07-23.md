@@ -84,7 +84,8 @@ A before/after map alone does not automatically pass.
 2. **AOC #14 Interim Action Completion Technical Memorandum**, Herrera, dated April 5, 2024.
 3. **Ecology Feedback on Survey of Cap Thickness Map**, dated June 25, 2024.
 4. **Cap Inspection Plan**, dated September 13, 2024.
-5. Washington Ecology SEPA records for the Elk Plain Crossing development and Future Park area.
+5. **2025 Q4 Progress Report**, dated December 2, 2025.
+6. Washington Ecology cleanup-site record, including the current NFA and environmental-covenant listing.
 
 ## Gate 1 - measured depth
 
@@ -130,15 +131,46 @@ Do not classify Elk Plain as `rejected_missing_uncertainty` until the related su
 
 ## Gate 0 - scale and isolation
 
-**Open and potentially terminal.**
+### Gross scale
 
-Public SEPA material describes the broader Future Park area as about **2.27 acres**, approximately **0.92 hectares**. The exact capped polygon still needs confirmation from the survey boundary.
+**Preliminary pass.**
 
-This is close to, but not clearly above, a one-hectare screening threshold. Its narrow shape, nearby road, grading, slopes, and surrounding development may create mixed Sentinel-1 pixels. Elk Plain cannot count as a qualifying site group until the exact capped area and usable isolated interior are measured.
+The December 2, 2025 official progress report identifies a **5.31-acre parcel where contaminated soils were capped in place**. This is about **2.15 hectares**, so Elk Plain is not automatically too small for Sentinel-1.
 
-Possible terminal classification:
+This corrects the earlier use of a 2.27-acre park figure from an older broader-development record. That figure was not a reliable measurement of the capped parcel.
 
-`rejected_scale_or_sensor_mismatch`
+### Usable isolated interior
+
+**Still open.**
+
+The cap drawing shows a multi-acre footprint, but the exact capped polygon and the interior remaining after edge, road, slope, and mixed-pixel buffers still need measurement. Nearby grading and residential development may reduce the clean usable interior even though the gross parcel exceeds one hectare.
+
+Current Gate 0 status:
+
+`evidence_verified_pending_support`
+
+A scale rejection is now justified only if the measured cap interior is too narrow or too mixed after buffering, not from the parcel acreage alone.
+
+## Gate 3 - observation-date depth
+
+**Hold.**
+
+The depth surveys are close together in August and September 2023, and the cleanup work continued through October 2023. This creates a defensible near-construction observation window if matching Sentinel-1 acquisitions exist.
+
+However, Ecology also stated that additional final grading would occur during later park and surrounding-area development. The current public record lists a recorded environmental covenant and a Site NFA decision in March 2026, but no later topographic survey has yet been found that re-measures the cap surface.
+
+Gate 3 can pass by either:
+
+1. using Sentinel-1 observations close to the September 8, 2023 as-built surface; or
+2. finding a later survey that confirms the surface elevation for later Sentinel-1 dates.
+
+Do not assume that the 2023 depth remained unchanged through later grading.
+
+## Gate 4 - Sentinel-1 coverage
+
+**Open.**
+
+The ASF and Copernicus public catalogues are the approved sources for the exact pre/post acquisition check. The catalogue query must record acquisition dates, orbit direction/path, polarization, and valid coverage over the cap. General mission availability is not enough.
 
 ## Gates 7-8 - negatives and radar linkage
 
@@ -166,22 +198,46 @@ Elk Plain does **not** count toward the three required independent site groups b
 
 ## Exact next checks, in order
 
-1. Measure or confirm the exact capped footprint and determine whether it has a sufficiently large isolated interior for Sentinel-1.
+1. Measure the cap polygon and the usable interior after edge/road/slope buffering.
 2. Check the related survey-control notes, certification, record survey, or signed/sealed version for a numerical vertical accuracy or registration bound and a common datum.
-3. If scale passes and Gate 2 can be resolved, check observation-date depth and Sentinel-1 coverage.
-4. Assess whether any independent confirmed negative exists and whether the surface-construction confound can realistically be controlled.
+3. Query ASF/Copernicus for Sentinel-1 acquisitions close to the August 16 and September 8, 2023 surveys.
+4. If those pass, assess whether the construction-surface confound can be controlled and whether an independent confirmed negative exists.
 5. Reject at the first unrecoverable failure using the correct gate-specific reason.
 
 ---
 
-# Candidate Mining Started
+# Candidate Mining - Arkansas ADEQ
 
-The first follow-on search has begun in official Arkansas ADEQ landfill records.
+## Source-class finding
 
-A 2023 public record (ADEQ document 85246) requires a final signed and sealed **Final Cover as-built with elevation points table** and AutoCAD deliverables. This is only a lead: the requirement does not prove that the completed as-built table is publicly available or that it includes uncertainty, observation-date confirmation, negatives, or radar linkage.
+Arkansas landfill rules are stronger than ordinary inventory records. Public regulations require final-cover certification reports to include as-constructed drawings showing:
 
-Current status:
+- limits of final-cover construction;
+- top and bottom final-cover elevations at 50-foot intervals;
+- a site grid and permanent survey-control points;
+- construction dates, testing locations, and professional certification.
+
+This source class is still promising because top-minus-bottom elevations can provide direct cover thickness over large cells.
+
+## Correction to ADEQ document 85246
+
+The earlier description of document 85246 was inaccurate. Document 85246 is a **March 2024 response concerning an exposed geomembrane cover at Two Pine Landfill**, not itself a completed final-cover as-built table.
+
+The correct evidence is:
+
+- Arkansas rules require detailed as-constructed final-cover drawings;
+- the Two Pine public facility index lists an **Exposed Geomembrane Cap Construction Quality Assurance Report Certification Report**, dated December 29, 2025;
+- the facility remained active, and the listed work concerns a cap demonstration/repair rather than a cleanly isolated completed closure cell.
+
+## Two Pine status
 
 `candidate_under_review`
 
-Next check: locate the matching completed closure/CQA submission and determine whether it contains measured layer surfaces, numerical tolerance or a stable control area, exact dates, and a large isolated footprint.
+Two Pine is not yet a positive candidate. The December 2025 CQA report must be checked for actual top/bottom elevations, numerical survey tolerance, exact area, and construction dates. Even if those fields exist, the active-landfill setting and repair activity may fail isolation, observation-date validity, negatives, or radar linkage.
+
+## Arkansas next action
+
+1. Inspect the December 29, 2025 Two Pine CQA certification report.
+2. Reject it immediately if it is only an exposed-surface repair or lacks a buried-interface depth.
+3. Use the ADEQ facility index to find completed closure cells with the same required top/bottom elevation drawings.
+4. Prefer closed/post-closure facilities with later settlement or topographic monitoring.
