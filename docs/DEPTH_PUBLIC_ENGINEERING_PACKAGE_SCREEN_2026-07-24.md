@@ -1,7 +1,7 @@
 # Public Engineering Package Screen for Numerical Depth — 2026-07-24
 
 **Branch:** `main`  
-**Status:** bounded named-document review complete  
+**Status:** bounded named-document review ongoing  
 **Broad generic search:** stopped  
 **Calibration-ready public packages:** 0
 
@@ -20,7 +20,7 @@ A site counts only when the records support:
 
 ## 1. Elk Plain County Shop
 
-**Classification:** strongest near-complete public evidence hold; not calibration-ready.
+**Classification:** strongest near-complete positive-depth public evidence hold; not calibration-ready.
 
 Official records establish:
 
@@ -54,7 +54,7 @@ Still missing:
 
 The cap map is labelled `REVIEW SET`. Ecology's acceptance and values displayed to hundredths of a foot do not by themselves establish measurement uncertainty.
 
-**Decision:** first retrieval target. No calibration row may be created yet.
+**Decision:** first positive-depth retrieval target. No calibration row may be created yet.
 
 ## 2. Sudbury Road Landfill
 
@@ -95,31 +95,55 @@ Still missing:
 - an independently confirmed no-target comparison area;
 - a final unchanged Sentinel-1 observation window.
 
-**Decision:** second retrieval target. Do not convert the 4.8-foot lower bound into a false exact depth label.
+**Decision:** second positive-depth retrieval target. Do not convert the 4.8-foot lower bound into a false exact depth label.
 
 ## 3. Go East Corp Landfill
 
-**Classification:** strong completed-cover and record-drawing hold; not calibration-ready.
+**Classification:** strongest confirmed-no-target lead and strong completed-cover hold; not calibration-ready.
 
-Official records establish:
+The official Construction Quality Assurance Report establishes:
 
-- the landfill was consolidated, regraded, and closed from March 2021 through July 2022;
-- the landfill footprint was reduced from about 9.6 acres to about 6 acres;
-- closure was completed under current limited-purpose-landfill requirements;
-- the applicable presumptive cover system includes a geomembrane and at least two feet of cover soil;
-- the final cover was completed in 2022;
-- a construction quality-assurance report, construction summary, and separate record drawings are publicly listed;
-- a July 2022 drone flight documented construction of the final cover;
+- landfill closure construction ran from March 2021 through July 2022;
+- the landfill footprint was reduced from about 10 acres to about 6 acres;
+- licensed surveyors performed site-layout and landfill-limit surveys and produced as-built survey documents;
+- the final cover system used a geomembrane with a required minimum of two feet of overlying soil;
+- the first approximately one-foot soil layer was placed under observed construction, while the final vegetative layer was scheduled as later surface work;
+- project engineers and geotechnical staff observed, tested, and certified the closure construction;
+- record drawings and a construction summary report are separately listed;
+- a July 2022 drone flight documented final-cover construction;
 - post-closure monitoring and an environmental covenant are in place.
 
-Still missing from the material successfully extracted:
+### Independently supported no-target evidence
 
-- actual as-built thickness values or matched top-and-bottom elevations from the record drawings;
-- numerical survey accuracy, vertical control, or accepted construction tolerance;
-- an independently confirmed no-target comparison area;
-- a clean Sentinel-1 period unaffected by surrounding residential development, stormwater works, access construction, and vegetation work.
+The same quality-assurance report documents a separate lot-exploration area outside the landfill:
 
-**Decision:** retain as the third retrieval target. The two-foot value remains a regulatory minimum until the as-built measurements are extracted.
+- the exploration was required by the approved closure plan;
+- its stated purpose was to confirm that the area contained no buried landfill material;
+- the exploration was performed and no buried landfill material was observed;
+- multiple government oversight agencies reviewed the area during confirmation;
+- the exact mapped footprint is referenced in approved plan sheet 4 and in the Lot Exploration Plan Report / appendix material.
+
+This is the first public record in the active screen that independently supports a true no-target area rather than an analyst-selected background polygon.
+
+Current evidence state:
+
+```text
+licensed_as_built_survey = yes
+minimum_cover_requirement_m = 0.6096
+actual_exact_cover_thickness_surface_extracted = no
+numerical_survey_accuracy = no
+independently_confirmed_no_target_area = yes
+confirmed_no_target_footprint_extracted = no
+```
+
+Important limits:
+
+- the two-foot value remains a minimum requirement rather than an extracted exact as-built thickness surface;
+- the quality-assurance report contains no numerical survey accuracy or tolerance statement;
+- the exact no-target boundary is referenced but not yet extracted from the plan appendix;
+- later surface improvements, roads, drainage, recreation features, residential development, and vegetation work complicate Sentinel-1 timing.
+
+**Decision:** Go East can potentially supply a valid confirmed-negative record before it supplies a numerical positive-depth record. Do not create either record until the mapped footprint and required uncertainty evidence are extracted.
 
 ## 4. Recomp of Washington
 
@@ -193,9 +217,9 @@ Still missing:
 ## Current ranking
 
 ```text
-1. Elk Plain — strongest measured as-built thickness map and timing support
-2. Sudbury — strongest professionally surveyed and independently cross-checked constructed minimum
-3. Go East — strongest recent completed-cover and record-drawing package
+1. Elk Plain — strongest measured as-built positive-depth map
+2. Sudbury — strongest professionally surveyed and cross-checked constructed minimum
+3. Go East — strongest independently confirmed no-target lead; positive remains minimum-only
 4. Recomp — documented installed depth but heavily confounded
 5. RAMCO — alternate named as-built package
 6. Triune — fallback
@@ -203,19 +227,21 @@ Still missing:
 
 ## Current readiness
 
-None of the six sites currently provides the complete combination:
+No complete site package yet provides:
 
 ```text
-actual measured depth or bounded thickness
+mapped positive depth evidence
 + numerical uncertainty
-+ confirmed no-target comparison
++ mapped confirmed no-target evidence
 + clean observation timing
 + independent split eligibility
 ```
 
-Therefore:
+Progress made in this pass:
 
 ```text
+independently_supported_no_target_areas_identified = 1
+confirmed_no_target_footprints_extracted = 0
 calibration_records_created = 0
 relative_depth_training_ready = no
 numerical_depth_training_ready = no
@@ -228,13 +254,14 @@ Do not restart generic searching.
 
 The remaining retrieval order is:
 
-1. Elk Plain Record of Survey `202502055001` and survey-control documentation;
-2. Elk Plain evidence for a confirmed comparison footprint;
-3. Sudbury certified as-built drawings and any project-specific survey tolerance;
-4. Go East record drawings and construction summary;
-5. Recomp G3/G4 drawings;
-6. RAMCO cap as-built drawings;
-7. Triune only if the stronger packages fail.
+1. Go East approved plan sheet 4 or Lot Exploration Plan Report, to extract the confirmed no-target footprint;
+2. Elk Plain Record of Survey `202502055001` and survey-control documentation;
+3. Elk Plain evidence for a second confirmed comparison footprint if Go East cannot provide a usable same-site comparison;
+4. Sudbury certified as-built drawings and any project-specific survey tolerance;
+5. Go East record drawings and construction summary for exact cover values and survey notes;
+6. Recomp G3/G4 drawings;
+7. RAMCO cap as-built drawings;
+8. Triune only if the stronger packages fail.
 
 Stop each document path when it cannot supply actual measured values, numerical uncertainty, or independently supported comparison evidence.
 
