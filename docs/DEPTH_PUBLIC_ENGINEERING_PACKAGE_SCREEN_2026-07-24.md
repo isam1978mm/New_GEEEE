@@ -89,23 +89,35 @@ Still missing:
 
 ### 4. Recomp of Washington
 
-**Current classification:** promising alternate hold; not calibration-ready.
+**Current classification:** documented installed-depth hold; not calibration-ready.
 
-Official records establish:
+Official records now establish more strongly than the earlier screen:
 
-- the ash landfill was closed with a stated two-foot compacted clay cover;
-- closure was approved in 1989;
-- a temporary ash storage facility was later constructed on top;
-- official as-built drawings and an engineering report are listed in the cleanup record.
+- the ash landfill **was closed by placing a two-foot-thick compacted clay cover** over the incinerator ash;
+- Whatcom County Health Department approved the landfill closure by the November 27, 1989 regulatory deadline;
+- the official cleanup record lists an engineering report for landfill closure and temporary ash-storage construction;
+- the official cleanup record also lists temporary ash-storage as-built drawings G3 and G4;
+- a temporary ash-storage facility was later constructed on top of the closed landfill;
+- the later storage facility included an 80-mil HDPE geomembrane over the two-foot clay layer, then 18 inches of compacted native soil and four inches of asphalt.
+
+This changes the earlier interpretation:
+
+```text
+actual_two_foot_clay_cover_documented = yes
+survey_grade_thickness_measurement_verified = no
+numerical_uncertainty_verified = no
+```
 
 Still missing:
 
-- proof that the two-foot value is an actual measured as-built thickness rather than a design or closure specification;
-- numerical survey accuracy or construction tolerance suitable as depth uncertainty;
+- a mapped as-built boundary that can be tied safely to the two-foot clay layer;
+- numerical survey accuracy, vertical control, construction tolerance, or a bounded accepted interval;
 - an independently confirmed no-target comparison area;
-- a clean Sentinel-1 observation period unaffected by later construction.
+- a clean Sentinel-1 observation period unaffected by the later storage facility, paving, grading, and continuing site operations.
 
-**Decision:** retain as an alternate physical-site lead. The later construction is a major timing and confounding risk.
+The 1989 engineering-report PDF was reachable, but it is image-based and did not expose searchable measurement text in this review. The G3/G4 as-built drawing file remained unavailable through the document server.
+
+**Decision:** upgrade Recomp from a design/specification lead to a documented installed-depth hold. It still cannot enter the calibration pack because uncertainty, clean timing, and confirmed comparison evidence are missing.
 
 ### 5. RAMCO / Recycled Aluminum Metals Co.
 
@@ -153,8 +165,8 @@ Still missing:
 1. Sudbury Road Landfill — strongest complete engineering-process lead
 2. Go East Corp Landfill — strongest recent record-drawing package
 3. Elk Plain County Shop — strongest actual measured thickness-map lead
-4. RAMCO — promising named cap as-built package
-5. Recomp of Washington — promising but later construction creates risk
+4. Recomp of Washington — strongest documented installed-depth statement, but heavily confounded
+5. RAMCO — promising named cap as-built package
 6. Triune Mine — fallback only
 ```
 
@@ -187,8 +199,8 @@ The next work is limited to retrieving and reading these named official document
 
 1. Sudbury final construction quality-assurance certification report and its as-built drawings;
 2. Go East record drawings, construction summary, and construction quality-assurance report;
-3. RAMCO cap-project as-built drawings;
-4. Recomp temporary ash-storage as-built drawings and engineering report;
+3. Recomp temporary ash-storage as-built drawings G3 and G4, specifically for mapped elevations, survey notes, and layer boundaries;
+4. RAMCO cap-project as-built drawings;
 5. Triune completion/as-built report only if the stronger packages fail;
 6. Elk Plain survey-control or accuracy documentation.
 
