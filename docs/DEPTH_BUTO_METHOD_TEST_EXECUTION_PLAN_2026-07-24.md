@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-24  
 **Branch:** `main`  
-**Status:** implementation complete; approximate local geometry prepared; Earth Engine execution pending  
+**Status:** completed successfully  
 **Broad source search:** stopped
 
 ## Plain-English goal
@@ -11,7 +11,7 @@ Check whether the current app's neutral Sentinel-1 processing shows a clear spat
 
 This is a detection and spatial-agreement test only.
 
-It will not:
+It does not:
 
 - train a depth model;
 - calculate wall depth from Sentinel-1;
@@ -34,13 +34,13 @@ The paper used SNAP processing including orbit correction, thermal-noise removal
 
 ## Repository method used
 
-The test reuses the existing app Sentinel-1 functions in:
+The test reused the existing app Sentinel-1 functions in:
 
 ```text
 app/pipeline/stages/sar_rtc.py
 ```
 
-The comparison features are limited to:
+The comparison features were limited to:
 
 ```text
 VV_dB
@@ -54,20 +54,20 @@ The current app preprocessing is not claimed to be an exact reproduction of ever
 
 ## Geometry handling
 
-Two local GeoJSON files are required:
+Two local GeoJSON files were used:
 
-1. the published large anomaly / investigation footprint;
+1. an approximate published anomaly / investigation footprint;
 2. a nearby comparison footprint with similar size and surface setting.
 
-Both files must remain outside Git.
+Both files remained outside Git.
 
-The comparison footprint is only a background comparison. It is not a confirmed negative unless independent evidence later proves that it contains no buried feature.
+The comparison footprint is only a background comparison. It is not a confirmed negative.
 
-Exact archaeological coordinates, geometry, and local paths must not be written into Git or printed to the terminal.
+Exact archaeological coordinates, geometry, and local paths were not written into Git or printed to the terminal.
 
-## Local geometry prepared
+## Local geometry used
 
-A local input package was prepared outside Git containing:
+The local input package contained:
 
 ```text
 buto_target_figure5_approx.geojson
@@ -76,23 +76,11 @@ run_buto_dry_run.ps1
 README.md
 ```
 
-The target boundary was estimated from Figure 5 and the paper's reported 128 m by 62 m size. It is not a survey-grade boundary and has an estimated centre uncertainty of about 30 m.
+The target boundary was estimated from Figure 5 and the paper's reported 128 m by 62 m size. It is not survey-grade and has an estimated centre uncertainty of about 30 m.
 
 The comparison polygon is a nearby same-size area selected only for the spatial screen. It is not a confirmed negative.
 
-These approximate files are enough for an exploratory first run, but not for calibration intake or a final scientific claim.
-
-## Test steps
-
-1. Validate both local polygons and the fixed image date.
-2. Query Sentinel-1 acquisitions covering the polygons around 2018-05-05.
-3. Require an acquisition on the exact published date.
-4. Process each usable acquisition with the current neutral app SAR functions.
-5. Calculate target and background pixel counts and median feature values.
-6. Calculate target-minus-background differences for the exact date.
-7. Use nearby same-orbit acquisitions only as a stability check.
-8. Write detailed numbers only to a local output file outside Git.
-9. Print only a redacted status summary to the terminal.
+These approximate files are enough for an exploratory method run, but not for calibration intake or a final scientific claim.
 
 ## Implemented files
 
@@ -132,61 +120,61 @@ The tests cover:
 
 No GitHub status check was attached to the direct `main` commits.
 
-## Pass and stop meanings
+## Real Earth Engine execution result
 
-### Method-screen pass
+The user ran the real Earth Engine command locally with the repository credentials.
 
-```text
-method_screen_complete_spatial_comparison_only
-```
-
-This means the exact published date was found and a valid target-versus-background comparison was produced.
-
-It does not mean that Sentinel-1 measured depth.
-
-### Useful positive result
-
-A useful result would show that two or more neutral signal features have a repeatable target-versus-background direction on the published date and supporting same-orbit dates.
-
-The interpretation remains:
+Redacted result:
 
 ```text
-spatial_agreement_supported
+query_executed = true
+status = method_screen_complete_spatial_comparison_only
+spatial_agreement_decision = spatial_agreement_supported
+exact_date_acquisition_count = 1
+usable_exact_date_acquisition_count = 1
+support_acquisition_count = 36
+same_orbit_support_count = 11
+signal_feature_count = 4
+stable_feature_count = 4
+comparison_area_is_confirmed_negative = false
+depth_measured = false
+training_started = false
+calibration_record_created = false
+app_depth_enabled = false
 ```
 
-not:
+## Meaning
+
+The exact published Sentinel-1 date was found and produced a valid target-versus-background comparison.
+
+All four neutral signal features kept a stable direction across 11 nearby same-orbit support acquisitions.
+
+Allowed conclusion:
 
 ```text
-depth_measured
+spatial_radar_anomaly_supported = yes
+repeatable_same_orbit_direction = yes
 ```
 
-### Failure or hold states
+Not allowed:
 
-The test stops without interpretation when:
+```text
+depth_measured = no
+depth_calibration_record_ready = no
+depth_model_training_ready = no
+app_depth_output_ready = no
+```
 
-- no exact-date Sentinel-1 acquisition is available;
-- either polygon has too few valid pixels;
-- no same-orbit support exists;
-- geometry is missing or invalid;
-- Earth Engine cannot be queried;
-- results depend only on one unstable feature or one image.
+## Result record
 
-## Current execution blocker
+The completed result is documented in:
 
-The software and approximate local polygons are ready.
-
-The real Earth Engine run has not occurred in this session because the repository uses a local Earth Engine service-account key and that credential is not available here.
-
-This is now the only immediate execution blocker. It is not a need for more web searching.
+```text
+docs/DEPTH_BUTO_METHOD_TEST_RESULT_2026-07-24.md
+```
 
 ## Completion boundary
 
-After local execution, the allowed conclusion is one of:
+This method test is complete.
 
-```text
-spatial_agreement_supported
-spatial_agreement_not_supported
-method_screen_inconclusive
-```
-
-Numerical depth prediction, calibration-pack intake, and app depth output remain blocked regardless of this test result.
+Numerical depth prediction, calibration-pack intake, and app depth output remain blocked because the project still lacks survey-grade geometry, numerical depth uncertainty, confirmed comparison areas, and separate physical site groups.
