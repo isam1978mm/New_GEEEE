@@ -42,7 +42,30 @@ Still missing from the material successfully extracted:
 
 **Decision:** keep as the first document-retrieval target. Do not enter a calibration record yet.
 
-### 2. Elk Plain County Shop
+### 2. Go East Corp Landfill
+
+**Current classification:** strong recent record-drawing hold; not calibration-ready.
+
+Official records establish:
+
+- the landfill was consolidated, regraded, and closed between March 2021 and July 2022;
+- closure was completed under current limited-purpose-landfill requirements;
+- a construction quality-assurance report is publicly listed;
+- a separate construction summary report is publicly listed;
+- separate as-built/record drawings are publicly listed as Appendix O;
+- the official record states that a July 2022 drone flight documented construction of the final cover;
+- post-closure monitoring and an environmental covenant are in place.
+
+Still missing from the material successfully extracted:
+
+- actual surveyed cover-thickness or top-and-bottom elevation values from the record drawings;
+- numerical survey accuracy, vertical control, or accepted construction tolerance;
+- an independently confirmed no-target comparison area;
+- a clean Sentinel-1 observation window not confused by the surrounding residential development and other post-closure work.
+
+**Decision:** retain as a high-priority document-retrieval target. The named record drawings and construction summary make it promising, but no calibration record may be created yet.
+
+### 3. Elk Plain County Shop
 
 **Current classification:** strongest actual-thickness-map hold; not calibration-ready.
 
@@ -64,7 +87,7 @@ Still missing:
 
 **Decision:** retain as the best public actual-thickness example, but do not use it as numerical truth until uncertainty and comparison evidence are found.
 
-### 3. Recomp of Washington
+### 4. Recomp of Washington
 
 **Current classification:** promising alternate hold; not calibration-ready.
 
@@ -84,7 +107,7 @@ Still missing:
 
 **Decision:** retain as an alternate physical-site lead. The later construction is a major timing and confounding risk.
 
-### 4. RAMCO / Recycled Aluminum Metals Co.
+### 5. RAMCO / Recycled Aluminum Metals Co.
 
 **Current classification:** promising alternate hold; not calibration-ready.
 
@@ -104,7 +127,7 @@ Still missing:
 
 **Decision:** retain as an alternate physical-site lead and inspect only the named as-built package.
 
-### 5. Triune Mine
+### 6. Triune Mine
 
 **Current classification:** weaker hold; not calibration-ready.
 
@@ -122,21 +145,22 @@ Still missing:
 - an independently confirmed no-target comparison area;
 - a verified unchanged Sentinel-1 observation period.
 
-**Decision:** keep only as a fallback. It is currently weaker than Sudbury, Elk Plain, Recomp, and RAMCO.
+**Decision:** keep only as a fallback. It is currently weaker than the other five packages.
 
 ## Current ranking
 
 ```text
 1. Sudbury Road Landfill — strongest complete engineering-process lead
-2. Elk Plain County Shop — strongest actual measured thickness-map lead
-3. RAMCO — promising named cap as-built package
-4. Recomp of Washington — promising but later construction creates risk
-5. Triune Mine — fallback only
+2. Go East Corp Landfill — strongest recent record-drawing package
+3. Elk Plain County Shop — strongest actual measured thickness-map lead
+4. RAMCO — promising named cap as-built package
+5. Recomp of Washington — promising but later construction creates risk
+6. Triune Mine — fallback only
 ```
 
 ## What this screen did not prove
 
-None of the five sites currently provides all of the following in the successfully reviewed public material:
+None of the six sites currently provides all of the following in the successfully reviewed public material:
 
 ```text
 actual measured depth or thickness
@@ -162,10 +186,11 @@ Do not restart generic searching.
 The next work is limited to retrieving and reading these named official documents:
 
 1. Sudbury final construction quality-assurance certification report and its as-built drawings;
-2. RAMCO cap-project as-built drawings;
-3. Recomp temporary ash-storage as-built drawings and engineering report;
-4. Triune completion/as-built report only if the stronger three fail;
-5. Elk Plain survey-control or accuracy documentation.
+2. Go East record drawings, construction summary, and construction quality-assurance report;
+3. RAMCO cap-project as-built drawings;
+4. Recomp temporary ash-storage as-built drawings and engineering report;
+5. Triune completion/as-built report only if the stronger packages fail;
+6. Elk Plain survey-control or accuracy documentation.
 
 For each document, stop immediately if it does not supply actual measured values, numerical uncertainty, or usable comparison evidence.
 
