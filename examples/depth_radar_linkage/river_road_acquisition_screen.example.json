@@ -1,0 +1,26 @@
+{
+  "site_id": "river_road",
+  "instructions": "Copy this file outside Git, replace the example dates with reviewed Sentinel-1 anchor dates, and set accepted=true only after every control passes.",
+  "anchors": [
+    {
+      "image_date": "2024-01-01",
+      "support_days": 36,
+      "accepted": false,
+      "weather_screened": false,
+      "vegetation_screened": false,
+      "construction_inactive": false,
+      "geometry_reviewed": false,
+      "rejection_reason": "example only - replace with a reviewed acquisition"
+    },
+    {
+      "image_date": "2024-02-01",
+      "support_days": 36,
+      "accepted": false,
+      "weather_screened": false,
+      "vegetation_screened": false,
+      "construction_inactive": false,
+      "geometry_reviewed": false,
+      "rejection_reason": "example only - replace with a reviewed acquisition"
+    }
+  ]
+}
