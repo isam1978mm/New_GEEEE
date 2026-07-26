@@ -1,19 +1,30 @@
 # Numerical Depth Estimation — Radar-Linkage Feasibility Execution Closeout — 2026-07-26
 
 **Branch:** `main`  
-**Status:** bounded four-site sequence completed at pre-query evidence gate  
+**Status:** bounded four-site sequence completed; no executable radar-depth experiment found  
 **Scientific radar-linkage outcome:** not evaluated
+
+## Current status
+
+```text
+bounded_candidate_sequence_complete = yes
+sites_reviewed = 4
+sites_ready_for_radar_query = 0
+earth_engine_site_queries_executed = 0
+usable_calibration_rows = 0
+numerical_depth_ready = no
+app_depth_enabled = false
+```
 
 ## Plain-English result
 
-River Road, Auburn, John Sevier and the Sconondoa substitute were screened in the fixed order required by the execution plan.
+River Road, Auburn, John Sevier and Sconondoa were reviewed in the fixed order required by the execution plan.
 
-No real Sentinel-1 site comparison was launched. Every candidate stopped before the radar query because the public evidence available in the current environment could not supply both:
+No Sentinel-1 depth test was run.
 
-1. visibly reviewable geometry that maps the documented feature to radar pixels; and
-2. a defensible target/comparison or shallow/deep zone pair with finite local labels.
+The first three sites failed before the query because exact geometry or usable local depth zones could not be recovered. Sconondoa supplied real geometry and real depth measurements, but failed because no shallow/deep pair had confirmed equivalent final radar-facing surface conditions.
 
-This is an evidence-access result. It is not evidence that Sentinel-1 lacks a depth-related surface response.
+This is not evidence that Sentinel-1 has no depth-related surface response. The scientific relationship remains untested because no candidate satisfied the experiment-input rules.
 
 ## Site outcomes
 
@@ -45,63 +56,85 @@ reason = exact_eastern_cap_polygon_and_matched_comparison_unavailable
 
 The record confirms an actual 24-inch cover profile over an approximately 19-acre eastern cap and a stable inspection period. Published inspection extents are approximate, the construction-history file timed out, and no exact cap polygon or numerical tolerance was recovered.
 
-### Sconondoa substitute
+### Sconondoa
 
 ```text
-site_surface_response_decision = site_screen_inconclusive
-site_depth_ordering_decision = site_depth_ordering_not_supported_or_inconclusive
-reason = surveyed_cell_geometry_unavailable
+sconondoa_appendix_b_reviewed = yes
+cell_geometry_available = yes
+finite_excavation_measurements_available = yes
+comparable_shallow_deep_surface_pair_confirmed = no
+site_depth_ordering_decision = not_good_to_go
+reason = comparable_final_surface_not_confirmed
 ```
 
-Sconondoa is the strongest restart candidate. The report confirms finite within-site depth variation, professionally surveyed cells and multiple cells with comparable gravel restoration. Appendix B contains the needed as-built survey drawings, but the 90 MB public appendix could not be rendered or downloaded. No separate mirror or archive copy was found.
+Appendix B drawings B-1, B-2 and B-3 were reviewed.
+
+The drawings provide professional survey geometry, coordinates, pre-excavation elevations, post-excavation elevations and finite excavation-depth variation. For example, verified Cell 2 calculations range from 13.8 ft to 20.7 ft at reviewed points.
+
+However, the final mapped setting includes different combinations of asphalt, gravel, gravel drives, roads, buildings, utilities, drainage, riprap, parking and vegetation. The drawings do not prove that any shallow/deep cell pair shares the same final material, thickness, compaction, moisture behaviour and later land use.
+
+Running the radar test would therefore risk measuring surface or infrastructure differences rather than excavation depth.
+
+Detailed review:
+
+`docs/DEPTH_SCONONDOA_APPENDIX_B_REVIEW_2026-07-26.md`
 
 ## Overall feasibility decision
 
-The execution plan's `PASS`, `MIXED` and `FAIL` outcomes require actual repeated Sentinel-1 measurements. None applies here.
+The execution plan's scientific `PASS`, `MIXED` and `FAIL` outcomes require completed Sentinel-1 measurements. None applies.
 
 ```text
-radar_linkage_feasibility_screen = blocked_before_query
+radar_linkage_feasibility_screen = no_valid_experiment_input
 bounded_candidate_sequence_complete = yes
 earth_engine_site_queries_executed = 0
 scientific_radar_linkage_outcome = not_evaluated
 cross_site_depth_linkage_decision = not_evaluated
-broad_candidate_search = paused
-broad_document_search = paused
 ```
 
-Do not label this result as `FAIL`. A failure decision would require valid site geometries, matched acquisitions and a completed analysis showing no stable relationship or a confounder-driven relationship.
+Do not label this as a radar `FAIL`. The radar relationship was never measured.
 
-## Exact restart point
+## What this sequence established
 
-Do not restart generic candidate searching.
+Geometry and measured depth are not enough.
 
-Restart with:
+A candidate may advance to a radar query only when it has all of the following:
+
+1. exact mappable boundaries;
+2. finite measured or calculable local depths;
+3. at least two depth zones with clear ordering;
+4. documented equivalent final surface material and construction;
+5. documented comparable later land use and maintenance;
+6. enough clean interior area after excluding roads, utilities, drainage, structures and mixed pixels;
+7. observation dates suitable for repeated same-orbit Sentinel-1 comparisons.
+
+Sconondoa failed requirements 4 through 6.
+
+## Next step
+
+Do not retry Sconondoa and do not run the Earth Engine query from its cells.
+
+Start a **targeted uniform-surface candidate search**, not a generic landfill search.
+
+Search only for completed projects where public records already show:
 
 ```text
-Site: Sconondoa Street former MGP
-Document: Report.HW.727008.2021-06-25.FER Appendices A through C-Survey Figures and Photos.pdf
-Required section: Appendix B as-built survey drawings, especially B-1, B-2 and B-3
+multiple mapped zones with different measured depths
++ one documented uniform final surface system across those zones
++ stable later land use
++ enough clean area for Sentinel-1 pixels
 ```
 
-Required extraction:
+Priority document types:
 
-- visible cell boundaries;
-- coordinate system and datum;
-- final surface elevations;
-- bottom-of-excavation elevations or finite depth annotations;
-- mapping between cell names and the comparable gravel-restored zones;
-- any stated survey accuracy or tolerance.
+- as-built excavation or cover-thickness grids;
+- final grading and restoration drawings;
+- material-placement specifications proving the same top layer;
+- completion certifications;
+- later inspection or aerial evidence showing unchanged use.
 
-After the Sconondoa geometry is recovered:
+Reject a candidate immediately when the different depth zones have different asphalt, gravel, vegetation, drainage, compaction or infrastructure conditions.
 
-1. select at least two simple gravel-restored cells with finite depth ordering;
-2. exclude buildings, asphalt, utilities, wells, drainage and the gas-regulator area;
-3. create the private shallow/deep GeoJSON files outside Git;
-4. screen at least two accepted anchor dates and six same-orbit support acquisitions;
-5. run `scripts/run_depth_radar_linkage_feasibility_screen.py` with `site_id=sconondoa` and `site_role=depth_ordering`;
-6. only then decide whether an independent replication site should be retried.
-
-## Implementation produced during this sequence
+## Implementation available
 
 ```text
 scripts/run_depth_radar_linkage_feasibility_screen.py
@@ -109,10 +142,10 @@ tests/unit/test_depth_radar_linkage_feasibility_screen.py
 .github/workflows/depth-radar-linkage-screen.yml
 docs/DEPTH_RADAR_LINKAGE_FEASIBILITY_EXECUTION_PLAN_2026-07-26.md
 docs/DEPTH_RIVER_ROAD_RADAR_LINKAGE_RUNBOOK_2026-07-26.md
-examples/depth_radar_linkage/river_road_acquisition_screen.example.json
+docs/DEPTH_SCONONDOA_APPENDIX_B_REVIEW_2026-07-26.md
 ```
 
-Focused tests and the workflow were committed, but no attached GitHub status check became visible and the local clone attempt was blocked by runtime DNS. No passing-test claim is made.
+The runner remains ready, but must not be used until a candidate passes the full experiment-input gate.
 
 ## Numerical-depth boundary
 
