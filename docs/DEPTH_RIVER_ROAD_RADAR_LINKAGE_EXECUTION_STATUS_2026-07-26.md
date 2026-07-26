@@ -1,28 +1,56 @@
 # River Road Radar-Linkage Execution Status — 2026-07-26
 
 **Branch:** `main`  
-**Status:** implementation complete; Earth Engine query not yet executed
+**Status:** site screen inconclusive at geometry gate; move to Auburn
 
 ## Completed
 
-- Reactivated the radar-linkage feasibility plan after the user's explicit instruction to continue.
-- Created the bounded execution plan for River Road, Auburn, John Sevier and Sconondoa.
-- Added a reusable privacy-safe multi-date Sentinel-1 site-screen runner.
+- Reactivated the bounded radar-linkage feasibility plan.
+- Created the execution plan for River Road, Auburn, John Sevier and Sconondoa.
+- Added the privacy-safe multi-date Sentinel-1 runner, focused tests, CI workflow, River Road runbook and manifest example.
 - Reused the tested neutral Buto feature path rather than creating a new radar-processing chain.
-- Added focused unit tests for privacy, confounder controls, multi-date agreement, incidence-angle exclusion and insufficient-anchor refusal.
-- Added a focused GitHub Actions workflow.
-- Added the River Road private-input runbook and acquisition-screen manifest example.
+- Rechecked the official River Road Record of Decision and current EPA site profile.
 
-## Repository commits
+## Evidence available
+
+The public record supports:
+
+- an inactive protected landfill cap;
+- a minimum three-foot final cover statement;
+- 129 excavated certification pits;
+- surveyed pit locations and pit-by-pit values known to exist;
+- a roughly east-west landfill approximately 1,000 by 2,100 feet;
+- continuing cap maintenance and institutional controls.
+
+These facts are sufficient to retain River Road as a feasibility candidate, but not to draw the private test polygons.
+
+## Geometry decision
+
+The runbook requires target and comparison polygons supported by a visible source or reviewed imagery. The available public text provides only approximate dimensions and location. The final-cover certification drawing and accepted pit-location sheet still cannot be rendered or visually reviewed.
+
+Creating rectangles from the public centroid and approximate dimensions would invent the capped boundary and could include:
+
+- the uninvestigated southeast knob;
+- roads and wooded edges;
+- drainage channels, berms and sedimentation structures;
+- leachate, gas and monitoring infrastructure;
+- borrow or maintenance areas.
+
+No defensible matched comparison polygon can be confirmed from the presently visible evidence. The geometry rule is therefore not weakened.
+
+## River Road result
 
 ```text
-a917504 docs: activate depth radar linkage feasibility execution
-a5b6493 feat: add multi-date depth radar linkage screen
-f115faf test: cover multi-date depth radar linkage screen
-64de1a7 ci: verify depth radar linkage screen
-ff484e6 docs: add River Road radar linkage runbook
-36fa14f docs: add River Road acquisition manifest example
+private_target_geometry_available = no
+private_comparison_geometry_available = no
+accepted_anchor_dates_available = no
+earth_engine_query_executed = no
+site_surface_response_decision = site_screen_inconclusive
+inconclusive_reason = visible_reviewed_geometry_unavailable
+cross_site_depth_linkage_decision = not_evaluated
 ```
+
+River Road is not rejected as scientific evidence. It remains on hold for a genuinely readable final-cover drawing, survey sheet or reviewed private imagery package.
 
 ## Verification status
 
@@ -35,38 +63,13 @@ local_clone_test_completed = no
 local_clone_blocker = runtime_DNS_could_not_resolve_github
 ```
 
-No test pass is claimed until either the GitHub Actions check appears or the focused tests are run in the user's local repository.
+No test pass is claimed until CI appears or the focused tests run locally.
 
-## Real River Road query status
+## Next action
 
-```text
-private_target_geometry_available = no
-private_comparison_geometry_available = no
-accepted_anchor_dates_available = no
-earth_engine_query_executed = no
-site_surface_response_decision = not_run
-cross_site_depth_linkage_decision = not_evaluated
-```
+Proceed directly to Auburn McMaster Street. Do not resume generic candidate searching.
 
-The real query cannot honestly run without the private geometry and acquisition-screen package. The repository deliberately rejects repository-local geometry and detailed outputs.
-
-## Exact next action
-
-Prepare outside Git:
-
-```text
-river_road_target.geojson
-river_road_comparison.geojson
-river_road_acquisition_screen.json
-```
-
-Then run the dry-run command in:
-
-```text
-docs/DEPTH_RIVER_ROAD_RADAR_LINKAGE_RUNBOOK_2026-07-26.md
-```
-
-If the dry run reports at least two accepted anchors, run the same command with `--execute` and store the detailed result outside Git.
+Auburn is stronger for the next step because the public record describes a later vacant compacted-gravel surface and states that licensed as-built drawings contain actual local cover thicknesses and mapped geometries. The immediate task is to recover or render the Auburn as-built appendix and identify at least two comparable subareas for a depth-ordering screen.
 
 ## Depth boundary
 
@@ -78,5 +81,3 @@ depth_measured = false
 numerical_depth_ready = no
 app_depth_enabled = false
 ```
-
-After River Road is completed or declared inconclusive, continue to Auburn without resuming generic candidate searching.
