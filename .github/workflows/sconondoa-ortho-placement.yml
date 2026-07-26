@@ -1,0 +1,42 @@
+name: Sconondoa official ortho placement check
+
+on:
+  pull_request:
+    paths:
+      - "scripts/validate_sconondoa_ortho_placement.py"
+      - "data/sconondoa_phase3_depth_ordering_qa_only.geojson"
+      - ".github/workflows/sconondoa-ortho-placement.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-placement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install geospatial dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests numpy matplotlib pyproj shapely rasterio
+
+      - name: Build official ortho overlay
+        run: python scripts/validate_sconondoa_ortho_placement.py
+
+      - name: Upload validation output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sconondoa-ortho-validation
+          path: artifacts/sconondoa_ortho_validation/
+          if-no-files-found: warn
+          retention-days: 7
