@@ -1,59 +1,82 @@
-# Sconondoa Appendix B — Access Blocker — 2026-07-26
+# Sconondoa Appendix B — Access Blocker Resolution — 2026-07-26
 
 **Branch:** `main`  
-**Current status:** blocked on file access  
+**Current status:** file-access blocker resolved; candidate closed after review  
 **Usable calibration rows:** `0`  
 **Numerical depth ready:** `no`
 
-## What is confirmed
+## What changed
 
-The official NYSDEC archive lists this file:
+The official file was reviewed in a separate working session:
 
 `Report.HW.727008.2021-06-25.FER Appendices A through C-Survey Figures and Photos.pdf`
 
-Listed size: approximately 90 MB.
+Appendix B drawings B-1, B-2 and B-3 were inspected.
 
-The required section is Appendix B, especially drawings B-1, B-2 and B-3. Those drawings are expected to contain the surveyed cell boundaries and as-built information needed to connect finite excavation-depth zones to Sentinel-1 pixels.
+The earlier access blocker is therefore resolved:
 
-## Access attempts completed
+```text
+sconondoa_appendix_b_visible = yes
+surveyed_cell_geometry_extracted = yes
+finite_excavation_measurements_available = yes
+```
 
-- official NYSDEC file listing confirmed;
-- direct browser fetch attempted;
-- managed file download attempted;
-- direct byte-range request attempted;
-- exact-title and mirror searches attempted.
+## Review result
 
-Results:
+The drawings contain:
 
-- the browser route returned a cache/fetch failure;
-- the managed download failed;
-- the local runtime could not resolve the NYSDEC host;
-- no separate mirror or cached copy of the appendix was found.
+- surveyed excavation-cell boundaries;
+- northing and easting coordinates;
+- pre-excavation elevations;
+- post-excavation elevations;
+- finite and spatially variable excavation depths;
+- professional survey certification and benchmarks.
+
+However, they do not prove that a shallow cell and a deep cell share equivalent final radar-facing conditions.
+
+The mapped final surfaces include or border different combinations of:
+
+- asphalt;
+- gravel and gravel drives;
+- riprap or surge stone;
+- buildings;
+- roads;
+- utilities;
+- drainage structures;
+- parking areas;
+- vegetation and wooded edges.
+
+The evidence does not confirm the same final material, thickness, compaction, moisture behaviour and later land use across a defensible shallow/deep pair.
 
 ## Decision
 
-Do not invent cell geometry from the main report text or site address.
-
-Do not run the Sentinel-1 depth-ordering screen until Appendix B is visibly reviewed.
-
 ```text
-sconondoa_appendix_b_visible = no
-surveyed_cell_geometry_extracted = no
+sconondoa_appendix_b_reviewed = yes
+cell_geometry_available = yes
+finite_excavation_measurements_available = yes
+comparable_shallow_deep_surface_pair_confirmed = no
+sconondoa_radar_depth_ordering_candidate = not_good_to_go
 earth_engine_query_executed = no
 scientific_radar_linkage_outcome = not_evaluated
 ```
 
+Do not create shallow/deep polygons or run the Sentinel-1 depth-ordering screen from Appendix B alone. That could measure surface construction or infrastructure differences rather than excavation depth.
+
+Detailed review:
+
+`docs/DEPTH_SCONONDOA_APPENDIX_B_REVIEW_2026-07-26.md`
+
+## Current status
+
+```text
+usable_calibration_rows = 0
+calibration_record_created = false
+training_started = false
+depth_measured = false
+numerical_depth_ready = no
+app_depth_enabled = false
+```
+
 ## Next step
 
-Download the official 90 MB appendix locally and provide the PDF to the working session.
-
-Then inspect drawings B-1, B-2 and B-3 and extract:
-
-- exact cell boundaries;
-- coordinate system and datum;
-- final surface elevations;
-- bottom-of-excavation elevations or finite depth annotations;
-- cell names and comparable gravel-restored zones;
-- stated survey accuracy or tolerance.
-
-After that, create private shallow/deep GeoJSON polygons and run the committed Sconondoa depth-ordering screen.
+Close Sconondoa for the current route. Any next candidate must have both finite mapped depth zones and documented equivalent final surface construction and later land use before a radar query is allowed.
