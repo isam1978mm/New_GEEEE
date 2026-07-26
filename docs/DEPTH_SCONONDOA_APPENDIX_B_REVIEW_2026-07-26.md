@@ -1,253 +1,108 @@
 # Sconondoa Appendix B Review — 2026-07-26
 
 **Branch:** `main`  
-**Decision:** `NOT GOOD TO GO`  
-**Reason:** excavation geometry and measured depths are available, but no defensible shallow-versus-deep pair has confirmed comparable final radar-facing surface conditions.
+**Decision:** `PROVISIONAL HOLD`  
+**Reason:** Appendix B proves geometry and measured excavation depths, but Appendix B alone does not prove or disprove that two named cells received the same final radar-facing surface assembly.
 
 ## Current status
 
 ```text
 sconondoa_appendix_b_reviewed = yes
+review_basis = summary_from_separate_pdf_review_session
 cell_geometry_available = yes
 finite_excavation_measurements_available = yes
-comparable_shallow_deep_surface_pair_confirmed = no
+comparable_shallow_deep_surface_pair_confirmed = not_yet_checked_in_restoration_records
 earth_engine_query_executed = no
 usable_calibration_rows = 0
 numerical_depth_ready = no
 app_depth_enabled = false
 ```
 
-## Main decision
+## Important correction
 
-Appendix B contains strong excavation geometry and professional survey evidence. The blocker is not the lack of excavation measurements. The blocker is linking those measurements to two separate areas whose post-restoration radar surfaces are demonstrably equivalent.
+The working session that wrote this repository record did not directly inspect the 90 MB Appendix PDF. It relied on the detailed findings supplied from a separate chat that had access to the PDF.
 
-Selecting a shallow and deep cell without that proof could measure asphalt, gravel, drainage, compaction, moisture, utilities or infrastructure differences rather than excavation depth.
+Those findings support statements about what Appendix B contains. They do not support a final site rejection until the main report's restoration specifications, construction records and completion certifications are separately checked.
 
-## Appendix B contents
+The earlier `NOT GOOD TO GO` wording was too strong and is superseded by this document.
 
-Appendix B is organized into Phase 1, Phase 2 and Phase 3 as-built survey sets.
+## What Appendix B establishes
 
-### B-1 — Phase 1
+Appendix B is organized into Phase 1, Phase 2 and Phase 3 survey sets.
 
-Cells shown:
+It establishes:
 
-- Cell I
-- Cell II
-- Cell III
-- Cell IV
-
-The drawings provide:
-
-- surveyed cell boundaries;
+- surveyed excavation-cell boundaries;
 - grid-point identifiers;
 - northing and easting coordinates;
-- pre-excavation elevations;
+- pre-excavation or pre-construction elevations;
 - post-excavation elevations;
-- calculated or tabulated excavation depths;
-- top-of-general-fill and top-of-subbase drawings;
-- licensed-surveyor certification and benchmarks.
+- finite, spatially variable excavation depths;
+- licensed-surveyor certification and benchmarks;
+- enough geometry to digitize individual cells.
 
-The four-cell arrangement and grid intersections are clearly visible.
+Examples reported from Phase 2 Cell 2 include calculated depths from 13.8 ft to 20.7 ft at reviewed survey points.
 
-Phase 1 was surveyed and completed around 2008, before Sentinel-1 operations. It cannot support a Sentinel-1 before-and-after excavation test. It could only be considered as a later static spatial comparison, which would still require proof that the cell surfaces remained comparable and unchanged.
+## What Appendix B does not establish by itself
 
-### B-2 — Phase 2
+Appendix B visibly distinguishes several surface and infrastructure conditions, including asphalt, gravel, gravel drives, roads, buildings, utilities, drainage, riprap, parking and vegetation.
 
-Cells shown:
+From Appendix B alone, the review could not confirm that two selected cells received:
 
-- Cell 1
-- Cell 2
-- Cell 3
-- Cell 3A
-- Cell 4
-- Cell 5
+- the same final surface material;
+- the same material thickness;
+- the same compaction specification;
+- the same drainage treatment;
+- the same later land use and maintenance;
+- enough clean interior area after exclusions.
 
-The drawings contain visible excavation limits, grid points, coordinates, pre-construction elevations, post-excavation elevations, target-removal elevations and material-volume calculations.
+This is an unresolved evidence question, not a proven negative.
 
-The geometry is detailed enough to digitize separate cell polygons. Pages 14 through 24 show the principal Cell 1 through Cell 4 boundaries and surveyed point tables.
+## Required next evidence check
 
-#### Verified Cell 2 calculations
+Inspect the main Final Engineering Report and its construction/restoration records for an explicit statement tying two named cells to the same final surface assembly.
 
-The Cell 2 table directly lists pre-construction and post-excavation ground elevations.
+Search for cell-specific language in:
 
-| Survey point | Pre-construction | Post-excavation | Calculated excavation depth | Metres |
-|---|---:|---:|---:|---:|
-| 2A | 420.6 ft | 399.9 ft | 20.7 ft | 6.31 m |
-| 2B | 418.9 ft | 400.5 ft | 18.4 ft | 5.61 m |
-| 2C | 419.1 ft | 401.2 ft | 17.9 ft | 5.46 m |
-| 2D | 419.2 ft | 401.6 ft | 17.6 ft | 5.36 m |
-| 2N | 413.5 ft | 399.7 ft | 13.8 ft | 4.21 m |
+- restoration specifications;
+- general-fill placement records;
+- subbase placement records;
+- gravel or top-course specifications;
+- compaction requirements and test results;
+- final grading plans;
+- restoration or surface-finish drawings;
+- construction completion certifications;
+- change orders and field directives;
+- material tickets or quantity summaries;
+- later inspection records showing unchanged surface use.
 
-These values are calculated as:
+The evidence must name or clearly map the relevant cells. A general project-wide material specification is insufficient unless it explicitly applies to both selected cells without exceptions.
 
-```text
-excavation depth = pre-construction surface elevation - post-excavation bottom elevation
-```
+## Decision rule after that review
 
-The Cell 2 drawing directly states a target-removal elevation of approximately 400.0 ft. It also distinguishes points affected by deeper regulator-approved excavation.
+`GOOD TO GO` only when two cells or subareas have:
 
-This proves that Cell 2 had finite, spatially variable excavation depths.
+1. different finite measured or calculable depths;
+2. exact mappable boundaries;
+3. the same documented final radar-facing surface assembly;
+4. comparable later land use and maintenance;
+5. enough clean interior area after removing roads, utilities, drainage, structures and mixed pixels.
 
-#### Cells 3 and 3A
+`NOT GOOD TO GO` only when the restoration and construction records have been reviewed and either:
 
-The notes report separate excavation quantities and state that the post-excavation surveys were used to construct digital terrain models.
+- explicitly show different final surface assemblies; or
+- fail to provide enough evidence to establish an equivalent pair.
 
-They also indicate:
-
-- Cell 3 material above the target level;
-- additional material below the target level;
-- Cell 3A material above the target level;
-- a small additional quantity below the target level.
-
-Therefore, Cells 3 and 3A had finite surveyed excavation bottoms. The depth is not one constant number for an entire cell; it varies between grid points.
-
-#### Cells 4 and 5
-
-The later B-2 sheets show:
-
-- separate cell limits;
-- point-number tables;
-- northing and easting coordinates;
-- pre-construction elevations;
-- post-excavation elevations;
-- areas of additional excavation highlighted in some tables;
-- nearby roads, gravel drives, drainage, utilities and adjacent cells.
-
-The cell geometry is mappable, but the drawings show substantial surface-context differences and infrastructure around and across these areas.
-
-### B-3 — Phase 3
-
-Cells shown:
-
-- Cell A
-- Cell B
-- Cell C
-- Cell D
-- Cell E
-- Cell F
-
-The Phase 3 pre-construction drawing shows the six cell areas, the maintenance-facility building, asphalt parking, a gravel stockpile, roads, utilities and drainage features.
-
-The post-construction drawings continue to show:
-
-- asphalt parking;
-- gravel areas and gravel boundaries;
-- Sconondoa Street;
-- maintenance-facility structures;
-- water, sanitary and stormwater infrastructure;
-- riprap or surge-stone areas;
-- drainage structures;
-- utility lines;
-- excavation limits.
-
-The Phase 3 maps provide enough geometry to digitize the cells, but the finished surface is not uniform across all six cells.
-
-## Coordinate system and survey information
-
-The survey sheets use a professional state-plane survey framework with:
-
-- northing and easting coordinates;
-- New York State Plane coordinates;
-- Central Zone;
-- elevations in feet;
-- survey benchmarks;
-- licensed New York land-surveyor seals.
-
-The drawings appear to reference a modern state-plane horizontal datum and a national vertical datum. The general-note text was not consistently readable enough in every rendered sheet to claim the exact datum wording for every phase without a higher-resolution source drawing.
-
-Therefore:
-
-```text
-coordinate_grid_present = yes
-northing_easting_coordinates_present = yes
-elevation_units = feet
-exact_datum_wording_error_free = no
-explicit_numerical_survey_tolerance_found = no
-professional_certification_present = yes
-benchmarks_present = yes
-```
-
-## Final-surface problem
-
-The drawings identify or visibly distinguish several surface conditions:
-
-- asphalt;
-- gravel;
-- gravel drives;
-- riprap or surge stone;
-- building footprints;
-- landscaped or wooded edges;
-- utility corridors;
-- drainage areas;
-- roads and parking surfaces.
-
-They do not establish that two selected cells had the same final material, same thickness, same compaction, same moisture behaviour and same subsequent land use.
-
-A line labelled `edge of gravel` proves where gravel was mapped. It does not prove that the entire adjacent excavation polygons received an equivalent radar-facing restoration system.
-
-## Required exclusions
-
-Any future polygon extraction would need substantial buffers around:
-
-- Sconondoa Street;
-- asphalt parking;
-- the maintenance-facility building;
-- gravel drives;
-- rail or embankment areas;
-- water lines;
-- sanitary sewer;
-- storm drainage;
-- catch basins and manholes;
-- wells and monitoring points;
-- riprap or surge stone;
-- sheet-pile boundaries;
-- cell edges;
-- stockpile areas;
-- woods and vegetation boundaries;
-- narrow cells or strips smaller than a practical Sentinel-1 pixel neighbourhood.
-
-At Sentinel-1 scale, these exclusions may leave limited uncontaminated interior area.
-
-## Gate evaluation
-
-Requirements satisfied:
-
-```text
-finite_surveyed_excavation_bottoms = yes
-different_excavation_depths = yes
-cell_boundaries = yes
-coordinates_and_control_points = yes
-geometry_sufficient_for_digitization = yes
-```
-
-Requirements not satisfied:
-
-```text
-confirmed_comparable_finished_surface_pair = no
-cell_wide_final_surface_matched_to_every_bottom_point = no
-one_representative_depth_per_complete_cell = no
-explicit_numerical_survey_uncertainty = no
-clean_cell_interiors_demonstrated = no
-sentinel1_pre_excavation_imagery_for_early_phases = no
-```
-
-## Final decision
+## Current decision
 
 ```text
 site = sconondoa
-radar_depth_ordering_candidate = not_good_to_go
-reason = comparable_final_surface_not_confirmed
+radar_depth_ordering_candidate = pending_restoration_record_review
+comparable_surface_pair = unresolved
 earth_engine_query_executed = no
 scientific_radar_linkage_outcome = not_evaluated
 ```
 
-Do not create shallow/deep GeoJSON polygons and do not run the Sentinel-1 depth-ordering screen from these drawings alone.
-
 ## Next step
 
-Close Sconondoa for the current calibration route. The next evidence search must require both of the following before a candidate advances:
-
-1. finite measured or calculable depth zones; and
-2. documented equivalent final surface construction and later land use across the compared zones.
-
-Do not accept geometry and depth measurements alone as sufficient evidence.
+Review the main report's restoration specifications and construction records. Do not create shallow/deep GeoJSON polygons and do not run the Sentinel-1 screen until that review is complete.
