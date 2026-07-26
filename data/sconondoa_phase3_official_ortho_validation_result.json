@@ -1,0 +1,35 @@
+{
+  "status": "placement_supported_but_execution_geometry_rejected",
+  "source_imagery": "NYS 2022 one-foot four-band orthoimagery",
+  "official_tile_count": 2,
+  "official_building_footprints_used": true,
+  "orientation_check": {
+    "maintenance_building_east_of_cells": true,
+    "road_south_of_cells": true,
+    "selected_zones_on_expected_phase3_restoration_area": true,
+    "gross_georeference_displacement_detected": false
+  },
+  "analysis_scale_meters": 20,
+  "maximum_provisional_georeference_residual_meters": 3.487,
+  "shallow_zone": {
+    "zone_id": "sconondoa_phase3_shallow_A_upper",
+    "nearest_visible_official_building_footprint_meters": 19.008,
+    "conservative_clearance_after_maximum_residual_meters": 15.521,
+    "placement_decision": "supported",
+    "execution_pixel_purity_decision": "borderline"
+  },
+  "deep_zone": {
+    "zone_id": "sconondoa_phase3_deep_BC_combined",
+    "nearest_visible_official_building_footprint_meters": 6.213,
+    "second_nearest_visible_official_building_footprint_meters": 9.391,
+    "conservative_nearest_clearance_after_maximum_residual_meters": 2.726,
+    "placement_decision": "supported",
+    "execution_pixel_purity_decision": "failed_building_proximity"
+  },
+  "earth_engine_query_executed": false,
+  "final_geojson_frozen": false,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false,
+  "decision": "DO_NOT_RUN_SCONONDOA_DEPTH_ORDERING_QUERY_WITH_CURRENT_POLYGONS"
+}
