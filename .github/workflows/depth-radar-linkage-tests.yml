@@ -1,0 +1,41 @@
+name: Depth radar linkage tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/run_buto_s1_method_screen.py"
+      - "scripts/run_depth_radar_linkage_feasibility_screen.py"
+      - "tests/unit/test_buto_s1_method_screen.py"
+      - "tests/unit/test_depth_radar_linkage_feasibility_screen.py"
+      - ".github/workflows/depth-radar-linkage-tests.yml"
+  pull_request:
+    paths:
+      - "scripts/run_buto_s1_method_screen.py"
+      - "scripts/run_depth_radar_linkage_feasibility_screen.py"
+      - "tests/unit/test_buto_s1_method_screen.py"
+      - "tests/unit/test_depth_radar_linkage_feasibility_screen.py"
+      - ".github/workflows/depth-radar-linkage-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Run focused tests
+        run: >-
+          python -m pytest
+          tests/unit/test_buto_s1_method_screen.py
+          tests/unit/test_depth_radar_linkage_feasibility_screen.py
+          -q
