@@ -17,6 +17,7 @@ This addendum corrects the earlier assumption that Appendix A could be isolated 
 - `AR304822` contains Table 1, the **Textural Classification Summary**.
 - Table 1 maps pit-number groups to soil-composite identifiers `RR1` through `RR15` and reports coarse-fragment, sand, silt, clay, and USDA soil-classification results.
 - Table 1 does **not** report cover depth and must never be used as a depth label.
+- Table 2 repeats the soil-composite groupings for nutrient requirements and also does **not** report depth.
 - `AR304830–AR304831` contain the professional facility-design and construction certification.
 - The certification identifies the closure as constructed in accordance with the approved application, documents, designs, and plans.
 - The closure package records surveying support by Kurtanich Engineers and Associates and QA/QC engineering certification by Todd Giddings and Associates.
@@ -45,7 +46,7 @@ pits 125-127  -> RR14
 pits 128-129  -> RR15
 ```
 
-The OCR appears imperfect around the `RR8` grouping, so the original page image must be checked before recording that mapping as authoritative.
+The OCR appears imperfect around the `RR8` grouping, so the original page image must be checked before recording that mapping as authoritative. Missing or unusual pit numbers must not be interpreted as failures or re-certifications without the field forms.
 
 ## What remains missing
 
@@ -68,6 +69,20 @@ Do not use an assumed archive-page window as if it were verified. The next extra
 
 Only page images that visibly contain those anchors can be used to extract depth or geometry.
 
+## Public access routes tested
+
+The following routes were checked and did not expose a readable copy of the pit forms or Sheet 1:
+
+- direct NEPIS PDF and text download from the local runtime — blocked by DNS resolution;
+- normal web opening of the direct NEPIS PDF — blocked by URL handoff/safety handling;
+- web search using the report title, document key, plan-sheet title, pit labels, unusual pit identifiers, and archive-page markers — returned only the OCR narrative and Tables 1–2;
+- EPA SEMS searches by site name, EPA ID, report title, and completion date — no separately indexed closure-certification copy;
+- Pennsylvania public-document searches by permit `100019`, facility name, and engineer name — no indexed copy;
+- Internet Archive, archive.ph/archive.is, cached-copy, and non-EPA mirror searches — no capture found;
+- text-rendering proxy searches — no usable PDF or page-image output.
+
+Do not repeat these broad searches unless a new archive or document identifier appears. The only unresolved public route is obtaining the actual page-image rendition of EPA document `91025HWW` or a separately scanned copy of the 1987 closure package.
+
 ## Readiness impact
 
 ```text
@@ -82,4 +97,5 @@ next_blocker = image_only_pit_forms_map_and_numerical_uncertainty
 - EPA NEPIS document key `91025HWW`, River Road Landfill Record of Decision with embedded 1987 Closure Certification and Post-Closure Plan.
 - Closure Certification narrative at archive pages `AR304820–AR304831`.
 - Table 1 Textural Classification Summary at `AR304822`.
+- Table 2 Nutrient Requirement Summary in the same closure section.
 - Pennsylvania solid-waste permit conditions embedded in the same EPA record.
