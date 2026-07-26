@@ -29,6 +29,8 @@ The selected remedy gives one potentially preservable subset: forested and matur
 - The eastern landfill was cleared, covered with soil, graded, and seeded during the remedial work.
 - Approximately 7,000 feet of inspection trails were constructed on the western landfill.
 - Later remedy descriptions state that cover thickness was verified during construction.
+- EPA, the Bureau of Reclamation, and PADEP performed construction oversight and concluded that the remedy was built according to the final design.
+- The July 2001 Remedial Action Completion Report documented achievement of the construction performance standards and was approved on August 17, 2001.
 - Construction was completed in December 2000 and final closeout was recorded in 2008.
 - The 2015 five-year review described the western landfill as predominantly forested or maturing forest, except for an open meadow at the crown.
 - The 2015 review reported periodic inspection of the western crown and did not identify a protectiveness issue in the forested cap.
@@ -36,9 +38,20 @@ The selected remedy gives one potentially preservable subset: forested and matur
 - The 2020 five-year review again described the western landfill as mainly forested with an open-meadow crown and reported no protectiveness issue from routine inspections.
 - Storm-related work in 2019–2020 affected the central drainageway and eastern and western access roads; these corridors must be excluded from any stable western-cap subset.
 - Current institutional controls restrict development and the landfill areas remain primarily vegetated green space.
-- EPA records a five-year review completed on July 2, 2025, but the full 2025 report has not yet been recovered.
-- The public administrative-record index identifies three exact March 1995 Revised Draft Remedial Investigation volumes and their page ranges, plus later design and construction reports.
-- The final closeout report identifies the September 1999 Final Remedial Action Design Report and 2001 Remedial Action Construction Report as the key as-built evidence chain.
+- EPA records a fifth five-year review completed on July 2, 2025.
+- As of this search, the full 2025 report is not retrievable through EPA's visible site report list, SEMS search results, Regulations.gov, or general web indexing.
+- The correct EPA remedial administrative-record collection is Region 3 collection 206, containing 71 documents. Collection 205 is the unilateral-order file and must not be used as the remedial-document source.
+- The public administrative-record index identifies three exact March 1995 Revised Draft Remedial Investigation volumes:
+  - Volume 1: archival pages 301638–302051;
+  - Volume 2: archival pages 302052–302646;
+  - Volume 3: archival pages 302647–303407.
+- The final closeout report identifies the September 15, 1999 Final Remedial Action Design Report and the 2001 Remedial Action Completion/Construction Report as the key as-built evidence chain.
+- Static EPA documents recovered in this pass include:
+  - first five-year review: SEMS document 2046292;
+  - second five-year review: SEMS document HQ/180195;
+  - third five-year review: SEMS document 2215256;
+  - final closeout report: SDMS document 2089421, also available in the federal docket archive.
+- The ROD identifies the cap-thickness figure in its appendix, but repeated screenshot attempts failed because the EPA PDF cache could not retrieve the page.
 
 ## Why it is not yet usable
 
@@ -53,7 +66,8 @@ The selected remedy gives one potentially preservable subset: forested and matur
 9. The auger-refusal endpoint may not always equal the top of refuse; the field method and logs must be reviewed point by point.
 10. Settlement, erosion repairs, vegetation management, access routes, gas or monitoring infrastructure, and other disturbed zones must be excluded.
 11. A stable Sentinel-1 interval must be proven separately for each surviving forested western point or polygon.
-12. The July 2025 five-year review must be checked for recent repairs or changes before a current stable interval is accepted.
+12. The July 2025 five-year review must be obtained and checked for recent repairs or changes before a current stable interval is accepted.
+13. Construction verification confirms compliance with the final design but does not expose the point-specific measured depths or numerical tolerance required by the calibration contract.
 
 ## Candidate classification
 
@@ -69,16 +83,18 @@ forested_western_subset_preserved_by_remedy = yes_in_principle
 construction_cover_verification_confirmed = yes_but_values_pending
 numerical_measurement_uncertainty_documented = no
 stable_post_remedy_surface = provisionally_supported_for_selected_forested_western_areas_pending_overlay
+latest_five_year_review_completed = 2025-07-02
+latest_five_year_review_report_retrievable = no
 eligible_calibration_row = no
 ```
 
 ## Required next steps
 
-1. Recover the March 1995 remedial-investigation cap-thickness field table and measurement logs from the indexed RI volumes.
+1. Recover the March 1995 remedial-investigation cap-thickness field table and measurement logs from Region 3 remedial collection 206.
 2. Recover the measurement-location figure, including coordinate system and point identifiers.
 3. Recover the February 19, 1997 Topographic Site Plan.
 4. Recover the September 15, 1999 Final Remedial Action Design Report and design drawing package.
-5. Recover the 2001 Remedial Action Construction Report and as-built drawings showing:
+5. Recover the July 2001 Remedial Action Completion Report and as-built drawings showing:
    - eastern cap repair limits;
    - non-forested western repair limits;
    - western inspection-trail alignments;
@@ -86,7 +102,7 @@ eligible_calibration_row = no
    - grading and soil-placement limits;
    - monitoring and gas-system features;
    - construction cover-verification results.
-6. Recover the July 2025 five-year review and recent maintenance records.
+6. Recover the July 2025 fifth five-year review and recent maintenance records.
 7. Identify only measured forested-western points proven to lie outside all construction, trail, road, drainage, monitoring, and repair limits.
 8. Establish point-specific depth uncertainty from the field method, logs, or a source-provided finite interval.
 9. Verify an unchanged Sentinel-1 observation interval for each surviving point.
@@ -104,8 +120,9 @@ eligible_calibration_row = no
 ## Public evidence reviewed
 
 - EPA Berks Landfill Record of Decision and remedial-investigation summary
-- EPA administrative-record index identifying the March 1995 RI volumes
+- EPA Region 3 remedial administrative-record collection 206 and its archived index
 - EPA final closeout report and its design/construction bibliography
-- EPA first, third, and fourth five-year review reports
+- EPA first, second, third, and fourth five-year review reports
+- EPA site schedule confirming the July 2, 2025 fifth review completion
 - EPA cleanup and redevelopment summaries
-- EPA five-year-review schedule and site profile
+- Regulations.gov federal docket copy of the final closeout report
