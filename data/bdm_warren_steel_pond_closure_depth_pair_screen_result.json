@@ -1,0 +1,52 @@
+{
+  "site": "BDM Warren Steel - Pond #5 and 56-inch Hot Mill Lagoon",
+  "state": "Ohio",
+  "source_document": "Closure Certification, September 2016",
+  "decision": "NOT_GOOD_TO_GO_GEOMETRY_AND_STABILITY_FAILED",
+  "candidate_structure": {
+    "positive_area": "Pond #5 controlled fill containing blended residuals beneath fine-grained cover soil and topsoil",
+    "negative_area": "56-inch Hot Mill Lagoon, residuals removed to the bentonite layer and confirmatory samples accepted before slag backfill, topsoil, and seeding"
+  },
+  "positive_depth_evidence": {
+    "surveyed_area_acres": 2.358,
+    "reported_fine_grained_fill_volume_cubic_yards": 10190.25,
+    "required_fine_grained_cover_inches": 30,
+    "derived_area_average_fine_grained_thickness_feet": 2.6786559208,
+    "derived_area_average_fine_grained_thickness_meters": 0.8164543246,
+    "topsoil_minimum_inches": 4,
+    "survey_compared_surfaces": "existing base surface and final clay fill surface",
+    "survey_date_final_surface": "2016-03-29",
+    "pointwise_final_thickness_grid_public": false
+  },
+  "surface_comparability": {
+    "pond_5": "cover soil, topsoil, and seeding",
+    "hot_mill_lagoon": "backfill material, topsoil, and seeding",
+    "same_visible_surface_supported": true,
+    "same_near_surface_assembly_supported": false
+  },
+  "geometry": {
+    "pond_5_professional_survey_drawing": true,
+    "pond_5_final_coordinate_table_public": false,
+    "hot_mill_lagoon_final_as_built_survey": false,
+    "hot_mill_lagoon_public_boundary_label": "approximate lagoon limit",
+    "exact_wgs84_execution_polygons_created": false
+  },
+  "timing": {
+    "closure_completed_in_sentinel_1_era": true,
+    "stable_post_closure_observation_period_confirmed": false,
+    "confounders": [
+      "active demolition and redevelopment of the surrounding former steel mill",
+      "later federal removal actions at the abandoned facility",
+      "large buildings, roads, rail and industrial infrastructure immediately adjacent to the lagoon areas"
+    ]
+  },
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "app_depth_enabled": false,
+  "fatal_reasons": [
+    "The confirmed-negative lagoon lacks a final surveyed boundary; the public map labels the lagoon limit approximate.",
+    "The positive survey provides surfaces and total volume but no public pointwise final thickness grid or stated numerical survey uncertainty.",
+    "The surrounding site underwent continuing demolition, remediation and redevelopment, so a clean stable Sentinel-1 observation interval is not established.",
+    "The two areas share topsoil and seeding but not the same near-surface substrate: fine-grained soil at Pond #5 versus slag backfill at the negative lagoon."
+  ]
+}
