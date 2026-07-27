@@ -1,0 +1,41 @@
+{
+  "site_group": "Cleveland-Cliffs Cleveland Works Area B and Area C",
+  "decision": "NOT_GOOD_TO_GO_SURFACE_ASSEMBLY_AND_DEPTH_GRID_FAILED",
+  "nominal_depth_pair": {
+    "area_b_ft": 3.0,
+    "area_c_ft": 2.0,
+    "contrast_ft": 1.0,
+    "contrast_m": 0.3048
+  },
+  "area_b": {
+    "area_acres": 12.0,
+    "closure_year": 1993,
+    "surface": "vegetated",
+    "cover_profile": [
+      "12 in: farm/topsoil, sand and composted-leaves blend",
+      "24 in: sand"
+    ],
+    "final_grade_coordinate_drawing": true,
+    "pointwise_final_thickness_grid": false,
+    "survey_uncertainty_published": false
+  },
+  "area_c": {
+    "area_acres": 16.3,
+    "closure_year": 2021,
+    "surface": "vegetated",
+    "cover_profile": [
+      "12 in: vegetative cover soil",
+      "12 in: slag fines"
+    ]
+  },
+  "fatal_blockers": [
+    "The near-surface material assemblies differ between Area B and Area C.",
+    "A Sentinel-1 difference could reflect soil, sand, compost and slag differences rather than depth alone.",
+    "The recovered Area B public record does not publish a pointwise final thickness grid or numerical survey uncertainty."
+  ],
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "plan_changed": false
+}
