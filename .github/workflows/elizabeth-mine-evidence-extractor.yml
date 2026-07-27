@@ -1,0 +1,44 @@
+name: Elizabeth Mine evidence extractor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/inspect_elizabeth_mine_public_collections.py"
+      - ".github/workflows/elizabeth-mine-evidence-extractor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-collections:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependency
+        run: python -m pip install requests
+
+      - name: Inspect EPA collection inventories
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/elizabeth_mine_collection_inventory
+          python scripts/inspect_elizabeth_mine_public_collections.py \
+            2>&1 | tee artifacts/elizabeth_mine_collection_inventory/inventory.log
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elizabeth-mine-collection-inventory
+          path: artifacts/elizabeth_mine_collection_inventory/
+          if-no-files-found: warn
+          retention-days: 7
