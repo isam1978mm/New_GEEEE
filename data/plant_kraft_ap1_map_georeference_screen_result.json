@@ -1,0 +1,59 @@
+{
+  "status": "MAP_AND_GEOREFERENCE_SCREEN_COMPLETE_EVIDENCE_ONLY",
+  "facility": "Georgia Power Plant Kraft",
+  "unit": "AP-1",
+  "official_source": "Certification of CCR Removal",
+  "official_pdf_page_count": 30,
+  "map_evidence": {
+    "post_excavation_topographic_map_pdf_page": 9,
+    "post_excavation_map_date": "2016-08-22",
+    "post_excavation_map_scale": "1 inch = 40 feet",
+    "post_excavation_map_horizontal_reference": "Georgia East Zone, NAD83",
+    "survey_engineering_firm": "KEM & Co., LLC",
+    "verified_excavation_limits_aerial_pdf_page": 11,
+    "top_of_structural_fill_map_pdf_page": 13,
+    "top_of_structural_fill_map_date": "2017-06-02",
+    "confirmed_clean_annotations_present": true,
+    "verified_excavation_boundary_visible": true,
+    "verified_excavation_boundary_storage": "raster overlay inside embedded aerial image",
+    "boundary_is_vector_survey_line": false
+  },
+  "physical_evidence": {
+    "CCR_removal_confirmed": true,
+    "post_excavation_survey_exists": true,
+    "top_of_structural_fill_survey_exists": true,
+    "local_physical_size_supports_20m_footprints_in_principle": true,
+    "local_size_result_is_execution_geometry": false
+  },
+  "independent_georeference_attempt": {
+    "control_source": "USGS/USDA NAIP imagery service",
+    "queried_record_count": 13,
+    "best_automatic_candidate_object_id": 42293,
+    "best_automatic_candidate_year": 2023,
+    "descriptor_match_count": 15,
+    "RANSAC_inlier_count": 4,
+    "RANSAC_inlier_ratio": 0.2666666667,
+    "automatic_transform_accepted": false,
+    "reason_rejected": "Only four inliers supported a visibly warped homography; the transformed source extent left the target image and the match visualization did not provide defensible permanent controls.",
+    "current_NAIP_site_condition": "major industrial and port redevelopment visible",
+    "exact_WGS84_excavation_polygon_created": false,
+    "boundary_position_uncertainty_assigned": false
+  },
+  "timing": {
+    "possible_post_removal_pre_transfer_window": "2018-2020",
+    "quiet_window_verified_for_AP1": false,
+    "property_transfer_year": 2021,
+    "later_redevelopment_visible": true,
+    "stable_Sentinel1_period_confirmed": false
+  },
+  "decision": "HOLD_EXACT_GEOREFERENCE_AND_STABLE_TIMING_NOT_ESTABLISHED",
+  "earth_engine_query_executed": false,
+  "sentinel1_catalogue_query_executed": false,
+  "radar_backscatter_extracted": false,
+  "execution_geojson_created": false,
+  "calibration_record_created": false,
+  "usable_confirmed_negative_rows": 0,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "next_step": "Retain Plant Kraft as strong confirmed-removal evidence only. Continue to a candidate whose final verified boundary is directly georeferenced or survey-vector based and whose post-construction surface remained stable."
+}
