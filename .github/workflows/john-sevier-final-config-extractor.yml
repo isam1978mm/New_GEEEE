@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/extract_john_sevier_final_configuration.py"
+      - "scripts/extract_john_sevier_conference_maps.py"
       - ".github/workflows/john-sevier-final-config-extractor.yml"
   workflow_dispatch:
 
@@ -28,7 +29,34 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pymupdf requests pillow
 
-      - name: Download and extract relevant map pages
+      - name: Download and extract conference papers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/john_sevier_conference_maps
+          curl --location --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 4 \
+            --connect-timeout 30 --max-time 900 \
+            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+            'https://www.flyash.info/files/2013/090-vance-2013.pdf' \
+            --output /tmp/090-vance-2013.pdf \
+            2>&1 | tee artifacts/john_sevier_conference_maps/download_2013.log
+          curl --location --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 4 \
+            --connect-timeout 30 --max-time 900 \
+            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+            'https://www.flyash.info/files/2015/081-bennett-2015.pdf' \
+            --output /tmp/081-bennett-2015.pdf \
+            2>&1 | tee artifacts/john_sevier_conference_maps/download_2015.log
+          file /tmp/090-vance-2013.pdf /tmp/081-bennett-2015.pdf | \
+            tee artifacts/john_sevier_conference_maps/file_types.log
+          JSF_WOCA_2013_PDF=/tmp/090-vance-2013.pdf \
+          JSF_WOCA_2015_PDF=/tmp/081-bennett-2015.pdf \
+            python scripts/extract_john_sevier_conference_maps.py \
+            2>&1 | tee artifacts/john_sevier_conference_maps/extractor.log
+
+      - name: Attempt optional History of Construction extraction
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
@@ -44,8 +72,8 @@ jobs:
             echo "Trying ${label}" | tee -a artifacts/john_sevier_final_configuration/download.log
             rm -f "$SOURCE_PDF"
             if curl --location --fail --show-error --silent \
-              --retry 4 --retry-all-errors --retry-delay 4 \
-              --connect-timeout 30 --max-time 1800 \
+              --retry 2 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 30 --max-time 600 \
               --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
               --referer 'https://tvawcma.com/' \
               "$url" --output "$SOURCE_PDF" \
@@ -59,24 +87,27 @@ jobs:
                 echo "$label" > artifacts/john_sevier_final_configuration/source_used.txt
                 return 0
               fi
-              echo "${label}: rejected unexpected size or MIME" | tee -a artifacts/john_sevier_final_configuration/download.log
             fi
             return 1
           }
 
-          download_source 'tvawcma mirror' "$MIRROR_URL" || \
-            download_source 'TVA official host' "$OFFICIAL_URL"
-
-          ls -lh "$SOURCE_PDF" | tee -a artifacts/john_sevier_final_configuration/download.log
-          JOHN_SEVIER_SOURCE_PDF="$SOURCE_PDF" \
-            python scripts/extract_john_sevier_final_configuration.py \
-            2>&1 | tee artifacts/john_sevier_final_configuration/extractor.log
+          if download_source 'tvawcma mirror' "$MIRROR_URL" || \
+             download_source 'TVA official host' "$OFFICIAL_URL"; then
+            JOHN_SEVIER_SOURCE_PDF="$SOURCE_PDF" \
+              python scripts/extract_john_sevier_final_configuration.py \
+              2>&1 | tee artifacts/john_sevier_final_configuration/extractor.log
+          else
+            echo 'History of Construction unavailable to automation; conference extraction remains authoritative for this run.' | \
+              tee artifacts/john_sevier_final_configuration/unavailable.txt
+          fi
 
       - name: Upload extraction artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: john-sevier-final-configuration
-          path: artifacts/john_sevier_final_configuration/
+          path: |
+            artifacts/john_sevier_conference_maps/
+            artifacts/john_sevier_final_configuration/
           if-no-files-found: warn
           retention-days: 7
