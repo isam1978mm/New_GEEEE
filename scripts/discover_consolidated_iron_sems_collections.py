@@ -1,11 +1,11 @@
 """Discover all SEMS public collections for Consolidated Iron and Metal.
 
-The site profile exposes only four key documents. This one-off utility submits
-EPA's full Records Collections search for Region 2 by EPA ID, captures Special
-Collection and Administrative Record results, and inspects discovered collection
-JSON for the Final Remedial Action Report, Site Management Plan, as-built
-surveys, and related construction records. It does not call Earth Engine or
-create calibration records.
+EPA's search form populates Collection Type only after Region is selected. This
+one-off utility follows that dynamic sequence for Region 02, searches both
+Special Collections and Administrative Records by EPA ID, and inspects every
+returned collection JSON for the Final Remedial Action Report, Site Management
+Plan, as-built surveys, and related construction records. It does not call Earth
+Engine or create calibration records.
 """
 from __future__ import annotations
 
@@ -22,6 +22,10 @@ from playwright.async_api import async_playwright
 EPA_ID = "NY0002455756"
 REGION = "02"
 SEARCH_URL = "https://semspub.epa.gov/src/search"
+REGION_ID = "arsearchformid:regionselectboxid"
+TYPE_ID = "arsearchformid:collTypeId"
+EPA_INPUT_ID = "arsearchformid:inpuEPAId"
+SUBMIT_ID = "arsearchformid:searchButtonId"
 TARGET_TERMS = (
     "remedial action report",
     "final remedial action",
@@ -37,13 +41,26 @@ TARGET_TERMS = (
 )
 
 
-def option_for(options: list[dict[str, str]], needles: tuple[str, ...]) -> str | None:
+def id_selector(element_id: str) -> str:
+    """Return an attribute selector safe for JSF IDs containing colons."""
+    return f'[id="{element_id}"]'
+
+
+async def options_for(page, element_id: str) -> list[dict[str, str]]:  # noqa: ANN001
+    return await page.locator(id_selector(element_id)).evaluate(
+        "el => [...el.options].map(o => ({text:(o.textContent||'').trim(), value:o.value}))"
+    )
+
+
+def choose_collection_value(options: list[dict[str, str]], kind: str) -> str:
+    needle = "special" if kind == "SC" else "administrative"
     for option in options:
-        text = option.get("text", "").lower()
-        value = option.get("value", "")
-        if all(needle.lower() in text for needle in needles):
-            return value
-    return None
+        if needle in option["text"].lower():
+            return option["value"]
+    for option in options:
+        if option["value"].upper() == kind:
+            return option["value"]
+    raise RuntimeError(f"Could not resolve collection type {kind}: {options}")
 
 
 async def submit_search(page, collection_kind: str, output: Path) -> dict[str, object]:  # noqa: ANN001
@@ -52,126 +69,71 @@ async def submit_search(page, collection_kind: str, output: Path) -> dict[str, o
         await page.wait_for_load_state("networkidle", timeout=45_000)
     except Exception:
         pass
-    await page.wait_for_timeout(3_000)
+    await page.wait_for_timeout(2_000)
 
-    controls = await page.evaluate(
-        """() => ({
-          selects: [...document.querySelectorAll('select')].map(s => ({
-            id:s.id, name:s.name,
-            options:[...s.options].map(o => ({text:(o.textContent||'').trim(), value:o.value}))
-          })),
-          inputs: [...document.querySelectorAll('input')].map(i => ({
-            id:i.id, name:i.name, type:i.type, value:i.value,
-            placeholder:i.placeholder||'', aria:i.getAttribute('aria-label')||''
-          })),
-          buttons: [...document.querySelectorAll('button,input[type=submit],input[type=button]')].map(b => ({
-            id:b.id, name:b.name, type:b.type, value:b.value||'', text:(b.innerText||b.textContent||'').trim()
-          })),
-          labels: [...document.querySelectorAll('label')].map(l => ({for:l.htmlFor, text:(l.innerText||l.textContent||'').trim()}))
-        })"""
+    # EPA populates Collection Type only after a Region change event.
+    region = page.locator(id_selector(REGION_ID))
+    collection_type = page.locator(id_selector(TYPE_ID))
+    epa_input = page.locator(id_selector(EPA_INPUT_ID))
+    submit = page.locator(id_selector(SUBMIT_ID))
+    for label, locator in (
+        ("region", region),
+        ("collection type", collection_type),
+        ("EPA ID", epa_input),
+        ("submit", submit),
+    ):
+        if await locator.count() != 1:
+            raise RuntimeError(f"SEMS {label} control not found uniquely")
+
+    initial_controls = {
+        "region_options": await options_for(page, REGION_ID),
+        "collection_type_options_before_region": await options_for(page, TYPE_ID),
+    }
+    await region.select_option(value=REGION)
+
+    # Wait for the JSF/Ajax update to add Special Collection and Administrative Record.
+    await page.wait_for_function(
+        "id => { const el=document.getElementById(id); return el && el.options.length > 1; }",
+        TYPE_ID,
+        timeout=60_000,
     )
+    type_options = await options_for(page, TYPE_ID)
+    initial_controls["collection_type_options_after_region"] = type_options
+    initial_controls["input_id"] = EPA_INPUT_ID
+    initial_controls["submit_id"] = SUBMIT_ID
     (output / f"search_controls_{collection_kind}.json").write_text(
-        json.dumps(controls, indent=2), encoding="utf-8"
+        json.dumps(initial_controls, indent=2), encoding="utf-8"
     )
 
-    region_select = None
-    type_select = None
-    for select in controls["selects"]:
-        texts = " ".join(option["text"].lower() for option in select["options"])
-        if "region 2" in texts or "region ii" in texts:
-            region_select = select
-        if "special collection" in texts and "administrative record" in texts:
-            type_select = select
-    if not region_select or not type_select:
-        raise RuntimeError("Could not identify SEMS region and collection-type controls")
+    type_value = choose_collection_value(type_options, collection_kind)
+    await collection_type.select_option(value=type_value)
+    await epa_input.fill(EPA_ID)
 
-    region_value = option_for(region_select["options"], ("region", "2"))
-    if region_value is None:
-        # Fallback to a value or text containing 02.
-        for option in region_select["options"]:
-            if option["value"] in {"2", "02"} or " 2" in option["text"]:
-                region_value = option["value"]
-                break
-    kind_needles = ("special",) if collection_kind == "SC" else ("administrative",)
-    type_value = option_for(type_select["options"], kind_needles)
-    if region_value is None or type_value is None:
-        raise RuntimeError(f"Could not resolve search options for {collection_kind}")
-
-    await page.select_option(f"select#{region_select['id']}", value=region_value)
-    await page.select_option(f"select#{type_select['id']}", value=type_value)
-    await page.wait_for_timeout(1_000)
-
-    # Locate the EPA-ID input by associated label/row text, then robust fallbacks.
-    epa_input_id = None
-    for label in controls["labels"]:
-        if "epa id" in label["text"].lower() and label.get("for"):
-            epa_input_id = label["for"]
-            break
-    if not epa_input_id:
-        candidates = await page.locator("text=/EPA ID/i").all()
-        for candidate in candidates:
-            try:
-                row = candidate.locator("xpath=ancestor::*[self::tr or self::div][1]")
-                inp = row.locator("input[type=text]").first
-                if await inp.count():
-                    epa_input_id = await inp.get_attribute("id")
-                    break
-            except Exception:
-                continue
-    if not epa_input_id:
-        for item in controls["inputs"]:
-            blob = " ".join(str(item.get(key, "")) for key in ("id", "name", "placeholder", "aria")).lower()
-            if item.get("type") in {"text", "search", ""} and "epa" in blob:
-                epa_input_id = item["id"]
-                break
-    if not epa_input_id:
-        # Last fallback: use the last visible text input, which is the EPA-ID field on this form.
-        visible = page.locator("input[type=text]:visible")
-        count = await visible.count()
-        if count:
-            epa_input_id = await visible.nth(count - 1).get_attribute("id")
-    if not epa_input_id:
-        raise RuntimeError("Could not identify EPA-ID input")
-    await page.fill(f"#{epa_input_id}", EPA_ID)
-
-    # Prefer a visible Search/Submit button, otherwise submit the enclosing form.
-    submitted = False
-    for selector in ("button:has-text('Search')", "input[type=submit][value*='Search' i]", "input[type=submit]:visible"):
-        locator = page.locator(selector).first
-        if await locator.count():
-            try:
-                await locator.click(timeout=10_000)
-                submitted = True
-                break
-            except Exception:
-                pass
-    if not submitted:
-        await page.evaluate(
-            "id => { const el=document.getElementById(id); if(!el||!el.form) throw new Error('No form'); el.form.submit(); }",
-            epa_input_id,
-        )
-
+    await submit.click(timeout=20_000)
     try:
         await page.wait_for_load_state("networkidle", timeout=60_000)
     except Exception:
         pass
     await page.wait_for_timeout(8_000)
+
     html = await page.content()
-    (output / f"search_results_{collection_kind}.html").write_text(html, encoding="utf-8")
+    body_text = await page.locator("body").inner_text()
     anchors = await page.eval_on_selector_all(
         "a",
         "els => els.map(a => ({text:(a.innerText||a.textContent||'').trim(), href:a.href||''}))",
     )
-    body_text = await page.locator("body").inner_text()
-    ids = sorted(set(re.findall(r"(?:colid=|Collection ID\s*[:#]?\s*)(\d{4,})", html + "\n" + body_text, re.I)))
+    (output / f"search_results_{collection_kind}.html").write_text(html, encoding="utf-8")
+
+    ids = set(re.findall(r"(?:colid=|Collection ID\s*[:#]?\s*)(\d{4,})", html + "\n" + body_text, re.I))
     for anchor in anchors:
         query = parse_qs(urlparse(anchor["href"]).query)
-        ids.extend(query.get("colid", []))
-    ids = sorted(set(ids))
+        ids.update(query.get("colid", []))
+
     return {
         "collection_kind": collection_kind,
+        "selected_type_value": type_value,
         "final_url": page.url,
-        "collection_ids": ids,
+        "collection_ids": sorted(ids),
         "anchors": anchors,
         "body_excerpt": body_text[:50_000],
     }
