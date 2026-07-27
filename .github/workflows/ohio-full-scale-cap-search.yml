@@ -1,0 +1,36 @@
+name: Ohio full-scale cap records scout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/scout_ohio_full_scale_cap_records.py"
+      - ".github/workflows/ohio-full-scale-cap-search.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  search-records:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser dependencies
+        run: |
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install --with-deps chromium
+      - name: Search Ohio EPA public records
+        run: python scripts/scout_ohio_full_scale_cap_records.py
+      - name: Upload search evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohio-full-scale-cap-records
+          path: artifacts/ohio_full_scale_cap_records/
+          if-no-files-found: warn
+          retention-days: 7
