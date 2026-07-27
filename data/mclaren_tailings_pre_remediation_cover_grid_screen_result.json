@@ -1,0 +1,21 @@
+{
+  "site_group": "McLaren Tailings Abandoned Mine Site",
+  "decision": "NOT_GOOD_TO_GO_MEASURED_ZONES_REMOVED_DURING_REMEDIATION",
+  "initial_evidence": {
+    "pre_remediation_cover_grid": true,
+    "grid_spacing_ft": 100,
+    "boring_location_count": 35,
+    "cover_thickness_measured_to_nearest_inch": true
+  },
+  "fatal_blocker": {
+    "tailings_impoundment_removed": true,
+    "creek_and_floodplain_reconstructed": true,
+    "reclamation_completed_year": 2014,
+    "old_measured_depth_zones_survived_into_sentinel1_period": false
+  },
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "plan_changed": false
+}
