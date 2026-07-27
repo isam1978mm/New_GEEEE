@@ -1,0 +1,44 @@
+{
+  "candidate_id": "onondaga_lake_sediment_consolidation_area_final_cover",
+  "candidate_name": "Onondaga Lake Sediment Consolidation Area final cover",
+  "screen_date": "2026-07-27",
+  "decision": "NOT_GOOD_TO_GO_UNIFORM_SINGLE_VEGETATED_DEPTH",
+  "approved_plan_changed": false,
+  "evidence": {
+    "construction_period": "2015-2017",
+    "vegetated_final_profile": [
+      "2-inch average compost layer",
+      "6-inch vegetative soil layer: 60 percent on-site borrow, 30 percent imported sand, 10 percent on-site topsoil",
+      "18-inch protective soil layer",
+      "geocomposite drainage and underlying barrier layers"
+    ],
+    "public_design_and_monitoring_records_exist": true,
+    "full_scale_area": true
+  },
+  "gate_results": {
+    "full_scale_vegetated_area": true,
+    "clean_30_to_40_m_interior_possible_in_principle": true,
+    "final_cover_profile_documented": true,
+    "second_large_vegetated_depth_zone": false,
+    "exact_negative_zone": false,
+    "usable_shallow_deep_pair": false,
+    "underwater_cap_measurements_within_approved_scope": false,
+    "usable_calibration_row": false
+  },
+  "fatal_blockers": [
+    "The upland SCA final cover is documented as one uniform vegetated profile rather than two large certified depth zones.",
+    "The numerous alternative cap profiles, cores and thickness measurements in the Onondaga remedy apply to submerged lake-bottom caps, not the vegetated SCA surface.",
+    "Using underwater cap zones would violate the approved full-scale vegetated-cover scope and create a fundamentally different radar-facing condition."
+  ],
+  "workflow_state": {
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  },
+  "sources_reviewed": [
+    "NYSDEC Onondaga Lake site document listing",
+    "Onondaga Lake Second Five-Year Review Report",
+    "SCA Final Cover Design references and post-closure records"
+  ],
+  "next_action": "Continue the approved search unchanged for an intact full-scale vegetated closure containing two coordinate-tied measured depth conditions under matching upper-soil construction."
+}
