@@ -1,0 +1,57 @@
+{
+  "site_name": "Dixie Auto Salvage Site",
+  "location": "Danville, Illinois",
+  "official_document_id": "EPA SEMS 313667",
+  "official_document_title": "Final Engineering Report",
+  "report_date": "1999-10",
+  "decision": "HOLD_NEGATIVE_GEOMETRY_AND_NUMERICAL_UNCERTAINTY_NOT_PUBLIC",
+  "good_to_go": false,
+  "positive_area": {
+    "description": "vegetated uplands consolidation cap",
+    "cover_structure": "30 inches protective soil plus minimum 6 inches topsoil over geosynthetics",
+    "nominal_minimum_depth_m": 0.9144,
+    "construction_measurement_support": "combined cover thickness measured every 50 to 75 feet during placement; additional soil added until minimum 36 inches was achieved",
+    "final_as_built_top_of_geomembrane_survey_recovered": true,
+    "final_as_built_topsoil_survey_recovered": true,
+    "horizontal_datum_stated": false,
+    "survey_accuracy_or_tolerance_stated": false
+  },
+  "possible_negative_area": {
+    "description": "former residential yard and driveway",
+    "excavation_depth_ft": 1.0,
+    "localized_overexcavation_depth_ft": 2.0,
+    "confirmation_sampling": "23 samples on an approximate 50-foot grid; two failed corners were re-excavated and passed on resampling",
+    "backfilled_and_restored": true,
+    "topsoil_support": "monthly report anticipated completion of topsoil placement in the former Burris yard",
+    "vegetation_support": "all disturbed areas were to be seeded, fertilized and mulched",
+    "final_surveyed_excavation_boundary_recovered": false,
+    "final_sample_coordinate_table_recovered": false,
+    "restored_topsoil_thickness_stated": false
+  },
+  "surface_comparability": {
+    "decision": "PARTIALLY_SUPPORTED_NOT_CONFIRMED_IDENTICAL",
+    "reason": "Both areas received soil and vegetation restoration, but the cap has a documented minimum 6-inch topsoil layer while the former yard restoration thickness and exact final assembly are not stated."
+  },
+  "pixel_support": {
+    "earth_engine_query_executed": false,
+    "clean_20m_positive_interior_confirmed": true,
+    "clean_20m_negative_interior_confirmed": false,
+    "reason": "The final negative boundary is not surveyed and the possible yard area is constrained by the access road, workshop, former house area, woods and cap edge."
+  },
+  "fatal_blockers": [
+    "No final surveyed excavation polygon or final sample-coordinate table for the restored former residential yard and driveway.",
+    "No stated horizontal datum for the recovered final survey drawings, so no defensible exact WGS84 geometry can be created from the public package alone.",
+    "No numerical survey accuracy or cover-depth measurement uncertainty is stated.",
+    "The restored negative area's topsoil thickness and exact final surface assembly are not documented as identical to the capped area.",
+    "A clean 20 m negative footprint cannot be confirmed from final as-built evidence."
+  ],
+  "calibration_record_created": false,
+  "app_depth_enabled": false,
+  "training_started": false,
+  "source_artifact": {
+    "pull_request": 11,
+    "workflow_run": 30291134615,
+    "artifact_id": 8662817931,
+    "artifact_name": "final-report-313667-scout"
+  }
+}
