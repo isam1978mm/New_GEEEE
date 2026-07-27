@@ -1,0 +1,34 @@
+{
+  "site": "ArcelorMittal Cleveland - Vista Pointe Landfill Area C",
+  "decision": "NOT_GOOD_TO_GO_NO_SECOND_COMPARABLE_DEPTH_ZONE",
+  "approved_plan_preserved": true,
+  "full_scale_closure_area_acres": 16.5,
+  "construction_substantially_completed": "October 2020",
+  "final_surface": "vegetative soil and seeded vegetation",
+  "certified_cover_assembly": {
+    "geosynthetic_clay_liner": true,
+    "hdpe_geomembrane_mil": 40,
+    "geocomposite": true,
+    "slag_fines_inches": 12,
+    "vegetative_soil_inches": 12,
+    "total_protective_cover_inches": 24
+  },
+  "surveys_verified_thickness": true,
+  "as_built_record_drawings": true,
+  "second_large_same_surface_measured_depth_zone": false,
+  "only_thicker_features": [
+    "internal construction haul roads",
+    "terraces",
+    "perimeter and stormwater drainage features"
+  ],
+  "fatal_reasons": [
+    "The full vegetated Area C closure cap uses the same 24-inch protective-cover design throughout.",
+    "The only thicker areas are roads or drainage-related infrastructure and are radar confounders, not a second same-surface depth condition.",
+    "The package states that Area C was the first closure cap constructed at Vista Pointe, so it does not provide an adjacent prior full-scale vegetated cap with a different certified thickness."
+  ],
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "usable_calibration_rows_after_review": 0
+}
