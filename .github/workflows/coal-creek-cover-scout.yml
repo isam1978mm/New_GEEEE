@@ -1,0 +1,34 @@
+name: Coal Creek cover evidence scout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/scout_coal_creek_cover_report.py"
+      - ".github/workflows/coal-creek-cover-scout.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install extraction dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 pymupdf pillow
+      - name: Recover and extract official final report
+        run: python scripts/scout_coal_creek_cover_report.py
+      - name: Upload evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coal-creek-cover-scout
+          path: artifacts/coal_creek_cover_scout/
+          if-no-files-found: warn
+          retention-days: 7
