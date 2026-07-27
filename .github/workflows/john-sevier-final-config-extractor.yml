@@ -29,29 +29,51 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pymupdf requests pillow
 
-      - name: Download and extract conference papers
+      - name: Download and extract available conference papers
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts/john_sevier_conference_maps
+          : > artifacts/john_sevier_conference_maps/download.log
+
+          PDF_2015=/tmp/john-sevier-woca-2015.pdf
+          UKNOWLEDGE_2015='https://uknowledge.uky.edu/cgi/viewcontent.cgi?article=1739&context=woca'
           curl --location --fail --show-error --silent \
             --retry 5 --retry-all-errors --retry-delay 4 \
             --connect-timeout 30 --max-time 900 \
+            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+            --referer 'https://uknowledge.uky.edu/woca/woca2015/day1/32/' \
+            "$UKNOWLEDGE_2015" \
+            --output "$PDF_2015" \
+            2>&1 | tee -a artifacts/john_sevier_conference_maps/download.log
+
+          file "$PDF_2015" | tee -a artifacts/john_sevier_conference_maps/download.log
+          bytes=$(stat -c%s "$PDF_2015")
+          mime=$(file -b --mime-type "$PDF_2015")
+          if [ "$bytes" -lt 1000 ] || [ "$mime" != 'application/pdf' ]; then
+            echo "UKnowledge file failed validation: bytes=${bytes} mime=${mime}" | \
+              tee -a artifacts/john_sevier_conference_maps/download.log
+            exit 1
+          fi
+
+          # The 2013 flyash.info host blocks automation. Keep it optional and do
+          # not fail the useful 2015 extraction when it is unavailable.
+          PDF_2013=/tmp/john-sevier-woca-2013.pdf
+          if curl --location --fail --show-error --silent \
+            --retry 1 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 20 --max-time 180 \
             --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
             'https://www.flyash.info/files/2013/090-vance-2013.pdf' \
-            --output /tmp/090-vance-2013.pdf \
-            2>&1 | tee artifacts/john_sevier_conference_maps/download_2013.log
-          curl --location --fail --show-error --silent \
-            --retry 5 --retry-all-errors --retry-delay 4 \
-            --connect-timeout 30 --max-time 900 \
-            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
-            'https://www.flyash.info/files/2015/081-bennett-2015.pdf' \
-            --output /tmp/081-bennett-2015.pdf \
-            2>&1 | tee artifacts/john_sevier_conference_maps/download_2015.log
-          file /tmp/090-vance-2013.pdf /tmp/081-bennett-2015.pdf | \
-            tee artifacts/john_sevier_conference_maps/file_types.log
-          JSF_WOCA_2013_PDF=/tmp/090-vance-2013.pdf \
-          JSF_WOCA_2015_PDF=/tmp/081-bennett-2015.pdf \
+            --output "$PDF_2013" \
+            2>> artifacts/john_sevier_conference_maps/download.log; then
+            mime_2013=$(file -b --mime-type "$PDF_2013")
+            bytes_2013=$(stat -c%s "$PDF_2013")
+            if [ "$bytes_2013" -ge 1000 ] && [ "$mime_2013" = 'application/pdf' ]; then
+              export JSF_WOCA_2013_PDF="$PDF_2013"
+            fi
+          fi
+
+          JSF_WOCA_2015_PDF="$PDF_2015" \
             python scripts/extract_john_sevier_conference_maps.py \
             2>&1 | tee artifacts/john_sevier_conference_maps/extractor.log
 
@@ -72,8 +94,8 @@ jobs:
             echo "Trying ${label}" | tee -a artifacts/john_sevier_final_configuration/download.log
             rm -f "$SOURCE_PDF"
             if curl --location --fail --show-error --silent \
-              --retry 2 --retry-all-errors --retry-delay 3 \
-              --connect-timeout 30 --max-time 600 \
+              --retry 1 --retry-all-errors --retry-delay 2 \
+              --connect-timeout 20 --max-time 240 \
               --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
               --referer 'https://tvawcma.com/' \
               "$url" --output "$SOURCE_PDF" \
