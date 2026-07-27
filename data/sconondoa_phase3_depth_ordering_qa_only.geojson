@@ -2,74 +2,11 @@
   "type": "FeatureCollection",
   "name": "sconondoa_phase3_depth_ordering_qa_only",
   "properties": {
-    "status": "QA_ONLY_NOT_EXECUTION_READY",
-    "source_horizontal_reference": "local assumed project datum",
-    "intermediate_crs": "NAD83(2011) / New York Central (ftUS), EPSG:6535",
-    "output_crs": "EPSG:4326",
-    "georeference_method": "provisional 2D affine fit using Appendix A property survey and five common Service Center building controls",
-    "control_residual_mean_ft": 5.49,
-    "control_residual_max_ft": 11.44,
-    "control_residual_mean_m": 1.673,
-    "control_residual_max_m": 3.487,
+    "status": "SUPERSEDED_DO_NOT_USE",
+    "superseded_by": "data/sconondoa_phase3_depth_ordering_survey_corrected.geojson",
+    "reason": "The provisional unconstrained affine transform distorted the foot-based local survey grid and misplaced the shallow and deep polygon centroids by approximately 23.9 m and 34.0 m. The corrected file uses a unit-scale survey-to-survey rigid transformation with an independent holdout check.",
     "earth_engine_query_executed": false,
-    "warning": "Validate placement against authoritative imagery before any Earth Engine query."
+    "warning": "This file intentionally contains no executable features. Do not upload it to Earth Engine."
   },
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "zone_id": "sconondoa_phase3_shallow_A_upper",
-        "class": "shallow",
-        "cells": "A",
-        "survey_point_ids": [109, 112, 118, 123, 127, 132, 138, 141, 150, 159],
-        "depth_definition": "post-construction final surface elevation minus post-excavation bottom elevation",
-        "depth_sample_count": 10,
-        "depth_min_ft": 10.8,
-        "depth_max_ft": 12.0,
-        "depth_mean_ft": 11.52,
-        "depth_min_m": 3.292,
-        "depth_max_m": 3.658,
-        "depth_mean_m": 3.511,
-        "polygon_area_m2": 387.5,
-        "minimum_rotated_dimension_m": 21.1,
-        "maximum_rotated_dimension_m": 25.6,
-        "surface_restoration": "woven geotextile; 8 in compacted run-of-bank gravel; 4 in crushed stone",
-        "local_assumed_datum_vertices_EN_ft": [[5189.8,5155.3],[5114.8,5157.0],[5121.6,5189.9],[5130.8,5201.7],[5149.4,5225.3],[5180.5,5216.3],[5199.0,5167.1],[5189.8,5155.3]]
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[[-75.64760306951062,43.09812157345329],[-75.64818863894423,43.09811888036108],[-75.64820925203854,43.09821533086137],[-75.64816419894238,43.098250613008624],[-75.6480725411796,43.098321197626305],[-75.64781122785978,43.09829817108571],[-75.64755801614022,43.0981568553598],[-75.64760306951062,43.09812157345329]]]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "zone_id": "sconondoa_phase3_deep_BC_combined",
-        "class": "deep",
-        "cells": "B and C",
-        "survey_point_ids": {
-          "B": [201,202,203,204,208,209,210,212,213,214,216,217,218,220,221,222,224,225,226],
-          "C": [306,307,308,311,312,313,316,317,318,321,322,323,326,327,328,331,332,333]
-        },
-        "depth_definition": "post-construction final surface elevation minus post-excavation bottom elevation",
-        "depth_sample_count": 37,
-        "depth_min_ft": 15.2,
-        "depth_max_ft": 16.7,
-        "depth_mean_ft": 16.01,
-        "depth_min_m": 4.633,
-        "depth_max_m": 5.09,
-        "depth_mean_m": 4.881,
-        "polygon_area_m2": 498.8,
-        "minimum_rotated_dimension_m": 23.2,
-        "maximum_rotated_dimension_m": 24.3,
-        "surface_restoration": "woven geotextile; 8 in compacted run-of-bank gravel; 4 in crushed stone",
-        "internal_cell_boundary_included": true,
-        "local_assumed_datum_vertices_EN_ft": [[5112.6,5042.5],[5098.3,5047.1],[5083.1,5052.0],[5054.5,5061.3],[5063.9,5089.8],[5073.3,5118.3],[5078.0,5132.5],[5108.8,5127.1],[5123.1,5122.5],[5151.6,5113.1],[5112.6,5042.5]]
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[[-75.64795039160782,43.097785396277914],[-75.64807157390051,43.09779732787824],[-75.64820040649438,43.097810040808554],[-75.6484429943144,43.09783419440935],[-75.64843362823329,43.09791810339666],[-75.64842426212464,43.098002012381755],[-75.64841946756866,43.09804382134544],[-75.64816850972186,43.09803124307086],[-75.64804732694799,43.09801931156919],[-75.64780529129251,43.0979948558802],[-75.64795039160782,43.097785396277914]]]
-      }
-    }
-  ]
+  "features": []
 }
