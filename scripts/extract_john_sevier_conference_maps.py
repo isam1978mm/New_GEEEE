@@ -1,9 +1,9 @@
-"""Render John Sevier closure conference papers for geometry review.
+"""Render available John Sevier closure conference papers for geometry review.
 
-The two source PDFs are public World of Coal Ash conference papers. This script
-accepts already-downloaded PDF paths, extracts text, renders every page, creates
-contact sheets, and writes a report. It does not call Earth Engine or create a
-calibration row.
+The source PDFs are public World of Coal Ash conference papers. This script
+accepts one or more already-downloaded PDF paths, extracts text, renders every
+page, creates contact sheets, and writes a report. It does not call Earth Engine
+or create a calibration row.
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ SOURCES = [
         "key": "woca_2015_dry_fly_ash_stack_sequence",
         "env": "JSF_WOCA_2015_PDF",
         "title": "John Sevier Dry Fly Ash Stack - Sequencing of CCR Waste Facility Closures",
-        "url": "https://www.flyash.info/files/2015/081-bennett-2015.pdf",
+        "url": "https://uknowledge.uky.edu/cgi/viewcontent.cgi?article=1739&context=woca",
     },
 ]
 
@@ -84,13 +84,16 @@ def make_contact_sheet(page_files: list[Path], destination: Path) -> None:
     canvas.save(destination, quality=90)
 
 
-def process_source(source: dict[str, str], output_root: Path) -> dict[str, object]:
+def process_source(source: dict[str, str], output_root: Path) -> dict[str, object] | None:
     configured = os.environ.get(source["env"])
     if not configured:
-        raise RuntimeError(f"Missing required environment variable {source['env']}")
+        return None
     pdf_path = Path(configured)
     if not pdf_path.exists():
         raise RuntimeError(f"Source PDF not found: {pdf_path}")
+    if pdf_path.stat().st_size < 1000:
+        raise RuntimeError(f"Source PDF is unexpectedly small: {pdf_path}")
+
     source_dir = output_root / source["key"]
     pages_dir = source_dir / "rendered_pages"
     pages_dir.mkdir(parents=True, exist_ok=True)
@@ -138,10 +141,30 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     output_root = repo_root / "artifacts" / "john_sevier_conference_maps"
     output_root.mkdir(parents=True, exist_ok=True)
-    records = [process_source(source, output_root) for source in SOURCES]
+
+    records: list[dict[str, object]] = []
+    unavailable: list[dict[str, str]] = []
+    for source in SOURCES:
+        if not os.environ.get(source["env"]):
+            unavailable.append(
+                {
+                    "key": source["key"],
+                    "title": source["title"],
+                    "reason": "source PDF was not downloaded",
+                }
+            )
+            continue
+        record = process_source(source, output_root)
+        if record is not None:
+            records.append(record)
+
+    if not records:
+        raise RuntimeError("No conference paper PDF was available for extraction")
+
     report = {
         "status": "CONFERENCE_PAPERS_EXTRACTED_MANUAL_REVIEW_REQUIRED",
         "sources": records,
+        "unavailable_sources": unavailable,
         "earth_engine_query_executed": False,
         "calibration_record_created": False,
         "decision": "HOLD_UNTIL_MAPS_AND_CONSTRUCTION_DETAILS_ARE_REVIEWED",
@@ -151,10 +174,10 @@ def main() -> int:
     )
     (output_root / "README.md").write_text(
         "# John Sevier conference-map extraction\n\n"
-        "Review both contact sheets and full rendered pages for closure sequencing, "
-        "Bottom Ash Pond geometry, final cover details, and permanent controls. "
-        "These papers are supporting evidence only and do not authorize an Earth "
-        "Engine query or calibration row.\n",
+        "Review the available contact sheets and full rendered pages for closure "
+        "sequencing, Bottom Ash Pond geometry, final-cover details, and permanent "
+        "controls. These papers are supporting evidence only and do not authorize "
+        "an Earth Engine query or calibration row.\n",
         encoding="utf-8",
     )
     print(json.dumps(report, indent=2))
