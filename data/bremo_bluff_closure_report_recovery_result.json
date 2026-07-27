@@ -1,0 +1,45 @@
+{
+  "status": "PUBLIC_REPORT_RECOVERY_COMPLETE_EVIDENCE_ONLY",
+  "facility": "Bremo Bluff Power Station",
+  "units": ["East Ash Pond", "West Ash Pond"],
+  "official_source": "Virginia DEQ SWP618 operating record",
+  "removal_evidence": {
+    "east_ash_pond_removal_accepted": true,
+    "east_acceptance_date": "2019-10-01",
+    "west_ash_pond_removal_accepted": true,
+    "west_acceptance_date": "2020-04-17",
+    "DEQ_site_status_by_2020_04": "ash removed from East and West ponds",
+    "visual_removal_and_over_excavation_supported": true,
+    "record_drawings_reported": true,
+    "east_original_delineated_area_acres": 26.5,
+    "east_reported_removed_area_acres": 27.2,
+    "east_area_difference_explanation": "CCR outside the original pond limits was also removed and undercut; the official response states those areas are shown in Appendix A record drawings."
+  },
+  "public_documents": {
+    "east_report_parts_listed": 3,
+    "west_report_parts_listed": 2,
+    "acceptance_memorandum_listed": true,
+    "attachments_downloadable_to_automation": false,
+    "download_failure": "HTTP 403 for all six Virginia DEQ showpublisheddocument endpoints",
+    "exact_record_drawings_recovered": false,
+    "exact_georeferenced_excavation_polygon_created": false,
+    "boundary_position_uncertainty_assigned": false
+  },
+  "timing_and_surface": {
+    "possible_post_removal_window_identified": true,
+    "stable_exact_pond_surface_period_verified": false,
+    "later_station_demolition_reported": true,
+    "later_adjacent_CCR_landfill_project_reported": true,
+    "clean_Sentinel1_window_confirmed": false
+  },
+  "decision": "HOLD_EXACT_RECORD_DRAWINGS_AND_STABLE_TIMING_UNAVAILABLE",
+  "earth_engine_query_executed": false,
+  "sentinel1_catalogue_query_executed": false,
+  "radar_backscatter_extracted": false,
+  "execution_geojson_created": false,
+  "calibration_record_created": false,
+  "usable_confirmed_negative_rows": 0,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "next_step": "Retain Bremo as strong confirmed-removal evidence only. Continue to a completed site whose final record drawings are directly retrievable and whose restored footprint has a verified stable observation period."
+}
