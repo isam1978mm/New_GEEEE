@@ -1,0 +1,39 @@
+{
+  "site_name": "Douglas County Recycling and Disposal Facility ACAP test sections",
+  "location": "Bennington, Nebraska",
+  "program": "USEPA Alternative Cover Assessment Program",
+  "decision": "NOT_GOOD_TO_GO_PIXEL_SUPPORT_FAIL",
+  "good_to_go": false,
+  "candidate_pair": {
+    "thin_cover_m": 0.76,
+    "thick_cover_m": 1.06,
+    "nominal_depth_difference_m": 0.30,
+    "thin_surface": "grasses",
+    "thick_surface": "grasses",
+    "construction_start": "2000-10",
+    "published_monitoring_period": "2000-2004"
+  },
+  "geometry": {
+    "published_test_section_top_deck_width_m": 20,
+    "published_test_section_top_deck_length_m": 30,
+    "published_pan_lysimeter_width_m": 10,
+    "published_pan_lysimeter_length_m": 20,
+    "clean_20m_interior_possible_after_boundary_margin": false,
+    "reason": "The full top deck is exactly 20 m wide. Any nonzero edge, berm, geolocation, or mixed-pixel margin reduces the clean interior below one 20 m analysis footprint. The instrumented lysimeter is only 10 m wide."
+  },
+  "additional_unresolved_gates": {
+    "exact_wgs84_plot_polygons_recovered": false,
+    "sentinel1_era_survival_confirmed": false,
+    "numerical_boundary_uncertainty_recovered": false,
+    "active_landfill_operations_present": true
+  },
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "app_depth_enabled": false,
+  "training_started": false,
+  "sources": [
+    "Apiwantragoon, Benson, and Albright (2014), Field Hydrology of Water Balance Covers for Waste Containment",
+    "Benson et al. (2007), Postconstruction Changes in the Hydraulic Properties of Water Balance Cover Soils",
+    "USEPA Fact Sheet on Evapotranspiration Cover Systems for Waste Containment"
+  ]
+}
