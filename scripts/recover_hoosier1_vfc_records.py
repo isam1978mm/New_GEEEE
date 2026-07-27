@@ -1,48 +1,88 @@
-"""Recover public IDEM VFC records for Hoosier #1 Landfill.
+"""Recover public IDEM VFC closure records for Hoosier #1 Landfill.
 
-The search is narrowly limited to SW Program ID 43-01 and environmental closure
-records: final-cover plans, closure certification, CQA, as-built surveys, and
-post-closure reports. It does not call Earth Engine, create calibration rows,
-train a model, or enable app depth output.
+The search is limited to SW Program ID 43-01 and public environmental closure
+records: final-cover plans, closure certifications, CQA reports, drawings,
+as-built surveys, approvals, and post-closure records. It does not call Earth
+Engine, create calibration rows, train a model, or enable app depth output.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import re
+from datetime import datetime
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, quote_plus, urlencode, urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
-START_URLS = (
-    "https://vfc.idem.in.gov/",
-    "https://www.in.gov/idem/legal/public-records/virtual-file-cabinet/",
-)
-SEARCH_VALUES = (
-    "43-01",
-    "Hoosier #1 Landfill",
-    "Hoosier 1 Landfill",
-    "2710 E. 800 South",
-)
-RELEVANT_TERMS = (
-    "closure certification",
-    "final closure",
-    "final cover",
-    "construction quality assurance",
-    "cqa",
-    "as-built",
-    "as built",
-    "survey",
-    "composite cover",
-    "soil cover",
-    "post-closure",
-    "post closure",
-    "closure approval",
-)
-MAX_DOWNLOADS = 50
+BASE = "https://ecm.idem.in.gov/cs/idcplg"
+PROGRAM_ID = "43-01"
+RESULT_COUNT = 100
+MAX_RESULT_PAGES = 25
+MAX_METADATA_RECORDS = 250
+MAX_DOWNLOADS = 60
 MAX_BYTES = 350 * 1024 * 1024
+
+QUERY_TEXT = f"xSWProgramID <contains> `{PROGRAM_ID}`"
+SEARCH_PARAMS = {
+    "IdcService": "GET_SEARCH_RESULTS",
+    "SortField": "dInDate",
+    "SortOrder": "Asc",
+    "ResultCount": str(RESULT_COUNT),
+    "QueryText": QUERY_TEXT,
+    "listTemplateId": "",
+    "ftx": "",
+    "SearchQueryFormat": "UNIVERSAL",
+    "TargetedQuickSearchSelection": "n",
+    "MiniSearchText": PROGRAM_ID,
+}
+
+RELEVANCE_WEIGHTS = {
+    "closure certification": 180,
+    "closure construction certification": 180,
+    "final closure certification": 180,
+    "construction quality assurance": 150,
+    "quality assurance": 100,
+    "cqa": 90,
+    "as-built": 150,
+    "as built": 150,
+    "final cover": 130,
+    "composite final cover": 140,
+    "soil final cover": 130,
+    "closure approval": 120,
+    "completion report": 110,
+    "completion document": 100,
+    "final construction": 110,
+    "construction certification": 120,
+    "survey": 90,
+    "drawing": 80,
+    "plan": 45,
+    "closure": 45,
+    "post-closure": 25,
+    "post closure": 25,
+    "43-01": 15,
+    "hoosier": 15,
+}
+
+TYPE_WEIGHTS = {
+    "completion document": 110,
+    "certification": 105,
+    "drawing": 90,
+    "survey": 95,
+    "olq permit": 65,
+    "olq report": 65,
+    "technical review": 55,
+    "approval": 75,
+    "plan": 50,
+    "report": 40,
+}
+
+TARGET_DATE_RANGES = (
+    (datetime(1994, 1, 1), datetime(1996, 12, 31)),
+    (datetime(2008, 1, 1), datetime(2011, 12, 31)),
+)
 
 
 def clean(value: str | None) -> str:
@@ -53,211 +93,162 @@ def safe_name(value: str) -> str:
     return (re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("_")[:170] or "document")
 
 
-def relevance(text: str) -> int:
-    lower = text.lower()
-    weights = {
-        "closure certification": 100,
-        "final closure": 80,
-        "construction quality assurance": 75,
-        "as-built": 70,
-        "as built": 70,
-        "final cover": 60,
-        "closure approval": 55,
-        "composite cover": 45,
-        "soil cover": 40,
-        "survey": 35,
-        "cqa": 30,
-        "post-closure": 20,
-        "post closure": 20,
-        "43-01": 10,
-        "hoosier": 10,
-    }
-    return sum(weight for token, weight in weights.items() if token in lower)
+def build_search_url(extra: dict[str, str] | None = None) -> str:
+    params = dict(SEARCH_PARAMS)
+    if extra:
+        params.update(extra)
+    return f"{BASE}?{urlencode(params, quote_via=quote_plus)}"
 
 
-def page_snapshot(page) -> dict[str, object]:
-    return page.evaluate(
-        """() => ({
-          url: location.href,
-          title: document.title,
-          bodyText: (document.body?.innerText || '').replace(/\s+/g, ' ').slice(0, 300000),
-          selects: Array.from(document.querySelectorAll('select')).map((el, i) => ({
-            index: i,
-            name: el.name || '',
-            id: el.id || '',
-            aria: el.getAttribute('aria-label') || '',
-            options: Array.from(el.options).map(o => ({text: (o.textContent || '').trim(), value: o.value}))
-          })),
-          inputs: Array.from(document.querySelectorAll('input')).map((el, i) => ({
-            index: i,
-            type: el.type || '',
-            name: el.name || '',
-            id: el.id || '',
-            placeholder: el.placeholder || '',
-            aria: el.getAttribute('aria-label') || ''
-          })),
-          buttons: Array.from(document.querySelectorAll('button,input[type=submit],input[type=button]')).map((el, i) => ({
-            index: i,
-            text: (el.innerText || el.value || el.title || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim(),
-            id: el.id || '',
-            name: el.name || ''
-          })),
-          rows: Array.from(document.querySelectorAll('table tbody tr, [role=row]')).slice(0, 5000).map(row => ({
-            text: (row.innerText || '').replace(/\s+/g, ' ').trim(),
-            links: Array.from(row.querySelectorAll('a')).map(a => ({
-              text: (a.innerText || '').replace(/\s+/g, ' ').trim(),
-              href: a.href || a.getAttribute('href') || '',
-              onclick: a.getAttribute('onclick') || ''
-            }))
-          })).filter(row => row.text)
-        })"""
-    )
-
-
-def choose_program_select(page) -> bool:
-    selects = page.locator("select")
-    for index in range(selects.count()):
-        select = selects.nth(index)
-        try:
-            options = select.locator("option").all_text_contents()
-        except Exception:
+def parse_date(text: str) -> datetime | None:
+    for pattern in (r"\b(\d{1,2}/\d{1,2}/\d{4})\b", r"\b(\d{4}-\d{2}-\d{2})\b"):
+        match = re.search(pattern, text)
+        if not match:
             continue
-        for option_index, text in enumerate(options):
-            normalized = clean(text).lower()
-            if "sw program" in normalized or ("solid waste" in normalized and "id" in normalized):
-                select.select_option(index=option_index)
-                return True
-    return False
-
-
-def fill_best_input(page, value: str) -> bool:
-    inputs = page.locator("input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio])")
-    preferred: list[int] = []
-    fallback: list[int] = []
-    for index in range(inputs.count()):
-        field = inputs.nth(index)
-        metadata = " ".join(
-            filter(
-                None,
-                [
-                    field.get_attribute("name"),
-                    field.get_attribute("id"),
-                    field.get_attribute("placeholder"),
-                    field.get_attribute("aria-label"),
-                ],
-            )
-        ).lower()
-        if any(token in metadata for token in ("quick", "search", "value", "program", "id")):
-            preferred.append(index)
-        else:
-            fallback.append(index)
-    for index in preferred + fallback:
-        field = inputs.nth(index)
-        try:
-            if field.is_visible() and field.is_enabled():
-                field.fill(value, timeout=8000)
-                return True
-        except Exception:
-            continue
-    return False
-
-
-def click_search(page) -> bool:
-    candidates = (
-        "button:has-text('Search')",
-        "input[type=submit][value*='Search' i]",
-        "input[type=button][value*='Search' i]",
-        "button[aria-label*='Search' i]",
-        "button[title*='Search' i]",
-        "[role=button][aria-label*='Search' i]",
-    )
-    for selector in candidates:
-        locator = page.locator(selector)
-        for index in range(locator.count()):
-            button = locator.nth(index)
+        for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
             try:
-                if button.is_visible() and button.is_enabled():
-                    button.click(timeout=10000)
-                    return True
-            except Exception:
-                continue
-    return False
+                return datetime.strptime(match.group(1), fmt)
+            except ValueError:
+                pass
+    return None
 
 
-def clear_visible_inputs(page) -> None:
-    fields = page.locator("input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio])")
-    for index in range(fields.count()):
-        field = fields.nth(index)
-        try:
-            if field.is_visible() and field.is_enabled():
-                field.fill("")
-        except Exception:
-            pass
+def in_target_date_range(date: datetime | None) -> bool:
+    if date is None:
+        return False
+    return any(start <= date <= end for start, end in TARGET_DATE_RANGES)
 
 
-def open_vfc(page) -> None:
-    last_error: Exception | None = None
-    for url in START_URLS:
-        try:
-            page.goto(url, wait_until="domcontentloaded", timeout=120000)
-            page.wait_for_timeout(6000)
-            if "in.gov/idem/legal" in page.url:
-                links = page.locator("a:has-text('Virtual File Cabinet')")
-                if links.count():
-                    links.first.click(timeout=15000)
-                    page.wait_for_timeout(8000)
-            return
-        except Exception as exc:
-            last_error = exc
-    if last_error:
-        raise last_error
+def score_text(text: str, document_type: str = "", document_date: datetime | None = None) -> int:
+    lower = text.lower()
+    score = sum(weight for token, weight in RELEVANCE_WEIGHTS.items() if token in lower)
+    type_lower = document_type.lower()
+    score += sum(weight for token, weight in TYPE_WEIGHTS.items() if token in type_lower)
+    if in_target_date_range(document_date):
+        score += 90
+    if PROGRAM_ID in text:
+        score += 20
+    return score
 
 
-def extract_urls(base_url: str, link: dict[str, str]) -> list[str]:
-    combined = f"{link.get('href', '')} {link.get('onclick', '')}"
-    values: list[str] = []
-    if link.get("href"):
-        values.append(urljoin(base_url, link["href"]))
-    for pattern in (
-        r"https?://[^\s'\"<>]+",
-        r"['\"]([^'\"]+(?:GET_FILE|GetFile|download|document|\.pdf)[^'\"]*)['\"]",
-    ):
-        for match in re.finditer(pattern, combined, re.I):
-            values.append(urljoin(base_url, match.group(1) if match.lastindex else match.group(0)))
-    result: list[str] = []
-    seen: set[str] = set()
-    for value in values:
-        parsed = urlparse(value)
-        if parsed.scheme in {"http", "https"} and value not in seen:
-            seen.add(value)
-            result.append(value)
-    return result
+def extract_result_rows(page_url: str, html: str) -> list[dict[str, object]]:
+    # Use a tiny browser DOM in the caller instead of fragile HTML regex.
+    raise RuntimeError("extract_result_rows must be evaluated in the browser")
 
 
-def download(context, url: str, destination: Path) -> dict[str, object]:
+def browser_rows(page) -> list[dict[str, object]]:
+    return page.evaluate(
+        """() => Array.from(document.querySelectorAll('table tr')).map(row => {
+          const text = (row.innerText || '').replace(/\s+/g, ' ').trim();
+          const links = Array.from(row.querySelectorAll('a')).map(a => ({
+            text: (a.innerText || '').replace(/\s+/g, ' ').trim(),
+            href: a.href || a.getAttribute('href') || '',
+            onclick: a.getAttribute('onclick') || ''
+          }));
+          return {text, links};
+        }).filter(row => row.text && row.links.some(link => /DOC_INFO|GET_FILE/i.test((link.href || '') + ' ' + (link.onclick || ''))))"""
+    )
+
+
+def browser_page_links(page) -> list[str]:
+    return page.evaluate(
+        """() => Array.from(document.querySelectorAll('a[href]'))
+          .map(a => a.href)
+          .filter(href => /GET_SEARCH_RESULTS/i.test(href) && /PageNumber=|StartRow=/i.test(href))"""
+    )
+
+
+def normalize_link(base_url: str, link: str) -> str:
+    return urljoin(base_url, link.replace("&amp;", "&"))
+
+
+def ids_from_url(url: str) -> tuple[str | None, str | None]:
+    query = parse_qs(urlparse(url).query)
+    did = (query.get("dID") or [None])[0]
+    doc_name = (query.get("dDocName") or [None])[0]
+    return did, doc_name
+
+
+def derive_file_urls(doc_info_url: str) -> list[str]:
+    did, doc_name = ids_from_url(doc_info_url)
+    if not did or not doc_name:
+        return []
+    common = {
+        "IdcService": "GET_FILE",
+        "dID": did,
+        "dDocName": doc_name,
+        "allowInterrupt": "1",
+        "noSaveAs": "1",
+    }
+    return [
+        f"{BASE}?{urlencode({**common, 'Rendition': rendition})}"
+        for rendition in ("web", "Primary", "primary")
+    ] + [f"{BASE}?{urlencode(common)}"]
+
+
+def page_metadata_text(page) -> str:
+    return clean(page.locator("body").inner_text(timeout=20000))
+
+
+def metadata_from_page(page, url: str) -> dict[str, object]:
+    body = page_metadata_text(page)
+    title = clean(page.title())
+    fields = page.evaluate(
+        """() => {
+          const out = {};
+          for (const row of document.querySelectorAll('tr')) {
+            const cells = Array.from(row.querySelectorAll('th,td')).map(c => (c.innerText || '').replace(/\s+/g, ' ').trim());
+            if (cells.length >= 2 && cells[0] && cells[1]) out[cells[0]] = cells.slice(1).join(' | ');
+          }
+          for (const el of document.querySelectorAll('input,textarea,select')) {
+            const key = el.name || el.id;
+            if (key && el.value) out[key] = el.value;
+          }
+          return out;
+        }"""
+    )
+    file_links = page.evaluate(
+        """() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href).filter(href => /GET_FILE/i.test(href))"""
+    )
+    return {
+        "url": url,
+        "title": title,
+        "body_text": body[:160000],
+        "fields": fields,
+        "file_links": file_links,
+    }
+
+
+def download_response(context, url: str, destination: Path) -> dict[str, object]:
     response = context.request.get(
         url,
-        headers={"Referer": "https://vfc.idem.in.gov/", "Accept": "application/pdf,text/html,*/*"},
+        headers={"Referer": BASE, "Accept": "application/pdf,text/html,*/*"},
         timeout=180000,
         fail_on_status_code=False,
     )
     body = response.body()
-    if len(body) > MAX_BYTES:
-        return {"url": response.url, "status": response.status, "skipped": "size_limit", "size_bytes": len(body)}
     content_type = response.headers.get("content-type", "").lower()
     is_pdf = body.startswith(b"%PDF-") or "application/pdf" in content_type
-    suffix = ".pdf" if is_pdf else ".html"
-    path = destination.with_suffix(suffix)
-    path.write_bytes(body)
-    return {
+    record: dict[str, object] = {
         "url": response.url,
         "status": response.status,
         "content_type": content_type,
         "size_bytes": len(body),
         "is_pdf": is_pdf,
-        "sha256": hashlib.sha256(body).hexdigest(),
-        "saved_path": str(path),
     }
+    if len(body) > MAX_BYTES:
+        record["skipped"] = "size_limit"
+        return record
+    suffix = ".pdf" if is_pdf else ".html"
+    path = destination.with_suffix(suffix)
+    path.write_bytes(body)
+    record.update(
+        {
+            "sha256": hashlib.sha256(body).hexdigest(),
+            "saved_path": str(path),
+        }
+    )
+    return record
 
 
 def main() -> int:
@@ -266,11 +257,14 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     downloads_dir = output / "downloads"
     downloads_dir.mkdir(exist_ok=True)
+
     report: dict[str, object] = {
         "status": "RECOVERY_STARTED",
-        "queries": [],
-        "ranked_rows": [],
-        "candidate_urls": [],
+        "program_id": PROGRAM_ID,
+        "search_url": build_search_url(),
+        "result_pages": [],
+        "records": [],
+        "ranked_records": [],
         "download_attempts": [],
         "earth_engine_query_executed": False,
         "calibration_record_created": False,
@@ -286,89 +280,160 @@ def main() -> int:
             accept_downloads=True,
         )
         page = context.new_page()
-        network: list[dict[str, object]] = []
 
-        def on_response(response) -> None:
-            content_type = response.headers.get("content-type", "").lower()
-            lower = response.url.lower()
-            if any(token in lower for token in ("search", "query", "ecm.idem", "idcplg", "document", "vfc")) or "json" in content_type or "pdf" in content_type:
-                network.append({"url": response.url, "status": response.status, "content_type": content_type})
-
-        page.on("response", on_response)
-        open_vfc(page)
+        first_url = build_search_url()
+        page.goto(first_url, wait_until="domcontentloaded", timeout=120000)
         page.wait_for_timeout(5000)
-        report["initial_snapshot"] = page_snapshot(page)
-        page.screenshot(path=str(output / "initial.png"), full_page=True)
-        (output / "initial.html").write_text(page.content(), encoding="utf-8")
+        try:
+            page.wait_for_load_state("networkidle", timeout=20000)
+        except PlaywrightTimeoutError:
+            pass
+        page.screenshot(path=str(output / "search_results_page_1.png"), full_page=True)
+        (output / "search_results_page_1.html").write_text(page.content(), encoding="utf-8")
 
-        all_rows: dict[str, dict[str, object]] = {}
-        for value in SEARCH_VALUES:
-            clear_visible_inputs(page)
-            selected_program = choose_program_select(page)
-            filled = fill_best_input(page, value)
-            clicked = click_search(page)
-            if not clicked and filled:
-                try:
-                    page.keyboard.press("Enter")
-                    clicked = True
-                except Exception:
-                    pass
-            page.wait_for_timeout(6000)
-            try:
-                page.wait_for_load_state("networkidle", timeout=15000)
-            except PlaywrightTimeoutError:
-                pass
-            snap = page_snapshot(page)
-            rows = snap.get("rows", [])
-            report["queries"].append(
+        queued: list[str] = [page.url]
+        queued.extend(normalize_link(page.url, url) for url in browser_page_links(page))
+        seen_pages: set[str] = set()
+        raw_records: dict[str, dict[str, object]] = {}
+
+        while queued and len(seen_pages) < MAX_RESULT_PAGES:
+            url = queued.pop(0)
+            if url in seen_pages:
+                continue
+            seen_pages.add(url)
+            if page.url != url:
+                page.goto(url, wait_until="domcontentloaded", timeout=120000)
+                page.wait_for_timeout(2500)
+            rows = browser_rows(page)
+            page_links = [normalize_link(page.url, item) for item in browser_page_links(page)]
+            for next_url in page_links:
+                if next_url not in seen_pages and next_url not in queued:
+                    queued.append(next_url)
+            report["result_pages"].append(
                 {
-                    "value": value,
-                    "selected_sw_program_id": selected_program,
-                    "input_filled": filled,
-                    "search_triggered": clicked,
-                    "page_url": page.url,
+                    "url": page.url,
                     "row_count": len(rows),
-                    "snapshot": snap,
+                    "pagination_link_count": len(page_links),
+                    "body_preview": clean(page.locator("body").inner_text(timeout=15000))[:5000],
                 }
             )
             for row in rows:
-                text = str(row.get("text", ""))
-                row_score = relevance(text)
-                if row_score <= 0 and "43-01" not in text and "hoosier" not in text.lower():
+                text = clean(str(row.get("text", "")))
+                if PROGRAM_ID not in text and "hoosier" not in text.lower():
                     continue
-                key = text + json.dumps(row.get("links", []), sort_keys=True)
-                existing = all_rows.get(key)
-                if not existing or row_score > int(existing["score"]):
-                    all_rows[key] = {**row, "score": row_score, "query": value, "page_url": page.url}
+                links = row.get("links", [])
+                doc_info_url = None
+                direct_file_urls: list[str] = []
+                for link in links:
+                    href = normalize_link(page.url, str(link.get("href", "")))
+                    if "DOC_INFO" in href.upper():
+                        doc_info_url = href
+                    if "GET_FILE" in href.upper():
+                        direct_file_urls.append(href)
+                identity = doc_info_url or (direct_file_urls[0] if direct_file_urls else text)
+                doc_date = parse_date(text)
+                raw_records[identity] = {
+                    "row_text": text,
+                    "document_date": doc_date.strftime("%Y-%m-%d") if doc_date else None,
+                    "doc_info_url": doc_info_url,
+                    "direct_file_urls": direct_file_urls,
+                    "row_score": score_text(text, document_date=doc_date),
+                }
 
-        ranked = sorted(all_rows.values(), key=lambda item: (-int(item["score"]), str(item["text"])))
-        report["ranked_rows"] = ranked
-        urls: list[dict[str, object]] = []
-        seen_urls: set[str] = set()
-        for row in ranked:
-            for link in row.get("links", []):
-                for url in extract_urls(str(row.get("page_url") or page.url), link):
-                    if url not in seen_urls:
-                        seen_urls.add(url)
-                        urls.append({"url": url, "row_text": row.get("text"), "score": row.get("score")})
-        for item in network:
-            url = str(item.get("url", ""))
-            if ("pdf" in str(item.get("content_type", "")).lower() or "get_file" in url.lower()) and url not in seen_urls:
-                seen_urls.add(url)
-                urls.append({"url": url, "row_text": "captured network response", "score": 0})
-        report["candidate_urls"] = urls
+        records = list(raw_records.values())
+        records.sort(key=lambda item: (-int(item["row_score"]), str(item["row_text"])))
+        report["records"] = records
 
-        for index, item in enumerate(urls[:MAX_DOWNLOADS], start=1):
-            try:
-                record = download(context, str(item["url"]), downloads_dir / f"{index:03d}_{safe_name(Path(urlparse(str(item['url'])).path).name or 'document')}")
-                record.update({"row_text": item.get("row_text"), "score": item.get("score")})
-                report["download_attempts"].append(record)
-            except Exception as exc:
-                report["download_attempts"].append({**item, "error": repr(exc)})
-        report["network_responses"] = network
+        metadata_page = context.new_page()
+        enriched: list[dict[str, object]] = []
+        for record in records[:MAX_METADATA_RECORDS]:
+            item = dict(record)
+            doc_info_url = item.get("doc_info_url")
+            metadata: dict[str, object] = {}
+            if doc_info_url:
+                try:
+                    metadata_page.goto(str(doc_info_url), wait_until="domcontentloaded", timeout=90000)
+                    metadata_page.wait_for_timeout(1000)
+                    metadata = metadata_from_page(metadata_page, str(doc_info_url))
+                except Exception as exc:
+                    metadata = {"url": doc_info_url, "error": repr(exc), "body_text": "", "fields": {}, "file_links": []}
+            combined = " ".join(
+                [
+                    str(item.get("row_text", "")),
+                    str(metadata.get("title", "")),
+                    str(metadata.get("body_text", "")),
+                    json.dumps(metadata.get("fields", {}), sort_keys=True),
+                ]
+            )
+            document_type = ""
+            for key, value in (metadata.get("fields") or {}).items():
+                if "type" in str(key).lower():
+                    document_type += f" {value}"
+            doc_date = None
+            if item.get("document_date"):
+                try:
+                    doc_date = datetime.strptime(str(item["document_date"]), "%Y-%m-%d")
+                except ValueError:
+                    pass
+            item["metadata"] = metadata
+            item["document_type"] = clean(document_type)
+            item["score"] = score_text(combined, document_type=document_type, document_date=doc_date)
+            file_urls: list[str] = []
+            for url in item.get("direct_file_urls", []):
+                if url not in file_urls:
+                    file_urls.append(url)
+            for url in metadata.get("file_links", []) if isinstance(metadata, dict) else []:
+                normalized = normalize_link(str(doc_info_url or BASE), str(url))
+                if normalized not in file_urls:
+                    file_urls.append(normalized)
+            if doc_info_url:
+                for url in derive_file_urls(str(doc_info_url)):
+                    if url not in file_urls:
+                        file_urls.append(url)
+            item["candidate_file_urls"] = file_urls
+            enriched.append(item)
+
+        enriched.sort(key=lambda item: (-int(item["score"]), str(item["row_text"])))
+        report["ranked_records"] = enriched
+        (output / "ranked_records.json").write_text(json.dumps(enriched, indent=2), encoding="utf-8")
+
+        downloaded_hashes: set[str] = set()
+        for index, record in enumerate(enriched[:MAX_DOWNLOADS], start=1):
+            attempts: list[dict[str, object]] = []
+            selected_pdf: dict[str, object] | None = None
+            for candidate_index, url in enumerate(record.get("candidate_file_urls", [])[:8], start=1):
+                try:
+                    result = download_response(
+                        context,
+                        str(url),
+                        downloads_dir / f"{index:03d}_{candidate_index:02d}_{safe_name(str(record.get('row_text', 'document')))}",
+                    )
+                    attempts.append(result)
+                    digest = str(result.get("sha256", ""))
+                    if result.get("is_pdf") and digest and digest not in downloaded_hashes:
+                        downloaded_hashes.add(digest)
+                        selected_pdf = result
+                        break
+                except Exception as exc:
+                    attempts.append({"url": url, "error": repr(exc)})
+            report["download_attempts"].append(
+                {
+                    "score": record.get("score"),
+                    "row_text": record.get("row_text"),
+                    "document_date": record.get("document_date"),
+                    "document_type": record.get("document_type"),
+                    "doc_info_url": record.get("doc_info_url"),
+                    "attempts": attempts,
+                    "selected_pdf": selected_pdf,
+                }
+            )
+
+        metadata_page.close()
         browser.close()
 
-    pdf_count = sum(bool(item.get("is_pdf")) for item in report["download_attempts"])
+    pdf_count = sum(bool(item.get("selected_pdf")) for item in report["download_attempts"])
+    report["result_page_count"] = len(report["result_pages"])
+    report["record_count"] = len(report["records"])
     report["recovered_pdf_count"] = pdf_count
     report["status"] = "RECOVERED" if pdf_count else "NO_PUBLIC_PDF_RECOVERED"
     report["decision"] = "MANUAL_REVIEW_REQUIRED_NO_CALIBRATION_DECISION"
