@@ -1,0 +1,37 @@
+{
+  "site": "Iron Valley C&DD Landfill",
+  "decision": "NOT_GOOD_TO_GO_UNIFORM_CAP_NO_MEASURED_DEPTH_CONTRAST",
+  "approved_plan_preserved": true,
+  "closure_report_date": "2016-10-17",
+  "new_cap_area_acres": 5.58,
+  "older_standard_cap_area_acres": 6.42,
+  "final_surface": "seeded vegetative soil over compacted cohesive soil",
+  "standard_cap": {
+    "compacted_soil_inches_minimum": 18,
+    "vegetative_soil_inches_minimum": 6,
+    "total_inches_minimum": 24
+  },
+  "verification": {
+    "test_pit_count": 10,
+    "purpose": "verify minimum 18-inch compacted layer and 6-inch vegetative layer",
+    "actual_numeric_depths_reported": false,
+    "failed_area_reworked": "TP-08 vicinity",
+    "reworked_area_rechecked": true,
+    "final_ground_grade_survey": true
+  },
+  "second_same_surface_depth_zone": false,
+  "different_surface_areas": [
+    "gravel and asphalt access roads",
+    "storage pads"
+  ],
+  "fatal_reasons": [
+    "The 2001 and 2015/2016 vegetated cap areas use the same standard minimum 24-inch cap assembly and do not provide a depth contrast.",
+    "The test pits certify minimum compliance but the report does not publish actual final layer thickness values for each pit.",
+    "Roads and gravel pads have different radar-facing surfaces and cannot serve as comparison zones."
+  ],
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "usable_calibration_rows_after_review": 0
+}
