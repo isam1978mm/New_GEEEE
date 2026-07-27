@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/scout_coal_creek_cover_report_v3.py"
+      - "scripts/render_coal_creek_scanned_pages.py"
       - ".github/workflows/coal-creek-cover-scout.yml"
   workflow_dispatch:
 
@@ -24,11 +25,13 @@ jobs:
         run: python -m pip install --disable-pip-version-check requests pymupdf pillow
       - name: Recover exact Coal Creek document with diagnostics
         run: python scripts/scout_coal_creek_cover_report_v3.py
+      - name: Render every Coal Creek page
+        run: python scripts/render_coal_creek_scanned_pages.py
       - name: Upload evidence package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coal-creek-cover-scout-v3
+          name: coal-creek-cover-scout-v4
           path: artifacts/coal_creek_cover_scout_v3/
           if-no-files-found: warn
           retention-days: 7
