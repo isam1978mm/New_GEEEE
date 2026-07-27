@@ -1,0 +1,38 @@
+{
+  "candidate_id": "keystone_sanitation_landfill_cover_grid",
+  "candidate_name": "Keystone Sanitation Landfill",
+  "screen_date": "2026-07-27",
+  "decision": "NOT_GOOD_TO_GO_SENTINEL1_ERA_COVER_CHANGED",
+  "approved_plan_changed": false,
+  "why_promising": [
+    "The 2000 remedy amendment required investigation of existing cover thickness using a representative grid approach.",
+    "Areas with less than two feet of cover were to be upgraded with low-permeability soil and a six-inch erosion layer.",
+    "The landfill is approximately forty acres and therefore large enough in principle."
+  ],
+  "fatal_evidence": [
+    "The 2025 Five-Year Review reports ponding, subsidence and increasingly large stands of woody vegetation on the landfill cover.",
+    "Areas of subsidence were repaired on two occasions and continued cover monitoring is ongoing.",
+    "The current source-control remedy and additional alternatives remain under evaluation.",
+    "The repaired and changing surface means the original grid-defined cover conditions cannot be treated as intact stable Sentinel-1-era depth zones."
+  ],
+  "gate_results": {
+    "full_scale_vegetated_area": true,
+    "historical_cover_thickness_grid_required_by_design": true,
+    "public_final_coordinate_tied_as_built_grid_recovered": false,
+    "stable_sentinel1_period": false,
+    "measured_zones_physically_unchanged": false,
+    "matching_surface_condition_across_zones": false,
+    "usable_calibration_row": false
+  },
+  "workflow_state": {
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  },
+  "sources_reviewed": [
+    "EPA 2000 Record of Decision Amendment",
+    "EPA Sixth Five-Year Review Report, 2025",
+    "EPA current Keystone Sanitation Landfill site profile"
+  ],
+  "next_action": "Continue the approved search unchanged and reject any historical cover grid whose mapped zones were later repaired, regraded, wooded or otherwise altered during the Sentinel-1 period."
+}
