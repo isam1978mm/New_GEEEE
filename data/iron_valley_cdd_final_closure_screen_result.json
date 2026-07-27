@@ -1,0 +1,32 @@
+{
+  "site": "Iron Valley C&DD Landfill",
+  "state": "Ohio",
+  "source_document": "Cap Construction and Final Closure Certification, October 2016",
+  "decision": "NOT_GOOD_TO_GO_NO_MEASURED_DEPTH_CONTRAST",
+  "full_scale_vegetated_cover": true,
+  "remaining_cap_area_acres": 5.58,
+  "standard_cover": {
+    "compacted_soil_minimum_inches": 18,
+    "vegetative_soil_minimum_inches": 6,
+    "total_minimum_inches": 24,
+    "surface": "seeded and mulched vegetation"
+  },
+  "thickness_verification": {
+    "test_pit_count": 10,
+    "purpose": "verify minimum 18-inch compacted layer and 6-inch vegetative layer",
+    "failed_area_reworked_and_rechecked": true,
+    "final_measured_shallow_deep_zones": false
+  },
+  "alternate_areas": {
+    "surface": "gravel/asphalt access roads and pads",
+    "soil_description": "minimum 24 inches unspecified well-compacted soil",
+    "usable_as_same_surface_depth_pair": false
+  },
+  "final_ground_survey": true,
+  "survey_dates": ["2016-09-15", "2016-09-16"],
+  "exact_wgs84_execution_polygons_created": false,
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "app_depth_enabled": false,
+  "fatal_reason": "The vegetated area was certified to one uniform minimum 24-inch cover specification. The report does not establish two broad measured thickness zones. The only alternative areas are gravel/asphalt roads and pads, which fail the same-surface requirement."
+}
