@@ -1,0 +1,65 @@
+name: J.R. Whiting control table extractor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/extract_jr_whiting_control_table.py"
+      - ".github/workflows/jr-whiting-control-table-extractor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-control-table:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PDF extraction dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pymupdf
+
+      - name: Download official report part 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/jr_whiting_control_table
+          url='https://www.consumersenergy.com/-/media/CE/Documents/sustainability/coal-combustion-residuals/jrw/pond-1-2/2021/jrw-pond-1-2-construction-documentation-report-1-of-6.pdf'
+          curl --location --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 30 --max-time 1800 \
+            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+            --referer 'https://www.consumersenergy.com/company/sustainability/environment/coal-combustion-residuals' \
+            "$url" --output /tmp/jr_whiting_report_1.pdf \
+            2>&1 | tee artifacts/jr_whiting_control_table/download.log
+          file /tmp/jr_whiting_report_1.pdf | tee -a artifacts/jr_whiting_control_table/download.log
+
+      - name: Extract page 30 vector table
+        shell: bash
+        run: |
+          set -o pipefail
+          JR_WHITING_REPORT_1=/tmp/jr_whiting_report_1.pdf \
+            python scripts/extract_jr_whiting_control_table.py \
+            2>&1 | tee artifacts/jr_whiting_control_table/extractor.log
+
+      - name: Remove source PDF
+        if: always()
+        run: rm -f /tmp/jr_whiting_report_1.pdf
+
+      - name: Upload table artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-whiting-control-table
+          path: artifacts/jr_whiting_control_table/
+          if-no-files-found: warn
+          retention-days: 7
