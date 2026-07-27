@@ -1,0 +1,40 @@
+{
+  "status": "DRY_RUN_COMPLETE",
+  "decision": "HOLD_PIXEL_SUPPORT_FAILED",
+  "input": "data/sconondoa_phase3_depth_ordering_survey_corrected.geojson",
+  "analysis_scale_m": 20.0,
+  "metric_crs": "EPSG:32618",
+  "placement_uncertainty_m": 1.1,
+  "method": "Project polygons to UTM 18N, erode each by 1.1 m placement uncertainty, then compute the maximum inscribed-circle diameter. A fully contained 20 m square necessarily contains a 10 m-radius circle, so a safe polygon with maximum inscribed-circle diameter below 20 m cannot support one clean 20 m analysis footprint.",
+  "zones": [
+    {
+      "zone_id": "sconondoa_phase3_shallow_A_upper",
+      "class": "shallow",
+      "original_area_m2": 387.206,
+      "safe_area_after_uncertainty_m2": 306.68,
+      "maximum_inscribed_radius_m": 8.318,
+      "maximum_inscribed_diameter_m": 16.637,
+      "clean_20m_footprint_possible": false,
+      "decision": "FAIL"
+    },
+    {
+      "zone_id": "sconondoa_phase3_deep_BC_combined",
+      "class": "deep",
+      "original_area_m2": 498.444,
+      "safe_area_after_uncertainty_m2": 405.049,
+      "maximum_inscribed_radius_m": 9.393,
+      "maximum_inscribed_diameter_m": 18.787,
+      "clean_20m_footprint_possible": false,
+      "decision": "FAIL",
+      "internal_cell_boundary_included": true
+    }
+  ],
+  "sentinel1_catalogue_query_executed": false,
+  "earth_engine_query_executed": false,
+  "reason_query_not_executed": "The geometry gate failed first. Querying acquisitions or backscatter cannot repair the absence of a clean 20 m footprint.",
+  "radar_backscatter_extracted": false,
+  "calibration_record_created": false,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "next_step": "Redesign larger shallow and deep polygons from the Phase 3 survey, then repeat the pixel-support gate before any Sentinel-1 query."
+}
