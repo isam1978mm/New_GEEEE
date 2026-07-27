@@ -1,0 +1,38 @@
+name: Hoosier #1 VFC filtered recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/recover_hoosier1_vfc_filtered.py"
+      - ".github/workflows/hoosier1-vfc-filtered-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-filtered-records:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser dependencies
+        run: |
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install --with-deps chromium
+      - name: Recover filtered Hoosier #1 records
+        run: python scripts/recover_hoosier1_vfc_filtered.py
+      - name: Upload filtered evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hoosier1-vfc-filtered-records
+          path: artifacts/hoosier1_vfc_filtered/
+          if-no-files-found: warn
+          retention-days: 7
+
+# Temporary public-record recovery tooling; do not merge.
