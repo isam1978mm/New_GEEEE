@@ -1,0 +1,48 @@
+name: Final report 313667 evidence scout
+
+on:
+  pull_request:
+    paths:
+      - "scripts/scout_semspub_final_report_313667.py"
+      - ".github/workflows/final-report-313667-scout.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scout-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install requests pymupdf pillow
+
+      - name: Extract official EPA report
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/semspub_313667_scout
+          python scripts/scout_semspub_final_report_313667.py \
+            2>&1 | tee artifacts/semspub_313667_scout/extractor.log
+
+      - name: Remove source PDF
+        if: always()
+        run: rm -f /tmp/313667.pdf
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-report-313667-scout
+          path: artifacts/semspub_313667_scout/
+          if-no-files-found: warn
+          retention-days: 7
