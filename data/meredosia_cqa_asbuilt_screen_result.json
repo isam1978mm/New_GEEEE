@@ -1,0 +1,46 @@
+{
+  "site_id": "meredosia_ash_pond_closure",
+  "screen_date": "2026-07-27",
+  "decision": "NOT_GOOD_TO_GO_SURFACE_ASSEMBLIES_NOT_COMPARABLE",
+  "official_cqa_report_recovered": true,
+  "cqa_report_page_count": 1336,
+  "final_as_built_survey_recovered": true,
+  "final_as_built_survey_date": "2018-11-30",
+  "final_as_built_elevation_datum": "NAVD88",
+  "final_as_built_contour_interval_ft": 1.0,
+  "horizontal_datum_publicly_stated": false,
+  "public_georeferenced_aerial_deliverable_available": false,
+  "public_point_cloud_available": false,
+  "public_dtm_available": false,
+  "bottom_ash_pond_ccr_removal_confirmed": true,
+  "east_fly_ash_stockpile_ccr_removal_confirmed": true,
+  "removed_areas_final_surface": "non_CCR_backfill_stormwater_controls_and_vegetation",
+  "fly_ash_pond_final_surface": "40_mil_HDPE_geomembrane_synthetic_turf_and_sand_infill",
+  "fly_ash_pond_sand_infill_thickness_in": {
+    "minimum": 0.5,
+    "maximum": 0.75,
+    "measurement_grid_ft_approx": 100
+  },
+  "same_surface_positive_negative_pair": false,
+  "surface_confounding": "fatal_for_current_depth_test",
+  "bottom_ash_berm_same_surface_alternative": {
+    "same_ClosureTurf_surface_as_fly_ash_pond": true,
+    "independent_non_overlapping_depth_contrast_demonstrated": false
+  },
+  "exact_wgs84_execution_geometry_created": false,
+  "boundary_uncertainty_assigned": false,
+  "pixel_support_test_run": false,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false,
+  "reason": "The capped fly-ash pond and the confirmed-removed areas have materially different final radar surfaces. The positive area is synthetic turf over HDPE with sand infill, whereas the negative areas are soil-filled and vegetated. A radar difference would not isolate buried depth. The public report also does not state a horizontal datum or publish the contractor's georeferenced aerial, point cloud, or DTM.",
+  "sources": [
+    "Ameren Meredosia CCR compliance page",
+    "Geotechnology Construction Quality Assurance Report, Closure of the Bottom Ash Pond and Fly Ash Pond, January 18, 2019",
+    "Geotechnology final as-built survey Figure 2",
+    "Ameren closure certification, November 2024",
+    "David Mason + Associates Meredosia Ash Pond Closure project summary"
+  ]
+}
