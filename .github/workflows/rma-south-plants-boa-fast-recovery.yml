@@ -1,0 +1,37 @@
+name: RMA South Plants BOA fast recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/recover_rma_south_plants_boa_fast.py"
+      - ".github/workflows/rma-south-plants-boa-fast-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-targeted-records:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install recovery dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Recover targeted South Plants records
+        run: python scripts/recover_rma_south_plants_boa_fast.py
+      - name: Upload targeted evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rma-south-plants-boa-fast
+          path: artifacts/rma_south_plants_boa_fast/
+          if-no-files-found: warn
+          retention-days: 7
