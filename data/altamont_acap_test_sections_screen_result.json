@@ -1,0 +1,45 @@
+{
+  "site_name": "Altamont Landfill ACAP test sections",
+  "location": "Alameda County, California",
+  "program": "USEPA Alternative Cover Assessment Program",
+  "decision": "NOT_GOOD_TO_GO_COVER_ARCHITECTURE_CONFOUNDER_AND_SURVIVAL_UNCONFIRMED",
+  "good_to_go": false,
+  "alternative_test_section": {
+    "cover_type": "monolithic evapotranspiration cover",
+    "surface_layer_m": 0.15,
+    "storage_layer_m": 0.91,
+    "interim_cover_m": 0.30,
+    "total_profile_m": 1.36,
+    "vegetation": "mixture of grasses",
+    "top_deck_dimensions_m": [30, 30],
+    "central_pan_lysimeter_dimensions_m": [10, 20],
+    "construction_year": 2000
+  },
+  "comparison_section": {
+    "cover_type": "conventional membrane composite / compacted clay",
+    "same_buried_material_system_as_alternative": false,
+    "same_depth_only_experiment": false
+  },
+  "fatal_blockers": [
+    "The compared sections use fundamentally different buried cover architectures: monolithic soil versus membrane composite/compacted clay. A radar difference cannot be attributed to depth alone.",
+    "The authoritative instrumented lysimeter is only 10 m wide, below the required clean 20 m footprint.",
+    "Exact WGS84 polygons and numerical boundary uncertainty for both original ACAP sections were not recovered.",
+    "Public records do not confirm that the original 2000 test sections remained physically unchanged throughout a usable Sentinel-1 observation period.",
+    "The landfill remained active and later closure/construction programs occurred, creating an unresolved disturbance risk."
+  ],
+  "pixel_support": {
+    "full_alternative_top_deck_nominally_large_enough": true,
+    "instrumented_area_large_enough": false,
+    "clean_comparable_20m_pair_confirmed": false
+  },
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "app_depth_enabled": false,
+  "training_started": false,
+  "sources": [
+    "Field Data and Water-Balance Predictions for a Monolithic Cover in a Semiarid Climate",
+    "U.S. EPA Evapotranspiration Landfill Cover Systems Fact Sheet",
+    "California CIWQS facility record for Altamont Landfill",
+    "CLU-IN Alternative Landfill Cover Project Profile"
+  ]
+}
