@@ -1,0 +1,49 @@
+{
+  "site_name": "Consolidated Iron and Metal",
+  "epa_id": "NY0002455756",
+  "nysdec_site_id": "336055",
+  "status": "HOLD_PIXEL_SUPPORT_FAILED",
+  "decision": "NOT_USABLE_FOR_CURRENT_20M_SENTINEL1_DEPTH_TEST",
+  "evidence": {
+    "final_engineering_report_recovered": true,
+    "site_management_plan_recovered": true,
+    "final_as_built_drawings_recovered": true,
+    "depth_of_excavation_map_recovered": true,
+    "post_excavation_cross_section_recovered": true,
+    "same_final_surface_supported": true,
+    "final_surface": "minimum_six_inches_topsoil_and_hydroseed_over_clean_fill",
+    "licensed_surveyor": true,
+    "survey_vertical_tolerance_ft": 0.5,
+    "measured_cover_depth_min_ft": 3.0,
+    "measured_cover_depth_max_ft": 6.2
+  },
+  "robust_depth_ordering_screen": {
+    "deep_reference_measured_depth_ft": 6.0,
+    "deep_reference_lower_bound_ft": 5.5,
+    "maximum_shallow_measured_depth_for_nonoverlap_ft": 5.0,
+    "fully_supported_shallow_grid_cell": "columns_G_to_H_lines_200_to_300",
+    "shallow_cell_corner_depths_ft": [3.6, 3.0, 4.8, 4.2],
+    "grid_spacing_east_west_ft": 50.0,
+    "grid_spacing_north_south_ft": 100.0,
+    "shallow_cell_width_m": 15.24,
+    "shallow_cell_length_m": 30.48,
+    "maximum_possible_clean_interior_diameter_m_before_any_boundary_margin": 15.24,
+    "required_clean_interior_diameter_m": 20.0,
+    "clean_20m_shallow_footprint_possible": false
+  },
+  "execution": {
+    "wgs84_execution_polygon_created": false,
+    "pixel_purity_test_run": false,
+    "sentinel1_catalogue_query_executed": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "app_depth_enabled": false
+  },
+  "current_readiness": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false
+  },
+  "allowed_next_action": "continue_search_for_larger_same_surface_depth_zones_with_exact_as_built_geometry"
+}
