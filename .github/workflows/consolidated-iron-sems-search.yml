@@ -29,6 +29,19 @@ jobs:
           python -m pip install requests playwright
           python -m playwright install --with-deps chromium
 
+      - name: Apply temporary Playwright compatibility fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/discover_consolidated_iron_sems_collections.py")
+          text = path.read_text(encoding="utf-8")
+          old = '        TYPE_ID,\n        timeout=60_000,'
+          new = '        arg=TYPE_ID,\n        timeout=60_000,'
+          if old not in text:
+              raise SystemExit("Expected wait_for_function call was not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
       - name: Search full EPA SEMS collections
         shell: bash
         run: |
