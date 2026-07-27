@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "scripts/scout_coal_creek_cover_report_v2.py"
+      - "scripts/scout_coal_creek_cover_report_v3.py"
       - ".github/workflows/coal-creek-cover-scout.yml"
   workflow_dispatch:
 
@@ -22,13 +22,13 @@ jobs:
           python-version: "3.12"
       - name: Install extraction dependencies
         run: python -m pip install --disable-pip-version-check requests pymupdf pillow
-      - name: Recover exact Coal Creek document
-        run: python scripts/scout_coal_creek_cover_report_v2.py
+      - name: Recover exact Coal Creek document with diagnostics
+        run: python scripts/scout_coal_creek_cover_report_v3.py
       - name: Upload evidence package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coal-creek-cover-scout-v2
-          path: artifacts/coal_creek_cover_scout_v2/
+          name: coal-creek-cover-scout-v3
+          path: artifacts/coal_creek_cover_scout_v3/
           if-no-files-found: warn
           retention-days: 7
