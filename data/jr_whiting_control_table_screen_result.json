@@ -1,0 +1,77 @@
+{
+  "status": "CONTROL_TABLE_SCREEN_COMPLETE_EVIDENCE_ONLY",
+  "source": {
+    "facility": "J.R. Whiting Generating Facility",
+    "unit": "Ponds 1 and 2",
+    "document": "Final Construction Documentation Report 1 of 6",
+    "record_drawing_page_1_based": 30,
+    "record_drawing_sheet": 6,
+    "extraction_method": "vector text and word coordinates; no OCR",
+    "coordinate_reference": "Michigan State Plane South Zone NAD83 (2011); vertical NGVD29"
+  },
+  "control_table": {
+    "final_cover_control_point_count": 107,
+    "control_point_range": "1000-1106",
+    "grid_spacing_ft": 100.0,
+    "depth_definition": "record topsoil elevation minus record subgrade elevation",
+    "depth_min_ft": 2.03,
+    "depth_max_ft": 2.5,
+    "depth_mean_ft": 2.17785,
+    "depth_min_m": 0.618744,
+    "depth_max_m": 0.762,
+    "depth_mean_m": 0.663809
+  },
+  "nominal_shallow_cell": {
+    "control_point_ids": [1068, 1067, 1075, 1076],
+    "depths_ft": [2.11, 2.14, 2.15, 2.14],
+    "depth_min_ft": 2.11,
+    "depth_max_ft": 2.15,
+    "depth_mean_ft": 2.135,
+    "depth_min_m": 0.643128,
+    "depth_max_m": 0.65532,
+    "depth_mean_m": 0.650748,
+    "nominal_width_m": 30.48,
+    "nominal_area_m2": 929.0304
+  },
+  "nominal_deep_cell": {
+    "control_point_ids": [1039, 1040, 1052, 1051],
+    "depths_ft": [2.39, 2.33, 2.24, 2.22],
+    "depth_min_ft": 2.22,
+    "depth_max_ft": 2.39,
+    "depth_mean_ft": 2.295,
+    "depth_min_m": 0.676656,
+    "depth_max_m": 0.728472,
+    "depth_mean_m": 0.699516,
+    "nominal_width_m": 30.48,
+    "nominal_area_m2": 929.0304,
+    "mapped_above_cap_drainage_intersection": true
+  },
+  "ordering": {
+    "deep_min_minus_shallow_max_ft": 0.07,
+    "deep_min_minus_shallow_max_m": 0.021336,
+    "deep_mean_minus_shallow_mean_ft": 0.16,
+    "deep_mean_minus_shallow_mean_m": 0.048768
+  },
+  "pixel_support": {
+    "analysis_scale_m": 20.0,
+    "nominal_cell_width_m": 30.48,
+    "nominal_edge_margin_per_side_m": 5.24,
+    "nominal_size_gate": "PASS_BEFORE_HORIZONTAL_UNCERTAINTY_AND_INFRASTRUCTURE_EXCLUSIONS",
+    "clean_execution_geometry": false
+  },
+  "uncertainty": {
+    "numerical_vertical_survey_accuracy_found": false,
+    "numerical_horizontal_survey_accuracy_found": false,
+    "subgrade_construction_grade_tolerance_ft": "0.0 to -0.2",
+    "protective_cover_construction_grade_tolerance_ft": "+0.2 to 0.0",
+    "construction_tolerances_used_as_measurement_uncertainty": false,
+    "reason": "Construction acceptance tolerances do not establish the uncertainty of the two surveyed elevations used to calculate thickness."
+  },
+  "decision": "HOLD_MISSING_SURVEY_ACCURACY_AND_CLEAN_DEPTH_PAIR",
+  "earth_engine_query_executed": false,
+  "radar_backscatter_extracted": false,
+  "calibration_record_created": false,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "next_step": "Pursue Plant Kraft AP-1 for an exact surveyed confirmed-removal polygon, boundary uncertainty, and stable post-removal timing."
+}
