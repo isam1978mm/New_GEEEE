@@ -33,17 +33,42 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p artifacts/john_sevier_final_configuration
-          PDF_URL='https://www.tva.com/docs/default-source/ccr/jsf/surface-impoundment---bottom-ash-pond/design-criteria/history-of-construction/257-73%28c%29-_history-of-construction_jsf_bottom-ash-pond.pdf?sfvrsn=703326f1_2'
-          curl --location --fail --show-error --silent \
-            --retry 5 --retry-all-errors --retry-delay 5 \
-            --connect-timeout 30 --max-time 1800 \
-            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
-            --referer 'https://www.tva.com/' \
-            "$PDF_URL" \
-            --output /tmp/john_sevier_history_of_construction.pdf \
-            2>&1 | tee artifacts/john_sevier_final_configuration/download.log
-          ls -lh /tmp/john_sevier_history_of_construction.pdf | tee -a artifacts/john_sevier_final_configuration/download.log
-          JOHN_SEVIER_SOURCE_PDF=/tmp/john_sevier_history_of_construction.pdf \
+          MIRROR_URL='https://tvawcma.com/docs/default-source/ccr/jsf/surface-impoundment---bottom-ash-pond/design-criteria/history-of-construction/257-73%28c%29-_history-of-construction_jsf_bottom-ash-pond.pdf?sfvrsn=703326f1_2'
+          OFFICIAL_URL='https://www.tva.com/docs/default-source/ccr/jsf/surface-impoundment---bottom-ash-pond/design-criteria/history-of-construction/257-73%28c%29-_history-of-construction_jsf_bottom-ash-pond.pdf?sfvrsn=703326f1_2'
+          SOURCE_PDF=/tmp/john_sevier_history_of_construction.pdf
+          : > artifacts/john_sevier_final_configuration/download.log
+
+          download_source() {
+            local label="$1"
+            local url="$2"
+            echo "Trying ${label}" | tee -a artifacts/john_sevier_final_configuration/download.log
+            rm -f "$SOURCE_PDF"
+            if curl --location --fail --show-error --silent \
+              --retry 4 --retry-all-errors --retry-delay 4 \
+              --connect-timeout 30 --max-time 1800 \
+              --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+              --referer 'https://tvawcma.com/' \
+              "$url" --output "$SOURCE_PDF" \
+              2>> artifacts/john_sevier_final_configuration/download.log; then
+              local bytes
+              bytes=$(stat -c%s "$SOURCE_PDF")
+              local kind
+              kind=$(file -b --mime-type "$SOURCE_PDF")
+              echo "${label}: bytes=${bytes} mime=${kind}" | tee -a artifacts/john_sevier_final_configuration/download.log
+              if [ "$bytes" -ge 10000000 ] && [ "$kind" = 'application/pdf' ]; then
+                echo "$label" > artifacts/john_sevier_final_configuration/source_used.txt
+                return 0
+              fi
+              echo "${label}: rejected unexpected size or MIME" | tee -a artifacts/john_sevier_final_configuration/download.log
+            fi
+            return 1
+          }
+
+          download_source 'tvawcma mirror' "$MIRROR_URL" || \
+            download_source 'TVA official host' "$OFFICIAL_URL"
+
+          ls -lh "$SOURCE_PDF" | tee -a artifacts/john_sevier_final_configuration/download.log
+          JOHN_SEVIER_SOURCE_PDF="$SOURCE_PDF" \
             python scripts/extract_john_sevier_final_configuration.py \
             2>&1 | tee artifacts/john_sevier_final_configuration/extractor.log
 
