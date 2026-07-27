@@ -1,0 +1,48 @@
+{
+  "site_name": "McMaster Street Former MGP",
+  "nysdec_site_id": "706010",
+  "status": "HOLD_CLEAN_20M_TARGET_PAIR_NOT_SUPPORTED",
+  "decision": "NOT_USABLE_FOR_CURRENT_20M_SENTINEL1_DEPTH_TEST",
+  "evidence": {
+    "final_engineering_report_recovered": true,
+    "final_as_built_summary_drawings_recovered": true,
+    "same_upland_radar_facing_surface": "Type_F_crusher_stone",
+    "phase_1_complete_removal": true,
+    "phase_1_demarcation_geotextile": false,
+    "phase_3_reuse_material_retained": true,
+    "phase_3_geotextile_above_reuse_material": true,
+    "phase_3_reuse_material_minimum_depth_below_final_grade_ft": 2.0,
+    "site_upland_area_acres": 1.93
+  },
+  "geometry_screen": {
+    "phase_3_target_shape": "irregular_triangular_wedge",
+    "target_crossed_or_constrained_by": [
+      "sanitary_sewer",
+      "storm_sewer",
+      "multiple_manholes",
+      "retaining_walls",
+      "railroad_edge",
+      "site_boundary",
+      "monitoring_and_NAPL_infrastructure"
+    ],
+    "phase_1_same_buried_interface": false,
+    "exact_clean_shallow_polygon_supported": false,
+    "exact_clean_deep_polygon_supported": false,
+    "two_clean_20m_same_surface_depth_zones_supported": false,
+    "pixel_support_decision": "HOLD_CLEAN_20M_TARGET_PAIR_NOT_SUPPORTED"
+  },
+  "execution": {
+    "wgs84_execution_geometry_created": false,
+    "sentinel1_catalogue_query_executed": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "app_depth_enabled": false
+  },
+  "current_readiness": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false
+  },
+  "allowed_next_action": "continue_search_for_larger_same_surface_as_built_depth_zones"
+}
