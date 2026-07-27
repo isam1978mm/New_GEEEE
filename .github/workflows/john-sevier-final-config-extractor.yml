@@ -29,7 +29,23 @@ jobs:
           python -m pip install pymupdf requests pillow
 
       - name: Download and extract relevant map pages
-        run: python scripts/extract_john_sevier_final_configuration.py
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/john_sevier_final_configuration
+          PDF_URL='https://www.tva.com/docs/default-source/ccr/jsf/surface-impoundment---bottom-ash-pond/design-criteria/history-of-construction/257-73%28c%29-_history-of-construction_jsf_bottom-ash-pond.pdf?sfvrsn=703326f1_2'
+          curl --location --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 30 --max-time 1800 \
+            --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+            --referer 'https://www.tva.com/' \
+            "$PDF_URL" \
+            --output /tmp/john_sevier_history_of_construction.pdf \
+            2>&1 | tee artifacts/john_sevier_final_configuration/download.log
+          ls -lh /tmp/john_sevier_history_of_construction.pdf | tee -a artifacts/john_sevier_final_configuration/download.log
+          JOHN_SEVIER_SOURCE_PDF=/tmp/john_sevier_history_of_construction.pdf \
+            python scripts/extract_john_sevier_final_configuration.py \
+            2>&1 | tee artifacts/john_sevier_final_configuration/extractor.log
 
       - name: Upload extraction artifact
         if: always()
