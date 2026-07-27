@@ -1,0 +1,50 @@
+name: Fletcher OU1 final report extractor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/extract_fletcher_ou1_final_report.py"
+      - ".github/workflows/fletcher-ou1-extractor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install extraction dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pymupdf requests pillow
+
+      - name: Extract official EPA final report
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/fletcher_ou1_final_report
+          python scripts/extract_fletcher_ou1_final_report.py \
+            2>&1 | tee artifacts/fletcher_ou1_final_report/extractor.log
+
+      - name: Remove source PDF
+        if: always()
+        run: rm -f /tmp/fletcher_ou1_final_report.pdf
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fletcher-ou1-final-report
+          path: artifacts/fletcher_ou1_final_report/
+          if-no-files-found: warn
+          retention-days: 7
