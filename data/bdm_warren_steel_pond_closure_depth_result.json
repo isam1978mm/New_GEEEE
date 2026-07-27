@@ -1,0 +1,30 @@
+{
+  "site": "BDM Warren Steel - Pond 5 and 56-inch Hot Mill Lagoon",
+  "decision": "NOT_GOOD_TO_GO_NO_FINAL_AS_BUILT_DEPTH_MEASUREMENTS",
+  "approved_plan_preserved": true,
+  "closure_report_date": "2016-09",
+  "closed_units": [
+    "Pond 5",
+    "56-inch Hot Mill Lagoon"
+  ],
+  "final_surface": "topsoil and established vegetation over backfill",
+  "internal_conditions": {
+    "pond_5": "mixed residuals and slag controlled fill",
+    "hot_mill_lagoon": "backfill without reused residuals"
+  },
+  "as_built_drawings_for_waste_in_place_closure": "Not Applicable",
+  "final_cover_depth_grid": false,
+  "buried_interface_depth_measurements": false,
+  "numerical_boundary_uncertainty": false,
+  "fatal_reasons": [
+    "The package confirms backfilling, topsoil, and vegetation but does not publish final as-built depth drawings.",
+    "It provides no measured surface-to-buried-interface depth grid for either pond.",
+    "Different internal backfill materials cannot be converted into numeric depth labels without measured final interface elevations and exact boundaries.",
+    "The report itself lists as-built drawings for waste-in-place closures as not applicable."
+  ],
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "usable_calibration_rows_after_review": 0
+}
