@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/extract_fletcher_ou1_final_report.py"
+      - "scripts/inspect_fletcher_public_collections.py"
       - ".github/workflows/fletcher-ou1-extractor.yml"
   workflow_dispatch:
 
@@ -36,6 +37,14 @@ jobs:
           python scripts/extract_fletcher_ou1_final_report.py \
             2>&1 | tee artifacts/fletcher_ou1_final_report/extractor.log
 
+      - name: Inspect public EPA collection inventories
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/fletcher_public_collection_inventory
+          python scripts/inspect_fletcher_public_collections.py \
+            2>&1 | tee artifacts/fletcher_public_collection_inventory/inventory.log
+
       - name: Remove source PDF
         if: always()
         run: rm -f /tmp/fletcher_ou1_final_report.pdf
@@ -45,6 +54,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fletcher-ou1-final-report
-          path: artifacts/fletcher_ou1_final_report/
+          path: |
+            artifacts/fletcher_ou1_final_report/
+            artifacts/fletcher_public_collection_inventory/
           if-no-files-found: warn
           retention-days: 7
