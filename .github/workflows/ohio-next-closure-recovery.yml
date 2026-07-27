@@ -1,0 +1,36 @@
+name: Ohio next closure candidate recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/recover_ohio_next_closure_candidates.py"
+      - ".github/workflows/ohio-next-closure-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install recovery dependencies
+        run: |
+          python -m pip install --disable-pip-version-check playwright beautifulsoup4
+          python -m playwright install --with-deps chromium
+      - name: Recover candidate closure packages
+        run: python scripts/recover_ohio_next_closure_candidates.py
+      - name: Upload candidate packages
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohio-next-closure-candidates
+          path: artifacts/ohio_next_closure_candidates/
+          if-no-files-found: warn
+          retention-days: 7
