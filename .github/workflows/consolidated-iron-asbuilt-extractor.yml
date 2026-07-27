@@ -1,0 +1,51 @@
+name: Consolidated Iron as-built extractor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/extract_consolidated_iron_asbuilt.py"
+      - ".github/workflows/consolidated-iron-asbuilt-extractor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-asbuilt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install extraction dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pymupdf requests pillow playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Discover EPA documents and extract survey evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/consolidated_iron_asbuilt
+          python scripts/extract_consolidated_iron_asbuilt.py \
+            2>&1 | tee artifacts/consolidated_iron_asbuilt/extractor.log
+
+      - name: Remove source PDFs
+        if: always()
+        run: rm -rf /tmp/consolidated_iron_pdfs
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-iron-asbuilt
+          path: artifacts/consolidated_iron_asbuilt/
+          if-no-files-found: warn
+          retention-days: 7
