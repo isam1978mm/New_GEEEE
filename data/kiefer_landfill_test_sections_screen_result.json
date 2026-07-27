@@ -1,0 +1,36 @@
+{
+  "candidate": "Kiefer Landfill alternative-cover test sections",
+  "location": "Sacramento County, California",
+  "decision": "not_good_to_go",
+  "fatal_reason": "Both experimental test sections were decommissioned in summer 2005, before the Sentinel-1 observation era.",
+  "construction_year": 1999,
+  "monitoring_period": "1999-2005",
+  "decommissioned": true,
+  "decommissioning_date": "summer 2005",
+  "sentinel_1_era_overlap": false,
+  "thin_section": {
+    "water_storage_layer_m": 1.40,
+    "interim_cover_layer_m": 0.46,
+    "total_section_thickness_m": 1.86,
+    "surface_topsoil_m": 0.15
+  },
+  "thick_section": {
+    "water_storage_layer_m": 2.44,
+    "interim_cover_layer_m": 0.46,
+    "total_section_thickness_m": 2.90,
+    "surface_topsoil_m": 0.15
+  },
+  "nominal_total_depth_difference_m": 1.04,
+  "same_surface_support": "Both sections received the same 150-mm topsoil layer and the same grass seed mixture; oleander seedlings were additionally planted on the thicker section.",
+  "exact_plot_dimensions_recovered": false,
+  "exact_wgs84_geometry_created": false,
+  "calibration_row_created": false,
+  "earth_engine_query_executed": false,
+  "sources": [
+    {
+      "title": "Using Pilot Test Data to Refine an Alternative Cover Design in Northern California",
+      "doi": "10.1080/15226514.2011.607871",
+      "key_support": "Reports construction in 1999, exact layer thicknesses, monitoring through 2005, and decommissioning of both sections in summer 2005."
+    }
+  ]
+}
