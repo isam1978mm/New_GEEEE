@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/discover_consolidated_iron_sems_collections.py"
+      - "scripts/inspect_consolidated_iron_known_collections.py"
       - ".github/workflows/consolidated-iron-sems-search.yml"
   workflow_dispatch:
 
@@ -50,11 +51,21 @@ jobs:
           python scripts/discover_consolidated_iron_sems_collections.py \
             2>&1 | tee artifacts/consolidated_iron_sems_search/search.log
 
+      - name: Inspect returned collection inventories
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/consolidated_iron_collection_inventory
+          python scripts/inspect_consolidated_iron_known_collections.py \
+            2>&1 | tee artifacts/consolidated_iron_collection_inventory/inventory.log
+
       - name: Upload search artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: consolidated-iron-sems-search
-          path: artifacts/consolidated_iron_sems_search/
+          path: |
+            artifacts/consolidated_iron_sems_search/
+            artifacts/consolidated_iron_collection_inventory/
           if-no-files-found: warn
           retention-days: 7
