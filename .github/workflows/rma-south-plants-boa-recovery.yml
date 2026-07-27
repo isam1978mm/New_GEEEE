@@ -1,0 +1,37 @@
+name: RMA South Plants BOA recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/recover_rma_south_plants_boa.py"
+      - ".github/workflows/rma-south-plants-boa-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-records:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install recovery dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Recover public South Plants records
+        run: python scripts/recover_rma_south_plants_boa.py
+      - name: Upload evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rma-south-plants-boa
+          path: artifacts/rma_south_plants_boa/
+          if-no-files-found: warn
+          retention-days: 7
