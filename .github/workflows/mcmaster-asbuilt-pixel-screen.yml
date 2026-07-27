@@ -28,37 +28,37 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pymupdf pillow
 
-      - name: Download official NYSDEC Appendices A-G
+      - name: Download official NYSDEC final engineering report
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts/mcmaster_asbuilt_cover_drawings
-          url='https://extapps.dec.ny.gov/data/DecDocs/706010/Report.HW.706010.2019-07-30.Construction%20Completion%20Report%20Appendices%20A%20thru%20G.pdf'
+          url='https://extapps.dec.ny.gov/data/DecDocs/706010/Report.HW.706010.2021-09-10.Final%20Engineering%20Report%20except%20Appendix%20D.pdf'
           curl --location --fail --show-error --silent \
             --retry 5 --retry-all-errors --retry-delay 5 \
-            --connect-timeout 30 --max-time 1800 \
+            --connect-timeout 30 --max-time 1200 \
             --user-agent 'Mozilla/5.0 (compatible; environmental-evidence-recovery/1.0)' \
-            "$url" --output /tmp/mcmaster_appendices_a_g.pdf \
+            "$url" --output /tmp/mcmaster_final_engineering_report.pdf \
             2>&1 | tee artifacts/mcmaster_asbuilt_cover_drawings/download.log
-          file /tmp/mcmaster_appendices_a_g.pdf | tee -a artifacts/mcmaster_asbuilt_cover_drawings/download.log
-          bytes=$(stat -c%s /tmp/mcmaster_appendices_a_g.pdf)
-          mime=$(file -b --mime-type /tmp/mcmaster_appendices_a_g.pdf)
+          file /tmp/mcmaster_final_engineering_report.pdf | tee -a artifacts/mcmaster_asbuilt_cover_drawings/download.log
+          bytes=$(stat -c%s /tmp/mcmaster_final_engineering_report.pdf)
+          mime=$(file -b --mime-type /tmp/mcmaster_final_engineering_report.pdf)
           if [ "$bytes" -lt 10000000 ] || [ "$mime" != 'application/pdf' ]; then
             echo "Invalid PDF: bytes=$bytes mime=$mime"
             exit 1
           fi
 
-      - name: Extract Appendix A as-built drawings
+      - name: Extract as-built cover drawings
         shell: bash
         run: |
           set -o pipefail
-          MCMASTER_APPENDICES_PDF=/tmp/mcmaster_appendices_a_g.pdf \
+          MCMASTER_APPENDICES_PDF=/tmp/mcmaster_final_engineering_report.pdf \
             python scripts/extract_mcmaster_asbuilt_cover_drawings.py \
             2>&1 | tee artifacts/mcmaster_asbuilt_cover_drawings/extractor.log
 
       - name: Remove source PDF
         if: always()
-        run: rm -f /tmp/mcmaster_appendices_a_g.pdf
+        run: rm -f /tmp/mcmaster_final_engineering_report.pdf
 
       - name: Upload evidence artifact
         if: always()
