@@ -1,0 +1,81 @@
+name: Consolidated Iron DEC report extractor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/extract_consolidated_iron_dec_reports.py"
+      - ".github/workflows/consolidated-iron-dec-reports.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-dec-reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install extraction dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pymupdf pillow
+
+      - name: Download official New York DEC reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/consolidated_iron_dec_reports
+          FER_URL='https://extapps.dec.ny.gov/data/DecDocs/336055/Report.HW.336055.2012-03-15.FER.pdf'
+          SMP_URL='https://extapps.dec.ny.gov/data/DecDocs/336055/Work%20Plan.HW.336055.2014-06-27.Final%20Site%20Management%20Plan.pdf'
+          curl --location --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 4 \
+            --connect-timeout 30 --max-time 1200 \
+            --user-agent 'Mozilla/5.0 (compatible; environmental-evidence-recovery/1.0)' \
+            "$FER_URL" --output /tmp/consolidated_iron_fer.pdf \
+            2>&1 | tee artifacts/consolidated_iron_dec_reports/download_fer.log
+          curl --location --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 4 \
+            --connect-timeout 30 --max-time 1200 \
+            --user-agent 'Mozilla/5.0 (compatible; environmental-evidence-recovery/1.0)' \
+            "$SMP_URL" --output /tmp/consolidated_iron_smp.pdf \
+            2>&1 | tee artifacts/consolidated_iron_dec_reports/download_smp.log
+          file /tmp/consolidated_iron_fer.pdf /tmp/consolidated_iron_smp.pdf | \
+            tee artifacts/consolidated_iron_dec_reports/file_types.log
+          for file in /tmp/consolidated_iron_fer.pdf /tmp/consolidated_iron_smp.pdf; do
+            bytes=$(stat -c%s "$file")
+            mime=$(file -b --mime-type "$file")
+            if [ "$bytes" -lt 100000 ] || [ "$mime" != 'application/pdf' ]; then
+              echo "Invalid PDF: $file bytes=$bytes mime=$mime"
+              exit 1
+            fi
+          done
+
+      - name: Extract as-built and depth evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          CONSOLIDATED_IRON_FER_PDF=/tmp/consolidated_iron_fer.pdf \
+          CONSOLIDATED_IRON_SMP_PDF=/tmp/consolidated_iron_smp.pdf \
+            python scripts/extract_consolidated_iron_dec_reports.py \
+            2>&1 | tee artifacts/consolidated_iron_dec_reports/extractor.log
+
+      - name: Remove source PDFs
+        if: always()
+        run: rm -f /tmp/consolidated_iron_fer.pdf /tmp/consolidated_iron_smp.pdf
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-iron-dec-reports
+          path: artifacts/consolidated_iron_dec_reports/
+          if-no-files-found: warn
+          retention-days: 7
