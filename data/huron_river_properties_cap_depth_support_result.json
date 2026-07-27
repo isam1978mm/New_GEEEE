@@ -1,0 +1,44 @@
+{
+  "site": "Huron River Properties - Huron Lime Landfills 1 and 2",
+  "decision": "NOT_GOOD_TO_GO_SPARSE_POINT_SUPPORT_AND_NO_FINAL_AS_BUILT_DEPTH_ZONES",
+  "approved_plan_preserved": true,
+  "full_scale_vegetated_cover": true,
+  "landfill_1": {
+    "approximate_area_acres": 15.6,
+    "measured_boring_count": 16,
+    "reported_surface": "established vegetation over clayey soil cap",
+    "measured_cap_thickness_inches": [18.5, 24.0, 16.0, 11.0, 16.0, 21.0, 22.0, 18.5, 16.0, 6.5, 14.0, 14.0, 20.5, 39.5, 11.0, 16.0],
+    "minimum_nearest_neighbor_spacing_m": 47.55,
+    "maximum_nearest_neighbor_spacing_m": 75.83,
+    "map_type": "interpolated cap-thickness isopach map",
+    "final_as_built_depth_grid": false,
+    "numerical_interpolation_or_zone_boundary_uncertainty": false,
+    "clean_30_to_40_m_zone_supported_by_multiple_measurements": false
+  },
+  "landfill_2": {
+    "approximate_area_acres": 14.0,
+    "measured_boring_count": 15,
+    "valid_measured_cap_thickness_range_inches": [6.0, 18.0],
+    "reported_average_cap_thickness_inches": 10.0,
+    "reported_surface": "established vegetation over clayey soil cap",
+    "minimum_nearest_neighbor_spacing_among_valid_points_m": 31.13,
+    "maximum_nearest_neighbor_spacing_among_valid_points_m": 47.10,
+    "points_reported_as_60_inches": "borings where fill material was not encountered; mapped with Note 1 and not defensible as measured 60-inch cap zones",
+    "map_type": "interpolated cap-thickness map",
+    "final_as_built_depth_grid": false,
+    "numerical_interpolation_or_zone_boundary_uncertainty": false,
+    "defensible_deep_zone": false
+  },
+  "fatal_reasons": [
+    "The reports are supplemental boring investigations, not final construction as-built thickness surveys.",
+    "Landfill 1 measured points are no closer than about 47.6 m, so a 30-40 m depth zone is not independently bounded by multiple nearby measurements.",
+    "Landfill 2 has no defensible deep measured zone; mapped greater-than-24-inch areas depend on interpolation and Note 1 borings where fill was not encountered.",
+    "The reports provide no numerical uncertainty for interpolated isopach boundaries.",
+    "Using the colored map polygons as exact depth zones would convert sparse exploratory measurements into unsupported geometry."
+  ],
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "usable_calibration_rows_after_review": 0
+}
