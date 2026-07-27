@@ -1,0 +1,33 @@
+{
+  "site_name": "Berks Landfill",
+  "status": "HOLD_FINAL_DEPTH_SURVEY_NOT_PUBLIC",
+  "decision": "NOT_USABLE_FOR_CURRENT_SENTINEL1_DEPTH_TEST",
+  "evidence": {
+    "cleanup_construction_complete": true,
+    "construction_period": "June_to_November_2000",
+    "same_general_vegetated_landfill_surface": true,
+    "western_landfill_cover_thickness_verified": true,
+    "eastern_landfill_cap_repaired_and_cover_thickness_verified": true,
+    "preliminary_close_out_report_recovered": true,
+    "five_year_reviews_recovered": true,
+    "standalone_final_construction_report_public": false,
+    "post_repair_point_measurements_public": false,
+    "post_repair_depth_zone_map_public": false,
+    "survey_accuracy_public": false
+  },
+  "execution": {
+    "wgs84_execution_geometry_created": false,
+    "pixel_support_test_run": false,
+    "sentinel1_catalogue_query_executed": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "app_depth_enabled": false
+  },
+  "current_readiness": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false
+  },
+  "allowed_next_action": "continue_search_for_large_same_surface_projects_with_public_final_depth_grids_and_survey_uncertainty"
+}
