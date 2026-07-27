@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/inspect_berks_landfill_public_collections.py"
+      - "scripts/extract_berks_landfill_closeout_reviews.py"
       - ".github/workflows/berks-landfill-cap-extractor.yml"
   workflow_dispatch:
 
@@ -13,7 +14,7 @@ permissions:
 jobs:
   inspect-collections:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -23,8 +24,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependency
-        run: python -m pip install requests
+      - name: Install dependencies
+        run: python -m pip install requests pymupdf pillow
 
       - name: Inspect EPA collection inventories
         shell: bash
@@ -34,11 +35,25 @@ jobs:
           python scripts/inspect_berks_landfill_public_collections.py \
             2>&1 | tee artifacts/berks_landfill_collection_inventory/inventory.log
 
+      - name: Extract closeout and five-year-review evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/berks_landfill_closeout_reviews
+          python scripts/extract_berks_landfill_closeout_reviews.py \
+            2>&1 | tee artifacts/berks_landfill_closeout_reviews/extractor.log
+
+      - name: Remove source PDFs
+        if: always()
+        run: rm -f /tmp/berks_*.pdf
+
       - name: Upload evidence artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: berks-landfill-collection-inventory
-          path: artifacts/berks_landfill_collection_inventory/
+          name: berks-landfill-cap-evidence
+          path: |
+            artifacts/berks_landfill_collection_inventory/
+            artifacts/berks_landfill_closeout_reviews/
           if-no-files-found: warn
           retention-days: 7
