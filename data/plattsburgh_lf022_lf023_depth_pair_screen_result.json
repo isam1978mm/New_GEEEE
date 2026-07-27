@@ -1,0 +1,55 @@
+{
+  "candidate_id": "plattsburgh_afb_lf022_lf023",
+  "candidate_name": "Plattsburgh Air Force Base LF-022 and LF-023",
+  "screen_date": "2026-07-27",
+  "decision": "NOT_GOOD_TO_GO_PUBLIC_ASBUILT_AND_MATCHING_SURFACE_FAILED",
+  "approved_plan_changed": false,
+  "evidence": {
+    "lf022": {
+      "approximate_area_acres": 11.3,
+      "approximate_dimensions_feet": "500 by 1200",
+      "cover_description": "12 inches of soil cover with grass",
+      "construction_completed": "spring 1995",
+      "final_inspection_date": "1995-07-20"
+    },
+    "lf023": {
+      "approximate_area_acres": 12.0,
+      "approximate_dimensions_feet": "500 by 1400",
+      "cover_description": "synthetic barrier, soil barrier-protection layer, six inches of topsoil, grass and shallow-rooted plants",
+      "construction_completed": "spring 1994",
+      "final_inspection_date": "1994-09-19"
+    },
+    "stable_post_construction_support": "Five-year reviews and the current EPA site profile report continuing cap inspection and no identified loss of cap integrity."
+  },
+  "gate_results": {
+    "full_scale_vegetated_areas": true,
+    "clean_30_to_40_m_interior_possible_in_principle": true,
+    "stable_sentinel1_period_supported_in_principle": true,
+    "second_depth_condition_exists_by_design": true,
+    "coordinate_tied_final_measured_depths": false,
+    "pointwise_as_built_thickness_grid": false,
+    "numerical_depth_or_survey_uncertainty": false,
+    "matching_near_surface_construction_proven": false,
+    "exact_wgs84_execution_polygons_created": false
+  },
+  "fatal_blockers": [
+    "The public record reviewed does not include the cited LF-022 or LF-023 Remedial Action Construction Completion Reports, an as-built thickness grid, survey coordinates, or numerical survey uncertainty.",
+    "LF-022 is described only as twelve inches of unspecified soil with grass, while LF-023 has six inches of topsoil over a separate barrier-protection soil layer and a synthetic barrier. Matching soil source, gradation, compaction and near-surface moisture behavior are not proven.",
+    "The available depths are design/completion descriptions rather than coordinate-tied final measured depth values for specific clean interior polygons."
+  ],
+  "workflow_state": {
+    "usable_calibration_row_created": false,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  },
+  "sources_reviewed": [
+    "Plattsburgh AFB Third Five-Year Review Report, 2009",
+    "LF-022 Record of Decision, 1992",
+    "LF-023 Source Control Record of Decision, 1992",
+    "EPA Plattsburgh Air Force Base current site profile",
+    "NYSDEC public document listing for site 510003",
+    "Temporary recovery PR #16 artifact"
+  ],
+  "next_action": "Continue the approved search unchanged for a full-scale vegetated pair with public coordinate-tied final measured depths, numerical uncertainty, matching upper-soil construction, and a stable Sentinel-1 period."
+}
