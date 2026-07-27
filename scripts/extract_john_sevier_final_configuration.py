@@ -1,13 +1,14 @@
 """Extract the map pages needed to evaluate the John Sevier Bottom Ash Pond.
 
-This is a one-off evidence-recovery utility. It downloads TVA's public History of
-Construction PDF, indexes page text, renders likely final-configuration and
-construction-drawing pages, and writes a machine-readable report. It does not
-call Earth Engine, create calibration rows, or enable depth output.
+This is a one-off evidence-recovery utility. It indexes TVA's public History of
+Construction PDF, renders likely final-configuration and construction-drawing
+pages, and writes a machine-readable report. It does not call Earth Engine,
+create calibration rows, or enable depth output.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -37,8 +38,14 @@ KEYWORDS = (
 
 
 def download_pdf(destination: Path) -> None:
+    if destination.exists() and destination.stat().st_size >= 10_000_000:
+        return
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with requests.get(PDF_URL, stream=True, timeout=(30, 900)) as response:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; evidence-recovery/1.0)",
+        "Referer": "https://www.tva.com/",
+    }
+    with requests.get(PDF_URL, headers=headers, stream=True, timeout=(30, 900)) as response:
         response.raise_for_status()
         with destination.open("wb") as handle:
             for chunk in response.iter_content(chunk_size=1024 * 1024):
@@ -77,7 +84,6 @@ def select_pages(document: fitz.Document) -> tuple[list[dict[str, object]], list
             for nearby in range(max(0, page_number - 2), min(document.page_count, page_number + 4)):
                 selected.add(nearby)
 
-    # Appendices often have title pages with text followed by scanned drawing pages.
     appendix_windows = {
         "construction drawings": 20,
         "final instrumentation layout": 8,
@@ -192,9 +198,11 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     output_dir = repo_root / "artifacts" / "john_sevier_final_configuration"
     output_dir.mkdir(parents=True, exist_ok=True)
-    pdf_path = output_dir / "john_sevier_history_of_construction.pdf"
+    configured_source = os.environ.get("JOHN_SEVIER_SOURCE_PDF")
+    pdf_path = Path(configured_source) if configured_source else output_dir / "john_sevier_history_of_construction.pdf"
 
     download_pdf(pdf_path)
+    source_size = pdf_path.stat().st_size
     document = fitz.open(pdf_path)
     try:
         text_index, selected_pages = select_pages(document)
@@ -204,7 +212,7 @@ def main() -> int:
         report = {
             "status": "EXTRACTION_COMPLETE_MANUAL_MAP_REVIEW_REQUIRED",
             "source_url": PDF_URL,
-            "pdf_bytes": pdf_path.stat().st_size,
+            "pdf_bytes": source_size,
             "pdf_page_count": document.page_count,
             "selected_page_count": len(selected_pages),
             "selected_pages_1_based": [page + 1 for page in selected_pages],
