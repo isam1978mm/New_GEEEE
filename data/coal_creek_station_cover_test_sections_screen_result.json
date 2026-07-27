@@ -1,0 +1,77 @@
+{
+  "site_name": "Coal Creek Station Alternative Cover Demonstration Project",
+  "location": "Underwood, North Dakota",
+  "project_id": "FY04-50-127 / LRC-50-F",
+  "decision": "NOT_GOOD_TO_GO_PIXEL_SUPPORT_FAILED",
+  "good_to_go": false,
+  "construction": {
+    "field_scale_sections_constructed": true,
+    "construction_date": "2004-05",
+    "source_support": "Published case-history abstract states that lysimeters were constructed in May 2004."
+  },
+  "cover_profiles": {
+    "municipal_waste_cover": {
+      "total_thickness_ft": 3.0,
+      "total_thickness_m": 0.9144,
+      "topsoil_in": 6,
+      "subsoil_in": 12,
+      "compacted_clay_rich_layer_in": 18,
+      "surface": "topsoil with adapted grasses"
+    },
+    "special_waste_cover": {
+      "total_thickness_ft": 5.0,
+      "total_thickness_m": 1.524,
+      "topsoil_in": 6,
+      "subsoil_in": 30,
+      "compacted_clay_rich_layer_in": 24,
+      "surface": "topsoil with adapted grasses"
+    },
+    "evapotranspiration_cover": {
+      "total_thickness_ft": 3.0,
+      "total_thickness_m": 0.9144,
+      "topsoil_in": 6,
+      "subsoil_in": 30,
+      "compacted_clay_rich_layer_in": 0,
+      "surface": "topsoil with adapted grasses"
+    }
+  },
+  "best_depth_pair": {
+    "shallow": "municipal_waste_cover",
+    "deep": "special_waste_cover",
+    "nominal_depth_difference_ft": 2.0,
+    "nominal_depth_difference_m": 0.6096,
+    "same_surface_layer": true,
+    "same_broad_conventional_cover_family": true,
+    "identical_internal_layer_ratios": false
+  },
+  "geometry": {
+    "outer_test_section_width_m": 20,
+    "outer_test_section_length_m": 30,
+    "monitored_lysimeter_width_m": 10,
+    "monitored_lysimeter_length_m": 20,
+    "clean_20m_interior_after_margin": false,
+    "reason": "The outer section is exactly 20 m wide and the authoritative monitored plot is only 10 m wide. Any nonzero boundary, berm, survey, geolocation, or mixed-pixel margin eliminates a clean 20 m footprint."
+  },
+  "additional_unresolved_gates": {
+    "final_as_built_depth_measurements_recovered": false,
+    "exact_wgs84_section_polygons_recovered": false,
+    "numerical_boundary_uncertainty_recovered": false,
+    "sentinel1_era_survival_confirmed": false
+  },
+  "fatal_blocker": "physical pixel support",
+  "calibration_record_created": false,
+  "earth_engine_query_executed": false,
+  "app_depth_enabled": false,
+  "training_started": false,
+  "temporary_extractor": {
+    "pull_request": 13,
+    "successful_workflow_run": 30299326581,
+    "artifact_id": 8665910859,
+    "merge": false
+  },
+  "sources": [
+    "North Dakota Industrial Commission LRC-50-F grant application",
+    "Stockdill, Jorgenson, and Obermeyer (2006), Case History and Regulatory Aspects of a Final Cover Performance Evaluation Involving Conventional and Evapotranspirative Cover Designs",
+    "EPA CLU-IN evapotranspiration-cover demonstration summary"
+  ]
+}
