@@ -1,0 +1,69 @@
+{
+  "candidate_id": "rma_integrated_cover_2ft_3ft",
+  "candidate_name": "Rocky Mountain Arsenal Integrated Cover System 2-foot and 3-foot soil covers",
+  "screen_date": "2026-07-27",
+  "decision": "NOT_GOOD_TO_GO_PUBLIC_ASBUILT_AND_ABSOLUTE_DEPTH_MISSING",
+  "approved_plan_changed": false,
+  "why_promising": {
+    "full_scale_cover_system": true,
+    "large_2ft_and_3ft_polygons": true,
+    "coordinate_labelled_current_map": true,
+    "map_projection": "NAD27/NGVD29, US survey feet, State Plane Colorado North FIPS 0501",
+    "construction_completed": "early 2010",
+    "shared_vegetation_assessment_group": "The 2-foot and 3-foot covers are evaluated together as one vegetation group.",
+    "long_term_monitoring": "Current annual reports document inspections, vegetation management, percolation monitoring and cover-soil-loss monitoring.",
+    "clean_30_to_40_m_interior_possible_in_principle": true
+  },
+  "public_evidence_recovered": {
+    "annual_reports": [
+      "2022 Annual Covers Report for Integrated Cover System",
+      "2023 Annual Covers Report for Integrated Cover System",
+      "2024 Annual Covers Report for Integrated Cover System",
+      "2025 Annual Covers Report for Integrated Cover System"
+    ],
+    "current_map": "2025 Integrated Cover System Maintenance Activities map showing RCRA-equivalent, 2-ft and 3-ft soil-cover polygons",
+    "cover_soil_monitoring": "A network of 92 erosion/settlement monuments, generally on a 500-foot grid, monitors the RCRA-equivalent and 3-foot cover areas.",
+    "soil_loss_table": "The annual report provides localized soil-thickness-loss measurements, not absolute as-built cover depths.",
+    "missing_named_record": "RCRA-Equivalent, 2-, and 3-Foot Covers Long-Term Care Plan, Revision 3, dated August 12, 2021",
+    "missing_earlier_records": [
+      "2000 South Plants Balance of Areas and Central Processing Area Explanation of Significant Differences",
+      "2001 South Plants Balance of Areas and Central Processing Area Phase 2 100 Percent Design Package",
+      "final cover construction completion or as-built survey package"
+    ]
+  },
+  "gate_results": {
+    "full_scale_vegetated_areas": true,
+    "clean_30_to_40_m_interior_possible_in_principle": true,
+    "exact_coordinate_labelled_zone_map": true,
+    "second_depth_condition_exists": true,
+    "nominal_depth_contrast_ft": 1.0,
+    "nominal_depth_contrast_m": 0.3048,
+    "stable_sentinel1_period_supported_in_principle": true,
+    "matching_vegetation_management": true,
+    "matching_final_near_surface_soil_construction_proven": false,
+    "coordinate_tied_absolute_final_measured_depths": false,
+    "absolute_as_built_depth_values_for_2ft_polygons": false,
+    "numerical_horizontal_or_vertical_survey_uncertainty": false,
+    "execution_ready_wgs84_polygons_created": false,
+    "usable_calibration_row": false
+  },
+  "fatal_blockers": [
+    "The current map labels 2-foot and 3-foot cover categories, but the recovered public records do not publish absolute final measured thickness values tied to the 2-foot polygons.",
+    "The 92-monument annual monitoring network reports soil-thickness loss and covers the RCRA-equivalent and 3-foot areas; it does not provide an absolute measured-depth grid for the 2-foot areas.",
+    "The recovered public records do not state numerical horizontal or vertical survey uncertainty.",
+    "The public record supports common vegetation assessment but does not prove that the final radar-facing soil source, gradation, compaction and moisture behavior are equivalent between the 2-foot and 3-foot polygons.",
+    "The named long-term care plan and final construction/as-built records were not recovered from the current Army reports page, the EPA live document table or the archived public-site search."
+  ],
+  "workflow_state": {
+    "usable_calibration_row_created": false,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  },
+  "temporary_recovery": {
+    "pull_request": 17,
+    "merge_required": false,
+    "close_without_merge": true
+  },
+  "next_action": "Continue the approved search unchanged. Advance only a full-scale vegetated pair whose public construction package provides coordinate-tied absolute final measured depths, numerical uncertainty and matching upper-soil construction."
+}
