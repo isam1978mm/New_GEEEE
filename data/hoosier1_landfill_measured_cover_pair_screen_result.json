@@ -1,0 +1,90 @@
+{
+  "candidate_id": "hoosier1_landfill_measured_cover_pair",
+  "candidate_name": "Hoosier #1 Landfill soil-cover and composite-cover closures",
+  "screen_date": "2026-07-27",
+  "decision": "NOT_GOOD_TO_GO_SECOND_MEASURED_ZONE_AND_UNCERTAINTY_FAILED",
+  "approved_plan_changed": false,
+  "why_promising": {
+    "full_scale_closed_landfill": true,
+    "older_soil_cover_area_acres": 39.1,
+    "composite_cover_area_acres": 27.0,
+    "final_closure_approval_date": "2010-12-02",
+    "matching_visible_surface_by_design": "Both the older closure plan and the 2009 partial-closure report specify approximately 30 inches of protective soil below a 6-inch vegetative layer.",
+    "public_coordinate_system": "Indiana State Plane Coordinates, East Zone",
+    "professional_certification": true
+  },
+  "measured_2009_partial_closure": {
+    "area_acres": 1.85,
+    "location": "Cell 1 South Slope",
+    "survey_point_count": 18,
+    "survey_pattern": "six toe/mid/crest transects",
+    "northing_range": [10499.96, 10691.91],
+    "easting_range": [10489.87, 11004.44],
+    "coordinate_envelope_approx_ft": {
+      "north_south": 191.95,
+      "east_west": 514.57
+    },
+    "soil_barrier_thickness_ft": {
+      "minimum": 2.0,
+      "maximum": 3.07
+    },
+    "protective_soil_thickness_ft": {
+      "minimum": 2.8,
+      "maximum": 4.33
+    },
+    "combined_barrier_plus_protective_ft": {
+      "minimum": 5.12,
+      "maximum": 6.42,
+      "vegetative_layer_excluded": true
+    },
+    "additional_evidence": [
+      "Final Cover Survey Results table with coordinates and actual subgrade, top-of-soil-barrier and top-of-cover elevations.",
+      "Thickness Verification Results table with coordinate-tied soil-barrier and protective-soil thicknesses.",
+      "Professional-engineer closure certification.",
+      "Coordinate-labelled final-cover as-built drawing comparing design and as-built final grades."
+    ]
+  },
+  "gate_results": {
+    "full_scale_vegetated_areas_exist": true,
+    "coordinate_tied_final_measurements_exist_somewhere": true,
+    "two_exact_broad_measured_depth_zones": false,
+    "measured_points_form_distinct_shallow_and_deep_polygons": false,
+    "older_39_acre_cap_has_public_final_measured_thickness_grid": false,
+    "entire_27_acre_composite_area_has_public_absolute_thickness_grid": false,
+    "clean_30_to_40_m_interior_for_each_measured_condition_proven": false,
+    "matching_near_surface_profile_supported_by_design": true,
+    "matching_final_soil_source_gradation_compaction_proven": false,
+    "numerical_horizontal_or_vertical_survey_uncertainty": false,
+    "stable_sentinel1_execution_period_proven_for_selected_polygons": false,
+    "execution_ready_wgs84_polygons_created": false,
+    "usable_calibration_row": false
+  },
+  "fatal_blockers": [
+    "The 18 coordinate-tied measurements vary irregularly among toe, mid-slope and crest locations and do not define two separate broad shallow/deep polygons.",
+    "The measured 1.85-acre south-slope area is a long, boundary-constrained strip; the public evidence does not prove two independent 30-40 m clean interiors after margins.",
+    "The older approximately 39.1-acre soil-cover closure is documented through design and post-closure plans, but the recovered public file does not publish final coordinate-tied measured cover thicknesses.",
+    "The full approximately 27-acre composite area has an as-built final-grade map, but the public package does not provide an absolute subgrade-to-final thickness grid covering the full area.",
+    "The recovered records do not state numerical horizontal or vertical survey uncertainty.",
+    "Final equivalence of soil source, gradation, compaction and radar-facing moisture behavior between the older and newer cover areas is not proven."
+  ],
+  "workflow_state": {
+    "usable_calibration_row_created": false,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  },
+  "sources_reviewed": [
+    "IDEM Closure Approval dated December 2, 2010.",
+    "Certification of Partial Closure Report, Cell 1 South Slope, 1.85 Acres, May 2009.",
+    "2008 Final Closure certification drawing set and as-built final-cover drawings.",
+    "Revised Solid Waste Closure and Post-Closure Plan, October 1996.",
+    "1995 Ransbottom Sanitary Landfill drawing package.",
+    "IDEM VFC public records recovered through temporary PR #18."
+  ],
+  "temporary_recovery": {
+    "pull_request": 18,
+    "merge_required": false,
+    "close_without_merge": true
+  },
+  "next_action": "Continue the approved search unchanged for a full-scale vegetated closure package that publishes two coordinate-tied broad final measured depth zones, numerical uncertainty, matching final upper-soil construction and a stable Sentinel-1 period."
+}
