@@ -1,0 +1,38 @@
+name: RMA EPA cover-record recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/recover_rma_epa_cover_records.py"
+      - ".github/workflows/rma-epa-cover-record-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-cover-records:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install recovery dependencies
+        run: |
+          python -m pip install --disable-pip-version-check playwright beautifulsoup4
+          python -m playwright install --with-deps chromium
+      - name: Recover EPA cover records
+        run: python scripts/recover_rma_epa_cover_records.py
+      - name: Upload cover evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rma-epa-cover-records
+          path: artifacts/rma_epa_cover_records/
+          if-no-files-found: warn
+          retention-days: 7
+
+# Temporary public environmental-record recovery; do not merge.
