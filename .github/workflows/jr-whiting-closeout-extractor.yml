@@ -1,0 +1,88 @@
+name: J.R. Whiting closeout extractor
+
+on:
+  pull_request:
+    paths:
+      - "scripts/extract_jr_whiting_closeout.py"
+      - ".github/workflows/jr-whiting-closeout-extractor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-closeout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install extraction dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pymupdf pillow
+
+      - name: Download six official closeout PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/jr_whiting_source artifacts/jr_whiting_closeout
+          : > artifacts/jr_whiting_closeout/download.log
+          base='https://www.consumersenergy.com/-/media/CE/Documents/sustainability/coal-combustion-residuals/jrw/pond-1-2/2021'
+          success=0
+          for part in 1 2 3 4 5 6; do
+            name="jrw-pond-1-2-construction-documentation-report-${part}-of-6.pdf"
+            output="/tmp/jr_whiting_source/report_${part}_of_6.pdf"
+            echo "Downloading part ${part}: ${name}" | tee -a artifacts/jr_whiting_closeout/download.log
+            if curl --location --fail --show-error --silent \
+              --retry 5 --retry-all-errors --retry-delay 5 \
+              --connect-timeout 30 --max-time 1800 \
+              --user-agent 'Mozilla/5.0 (compatible; evidence-recovery/1.0)' \
+              --referer 'https://www.consumersenergy.com/company/sustainability/environment/coal-combustion-residuals' \
+              "${base}/${name}" \
+              --output "$output" \
+              2>> artifacts/jr_whiting_closeout/download.log; then
+              bytes=$(stat -c%s "$output")
+              mime=$(file -b --mime-type "$output")
+              echo "part=${part} bytes=${bytes} mime=${mime}" | tee -a artifacts/jr_whiting_closeout/download.log
+              if [ "$bytes" -ge 10000 ] && [ "$mime" = 'application/pdf' ]; then
+                success=$((success + 1))
+              else
+                rm -f "$output"
+                echo "part=${part} rejected: unexpected size or MIME" | tee -a artifacts/jr_whiting_closeout/download.log
+              fi
+            else
+              echo "part=${part} download failed" | tee -a artifacts/jr_whiting_closeout/download.log
+            fi
+          done
+          echo "valid_pdf_count=${success}" | tee -a artifacts/jr_whiting_closeout/download.log
+          if [ "$success" -eq 0 ]; then
+            exit 1
+          fi
+
+      - name: Extract survey evidence pages
+        shell: bash
+        run: |
+          set -o pipefail
+          JR_WHITING_SOURCE_DIR=/tmp/jr_whiting_source \
+            python scripts/extract_jr_whiting_closeout.py \
+            2>&1 | tee artifacts/jr_whiting_closeout/extractor.log
+
+      - name: Remove source PDFs from artifact
+        if: always()
+        run: rm -rf /tmp/jr_whiting_source
+
+      - name: Upload extraction artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-whiting-closeout-extraction
+          path: artifacts/jr_whiting_closeout/
+          if-no-files-found: warn
+          retention-days: 7
