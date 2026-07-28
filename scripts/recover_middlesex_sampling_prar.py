@@ -18,11 +18,17 @@ OUT.mkdir(parents=True, exist_ok=True)
 PAGES = OUT / "pages"
 PAGES.mkdir(exist_ok=True)
 
-PDF_URL = (
-    "https://www.nan.usace.army.mil/Portals/37/docs/civilworks/projects/nj/fusrap/"
-    "Middlesex%20Sampling/MSP_Final_Prar_9_8_2010_complete.pdf"
-    "?ver=xkMcDgp6X07owwtb3l_MhQ%3D%3D"
-)
+PDF_URLS = [
+    (
+        "https://www.nan.usace.army.mil/Portals/37/docs/civilworks/projects/nj/fusrap/"
+        "Middlesex%20Sampling/MSP_Final_Prar_9_8_2010_complete.pdf"
+        "?ver=xkMcDgp6X07owwtb3l_MhQ%3D%3D"
+    ),
+    (
+        "https://www.nan.usace.army.mil/Portals/37/docs/civilworks/projects/nj/fusrap/"
+        "Middlesex%20Sampling/MSP_Final_Prar_9_8_2010_complete.pdf"
+    ),
+]
 PDF_PATH = OUT / "MSP_Final_PRAR_2010.pdf"
 TEXT_PATH = OUT / "MSP_Final_PRAR_2010.txt"
 
@@ -31,8 +37,27 @@ session.headers.update({
     "User-Agent": "Mozilla/5.0 (compatible; public-record evidence recovery)",
     "Accept": "application/pdf,*/*;q=0.8",
 })
-response = session.get(PDF_URL, timeout=240)
-response.raise_for_status()
+
+attempts: list[dict[str, object]] = []
+response = None
+for url in PDF_URLS:
+    candidate = session.get(url, timeout=240, allow_redirects=True)
+    body_is_pdf = candidate.content.startswith(b"%PDF-")
+    attempts.append({
+        "url": url,
+        "final_url": candidate.url,
+        "status_code": candidate.status_code,
+        "content_type": candidate.headers.get("content-type"),
+        "bytes": len(candidate.content),
+        "body_is_pdf": body_is_pdf,
+    })
+    if body_is_pdf:
+        response = candidate
+        break
+
+(OUT / "transport_report.json").write_text(json.dumps(attempts, indent=2), encoding="utf-8")
+if response is None:
+    raise RuntimeError("USACE responses did not contain a verified PDF body")
 PDF_PATH.write_bytes(response.content)
 
 subprocess.run(["pdftotext", "-layout", str(PDF_PATH), str(TEXT_PATH)], check=True)
@@ -60,8 +85,6 @@ for page in range(1, page_count + 1):
     if matches:
         page_results.append({"page": page, "matches": matches[:80]})
 
-# Render only the highest-value pages for manual inspection. Maps/figures are
-# detected from keyword density and common appendix/figure terms.
 scored: list[tuple[int, int]] = []
 for item in page_results:
     page = int(item["page"])
@@ -83,7 +106,8 @@ for page in selected_pages:
     )
 
 report = {
-    "source_url": PDF_URL,
+    "source_url": response.url,
+    "http_status_code": response.status_code,
     "pdf_bytes": len(response.content),
     "page_count": page_count,
     "keyword_pages": page_results,
@@ -96,4 +120,4 @@ report = {
     },
 }
 (OUT / "recovery_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-print(json.dumps({"pdf_bytes": report["pdf_bytes"], "page_count": page_count, "keyword_page_count": len(page_results), "rendered_pages": selected_pages}, indent=2))
+print(json.dumps({"http_status_code": response.status_code, "pdf_bytes": report["pdf_bytes"], "page_count": page_count, "keyword_page_count": len(page_results), "rendered_pages": selected_pages}, indent=2))
