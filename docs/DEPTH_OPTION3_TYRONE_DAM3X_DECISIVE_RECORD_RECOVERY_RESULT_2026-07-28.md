@@ -81,13 +81,28 @@ A useful records response must include at least one of the following:
 
 The free public route did not complete the candidate. Further Tyrone work now requires a targeted public-records request or a direct records response from New Mexico MMD or the operator. Do not perform more broad Tyrone web searching unless a genuinely new file or archive location is identified.
 
+## Public-records request submitted
+
+The user submitted a New Mexico EMNRD Mining and Minerals Division IPRA request on **2026-07-28**.
+
+```text
+tracking reference = N000019-070026
+request status = received and processing
+requested date range = 2005-01-01 through 2026-07-27
+```
+
+The request specifically asks for the June 2008 CQA report, all appendices and plates, original GPS/CAES/CAD/GIS/survey files, datum and accuracy documentation, and post-2014 inspection or disturbance records for Test Plots 5 and 6.
+
+No further user action is needed until EMNRD responds. Preserve the complete response in original form, including ZIP, GIS, CAD, spreadsheet and PDF files.
+
 ## Recovery references
 
 ```text
 draft PR = #33
 workflow run = 30384586998
 artifact ID = 8698411917
-PR must be closed without merging
+PR state = closed
+merged = no
 ```
 
 ## App status
@@ -100,6 +115,6 @@ Earth Engine query executed = no
 training started = false
 ```
 
-## User-dependent next action
+## Next action
 
-Request the June 2008 3X CQA report and all associated appendices and electronic survey files. When received, inspect only whether they resolve exact Test Plot 5/6 geometry and plot-specific stability. If they do not, close Tyrone Dam 3X permanently under Option 3.
+Wait for EMNRD response under tracking reference `N000019-070026`. When records arrive, inspect only whether they resolve exact Test Plot 5/6 geometry and a defensible plot-specific stable Sentinel-1 interval. If they do not, close Tyrone Dam 3X permanently under Option 3.
