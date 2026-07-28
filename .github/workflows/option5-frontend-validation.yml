@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   frontend-build:
@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -38,3 +40,16 @@ jobs:
           path: frontend-v2/dist/
           if-no-files-found: error
           retention-days: 7
+      - name: Commit validated SPA assets
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        run: |
+          git add -A frontend-v2/dist
+          if git diff --cached --quiet; then
+            echo "Generated SPA is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build: refresh Option 5 frontend assets"
+          git push origin HEAD:${{ github.head_ref }}
