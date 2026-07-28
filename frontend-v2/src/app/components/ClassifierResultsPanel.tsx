@@ -94,7 +94,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
         style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)" }}
       >
         <div className="flex items-center gap-2">
-          <span className="font-mono" style={sectionTitleStyle}>Screening Results</span>
+          <span className="font-mono" style={sectionTitleStyle}>Classifier Results</span>
           <Badge text="REDACTED_PUBLIC" />
         </div>
         {loading && (
@@ -118,7 +118,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
           >
             <Info size={13} className="shrink-0" style={{ marginTop: "2px" }} />
             <span style={{ fontSize: "11.5px", lineHeight: "1.5" }}>
-              These are unitless, within-run PCA anomaly scores. A higher score means an object was more unusual than other valid pixels in this run. The score is not a probability, physical confirmation, a change measurement, or a depth estimate.
+              These are unitless, within-run PCA anomaly scores. A higher score means an object was more unusual than other valid pixels in this run. It is not a probability, not physical confirmation, not a measured change, and not a depth estimate.
             </span>
           </div>
 
