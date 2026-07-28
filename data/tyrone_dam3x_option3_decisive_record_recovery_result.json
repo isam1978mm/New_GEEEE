@@ -1,0 +1,68 @@
+{
+  "candidate": "Tyrone Mine Dam 3X Test Plots 5 and 6",
+  "strategy": "Option 3 — Complete Candidates",
+  "screen_date": "2026-07-28",
+  "decision": "not_good_to_go_public_record_incomplete",
+  "broad_search_restarted": false,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "existing_passes": {
+    "two_large_final_measured_depth_zones": true,
+    "matching_cover_and_revegetation": true,
+    "numerical_depth_uncertainty": true,
+    "clean_interior_width_plausible": true
+  },
+  "remaining_gates": {
+    "coordinate_tied_test_plot_5_and_6_geometry": false,
+    "plot_specific_unchanged_sentinel1_period": false
+  },
+  "bounded_recovery": {
+    "documents": [
+      "2012-12-17_Mod12-3Application_GR010RE.pdf",
+      "GR010RE_20091223_Tyrone_Mod09-03_Finanial_Assurance_Reduction.pdf",
+      "GR010RE_20081223_FAReduction-AttachmentI.pdf"
+    ],
+    "findings": {
+      "2012_package_scope": "financial calculations, 1C7A Stockpile completion record, public notices and electronic-copy placeholder",
+      "2009_package_scope": "financial calculations, No. 1 Stockpile completion record, public notices and electronic-copy placeholder",
+      "actual_electronic_survey_files_present": false,
+      "test_plot_5_6_vertices_found": false,
+      "gis_or_cad_geometry_found": false,
+      "june_2008_3x_cqa_report_found": false,
+      "plot_specific_post_2014_stability_found": false
+    },
+    "draft_pr": 33,
+    "workflow_run": 30384586998,
+    "artifact_id": 8698411917,
+    "merge_allowed": false
+  },
+  "specific_missing_record": {
+    "title": "Construction Quality Assurance Report: Tailing Impoundment 3X Reclamation",
+    "author_reference": "M3, 2008a",
+    "date": "June 2008",
+    "status_in_2020_bibliography": "Draft",
+    "required_associated_materials": [
+      "all appendices and plates",
+      "GPS or CAES survey exports",
+      "surveyed northing/easting vertices for Test Plots 5 and 6",
+      "CAD DWG or DXF files",
+      "GIS shapefile or geodatabase files",
+      "horizontal datum and numerical positioning accuracy",
+      "later plot-specific inspection, maintenance, disturbance and repair records"
+    ]
+  },
+  "option3_feasibility": {
+    "bounded_public_test_was_feasible": true,
+    "public_route_completed_candidate": false,
+    "further_work_requires_user_records_request_or_direct_records_response": true,
+    "repeat_broad_web_search": false
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Request the June 2008 3X CQA report and all associated electronic survey files from New Mexico MMD or the operator. Reopen Tyrone only when those files are received."
+}
