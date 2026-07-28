@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "option": "Option 1 — Global Depth",
+  "batch": 3,
+  "decision_date": "2026-07-28",
+  "decision": "not_good_to_go",
+  "candidate_count": 5,
+  "decisive_candidate": "Fort Dix Landfill",
+  "passed_documentary_gate_count": 0,
+  "fatal_blocker": "No candidate provides two coordinate-tied final measured numerical depth conditions with uncertainty and matching surfaces, or one measured condition plus a confirmed no-target control.",
+  "fort_dix": {
+    "full_scale_areas": true,
+    "stable_sentinel1_period_plausible": true,
+    "final_measured_as_built_depth": false,
+    "exact_second_measured_depth": false,
+    "confirmed_control": false,
+    "coordinate_tied_thickness_geometry": false,
+    "numerical_uncertainty": false,
+    "matching_radar_facing_surface": false,
+    "calibration_record_created": false
+  },
+  "usable_positive_depth_site_groups": 0,
+  "usable_confirmed_negative_site_groups": 0,
+  "usable_calibration_rows": 0,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}

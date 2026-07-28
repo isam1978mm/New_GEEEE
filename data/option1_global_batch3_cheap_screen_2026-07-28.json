@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "option": "Option 1 — Global Depth",
+  "batch": 3,
+  "screen_date": "2026-07-28",
+  "status": "cheap_screen_complete",
+  "candidate_count": 5,
+  "advanced_to_decisive_review_count": 1,
+  "advanced_candidate": "Fort Dix Landfill",
+  "passed_documentary_gate_count": 0,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "usable_positive_depth_site_groups": 0,
+  "usable_confirmed_negative_site_groups": 0,
+  "usable_calibration_rows": 0,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false,
+  "candidates": [
+    {
+      "name": "Fort Dix Landfill",
+      "location": "New Jersey",
+      "decision": "advance_to_decisive_review",
+      "reason": "Two large remedy areas and a long stable management period are documented, but final measured depths, uncertainty, surface comparability and control status require decisive review."
+    },
+    {
+      "name": "Hunt's Disposal Landfill",
+      "location": "Wisconsin",
+      "decision": "stop",
+      "reason": "One multi-layer cap system is publicly described; no second measured depth condition or confirmed control is identified."
+    },
+    {
+      "name": "Strasburg Landfill",
+      "location": "Pennsylvania",
+      "decision": "stop",
+      "reason": "One multi-layer cap system is publicly described; no second measured depth condition or confirmed control is identified."
+    },
+    {
+      "name": "Doepke-Holliday Superfund Site",
+      "location": "Kansas",
+      "decision": "stop",
+      "reason": "One impermeable multilayer cap is publicly described; no second measured depth condition or confirmed control is identified."
+    },
+    {
+      "name": "Bell Landfill",
+      "location": "Pennsylvania",
+      "decision": "stop",
+      "reason": "Two landfills were capped, but the reviewed public material does not provide two numerical final measured depths, uncertainty or a confirmed control."
+    }
+  ]
+}
