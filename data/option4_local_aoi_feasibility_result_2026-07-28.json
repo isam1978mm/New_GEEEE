@@ -1,0 +1,59 @@
+{
+  "strategy": "Option 4 — Local AOI Calibration",
+  "screen_date": "2026-07-28",
+  "decision": "NOT_READY_TO_RUN",
+  "local_aoi_selected": false,
+  "complete_three_zone_package": false,
+  "requirements": {
+    "measured_shallow_reference": true,
+    "measured_deeper_reference": true,
+    "confirmed_control_area": false,
+    "coordinate_tied_polygons": false,
+    "comparable_surface_conditions": "candidate_dependent",
+    "sufficient_clean_sentinel1_support": false,
+    "stable_observation_period": false
+  },
+  "candidates": {
+    "tyrone_dam_3x": {
+      "measured_shallow_reference": {
+        "plot": "Test Plot 5",
+        "mean_inches": 26.8,
+        "confidence_interval_95_inches": [25.8, 27.8]
+      },
+      "measured_deeper_reference": {
+        "plot": "Test Plot 6",
+        "mean_inches": 37.4,
+        "confidence_interval_95_inches": [33.5, 41.3]
+      },
+      "confirmed_control_area": false,
+      "coordinate_tied_polygons": false,
+      "stable_sentinel1_period": false,
+      "status": "blocked_pending_emnrd_request_N000019-070026"
+    },
+    "sconondoa_phase3": {
+      "measured_shallow_reference": {
+        "zone": "Cell A upper interior",
+        "mean_depth_m": 3.511,
+        "minimum_width_m": 21.1
+      },
+      "measured_deeper_reference": {
+        "zone": "Cells B/C combined interior",
+        "mean_depth_m": 4.881,
+        "minimum_width_m": 23.2
+      },
+      "matching_final_surface_assembly": true,
+      "confirmed_control_area": false,
+      "authoritative_georeference": false,
+      "sufficient_clean_sentinel1_support": false,
+      "status": "not_ready"
+    }
+  },
+  "workflow_state": {
+    "earth_engine_query_executed": false,
+    "calibration_package_created": false,
+    "training_started": false,
+    "app_depth_enabled": false,
+    "numerical_depth_ready": false
+  },
+  "next_action": "Wait for the Tyrone EMNRD response and check whether it supplies exact plot geometry, stability evidence, and a defensible control area. Otherwise Option 4 requires an operator-provided AOI package."
+}
