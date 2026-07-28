@@ -1,0 +1,71 @@
+{
+  "strategy": "Option 1 — Global Depth",
+  "batch": 2,
+  "result_date": "2026-07-28",
+  "decision": "NO_CANDIDATE_PASSED",
+  "candidate_count": 5,
+  "decisive_review_candidate": "Lowry Landfill",
+  "decisive_review_result": "NOT_GOOD_TO_GO",
+  "lowry": {
+    "full_scale_vegetated_area": true,
+    "construction_complete_and_managed": true,
+    "public_broad_thickness_variation": true,
+    "reported_cover_minimum_ft": 4.0,
+    "reported_cover_maximum_ft": 12.0,
+    "reported_maximum_qualifier": "up to, in some places",
+    "north_face_area_acres": 29.0,
+    "north_face_additional_soil_ft": 2.0,
+    "north_face_final_depth_status": "minimum_4_ft_only",
+    "two_exact_final_measured_depth_polygons": false,
+    "coordinate_tied_as_built_thickness_grid": false,
+    "numerical_depth_or_survey_uncertainty": false,
+    "confirmed_control_area": false,
+    "matching_surface_pair_proven": false,
+    "stable_sentinel1_period_for_exact_pair": false,
+    "fatal_blocker": "Public thickness descriptions are broad or minimum-only and are not tied to two final measured polygons with numerical uncertainty."
+  },
+  "candidate_results": [
+    {
+      "site": "Rocky Flats Original Landfill",
+      "result": "REJECTED_CHEAP_SCREEN",
+      "reason": "Sentinel-1-era stabilization and drainage reconstruction"
+    },
+    {
+      "site": "Lowry Landfill",
+      "result": "REJECTED_DECISIVE_REVIEW",
+      "reason": "No two exact final measured depth polygons, numerical uncertainty, or confirmed control"
+    },
+    {
+      "site": "Modern Sanitation Landfill",
+      "result": "REJECTED_CHEAP_SCREEN",
+      "reason": "One cap system; plateau and side slopes do not establish a measured depth pair"
+    },
+    {
+      "site": "Shpack Landfill",
+      "result": "REJECTED_CHEAP_SCREEN",
+      "reason": "Excavation and ecological restoration rather than a retained two-depth cover system"
+    },
+    {
+      "site": "Fernald On-Site Disposal Facility",
+      "result": "REJECTED_CHEAP_SCREEN",
+      "reason": "One multilayer cap and no second measured condition or confirmed control"
+    }
+  ],
+  "workflow_state": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "reopen_lowry_only_if": [
+    "certified final as-built top and underlying-reference surfaces or equivalent thickness grid",
+    "at least two broad coordinate-tied depth polygons with final measured values",
+    "numerical survey or measurement uncertainty",
+    "matching radar-facing surface construction",
+    "documented unchanged observation period"
+  ],
+  "next_action": "Record and review Batch 2. Continue only through another bounded Option 1 candidate batch while Tyrone Dam 3X remains pending under EMNRD request N000019-070026."
+}
