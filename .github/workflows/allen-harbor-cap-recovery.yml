@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/recover_allen_harbor_cap_records.py"
       - "scripts/recover_allen_harbor_cap_records_fast.py"
+      - "scripts/recover_allen_harbor_collection_records.py"
       - ".github/workflows/allen-harbor-cap-recovery.yml"
   workflow_dispatch:
 
@@ -25,14 +26,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y poppler-utils
-          python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Recover focused official Allen Harbor records
-        run: python scripts/recover_allen_harbor_cap_records_fast.py
+          python -m pip install --disable-pip-version-check requests
+      - name: Recover decisive Allen Harbor collection records
+        run: python scripts/recover_allen_harbor_collection_records.py
       - name: Upload evidence package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allen-harbor-cap-records
-          path: artifacts/allen_harbor_cap_records/
+          name: allen-harbor-collection-records
+          path: artifacts/allen_harbor_collection_records/
           if-no-files-found: warn
           retention-days: 7
