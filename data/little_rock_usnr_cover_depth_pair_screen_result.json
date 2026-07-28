@@ -1,0 +1,58 @@
+{
+  "candidate": "Little Rock/Tyrone USNR cover test plots",
+  "location": "Grant County, New Mexico",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "official_as_built_report_available": true,
+    "annual_monitoring_reports_through_2020_available": true,
+    "total_test_plot_area_acres": 2.0,
+    "treatment_count": 4,
+    "approximate_area_per_treatment_acres": 0.5
+  },
+  "measured_cover_evidence": {
+    "measurement_method": "five test pits distributed across the test plot area",
+    "minimum_requirement_inches": 36,
+    "measured_range_inches": [38, 45],
+    "separate_depth_treatments_constructed": false,
+    "treatment_variables": [
+      "conventional versus experimental seed mix",
+      "mulch applied before versus after seeding"
+    ]
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": false,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period_for_exact_zones": false
+  },
+  "fatal_blocker": "The four approximately half-acre treatments were designed to compare seed mixes and mulch timing, not cover depth. The as-built report states that all five thickness test pits exceeded the same 36-inch minimum and measured 38 to 45 inches. Those scattered measurements do not define two exact shallow and deep polygons. Each treatment is also too small and slope-dominated to retain an independent 30-40 m clean interior after exclusions.",
+  "key_evidence": [
+    "The total test plot is approximately two acres and contains four approximately half-acre treatments.",
+    "The treatment variables are seed mix and timing of mulching.",
+    "Final surveyed slope lengths are approximately 150 to 180 feet with 3:1 to 4:1 gradients.",
+    "Five test pits measured cover thicknesses ranging from 38 to 45 inches; all exceeded one common 36-inch requirement.",
+    "The public reports do not assign different measured cover depths to the four treatment polygons.",
+    "The 2020 report describes the soil surfaces as stable, but stability cannot rescue the missing depth contrast and undersized treatment geometry."
+  ],
+  "sources": {
+    "2017_as_built_report": "12380014_USNR_Test_Plot_As-Built_Rpt_F_20170308.pdf",
+    "2018_annual_report": "20180430-100_Tyrone_USNR_Annual_Report_2.pdf",
+    "2019_annual_report": "12380014-R-Rev0-USNR_AnnRpt_2018-20190425.pdf",
+    "2020_annual_report": "19122576-002-R-Rev0-USNR_AnnRpt_2020_04282021_unlocked.pdf",
+    "temporary_pr": 28,
+    "workflow_run": 30363840971,
+    "artifact_id": 8689955206
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for full-scale vegetated zones intentionally constructed at different measured depths, with coordinate-tied polygons, numerical uncertainty, and at least 30-40 m clean interiors."
+}
