@@ -1,0 +1,46 @@
+{
+  "candidate": "Syncrude Oil Sands Soil Reconstruction Project",
+  "location": "Mildred Lake mine site, Alberta, Canada",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "total_test_pad_area_hectares": 7,
+    "paired_nominal_depths_cm": [20, 40],
+    "soil_mixture_count": 9,
+    "typical_plot_dimensions_m": [22, 44],
+    "minimum_required_clean_width_m": 30,
+    "size_gate_passed": false
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": "not_evaluated_after_size_failure",
+    "matching_upper_soil_and_vegetation": "not_evaluated_after_size_failure",
+    "numerical_depth_uncertainty": "not_evaluated_after_size_failure",
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period_for_exact_zones": "not_evaluated_after_size_failure"
+  },
+  "fatal_blocker": "The primary report's Typical Plot Configuration drawing shows each plot as approximately 22 m by 44 m. The 22 m narrow dimension is below the locked requirement for a 30-40 m clean interior even before plot edges, planting rows, sampling areas and monitoring infrastructure are excluded. The candidate therefore cannot support two independent clean radar footprints and was stopped at the cheap size gate.",
+  "key_evidence": [
+    "The overall field program occupied an approximately seven-hectare tailings-sand pad.",
+    "Nine soil mixtures were each tested at nominal reconstructed depths of 20 cm and 40 cm.",
+    "The recovered primary report contains a Typical Plot Configuration drawing labelled 22 m wide by 44 m long.",
+    "The plot drawing includes internal planting and sampling subdivisions, further reducing any usable homogeneous interior.",
+    "No deeper measured-depth or Sentinel-1 stability review was performed after the fatal width failure."
+  ],
+  "sources": {
+    "primary_report": "HBT AGRA Limited, Oil Sands Soil Reconstruction Project Five Year Summary, 1992",
+    "legacy_repository_item_uuid": "97623d12-9b03-4765-ad4f-ccb6945c0b9b",
+    "temporary_pr": 32,
+    "workflow_run": 30367952520,
+    "artifact_id": 8691608148
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search only with plots or closure zones that remain at least 30-40 m wide after all exclusions."
+}
