@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/recover_slaps_cap_depth_records.py"
+      - "scripts/recover_slaps_cap_depth_records_fast.py"
       - ".github/workflows/slaps-cap-depth-recovery.yml"
   workflow_dispatch:
 
@@ -14,7 +15,7 @@ permissions:
 jobs:
   recover-records:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,14 +25,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y poppler-utils
-          python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Recover official SLAPS records
-        run: python scripts/recover_slaps_cap_depth_records.py
+          python -m pip install --disable-pip-version-check requests
+      - name: Recover focused official SLAPS records
+        run: python scripts/recover_slaps_cap_depth_records_fast.py
       - name: Upload evidence package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: slaps-cap-depth-records
-          path: artifacts/slaps_cap_depth_records/
+          name: slaps-cap-depth-records-fast
+          path: artifacts/slaps_cap_depth_records_fast/
           if-no-files-found: warn
           retention-days: 7
