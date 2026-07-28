@@ -1,0 +1,57 @@
+{
+  "candidate": "Aurora Soil Capping Study",
+  "location": "Syncrude Aurora North Mine, Alberta, Canada",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "total_site_area_hectares": 36,
+    "cell_count": 36,
+    "cell_area_each_hectares": 1.0,
+    "treatment_count": 12,
+    "replicates_per_treatment": 3,
+    "construction_period": "2011-2012",
+    "public_coordinates_available": true,
+    "public_2017_construction_report_retrievable": false
+  },
+  "treatment_design": {
+    "surface_cover_depths_cm": [10, 20, 30],
+    "surface_cover_materials": ["peat-mineral mix", "forest-floor mineral mix"],
+    "additional_variables": [
+      "subsoil material type",
+      "subsoil layer arrangement",
+      "tree species and planting density",
+      "fertilizer treatment"
+    ]
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": false,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": "likely_by_size_but_not_evaluable_from_public_measured_geometry",
+    "stable_sentinel1_period_for_exact_zones": "not_proven"
+  },
+  "fatal_blocker": "The public research literature identifies 10, 20 and 30 cm treatment depths and a randomized layout of thirty-six one-hectare cells, but repeatedly relies on a private 2017 O'Kane Consultants monitoring/construction report for cover-design details. That report was not found in a publicly retrievable form. The accessible papers do not publish final measured as-built thickness values, numerical thickness uncertainty, construction survey accuracy, or a coordinate table/GIS deliverable linking exact measured depths to cell polygons. The treatment matrix also changes coversoil material, subsoil configuration and planting treatments, so a depth-only matched pair is not established from the public record.",
+  "key_evidence": [
+    "The study comprises twelve alternate one-hectare cover designs replicated three times for thirty-six cells.",
+    "Accessible papers describe 10, 20 and 30 cm coversoil depths using peat-mineral or forest-floor mineral materials.",
+    "The randomized cells also vary underlying subsoil material and arrangement and were planted with multiple tree species and densities.",
+    "The public HESS paper cites OKC 2017 for treatment layout and construction/performance details.",
+    "No publicly retrievable copy of the cited 2017 OKC report or equivalent final construction certification was found.",
+    "No accessible public document publishes final measured thicknesses, numerical depth uncertainty or survey-controlled measured-depth polygons."
+  ],
+  "sources": {
+    "hess_2020": "Characterizing uncertainty in the hydraulic parameters of oil sands mine reclamation covers and its influence on water balance predictions",
+    "canadian_journal_soil_science_2017": "Carbon, nitrogen and phosphorus release from peat and forest floor-based cover soils used during oil sands reclamation",
+    "okc_2017_cited_report": "Aurora Soil Capping Study Five Year Performance Monitoring Report November 2012 to September 2017"
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a publicly retrievable final construction survey that assigns measured depths and uncertainty to large georeferenced vegetated polygons."
+}
