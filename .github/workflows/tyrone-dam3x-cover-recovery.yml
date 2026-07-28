@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/recover_tyrone_dam3x_cover_records.py"
+      - "scripts/recover_tyrone_dam3x_stability_records.py"
       - ".github/workflows/tyrone-dam3x-cover-recovery.yml"
   workflow_dispatch:
 
@@ -14,7 +15,7 @@ permissions:
 jobs:
   recover-records:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,13 +26,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y poppler-utils
           python -m pip install --disable-pip-version-check requests
-      - name: Recover official Tyrone records
-        run: python scripts/recover_tyrone_dam3x_cover_records.py
+      - name: Recover Tyrone coordinate and stability records
+        run: python scripts/recover_tyrone_dam3x_stability_records.py
       - name: Upload evidence package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tyrone-dam3x-cover-records
-          path: artifacts/tyrone_dam3x_cover_records/
+          name: tyrone-dam3x-stability-records
+          path: artifacts/tyrone_dam3x_stability_records/
           if-no-files-found: warn
           retention-days: 7
