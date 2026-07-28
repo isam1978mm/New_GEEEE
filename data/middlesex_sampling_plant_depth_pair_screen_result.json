@@ -1,0 +1,48 @@
+{
+  "candidate": "Middlesex Sampling Plant OU1 soils remediation",
+  "location": "Middlesex, New Jersey",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "site_area_acres": 9.6,
+    "soil_remediation_completed": true,
+    "final_prar_publicly_listed": true,
+    "final_prar_retrievable_in_recovery": false,
+    "site_transferred_for_redevelopment_in_2024": true
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": "not_proven",
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": "not_proven",
+    "stable_sentinel1_period_for_exact_zones": false
+  },
+  "fatal_blocker": "The publicly accessible official evidence describes final-status radiological surveys for twenty-two onsite survey units and one offsite unit before backfilling, but it does not publish exact measured excavation depths, a second exact depth condition, coordinate-tied depth polygons, or numerical depth uncertainty. The official Post-Remedial Action Report is listed by USACE but both direct recovery attempts returned HTTP 403 HTML responses rather than the PDF. The candidate therefore cannot supply a public measured numerical-depth reference under the locked rules.",
+  "key_evidence": [
+    "The site covers approximately 9.6 acres.",
+    "The 2006-2008 cleanup removed contaminated soil and debris and included final-status surveys before backfilling.",
+    "The accessible technical paper describes twenty-two onsite and one offsite radiological survey units; those surveys verify cleanup criteria rather than final excavation depth.",
+    "No accessible public table or map assigns exact measured excavation depths to two broad restored zones.",
+    "No accessible public numerical horizontal, vertical, or depth uncertainty was found for proposed calibration zones.",
+    "USACE returned HTTP 403 HTML responses for both the versioned and unversioned official PRAR URLs during isolated recovery.",
+    "The property was transferred to the Borough of Middlesex in 2024 for planned public-works redevelopment, so later surface stability cannot be assumed."
+  ],
+  "sources": {
+    "official_usace_site_page": "Middlesex Sampling Plant project page",
+    "official_epa_cleanup_profile": "Middlesex Sampling Plant cleanup activities profile",
+    "technical_paper": "Use of and Lessons Learned in Using a Surrogate Radionuclide Approach in the Remediation of Radiologically Impacted Soils and Sediments at the Middlesex Sampling Plant Site",
+    "temporary_pr": 27,
+    "workflow_runs": [30363239827, 30363424528],
+    "transport_artifact_id": 8689750133
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a completed vegetated closure or reclamation package with publicly retrievable exact measured depths, coordinate-tied polygons, numerical uncertainty, and a stable Sentinel-1 period."
+}
