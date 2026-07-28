@@ -1,0 +1,37 @@
+name: Recover Tyrone Dam 3X decisive records
+
+on:
+  push:
+    branches:
+      - option3/tyrone-dam3x-decisive-records
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Install PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --upgrade pip
+          python -m pip install requests
+
+      - name: Recover and inspect official records
+        run: python scripts/recover_tyrone_dam3x_decisive_records.py
+
+      - name: Upload bounded evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-dam3x-decisive-records
+          path: artifacts/tyrone_dam3x_decisive_records
+          if-no-files-found: warn
+          retention-days: 7
