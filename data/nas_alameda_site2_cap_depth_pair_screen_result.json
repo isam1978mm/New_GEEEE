@@ -1,0 +1,56 @@
+{
+  "candidate": "Former NAS Alameda Installation Restoration Site 2",
+  "location": "Alameda Point, Alameda, California",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-27",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_vegetated_cover": true,
+    "approximate_cover_acres": 79,
+    "final_measured_grid_available": true,
+    "official_reported_verification_locations": 336,
+    "grid_spacing_ft": 100,
+    "stable_sentinel1_period_plausible": true
+  },
+  "documentary_gates": {
+    "two_large_official_measured_depth_polygons": false,
+    "coordinate_tied_final_measured_depths": true,
+    "matching_upper_soil_and_vegetation": true,
+    "numerical_project_specific_survey_uncertainty": false,
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period_confirmed": false
+  },
+  "measured_depth_summary": {
+    "required_minimum_ft": 2.0,
+    "reported_average_ft": 2.2,
+    "reported_all_points_at_or_above_minimum": true,
+    "possible_deep_cluster_ft": "2.5-2.8",
+    "possible_shallow_clusters_ft": "2.0-2.1"
+  },
+  "fatal_blocker": "The completion report publishes a systematic 100-foot grid of coordinate-tied point measurements, but it does not certify shallow and deep polygons. Converting clusters of point values into area-wide depth zones would require interpolation or invented boundaries, which the approved plan forbids. The strongest deep cluster also overlaps the eastern gas-vent and covered-inlet infrastructure corridor, so a clean 30-40 m interior cannot be established conservatively. The recovered report omits Appendix J survey data and Appendix K certification, and no explicit project-specific numerical uncertainty for the 336-point thickness survey was found.",
+  "key_evidence": [
+    "The final cover is approximately 79 acres and uses one common profile: 18 inches of general cover soil plus 6 inches of vegetative soil.",
+    "The same DIAM quarry soil was used throughout the final cover, with compaction as the only stated variation between the general and vegetative layers.",
+    "Plywood verification monuments were installed immediately above the animal-intrusion barrier on a 100-foot by 100-foot grid.",
+    "The subgrade and final cover elevations were surveyed at each monument and the report provides northing, easting, before/after elevations, settlement, final cover elevation and calculated thickness.",
+    "The report states that every verification location was at least 2.0 feet and that the average measured thickness was 2.2 feet.",
+    "A contiguous 5-by-3 point cluster contains values of approximately 2.5 to 2.8 feet, but the mapped cluster intersects the eastern gas-vent/inlet corridor.",
+    "Several 2.0-to-2.1-foot point clusters exist, but the report does not establish official zone boundaries around them.",
+    "Appendix J, containing the underlying survey data, and Appendix K, containing the Engineer of Record certification, were not included in the recovered public report."
+  ],
+  "sources": {
+    "official_epa_document_id": 100035046,
+    "report_dcn": "RMAC-0809-0009-0009",
+    "temporary_pr": 22,
+    "workflow_run": 30319470673,
+    "artifact_id": 8673434920
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a closure package that publishes official measured thickness zones or cell polygons, not only point measurements, and that states numerical survey uncertainty."
+}
