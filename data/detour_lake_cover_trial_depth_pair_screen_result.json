@@ -1,0 +1,50 @@
+{
+  "candidate": "Detour Lake Mine Test Cover Trial",
+  "location": "Northeastern Ontario, Canada",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "mine_scale_trial": true,
+    "total_trial_area_hectares": 10,
+    "plot_count": 13,
+    "construction_period": "2018-2019",
+    "monitoring_through": 2024,
+    "intended_cover_depths_m": [0.0, 0.3, 0.7, 1.0]
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": false,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": "not_proven",
+    "stable_sentinel1_period_for_exact_zones": false
+  },
+  "fatal_blocker": "The accessible primary monitoring record identifies nominal design cover thicknesses of 0, 0.3, 0.7 and 1.0 m, but it does not publish final measured as-built thickness values, numerical construction or survey uncertainty, or coordinate-controlled plot polygons. A thickness-only comparison is not established because plot conditions also vary in slope angle, aspect, peat content, surface grading, ripping and revegetation. The as-constructed peat content differed materially from design and varied across the trial. Recent test-pit excavation and re-covering produced barren areas and excavator tracks across portions of the plots, while rills, gullies, erosion pavement and small sinkholes affect other areas. The inaccessible 2022 construction paper could not be used to fill these gaps because both public UBC download endpoints returned HTML rather than the PDF.",
+  "key_evidence": [
+    "The trial covers approximately 10 hectares and contains twelve bench-slope plots plus one plateau plot.",
+    "The published treatment design includes cover thicknesses of 0, 0.3, 0.7 and 1.0 m.",
+    "Most plots use 0.7 m cover; only one 0.3 m plot and one 1.0 m plot are described in the five-year review.",
+    "The plots also vary by slope, aspect, peat-mineral composition, surface grading, ripping and revegetation prescription.",
+    "The as-constructed cover had less peat than specified on slopes and highly variable peat content on the plateau.",
+    "Waste rock was exposed in gullies on the 0.3 m plot, while the 1.0 m plot did not show improved erosion performance relative to 0.7 m plots.",
+    "The 2024 image and caption identify large barren areas and excavator tracks caused by recent test-pit excavation and re-covering.",
+    "The accessible record does not provide final measured thickness tables, numerical depth uncertainty, surveyed corner coordinates or a georeferenced plot deliverable.",
+    "The 2022 design-and-construction PDF could not be recovered from either public UBC endpoint because both returned a 200-status HTML blocking page instead of PDF bytes."
+  ],
+  "sources": {
+    "2022_design_construction_record": "Design and Construction of a Test Cover Trial at Detour Lake Mine",
+    "2025_five_year_review": "Five-year review of Detour Lake Mine Test Cover Trial",
+    "temporary_pr": 29,
+    "workflow_run": 30364475026,
+    "artifact_id": 8690181472
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a completed full-scale vegetated cover project that publishes final measured as-built thicknesses, georeferenced polygons, numerical uncertainty, matched surface construction and a repair-free Sentinel-1 window."
+}
