@@ -1,0 +1,68 @@
+{
+  "strategy": "Option 1 — Global Depth",
+  "batch": 2,
+  "screen_date": "2026-07-28",
+  "stage": "cheap_screen_complete",
+  "decision": "ONE_CANDIDATE_ADVANCED",
+  "candidate_count": 5,
+  "advanced_candidate_count": 1,
+  "advanced_candidate": "Lowry Landfill",
+  "candidates": [
+    {
+      "site": "Rocky Flats Original Landfill",
+      "state": "Colorado",
+      "decision": "STOP",
+      "fatal_blocker": "Major stabilization and drainage reconstruction during the Sentinel-1 era",
+      "earth_engine_query_executed": false
+    },
+    {
+      "site": "Lowry Landfill",
+      "state": "Colorado",
+      "decision": "ADVANCE_TO_DECISIVE_DOCUMENT_REVIEW",
+      "positive_evidence": [
+        "approximately 200-acre covered landfill",
+        "publicly described cover range of at least 4 feet to as much as 12 feet in some places",
+        "29-acre north face received 2 additional feet in 1999 to reach a minimum 4-foot cover",
+        "construction complete and long-term operations and maintenance"
+      ],
+      "unresolved": [
+        "two exact final measured depth polygons",
+        "numerical uncertainty",
+        "matching surface assembly",
+        "stable exact observation window"
+      ],
+      "earth_engine_query_executed": false
+    },
+    {
+      "site": "Modern Sanitation Landfill",
+      "state": "Pennsylvania",
+      "decision": "STOP",
+      "fatal_blocker": "Plateau and side slopes are parts of one cap system, not two measured depth conditions",
+      "earth_engine_query_executed": false
+    },
+    {
+      "site": "Shpack Landfill",
+      "state": "Massachusetts",
+      "decision": "STOP",
+      "fatal_blocker": "Excavation, clean backfill, and wetland/upland restoration rather than a retained two-depth cover system",
+      "earth_engine_query_executed": false
+    },
+    {
+      "site": "Fernald On-Site Disposal Facility",
+      "state": "Ohio",
+      "decision": "STOP",
+      "fatal_blocker": "One multilayer prairie-covered disposal-cell cap and no second measured condition or confirmed control",
+      "earth_engine_query_executed": false
+    }
+  ],
+  "workflow_state": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "next_action": "Perform a bounded Lowry Landfill review for exact final measured depth polygons, numerical uncertainty, matching radar-facing surfaces, and a stable observation period."
+}
