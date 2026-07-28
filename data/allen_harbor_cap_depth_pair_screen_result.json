@@ -1,0 +1,56 @@
+{
+  "candidate": "Allen Harbor Landfill Site 09",
+  "location": "Former NCBC Davisville, North Kingstown, Rhode Island",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-27",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_vegetated_cover": true,
+    "approximate_landfill_acres": 15,
+    "two_mapped_cover_types": true,
+    "construction_completed": "1999-08",
+    "long_term_monitoring_available": true,
+    "stable_sentinel1_period_plausible": true
+  },
+  "documentary_gates": {
+    "two_large_final_measured_as_built_depth_zones": false,
+    "coordinate_tied_depth_polygons": false,
+    "matching_radar_facing_soil_and_vegetation": false,
+    "numerical_depth_or_survey_uncertainty": false,
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period": true
+  },
+  "fatal_blocker": "The official records describe a multimedia cap above the 14-foot mean-sea-level contour and a soil cap below that elevation, but the reported layer thicknesses are design/construction descriptions rather than final measured as-built depth values tied to certified polygons. The publicly indexed EPA collections do not contain the cited 1998 Final Design Analysis Report or the June 2000 Final Remedial Action Report, and no numerical construction-survey uncertainty was found. The two cap types also use different underlying assemblies, while equivalence of their complete radar-facing near-surface construction was not proven.",
+  "key_evidence": [
+    "The selected remedy placed a multimedia cap above the 100-year storm elevation of 14 feet MSL and a soil cap below 14 feet MSL.",
+    "The multimedia cap includes multiple soil and geosynthetic layers; its design description includes an 18-inch barrier-protection layer and a 6-inch vegetative-support layer above the impermeable components.",
+    "The soil-cap description states that the older cover was regraded and supplemented with 18 inches of common borrow fill plus 6 inches of vegetation-supporting soil.",
+    "Both surfaces were graded and vegetated, but the public record does not certify equal upper soil source, compaction or as-built thickness between the two cap systems.",
+    "Construction was completed in August 1999 and later inspections and settlement surveys support long-term whole-site integrity.",
+    "The public five-year reviews cite the March 1998 Final Design Analysis Report and June 2000 Final Remedial Action Report, but neither decisive report appears in the official EPA key, public, five-year-review or decision-document collections recovered for this screen.",
+    "No final measured thickness table, certified measured-depth polygons or project-specific numerical survey uncertainty was recovered."
+  ],
+  "sources": {
+    "epa_site_id": "0101430",
+    "epa_id": "RI6170022036",
+    "record_of_decision_document_ids": [51711, 14818],
+    "explanation_of_significant_differences_document_id": 200665,
+    "first_five_year_review_document_id": 42867,
+    "second_five_year_review_document_id": 456712,
+    "fifth_review_protectiveness_letter_document_id": 100024332,
+    "epa_collection_ids": [70121, 31799, 32764, 32765],
+    "temporary_pr": 23,
+    "focused_workflow_run": 30320624553,
+    "focused_artifact_id": 8673841767,
+    "inventory_workflow_run": 30320956849,
+    "inventory_artifact_id": 8673964476
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a closure package that publishes two named, broad final measured as-built depth polygons under one common vegetated upper construction and states numerical survey uncertainty."
+}
