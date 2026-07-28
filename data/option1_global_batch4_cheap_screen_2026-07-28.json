@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "option": 1,
+  "batch": 4,
+  "date": "2026-07-28",
+  "decision": "one_candidate_advanced_to_decisive_review",
+  "candidate_count": 5,
+  "advanced_candidate": "mather_air_force_base_landfill_ou",
+  "candidates": [
+    {
+      "candidate": "Coker's Sanitation Service Landfills",
+      "state": "Delaware",
+      "screen_result": "stopped",
+      "fatal_blocker": "same multi-layer cap remedy on both landfills; no two different final measured depth polygons or confirmed control"
+    },
+    {
+      "candidate": "Limestone Road",
+      "state": "Maryland",
+      "screen_result": "stopped",
+      "fatal_blocker": "no two distinct final measured depth conditions, numerical uncertainty, or confirmed control; repair history complicates stability"
+    },
+    {
+      "candidate": "Newport Dump",
+      "state": "Kentucky",
+      "screen_result": "stopped",
+      "fatal_blocker": "one clay cap condition only"
+    },
+    {
+      "candidate": "Sinclair Refinery",
+      "state": "New York",
+      "screen_result": "stopped",
+      "fatal_blocker": "wastes consolidated into one capped area; no independent second measured condition or control"
+    },
+    {
+      "candidate": "Mather Air Force Base Landfill OU",
+      "state": "California",
+      "screen_result": "advanced_to_decisive_review",
+      "reason": "two capped landfill areas and a specifically referenced Final Closure Certification Report"
+    }
+  ],
+  "earth_engine_query_executed": false,
+  "usable_positive_depth_site_groups": 0,
+  "usable_confirmed_negative_site_groups": 0,
+  "usable_calibration_rows": 0,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}

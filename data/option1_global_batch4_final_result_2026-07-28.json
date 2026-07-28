@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "option": 1,
+  "batch": 4,
+  "date": "2026-07-28",
+  "decision": "not_good_to_go",
+  "candidate_count": 5,
+  "decisive_candidate": "mather_air_force_base_landfill_ou",
+  "passed_documentary_gate": 0,
+  "mather_result": {
+    "two_capped_landfills": true,
+    "final_closure_certification_report_referenced": true,
+    "two_final_measured_depth_polygons_published": false,
+    "coordinate_tied_measured_depths_published": false,
+    "numerical_uncertainty_published": false,
+    "confirmed_control": false,
+    "matching_radar_facing_surface_proven": false,
+    "fatal_blocker": "public record does not expose two final measured cap-depth polygons with numerical uncertainty; Site 4 is a consolidation landfill with added flood-control infrastructure"
+  },
+  "reopen_only_if": [
+    "1997 Final Closure Certification Report or equivalent as-built package is recovered",
+    "separate Site 3 and Site 4 final measured depth polygons are present",
+    "coordinate-tied geometry is present",
+    "numerical depth or survey uncertainty is present",
+    "matching radar-facing surface construction is proven",
+    "30-40 m clean interiors remain after exclusions",
+    "stable Sentinel-1 period is confirmed"
+  ],
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "usable_positive_depth_site_groups": 0,
+  "usable_confirmed_negative_site_groups": 0,
+  "usable_calibration_rows": 0,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
