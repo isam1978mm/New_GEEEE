@@ -1,0 +1,111 @@
+name: Aurora cover-study recovery
+
+on:
+  push:
+    branches:
+      - agent/aurora-cover-study-recovery-20260728
+    paths:
+      - .github/workflows/aurora-cover-study-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/aurora-cover-study-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Download public Aurora records
+        shell: bash
+        run: |
+          set -u
+          mkdir -p recovered/renders recovered/images
+
+          try_pdf() {
+            local output="$1"
+            shift
+            rm -f "$output"
+            for url in "$@"; do
+              echo "Trying ${url}"
+              if curl --fail --location --retry 4 --retry-delay 3 \
+                  --connect-timeout 30 --max-time 300 \
+                  --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
+                  --header "Accept: application/pdf,*/*;q=0.8" \
+                  --output "$output" "$url"; then
+                if [ "$(head -c 4 "$output" 2>/dev/null)" = "%PDF" ] && \
+                   [ "$(stat -c%s "$output")" -gt 10000 ]; then
+                  echo "Recovered ${output}"
+                  return 0
+                fi
+                echo "Response was not a usable PDF"
+                file "$output" || true
+                head -c 300 "$output" || true
+              fi
+              rm -f "$output"
+            done
+            return 1
+          }
+
+          try_pdf recovered/aurora_korbas_thesis_2013.pdf \
+            "https://harvest.usask.ca/bitstreams/d6772ca4-6116-42ff-a89d-2a14bd2edb19/download" \
+            "https://www.collectionscanada.gc.ca/obj/thesescanada/vol2/SSU/TC-SSU-2013091346.pdf" \
+            "https://harvest.usask.ca/bitstream/handle/10388/ETD-2013-09-1346/KORBAS-THESIS.pdf?sequence=4&isAllowed=y" || true
+
+          try_pdf recovered/aurora_hess_2020.pdf \
+            "https://hess.copernicus.org/articles/24/735/2020/hess-24-735-2020.pdf" \
+            "https://www.hydrol-earth-syst-sci.net/24/735/2020/hess-24-735-2020.pdf" || true
+
+          try_pdf recovered/aurora_rosso_thesis_2016.pdf \
+            "https://harvest.usask.ca/server/api/core/items/96b1b882-5ef6-48c2-bb87-f64f77c42497" || true
+
+          find recovered -maxdepth 1 -type f -printf '%f\t%s bytes\n' | sort
+          test -n "$(find recovered -maxdepth 1 -type f -name '*.pdf' -print -quit)"
+
+      - name: Extract text, figures, and decisive passages
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          : > recovered/DECISIVE_PASSAGES.txt
+
+          for pdf in recovered/*.pdf; do
+            base="${pdf%.pdf}"
+            pdftotext -layout "$pdf" "${base}.txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,25p'
+              echo
+            } >> recovered/INVENTORY.txt
+
+            grep -inE -C 5 'TRT[[:space:]]*10|TRT[[:space:]]*11|Treatment[[:space:]]*10|Treatment[[:space:]]*11|as-built|placement depth|constructed|survey|cell no\.|one hectare|1 ha|subsoil|peat|uncertainty|standard deviation|coordinate' "${base}.txt" \
+              >> recovered/DECISIVE_PASSAGES.txt || true
+          done
+
+          if [ -f recovered/aurora_hess_2020.pdf ]; then
+            pdftoppm -f 3 -singlefile -png -r 220 recovered/aurora_hess_2020.pdf recovered/renders/hess_page_3
+            pdfimages -f 3 -l 3 -png recovered/aurora_hess_2020.pdf recovered/images/hess_p3 || true
+          fi
+
+          find recovered -maxdepth 3 -type f -printf '%p\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Upload recovered Aurora records
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurora-cover-study-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
