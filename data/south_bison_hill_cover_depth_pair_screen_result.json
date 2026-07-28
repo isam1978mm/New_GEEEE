@@ -1,0 +1,65 @@
+{
+  "candidate": "South Bison Hill prototype reclamation covers",
+  "location": "Syncrude Mildred Lake Mine, Alberta, Canada",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "construction_year": 1999,
+    "plot_count": 3,
+    "plot_area_each_hectares": 1.0,
+    "approximate_plot_dimensions_m": [50, 200],
+    "north_facing_slope": true,
+    "slope_ratio_horizontal_to_vertical": "5:1",
+    "vegetated": true,
+    "long_term_monitoring": true
+  },
+  "cover_prescriptions": {
+    "D1_50_cm": {
+      "surface_peat_glacial_mix_cm": 20,
+      "secondary_subsoil_cm": 30,
+      "nominal_total_cm": 50
+    },
+    "D2_35_cm": {
+      "surface_topsoil_cm": 15,
+      "secondary_subsoil_cm": 20,
+      "nominal_total_cm": 35
+    },
+    "D3_100_cm": {
+      "surface_peat_glacial_mix_cm": 20,
+      "secondary_subsoil_cm": 80,
+      "nominal_total_cm": 100
+    }
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": "partially_but_not_cleanly_proven",
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": "not_proven",
+    "stable_sentinel1_period_for_exact_zones": "not_proven"
+  },
+  "fatal_blocker": "The public primary papers and Syncrude synthesis describe prescribed or nominal cover configurations of 35, 50 and 100 cm, but do not publish final measured as-built thickness values, numerical thickness uncertainty, survey accuracy, surveyed plot-corner coordinates, or a georeferenced polygon deliverable. The approximately 50 m-wide plots contain extensive monitoring and drainage infrastructure, so a 30-40 m clean interior cannot be established from public geometry after exclusions. The D3 surface layer also contained unintended secondary-material inclusions and initially supported sparser vegetation, weakening the matched-surface assumption.",
+  "key_evidence": [
+    "Three adjacent one-hectare covers were constructed on a north-facing approximately 5:1 slope in 1999.",
+    "The 50 cm and 100 cm prescriptions both use a 20 cm peat/glacial surface layer over different thicknesses of secondary subsoil.",
+    "The public literature calls these reclamation prescriptions or cover depths and does not publish a final as-built thickness survey.",
+    "No public numerical depth tolerance, horizontal or vertical survey accuracy, or exact plot-corner coordinate table was found.",
+    "Each plot includes midslope instrumentation, neutron access tubes at top/middle/toe positions, interflow cutoff and collection systems, runoff swales and weirs.",
+    "The D3 peat surface layer contained unintended secondary-material inclusions and vegetation was initially less established than on the thinner covers.",
+    "Later research confirms long-term monitoring and forest development, but does not tie a repair-free Sentinel-1 window to exact public calibration polygons."
+  ],
+  "sources": {
+    "syncrude_2013_synthesis": "South Bison Hill Soil Capping Research Synthesis",
+    "meier_barbour_2002": "Monitoring of Cover and Watershed Performance for Soil Covers Placed Over Saline-Sodic Shale Overburden from Oilsands Mining",
+    "kessler_et_al_2010": "Salinization of soil over saline-sodic overburden from the oil sands in Alberta"
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for large vegetated covers whose published construction certification includes final measured total thickness, numerical uncertainty and georeferenced polygons."
+}
