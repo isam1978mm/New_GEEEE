@@ -1,0 +1,64 @@
+{
+  "candidate": "1990 Syncrude Oil Sands Tailings Capping Study",
+  "location": "Mildred Lake mine site, Alberta, Canada",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "construction_year": 1990,
+    "treatment_count": 4,
+    "replicate_plots_per_treatment": 3,
+    "total_plot_count": 12,
+    "plot_dimensions_m": [60, 60],
+    "same_fair_source_depth_treatments_cm": [30, 50, 70],
+    "same_tree_and_shrub_species_on_all_plots": true
+  },
+  "measured_depth_evidence": {
+    "measurement_method": "band-auger measurements to the tailings-sand base, adjusted for Rome-plow ridge height",
+    "measurements_per_plot": 50,
+    "fair_source_mean_thickness_cm": {
+      "70_cm_target": 80,
+      "50_cm_target": 58,
+      "30_cm_target": 39
+    },
+    "poor_source_70_cm_mean_thickness_cm": 79,
+    "treatment_means_statistically_different": true,
+    "numerical_depth_uncertainty_published": false,
+    "raw_point_measurements_published": false
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": true,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": false,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": "possible_by_dimensions_but_not_geographically_locatable",
+    "stable_sentinel1_period_for_exact_zones": false
+  },
+  "fatal_blocker": "The primary report provides unusually strong measured depth evidence across large replicated plots, but it does not publish numerical uncertainty for the depth means, raw measurement coordinates, surveyed geographic plot corners, or a georeferenced GIS/CAD deliverable. The report also states that the capping material was heterogeneous and that large areas of plots had little or no peat, producing strong differences in herbaceous cover. Plot locations are shown only in a local engineering layout adjacent to Cell 5, and public follow-up was found only through 1996. The exact plots therefore cannot be located or certified as unchanged during the Sentinel-1 period.",
+  "key_evidence": [
+    "Each treatment was replicated three times in plots measuring approximately 60 m by 60 m.",
+    "The four species subplots occupied approximately 50 m by 50 m within each treatment plot, with about 5 m buffers.",
+    "Fifty cap-thickness measurements were collected per plot near permanently marked seedlings.",
+    "The fair-source treatment means were approximately 80 cm, 58 cm and 39 cm for the 70 cm, 50 cm and 30 cm targets.",
+    "The report states that the fair-source treatment means were statistically different, but does not publish a numerical confidence interval, standard error, standard deviation or raw point table for cap thickness.",
+    "The engineering layout gives local block dimensions but no geographic coordinates or survey-control table.",
+    "The construction discussion states that peat and mineral material were not uniformly mixed and that large areas of plots had little or no peat.",
+    "One plot had construction ponding, one plot developed a small gully, and the surrounding exposed tailings were capped after the first monitoring year.",
+    "A secondary review reports vegetation measurement again in 1996, but no public record was found proving that the exact plots remained identifiable and unchanged after Sentinel-1 began in 2014."
+  ],
+  "sources": {
+    "primary_report": "HBT AGRA Limited, Oil Sands Tailings Capping Study, 1994",
+    "repository_item_uuid": "6f0a285b-9bab-443c-833f-9afb54588aae",
+    "temporary_pr": 31,
+    "workflow_runs": [30366891572, 30367136391],
+    "artifact_id": 8691273127
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a completed large vegetated depth experiment whose public record adds numerical depth uncertainty, surveyed geographic polygons, and a documented unchanged Sentinel-1 period to comparably strong measured thickness evidence."
+}
