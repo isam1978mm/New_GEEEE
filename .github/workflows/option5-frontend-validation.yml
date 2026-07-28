@@ -1,5 +1,6 @@
 name: Option 5 frontend validation
 
+# Build source and keep the checked-in SPA assets synchronized.
 on:
   pull_request:
     branches: [main]
