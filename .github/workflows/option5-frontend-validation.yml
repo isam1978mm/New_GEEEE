@@ -1,0 +1,56 @@
+name: Option 5 frontend validation
+
+# Build source and keep the checked-in SPA assets synchronized.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend-v2/src/**"
+      - "frontend-v2/package.json"
+      - "frontend-v2/package-lock.json"
+      - "tests/unit/test_option5_anomaly_ui_contract.py"
+      - ".github/workflows/option5-frontend-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend-v2/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend-v2
+        run: npm install --no-audit --no-fund
+      - name: Build production SPA
+        working-directory: frontend-v2
+        run: npm run build
+      - name: Upload generated SPA for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: option5-frontend-dist
+          path: frontend-v2/dist/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Commit validated SPA assets
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        run: |
+          git add -A frontend-v2/dist
+          if git diff --cached --quiet; then
+            echo "Generated SPA is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build: refresh Option 5 frontend assets"
+          git push origin HEAD:${{ github.head_ref }}
