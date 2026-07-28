@@ -1,0 +1,37 @@
+name: Detour Lake cover-trial recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/recover_detour_lake_cover_trial_records.py"
+      - ".github/workflows/detour-lake-cover-trial-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-records:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install recovery dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check requests
+      - name: Recover primary Detour Lake records
+        run: python scripts/recover_detour_lake_cover_trial_records.py
+      - name: Upload evidence package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detour-lake-cover-trial-records
+          path: artifacts/detour_lake_cover_trial_records/
+          if-no-files-found: warn
+          retention-days: 7
