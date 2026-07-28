@@ -1,0 +1,91 @@
+{
+  "strategy": "Option 2 — Ordering Test",
+  "screen_date": "2026-07-28",
+  "decision": "not_good_to_go_for_second_radar_test",
+  "strategy_status": "active_but_blocked",
+  "rma_test_status": "closed_ordering_inconsistent",
+  "second_site_selected": false,
+  "second_earth_engine_query_executed": false,
+  "radar_values_inspected_for_second_site": false,
+  "calibration_row_created": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "numerical_depth_ready": false,
+  "screened_candidates": [
+    {
+      "name": "Aitik",
+      "decision": "reject",
+      "blocker": "No public trial-corner coordinates or map identifying the two exact plateaus."
+    },
+    {
+      "name": "NAS Alameda Site 2",
+      "decision": "reject",
+      "blocker": "The strongest deeper measured band follows drainage and monitoring infrastructure."
+    },
+    {
+      "name": "Mount Morgan",
+      "decision": "reject",
+      "blocker": "Plots are about 30 m wide before required exclusions."
+    },
+    {
+      "name": "Mt Whaleback",
+      "decision": "reject",
+      "blocker": "The 2 m and 4 m plots have unvegetated rough surfaces in an active mine."
+    },
+    {
+      "name": "Century",
+      "decision": "reject",
+      "blocker": "Compared cells use the same total cover thickness."
+    },
+    {
+      "name": "Cannington",
+      "decision": "reject",
+      "blocker": "Cells are too narrow after exclusions and change barrier design rather than thickness alone."
+    },
+    {
+      "name": "Kidston",
+      "decision": "reject",
+      "blocker": "Only one uniform 2 m cover condition exists."
+    },
+    {
+      "name": "Mt Leyshon",
+      "decision": "reject",
+      "blocker": "Variable thickness is not separated into two mapped comparable zones."
+    },
+    {
+      "name": "Cadia",
+      "decision": "reject",
+      "blocker": "The alternative changes the liner system, not thickness alone."
+    },
+    {
+      "name": "Kestrel",
+      "decision": "reject",
+      "blocker": "Covered versus uncovered waste is not a shallow/deep pair."
+    },
+    {
+      "name": "South Bison Hill",
+      "decision": "blocked_near_miss",
+      "blocker": "Exact D1 and D3 strip geometry is not publicly coordinate-tied and clean interiors cannot be drawn without guessing."
+    }
+  ],
+  "strongest_near_miss": {
+    "name": "South Bison Hill",
+    "location": "Syncrude Mildred Lake Mine, Alberta, Canada",
+    "plot_dimensions_m_approximate": [50, 200],
+    "D1_nominal_total_cm": 50,
+    "D3_nominal_total_cm": 100,
+    "shared_prescribed_surface_layer": "20 cm peat/glacial mix",
+    "required_recovery": [
+      "surveyed D1/D2/D3 plot-corner coordinates",
+      "georeferenced GIS, CAD, or survey plan",
+      "2012 field-survey map and appendices referenced by the 2013 synthesis",
+      "later official map identifying post-2014 repairs or disturbances"
+    ],
+    "additional_surface_warning": "D3 contained unintended secondary-material inclusions and initially different vegetation."
+  },
+  "option3_status": {
+    "state": "on_hold",
+    "request_reference": "N000019-070026"
+  },
+  "next_action": "Recover exact South Bison Hill D1/D3 survey geometry or wait for the Tyrone Dam 3X EMNRD response. Do not run a second radar test using guessed geometry."
+}
