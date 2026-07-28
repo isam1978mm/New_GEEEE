@@ -1,0 +1,70 @@
+{
+  "candidate": "Tyrone Mine Dam 3X top-surface cover treatments",
+  "location": "Grant County, New Mexico",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-27",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "full_scale_reclamation_integrated_plots": true,
+    "same_reclaimed_impoundment": true,
+    "vegetated_surface": true,
+    "measured_as_built_depth_pair": true,
+    "plot_5_area_acres": 4.06,
+    "plot_6_area_acres": 4.50,
+    "clean_30_to_40_m_interior_plausible": true
+  },
+  "measured_depths": {
+    "plot_5": {
+      "nominal_depth_ft": 2.0,
+      "measured_values_in": [28, 26, 26, 28, 26],
+      "measured_mean_in": 26.8,
+      "confidence_interval_95_in": [25.8, 27.8]
+    },
+    "plot_6": {
+      "nominal_depth_ft": 3.0,
+      "measured_values_in": [40, 35, 42, 36, 34],
+      "measured_mean_in": 37.4,
+      "confidence_interval_95_in": [33.5, 41.3]
+    }
+  },
+  "documentary_gates": {
+    "two_large_final_measured_as_built_depth_zones": true,
+    "matching_upper_soil_and_vegetation": true,
+    "numerical_depth_uncertainty": true,
+    "clean_30_to_40_m_interior_each": true,
+    "coordinate_tied_geometry": false,
+    "stable_sentinel1_period_for_exact_polygons": false
+  },
+  "fatal_blocker": "The public as-built drawing certifies named treatment polygons, areas, test-pit measurements and as-built topography, but it does not publish a coordinate grid, northing/easting vertices, GIS file or other georeferenced boundary data for Test Plots 5 and 6. The 2020 closure plan and 2021 permit identify the 3X impoundment as reclaimed and partially released from financial assurance, but they do not preserve the exact test-plot boundaries or certify that the proposed clean interiors remained physically unchanged throughout a usable Sentinel-1 period. Georeferencing the 2006 plate by matching contours or current imagery would introduce unsupported positional assumptions.",
+  "key_evidence": [
+    "Test Plot 5 is a 4.06-acre top-surface treatment and Test Plot 6 is a 4.50-acre top-surface treatment within the reclaimed 3X Tailing Impoundment.",
+    "The plots were constructed concurrently with full-scale reclamation using Gila Conglomerate cover material placed in lifts; the upper six inches were selectively handled to meet common material requirements.",
+    "Both treatments received the same seedbed preparation, seeding, mulching and crimping procedure.",
+    "Five final confirmation pits per plot produced directly measured thickness values and a reported mean with a 95-percent confidence interval.",
+    "The engineering plate shows survey-derived as-built topography, treatment boundaries and instrumentation, but no coordinate grid, datum-based polygon vertices or numerical horizontal positioning accuracy.",
+    "The plot polygons are approximately 110 metres wide in their narrow dimension, so size itself is not the blocker.",
+    "Localized subsidence and repair occurred around lysimeters and instrumentation after construction; those features can be excluded spatially only after exact georeferencing, which is unavailable.",
+    "The 2020 closure plan states that 3X reclamation was completed in 2005, storm-channel corrective work was completed in early 2007 and a CQA report was submitted in 2008.",
+    "The 2021 permit identifies the reclaimed 3X impoundment among units with partial financial-assurance release, but does not provide plot-specific unchanged-condition certification."
+  ],
+  "sources": {
+    "official_emnrd_revision_page": "https://www.emnrd.nm.gov/mmd/mining-act-reclamation-program/pending-and-approved-mine-applications/mining-applications-regular-existing/gr010retyrone-mine-revision-09-1/",
+    "as_built_document": "GR010RE_20071011_Closeout_Plan_Update_AppendixE_C.76_3XTailing_AsBuilt_Report.pdf",
+    "annual_summary_document": "GR010RE_20071011_Closeout_Plan_Update_AppendixE_C.76_3XTailing_Annual_Summary_Report_Jan07.pdf",
+    "2020_closure_plan_document": "2-18106417_004RRev1_Tyrone_CCP_Update_20200429.pdf",
+    "2021_permit_document": "TyroneRevision09-1Final_signed_32921.pdf",
+    "temporary_pr": 25,
+    "as_built_workflow_run": 30322163764,
+    "as_built_artifact_id": 8674397864,
+    "stability_workflow_run": 30322698957,
+    "stability_artifact_id": 8674597797
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for similarly large named measured treatment polygons whose final as-built boundaries are published with coordinates or georeferenced GIS/CAD data and whose unchanged Sentinel-1 period is documented."
+}
