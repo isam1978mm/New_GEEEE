@@ -21,7 +21,7 @@ def test_option5_panel_labels_anomaly_as_not_depth() -> None:
 def test_option5_panel_does_not_claim_measured_change_or_numerical_depth() -> None:
     source = PANEL.read_text(encoding="utf-8").lower()
 
-    assert "a change measurement" in source
+    assert "not a measured change" in source
     assert "estimated depth:" not in source
     assert "depth in metres" not in source
     assert "depth in meters" not in source
