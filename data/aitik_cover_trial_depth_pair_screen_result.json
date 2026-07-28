@@ -1,0 +1,63 @@
+{
+  "candidate": "Aitik Mine WRD6 cover system field trials",
+  "location": "Gällivare, northern Sweden",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_scale_field_trial": true,
+    "construction_year": 2013,
+    "total_trial_area_hectares": 1.0,
+    "plateau_dimensions_each_m": [50, 50],
+    "monitoring_years_reported": 11,
+    "vegetation_established": true,
+    "macro_scale_erosion_observed": false
+  },
+  "cover_configurations": {
+    "trial_1": {
+      "compacted_till_m": 0.3,
+      "protective_non_compacted_till_m": 1.0,
+      "growth_medium_m": 0.3,
+      "nominal_total_m": 1.6
+    },
+    "trial_2": {
+      "compacted_till_m": 0.3,
+      "protective_non_compacted_till_m": 1.5,
+      "growth_medium_m": 0.3,
+      "nominal_total_m": 2.1
+    }
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": true,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": "not_proven",
+    "stable_sentinel1_period_for_exact_zones": "likely_but_not_coordinate_tied"
+  },
+  "fatal_blocker": "The primary construction and monitoring papers describe nominal constructed configurations with 1.0 m and 1.5 m protective till layers, but they do not publish final measured as-built thickness values for the two trial polygons, numerical thickness or survey uncertainty, surveyed corner coordinates, or a georeferenced GIS/CAD deliverable. The 50 m by 50 m plateau dimensions are approximate and monitoring infrastructure is present, so two independent 30-40 m clean interiors cannot be established from the public record without inventing geometry.",
+  "key_evidence": [
+    "Both field trials were constructed in 2013 and each includes an approximately 50 m by 50 m plateau plus a 3H:1V slope.",
+    "The configurations share a 0.3 m compacted till layer and a 0.3 m till-organic growth-medium layer.",
+    "The intended difference is a 1.0 m versus 1.5 m non-compacted protective till layer.",
+    "Construction QA in the 2015 paper reports density, moisture and permeability testing for compacted layers but does not report final total thickness measurements for the trial polygons.",
+    "The public papers contain no numerical thickness tolerance, survey accuracy, northing/easting corner table or georeferenced polygon file.",
+    "The 2025 paper reports eleven years of monitoring, established vegetation, expected hydraulic performance and no macro-scale erosion.",
+    "Long-term stability cannot rescue the missing independent measured depth labels and public coordinate control."
+  ],
+  "sources": {
+    "2015_construction_paper": "Evaluation of Cover System Field Trials with Compacted Till Layers for Waste Rock Dumps at the Boliden Aitik Copper Mine, Northern Sweden",
+    "2025_monitoring_paper": "Assessing mine closure and cover system design strategies with consideration for climate change risks at Aitik mine",
+    "temporary_pr": 30,
+    "workflow_run": 30365539856,
+    "artifact_id": 8690628623
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for full-scale matched vegetated zones whose final construction survey publishes measured total thicknesses, numerical uncertainty and georeferenced polygons."
+}
