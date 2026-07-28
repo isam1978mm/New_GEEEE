@@ -1,0 +1,63 @@
+{
+  "candidate": "Tyrone Mine Dam 1 reclaimed cover",
+  "location": "Grant County, New Mexico",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-28",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_reclaimed_vegetated_area": true,
+    "total_impacted_area_acres": 402,
+    "area_reported_greater_than_3_ft_acres": 309,
+    "financial_assurance_release_application_available": true,
+    "electronic_files_attachment_referenced": true
+  },
+  "reported_area_summary": {
+    "dam_1_top": {
+      "impacted_area_acres": 254,
+      "area_greater_than_3_ft_acres": 237
+    },
+    "dam_1_outslope": {
+      "impacted_area_acres": 104,
+      "area_greater_than_3_ft_acres": 28
+    },
+    "twelve_ponds_top": {
+      "impacted_area_acres": 44,
+      "area_greater_than_3_ft_acres": 44
+    }
+  },
+  "documentary_gates": {
+    "two_large_exact_final_measured_depth_zones": false,
+    "coordinate_tied_measured_depth_geometry": false,
+    "matching_upper_soil_and_vegetation": not_proven,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": not_evaluable,
+    "stable_sentinel1_period_for_exact_zones": false
+  },
+  "fatal_blocker": "The official public package publishes only acreage classified as having greater-than-3-foot cover. It does not publish the actual measured thickness values, a shallow-zone depth, thickness contours, point tables, certified polygons, numerical uncertainty, or coordinate-tied geometry for the reported categories. The application states that Attachment I was an electronic copy supplied on CD, but the online Attachment I is only a placeholder PDF and contains zero embedded files. The recovered 2009 and 2012 financial-assurance packages concern other reclaimed stockpiles rather than Dam 1 cover-thickness mapping.",
+  "key_evidence": [
+    "The Dam 1 cover-thickness summary reports 402 affected acres and 309 acres with cover greater than 3 feet.",
+    "The summary separately lists Dam 1 top, Dam 1 outslope and the 12 Ponds top, but provides no exact thickness for the remaining acreage.",
+    "A greater-than-3-foot category cannot be used as an exact numerical depth reference.",
+    "The public PDF set contains no map or table assigning exact measured thicknesses to coordinate-controlled zones.",
+    "The financial-assurance application identifies Attachment I as an electronic copy of application materials supplied on CD.",
+    "The online Attachment I PDF contains no embedded files; the recovery found zero attachments across the five recovered PDFs.",
+    "The later 2009 package concerns No. 1 Stockpile, and the 2012 package concerns No. 1C/7A Stockpile, so neither supplies the missing Dam 1 depth geometry."
+  ],
+  "sources": {
+    "official_emnrd_tyrone_page": "https://www.emnrd.nm.gov/mmd/mining-act-reclamation-program/pending-and-approved-mine-applications/mining-applications-regular-existing/gr010retyrone-mine/",
+    "2008_application": "GR010RE_20081223_FAReduction-Application.pdf",
+    "dam1_attachment": "GR010RE_20081223_FAReduction-AttachmentD.pdf",
+    "electronic_files_placeholder": "GR010RE_20081223_FAReduction-AttachmentI.pdf",
+    "temporary_pr": 26,
+    "workflow_run": 30323318899,
+    "artifact_id": 8674771328
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a completed vegetated reclamation or closure package that publishes exact final measured thickness values and coordinate-tied polygons, rather than threshold acreage categories or unavailable electronic attachments."
+}
