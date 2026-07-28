@@ -1,0 +1,51 @@
+{
+  "candidate": "St. Louis Airport Site (SLAPS)",
+  "location": "St. Louis County, Missouri",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-27",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_remediated_area": true,
+    "site_area_acres": 21.7,
+    "multiple_excavation_phases": true,
+    "coordinate_control_in_design_records": true,
+    "formal_closure_year": 2007,
+    "final_prar_fsse_completed_year": 2009
+  },
+  "documentary_gates": {
+    "two_large_final_measured_as_built_depth_polygons": false,
+    "coordinate_tied_final_measured_depths": false,
+    "matching_upper_soil_and_vegetation": false,
+    "numerical_project_specific_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period": false
+  },
+  "fatal_blocker": "The official phase packages publish planned excavation contours, cross-sections, survey-unit boundaries and cut/fill calculations, but not two completed final measured excavation-depth polygons. The Phase 4-5 work description states that cut lines were derived from contamination contours and a TIN, that guided excavation would continue until radiological criteria were met, and that the gross cut lines could change during implementation. The final-status survey plan verifies residual radiological concentrations through sampling grids; it is not a final topographic excavation-depth or backfill-thickness survey and states no project-specific horizontal or vertical depth uncertainty. The cited May 2009 PRAR/FSSE was confirmed to exist but was not exposed in the indexed administrative-record list or recovered from the official PDF endpoint.",
+  "key_evidence": [
+    "USACE identifies SLAPS as a 21.7-acre tract and reports that more than 600,000 cubic yards were removed before formal closure in May 2007.",
+    "The Phase 4-5 package includes survey-unit maps, excavation contour maps, cross-sections and excavation-depth cross-sections.",
+    "Planned surfaces were generated from point or contour data using a TIN and a 3-foot calculation grid for cut/fill volumes.",
+    "The document states that initial gross cut lines were based on historical and pre-design data and could be adjusted during remedial action as guided excavation and additional information became available.",
+    "The final-status survey plan stops excavation when radiological surveys indicate that the excavation bottom meets cleanup criteria and uses statistical sample grids to verify residual concentrations.",
+    "No final measured before-and-after excavation depth table, certified depth polygons, or numerical survey accuracy for physical depth was found.",
+    "The site includes an active rail spur, Coldwater Creek, drainage structures, berms, sedimentation or retention basins, wells and reconstructed channels, preventing conservative certification of two clean 30-40 m interiors from the available records.",
+    "The recovered work descriptions do not prove that two candidate zones received one matching final topsoil and vegetation assembly."
+  ],
+  "sources": {
+    "official_slaps_page": "https://www.mvs.usace.army.mil/Missions/FUSRAP/SLAPS/",
+    "official_reading_room": "https://www.mvs.usace.army.mil/Missions/FUSRAP/Reading-Room/",
+    "phase_4_5_document": "NCountySites_02.04_0042_a.PDF",
+    "final_status_survey_plan": "NCountySites_02.04_0075_a.PDF",
+    "temporary_pr": 24,
+    "workflow_run": 30321693382,
+    "artifact_id": 8674234205
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a completed closure or excavation report that publishes final measured depth by named polygon or cell, uses one common vegetated restoration assembly, states numerical survey uncertainty, and preserves two 30-40 m clean interiors."
+}
