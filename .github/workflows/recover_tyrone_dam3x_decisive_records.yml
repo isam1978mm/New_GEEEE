@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - option3/tyrone-dam3x-decisive-records
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
