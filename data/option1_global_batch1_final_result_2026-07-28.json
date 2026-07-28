@@ -1,0 +1,84 @@
+{
+  "strategy": "Option 1 — Global Depth",
+  "batch_id": "option1_global_batch1",
+  "decision_date": "2026-07-28",
+  "decision": "NOT_GOOD_TO_GO",
+  "candidate_count": 5,
+  "advanced_after_cheap_screen": 1,
+  "passed_decisive_documentary_gate": 0,
+  "olympic_view": {
+    "status": "FAILED_DECISIVE_DOCUMENTARY_GATE",
+    "positive_evidence": {
+      "approximate_landfill_area_acres": 65,
+      "large_adjoining_areas": [
+        "Old Barney White Landfill",
+        "Phase I",
+        "Phase II"
+      ],
+      "closure_period": "approximately 2002-2003",
+      "official_post_closure_plan_reviewed": true,
+      "long_term_monitoring_records_present": true
+    },
+    "cover_profiles": {
+      "old_barney_white": {
+        "original_low_permeability_silt_inches": 12,
+        "original_native_soil_and_topsoil_inches": 24,
+        "later_upgrade": [
+          "50-mil VLDPE geomembrane",
+          "geocomposite drainage layer",
+          "topsoil"
+        ]
+      },
+      "phase_i_and_phase_ii_repeated_profile": {
+        "vegetative_topsoil_and_cover_soil_inches": 12,
+        "drainage_layer_inches": 12,
+        "low_permeability_soil_inches": 6,
+        "other_layers": [
+          "geotextile fabric",
+          "geonet composite",
+          "40-mil geomembrane"
+        ]
+      }
+    },
+    "fatal_blockers": [
+      "Phase I and Phase II repeat one cover profile and therefore do not provide two depth conditions.",
+      "Old Barney White has a materially different cover assembly and construction history.",
+      "Reviewed thicknesses are design descriptions rather than final measured as-built depth polygons.",
+      "No numerical depth or survey uncertainty was established.",
+      "No coordinate-tied confirmed negative zone was established.",
+      "Repair and infrastructure exclusions are not available as exact measured polygons."
+    ]
+  },
+  "other_candidates": [
+    {
+      "site": "Central Maui Landfill Phases I and II Closure",
+      "status": "FAILED_CHEAP_SCREEN",
+      "fatal_blocker": "Later Phase II slope and cover reconstruction during 2022-2026 prevents a clean stable historical two-zone Sentinel-1 pair."
+    },
+    {
+      "site": "Berlin/Petersburgh Landfill",
+      "status": "FAILED_CHEAP_SCREEN",
+      "fatal_blocker": "Renewed investigation, consent-order work, and cleanup planning show that important closure and leachate-control issues remained unresolved."
+    },
+    {
+      "site": "Greenpoint Type III C&D Landfill",
+      "status": "FAILED_PUBLIC_DOCUMENT_SCREEN",
+      "fatal_blocker": "Public material does not publish final measured depths, uncertainty, a second zone/control, matching surfaces, or a stable observation period."
+    },
+    {
+      "site": "Matachewan First Nation Landfill closure",
+      "status": "FAILED_CHEAP_SCREEN",
+      "fatal_blocker": "The record concerns planned 2026 construction and has no completed post-construction Sentinel-1 period."
+    }
+  ],
+  "workflow_state": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "next_action": "Begin Option 1 batch 2 only with new full-scale closures whose public indexes explicitly identify final-cover CQA/as-built records and separate measured thickness zones or a coordinate-tied confirmed control."
+}

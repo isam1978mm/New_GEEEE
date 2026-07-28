@@ -1,0 +1,51 @@
+{
+  "strategy": "Option 1 — Global Depth",
+  "screen_date": "2026-07-28",
+  "batch_id": "option1_global_batch1",
+  "decision": "NOT_GOOD_TO_GO_FOR_NUMERICAL_DEPTH",
+  "candidate_count": 5,
+  "advanced_to_decisive_review": 1,
+  "stopped_at_cheap_screen": 4,
+  "candidates": [
+    {
+      "site": "Olympic View Sanitary Landfill",
+      "jurisdiction": "Washington",
+      "cheap_screen_status": "ADVANCE_TO_DECISIVE_DOCUMENT_REVIEW",
+      "reason": "Large three-area closed landfill with official final-cover investigation, periodic review, post-closure, and annual monitoring records; exact measured depths, matching surfaces, uncertainty, geometry, and stable repaired-area exclusions remain unresolved."
+    },
+    {
+      "site": "Central Maui Landfill Phases I and II Closure",
+      "jurisdiction": "Hawaii",
+      "cheap_screen_status": "STOPPED",
+      "fatal_blocker": "Later Phase II slope and cover-system reconstruction in 2022-2026 prevents a clean stable two-zone Sentinel-1 comparison from the historical closure."
+    },
+    {
+      "site": "Berlin/Petersburgh Landfill",
+      "jurisdiction": "New York",
+      "cheap_screen_status": "STOPPED",
+      "fatal_blocker": "Closure remained incomplete in important respects and the site entered renewed investigation, consent-order work, and cleanup planning."
+    },
+    {
+      "site": "Greenpoint Type III C&D Landfill",
+      "jurisdiction": "Louisiana",
+      "cheap_screen_status": "STOPPED_PUBLIC_DOCUMENT_BATCH",
+      "fatal_blocker": "Only a consultant summary is publicly accessible; final measured depths, uncertainty, second zone/control, matching surfaces, and stable-period evidence are not published."
+    },
+    {
+      "site": "Matachewan First Nation Landfill closure",
+      "jurisdiction": "Ontario",
+      "cheap_screen_status": "STOPPED",
+      "fatal_blocker": "The record describes planned 2026 construction, so no completed post-construction Sentinel-1 observation period exists."
+    }
+  ],
+  "workflow_state": {
+    "usable_positive_depth_site_groups": 0,
+    "usable_confirmed_negative_site_groups": 0,
+    "usable_calibration_rows": 0,
+    "earth_engine_query_executed": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "next_action": "Recover and inspect the official Olympic View final-cover records. Stop unless two broad final measured depth conditions, matching upper surfaces, numerical uncertainty, coordinate-tied geometry, and a stable Sentinel-1 period are all proven."
+}
