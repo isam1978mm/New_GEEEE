@@ -1,0 +1,87 @@
+name: Detour cover trial recovery
+
+on:
+  push:
+    branches:
+      - agent/detour-cover-trial-recovery-20260728
+    paths:
+      - .github/workflows/detour-cover-trial-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Download open-access Detour Lake papers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered
+
+          download_pdf() {
+            local url="$1"
+            local output="$2"
+            echo "Downloading ${url}"
+            curl --fail --location --retry 5 --retry-delay 3 \
+              --connect-timeout 30 --max-time 300 \
+              --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
+              --header "Accept: application/pdf,text/html;q=0.9,*/*;q=0.8" \
+              --output "${output}" "${url}"
+            test "$(head -c 4 "${output}")" = "%PDF"
+            test "$(stat -c%s "${output}")" -gt 10000
+          }
+
+          download_pdf \
+            "https://open.library.ubc.ca/media/stream/pdf/59367/1.0421799/5" \
+            "recovered/detour_design_construction_2022.pdf"
+
+          download_pdf \
+            "https://open.library.ubc.ca/media/stream/pdf/59367/1.0421800/5" \
+            "recovered/detour_initial_performance_2022.pdf"
+
+          if curl --fail --location --retry 3 --retry-delay 3 \
+              --connect-timeout 30 --max-time 300 \
+              --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
+              --output "recovered/detour_five_year_review_2025.pdf" \
+              "https://open.library.ubc.ca/media/stream/pdf/59367/1.0450902/5"; then
+            if [ "$(head -c 4 recovered/detour_five_year_review_2025.pdf)" != "%PDF" ] || \
+               [ "$(stat -c%s recovered/detour_five_year_review_2025.pdf)" -le 10000 ]; then
+              rm -f recovered/detour_five_year_review_2025.pdf
+            fi
+          fi
+
+      - name: Extract text and inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          for pdf in recovered/*.pdf; do
+            base="${pdf%.pdf}"
+            pdftotext -layout "$pdf" "${base}.txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,25p'
+              echo
+            } >> recovered/INVENTORY.txt
+          done
+          find recovered -maxdepth 1 -type f -printf '%f\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Upload recovered records
+        uses: actions/upload-artifact@v4
+        with:
+          name: detour-cover-trial-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
