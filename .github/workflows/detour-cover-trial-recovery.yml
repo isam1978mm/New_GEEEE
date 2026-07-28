@@ -41,30 +41,34 @@ jobs:
             curl --fail --location --retry 5 --retry-delay 3 \
               --connect-timeout 30 --max-time 300 \
               --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
-              --header "Accept: application/pdf,text/html;q=0.9,*/*;q=0.8" \
+              --header "Accept: application/pdf,*/*;q=0.8" \
               --output "${output}" "${url}"
-            test "$(head -c 4 "${output}")" = "%PDF"
+            if [ "$(head -c 4 "${output}")" != "%PDF" ]; then
+              echo "Not a PDF: ${url}"
+              file "${output}" || true
+              head -c 500 "${output}" || true
+              return 1
+            fi
             test "$(stat -c%s "${output}")" -gt 10000
           }
 
           download_pdf \
-            "https://open.library.ubc.ca/media/stream/pdf/59367/1.0421799/5" \
+            "https://open.library.ubc.ca/media/download/pdf/59367/1.0421799/5" \
             "recovered/detour_design_construction_2022.pdf"
 
           download_pdf \
-            "https://open.library.ubc.ca/media/stream/pdf/59367/1.0421800/5" \
+            "https://open.library.ubc.ca/media/download/pdf/59367/1.0421800/5" \
             "recovered/detour_initial_performance_2022.pdf"
 
-          if curl --fail --location --retry 3 --retry-delay 3 \
-              --connect-timeout 30 --max-time 300 \
-              --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
-              --output "recovered/detour_five_year_review_2025.pdf" \
-              "https://open.library.ubc.ca/media/stream/pdf/59367/1.0450902/5"; then
-            if [ "$(head -c 4 recovered/detour_five_year_review_2025.pdf)" != "%PDF" ] || \
-               [ "$(stat -c%s recovered/detour_five_year_review_2025.pdf)" -le 10000 ]; then
-              rm -f recovered/detour_five_year_review_2025.pdf
-            fi
-          fi
+          download_pdf \
+            "https://papers.acg.uwa.edu.au/d/2515_98_Cash/98_Cash.pdf" \
+            "recovered/detour_five_year_review_2025.pdf"
+
+          curl --fail --location --retry 3 --retry-delay 3 \
+            --connect-timeout 30 --max-time 180 \
+            --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
+            --output "recovered/detour_design_item_page.html" \
+            "https://open.library.ubc.ca/soa/cIRcle/collections/59367/items/1.0421799" || true
 
       - name: Extract text and inventory
         shell: bash
