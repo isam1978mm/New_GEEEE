@@ -35,6 +35,10 @@ It states that the score is:
 - not a measured change;
 - not a depth estimate.
 
+### Compatibility boundary
+
+The established top-level panel heading remains exactly `Classifier Results`. The new radar-anomaly section is added inside that existing panel so older UI contracts and static-bundle checks continue to pass.
+
 ### Explicit exclusions
 
 This slice does not:
@@ -66,6 +70,7 @@ No training begins until a real calibration package passes the repository valida
 
 ```text
 Option 5 anomaly UI source = implemented on isolated branch
+Option 5 production SPA build = passed and synchronized
 Option 5 temporal change output = not implemented
 Option 1 evidence search = active in parallel
 Option 3 Tyrone records = pending
@@ -74,6 +79,7 @@ usable calibration rows = 0
 training started = no
 numerical depth ready = no
 app depth enabled = no
+full repository CI = final synchronized-head rerun pending
 ```
 
 ## Verification required before merge
