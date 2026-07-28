@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/recover_allen_harbor_cap_records.py"
+      - "scripts/recover_allen_harbor_cap_records_fast.py"
       - ".github/workflows/allen-harbor-cap-recovery.yml"
   workflow_dispatch:
 
@@ -25,8 +26,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y poppler-utils
           python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Recover official Allen Harbor records
-        run: python scripts/recover_allen_harbor_cap_records.py
+      - name: Recover focused official Allen Harbor records
+        run: python scripts/recover_allen_harbor_cap_records_fast.py
       - name: Upload evidence package
         if: always()
         uses: actions/upload-artifact@v4
