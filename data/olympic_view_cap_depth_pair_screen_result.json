@@ -1,0 +1,48 @@
+{
+  "candidate": "Olympic View Sanitary Landfill",
+  "location": "Port Orchard, Washington",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-27",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_vegetated_cover": true,
+    "approximate_closed_refuse_area_acres": 65,
+    "stable_sentinel1_period_plausible": true,
+    "coordinate_tied_geometry_available": true
+  },
+  "documentary_gates": {
+    "two_large_measured_depth_conditions": false,
+    "coordinate_tied_final_measured_depths": false,
+    "matching_upper_soil_and_vegetation": false,
+    "numerical_depth_uncertainty": false,
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period": true
+  },
+  "fatal_blocker": "The 2011 final-cover investigation used ten narrow backhoe test pits along the perimeter landfill-gas header to inspect geosynthetic integrity. It did not publish measured final-cover soil thicknesses or define two broad measured depth polygons. Phases I and II have one repeated cover profile, while the Old Barney White Landfill has a different construction history and no coordinate-tied final measured thickness grid.",
+  "key_evidence": [
+    "The 2011 investigation excavated ten test pits through final-cover soil along the north, west, south and a small east perimeter portion above the landfill-gas header.",
+    "Typical test pits were approximately 50 to 60 feet long and 4 feet wide.",
+    "The report concluded the geosynthetic cover was intact, but did not provide a table of measured soil-cover thickness values.",
+    "The post-closure plan describes Phases I and II with one repeated profile: 12 inches vegetative topsoil/cover soil, geotextile, 12-inch drainage layer, geonet composite, geomembrane and 6-inch low-permeability soil.",
+    "The Old Barney White Landfill was closed and later upgraded under a different construction history, so it is not a matched near-surface comparison zone.",
+    "Periodic reviews support long-term maintenance and current cover integrity, but do not supply the missing measured depth pair."
+  ],
+  "sources": {
+    "official_site": "https://apps.ecology.wa.gov/cleanupsearch/site/4217",
+    "final_cover_investigation_document_id": 6986,
+    "post_closure_plan_document_id": 9056,
+    "2021_periodic_review_document_id": 106491,
+    "2024_annual_monitoring_report_document_id": 157297,
+    "temporary_pr": 20,
+    "workflow_run": 30318804097,
+    "artifact_id": 8673211600
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search for a full-scale vegetated closure containing two broad coordinate-tied final measured as-built depth zones under the same near-surface construction."
+}
