@@ -1,0 +1,45 @@
+name: RMA Option 2 Earth Engine auth probe
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EE_SERVICE_ACCOUNT_JSON: ${{ secrets.EE_SERVICE_ACCOUNT_JSON }}
+      GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
+      EE_CREDENTIALS_JSON: ${{ secrets.EE_CREDENTIALS_JSON }}
+      GEE_CREDENTIALS_JSON: ${{ secrets.GEE_CREDENTIALS_JSON }}
+      EE_PROJECT: ${{ secrets.EE_PROJECT }}
+      GEE_PROJECT: ${{ secrets.GEE_PROJECT }}
+      GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Install Earth Engine client
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install earthengine-api
+
+      - name: Probe noninteractive credentials
+        run: python scripts/probe_earth_engine_auth.py
+
+      - name: Upload bounded status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rma-option2-earth-engine-auth-probe
+          path: artifacts/rma_option2_auth_probe/earth_engine_auth_probe.json
+          if-no-files-found: error
+          retention-days: 7
