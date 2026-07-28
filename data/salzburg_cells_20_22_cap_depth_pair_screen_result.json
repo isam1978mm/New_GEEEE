@@ -1,0 +1,48 @@
+{
+  "candidate": "Salzburg Hazardous Waste Landfill Cells 20-22",
+  "location": "Midland, Michigan",
+  "decision": "not_good_to_go",
+  "screen_date": "2026-07-27",
+  "approved_plan_changed": false,
+  "cheap_screen": {
+    "large_vegetated_cover": true,
+    "approximate_cap_acres": 4.0,
+    "closure_year": 2017,
+    "stable_sentinel1_period_plausible": true,
+    "coordinate_tied_survey_method_required": true,
+    "survey_instrument_precision_ft": 0.01,
+    "vertical_construction_tolerance_ft": 0.1
+  },
+  "documentary_gates": {
+    "two_large_measured_depth_conditions": false,
+    "coordinate_tied_final_measured_depths": false,
+    "matching_upper_soil_and_vegetation": true,
+    "numerical_depth_uncertainty": true,
+    "clean_30_to_40_m_interior_each": false,
+    "stable_sentinel1_period": true
+  },
+  "fatal_blocker": "The official public package contains the approved survey method and a single uniform final-cover profile, but not the 2017 Construction Certification Report, record drawings, or same-coordinate measured thickness table. The proposed rescue comparison with Cells 17-19 also fails because the public package contains only the regulator's approval letter for that closure, not its measured as-built thickness data or proof of an equivalent upper surface assembly.",
+  "key_evidence": [
+    "Cells 20-22 were closed in 2017 and cover approximately four acres.",
+    "The approved final-cover profile is uniform across Cells 20-22: 6 inches topsoil, 18 inches protective soil, drainage geocomposite, geomembrane, two GCL layers, and 12 inches foundation soil.",
+    "The approved CQA plan requires as-built thickness to be calculated by comparing surveys of underlying and overlying surfaces at the same coordinates, generally at no more than 100-foot spacing and at slope/grade breaks.",
+    "Survey instruments were required to read to 0.01 foot with a vertical construction tolerance of 0.1 foot.",
+    "Recovered current-license and renewal records do not include the completed Cells 20-22 measurement table or construction-certification report.",
+    "The Cells 17-19 record provides a closure-approval letter and later condition statement, but not the underlying measured thickness grid."
+  ],
+  "sources": {
+    "official_license_documents_page": "https://www.michigan.gov/egle/about/organization/materials-management/hazardous-waste/liquid-industrial-byproducts/dow-midland-salzburg-landfill-operating-license/license-documents",
+    "official_facility_database": "https://www.egle.state.mi.us/wdspi/Pca/Facility.aspx?w=399133",
+    "temporary_pr": 21,
+    "workflow_run": 30319245231,
+    "artifact_id": 8673360526
+  },
+  "app_status": {
+    "usable_calibration_rows": 0,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "earth_engine_query_executed": false,
+    "training_started": false
+  },
+  "next_action": "Continue the approved search with the NAS Alameda Site 2 official completion report, which contains a 100-foot thickness-verification grid over a much larger cover."
+}
