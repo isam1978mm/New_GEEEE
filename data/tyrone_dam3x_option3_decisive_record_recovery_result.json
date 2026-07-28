@@ -34,7 +34,8 @@
     "draft_pr": 33,
     "workflow_run": 30384586998,
     "artifact_id": 8698411917,
-    "merge_allowed": false
+    "pr_state": "closed",
+    "merged": false
   },
   "specific_missing_record": {
     "title": "Construction Quality Assurance Report: Tailing Impoundment 3X Reclamation",
@@ -51,10 +52,21 @@
       "later plot-specific inspection, maintenance, disturbance and repair records"
     ]
   },
+  "public_records_request": {
+    "submitted": true,
+    "submitted_date": "2026-07-28",
+    "agency": "New Mexico Energy, Minerals and Natural Resources Department",
+    "division": "Mining and Minerals Division",
+    "tracking_reference": "N000019-070026",
+    "status": "received_and_processing",
+    "requested_record_date_from": "2005-01-01",
+    "requested_record_date_to": "2026-07-27",
+    "user_action_required_now": false
+  },
   "option3_feasibility": {
     "bounded_public_test_was_feasible": true,
     "public_route_completed_candidate": false,
-    "further_work_requires_user_records_request_or_direct_records_response": true,
+    "further_work_requires_records_response": true,
     "repeat_broad_web_search": false
   },
   "app_status": {
@@ -64,5 +76,5 @@
     "earth_engine_query_executed": false,
     "training_started": false
   },
-  "next_action": "Request the June 2008 3X CQA report and all associated electronic survey files from New Mexico MMD or the operator. Reopen Tyrone only when those files are received."
+  "next_action": "Wait for EMNRD response under tracking reference N000019-070026. Preserve all returned files in original form and inspect only whether they resolve exact Test Plot 5/6 geometry and a plot-specific stable Sentinel-1 interval."
 }
