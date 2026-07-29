@@ -6,12 +6,14 @@ on:
       - agent/tyrone-electronic-files-recovery-20260729
     paths:
       - scripts/recover_tyrone_electronic_files.py
+      - scripts/recover_tyrone_electronic_manifest.py
       - .github/workflows/tyrone-electronic-files-recovery.yml
   pull_request:
     branches:
       - main
     paths:
       - scripts/recover_tyrone_electronic_files.py
+      - scripts/recover_tyrone_electronic_manifest.py
       - .github/workflows/tyrone-electronic-files-recovery.yml
   workflow_dispatch:
 
@@ -33,6 +35,9 @@ jobs:
 
       - name: Recover official electronic-file record
         run: python scripts/recover_tyrone_electronic_files.py
+
+      - name: Inspect associated application manifest
+        run: python scripts/recover_tyrone_electronic_manifest.py
 
       - name: Upload recovered evidence
         if: always()
