@@ -1,0 +1,113 @@
+name: Continental test-plot record recovery
+
+on:
+  push:
+    branches:
+      - agent/continental-test-plot-recovery-20260729
+    paths:
+      - .github/workflows/continental-test-plot-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/continental-test-plot-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check requests beautifulsoup4
+
+      - name: Fetch official page and linked PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/pdfs recovered/text
+          python - <<'PY'
+          import json, re, time
+          from pathlib import Path
+          from urllib.parse import urljoin, urlparse, unquote
+          import requests
+          from bs4 import BeautifulSoup
+
+          page_url = "https://www.emnrd.nm.gov/mmd/gr002re-continental-mine-test-plots-and-borrow-material-update/"
+          out = Path("recovered")
+          headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
+          s = requests.Session()
+          r = s.get(page_url, headers=headers, timeout=90)
+          r.raise_for_status()
+          (out / "page.html").write_bytes(r.content)
+          soup = BeautifulSoup(r.text, "html.parser")
+          links = []
+          for a in soup.find_all("a", href=True):
+              href = urljoin(page_url, a["href"])
+              label = " ".join(a.get_text(" ", strip=True).split())
+              if ".pdf" in href.lower():
+                  links.append({"label": label, "url": href})
+          seen = set()
+          links = [x for x in links if not (x["url"] in seen or seen.add(x["url"]))]
+          (out / "LINKS.json").write_text(json.dumps(links, indent=2), encoding="utf-8")
+          (out / "LINKS.txt").write_text("\n".join(f'{i+1}\t{x["label"]}\t{x["url"]}' for i,x in enumerate(links)), encoding="utf-8")
+          print(f"Found {len(links)} PDF links")
+          if not links:
+              raise SystemExit("No PDF links found")
+          for i, item in enumerate(links, 1):
+              raw_name = unquote(Path(urlparse(item["url"]).path).name) or f"document_{i}.pdf"
+              safe = re.sub(r"[^A-Za-z0-9._-]+", "_", raw_name)
+              path = out / "pdfs" / f"{i:02d}_{safe}"
+              print(f"Downloading {i}/{len(links)}: {item['url']}")
+              rr = s.get(item["url"], headers=headers, timeout=300)
+              rr.raise_for_status()
+              path.write_bytes(rr.content)
+              if rr.content[:4] != b"%PDF":
+                  print(f"WARNING non-PDF response: {path} {rr.headers.get('content-type')}")
+              time.sleep(0.2)
+          PY
+
+      - name: Extract text and evidence inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          : > recovered/TARGETED_EXTRACTS.txt
+          shopt -s nullglob
+          for pdf in recovered/pdfs/*.pdf; do
+            if [ "$(head -c 4 "$pdf")" != "%PDF" ]; then
+              echo "SKIP_NON_PDF $pdf" >> recovered/INVENTORY.txt
+              continue
+            fi
+            base="$(basename "${pdf%.pdf}")"
+            txt="recovered/text/${base}.txt"
+            pdftotext -layout "$pdf" "$txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,30p'
+              echo
+            } >> recovered/INVENTORY.txt
+            {
+              echo "================ ${base}.txt ================"
+              grep -inE -C 6 'as-built|as built|thickness|depth|survey|coordinate|northing|easting|polygon|test plot|cover|uncertaint|tolerance|CQA|CQC|lift|compaction|control|reference|seed|vegetation|erosion|acre|feet|meter' "$txt" || true
+              echo
+            } >> recovered/TARGETED_EXTRACTS.txt
+          done
+          find recovered -maxdepth 3 -type f -printf '%P\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Upload recovered records
+        uses: actions/upload-artifact@v4
+        with:
+          name: continental-test-plot-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
