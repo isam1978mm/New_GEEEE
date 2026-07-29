@@ -1,0 +1,41 @@
+{
+  "protocol": "tyrone_tp56_provisional_pc_rtc_v1",
+  "preregistered_at": "2026-07-29",
+  "status": "preregistered_before_scientific_query",
+  "purpose": "local_raw_sentinel1_ordering_screen",
+  "geometry": {
+    "status": "provisional_derived_geometry_40m_core",
+    "registration_uncertainty_m": 40,
+    "outer_plot_inside_usgs_3x": true,
+    "tp5_core_minimum_width_m_approx": 35.66,
+    "tp6_core_minimum_width_m_approx": 39.85
+  },
+  "measured_depths_m": {
+    "tp5": {"minimum": 0.65532, "best": 0.68072, "maximum": 0.70612},
+    "tp6": {"minimum": 0.85090, "best": 0.94996, "maximum": 1.04902}
+  },
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "instrument_mode": "IW",
+    "polarizations": ["VV", "VH"]
+  },
+  "orbit_selection": "maximum_distinct_months_then_acquisition_count_without_signal_values",
+  "grid": {"crs": "EPSG:32612", "pixel_size_m": 10, "minimum_valid_pixels_per_zone_month": 15},
+  "monthly_aggregation": "per_pixel_median_then_zone_mean",
+  "features": ["vv_db", "vh_db", "log_ratio_db_vv_minus_vh"],
+  "comparison": "tp6_minus_tp5",
+  "pass_rule": {
+    "minimum_usable_months": 24,
+    "minimum_dominant_sign_fraction": 0.7,
+    "minimum_same_sign_fraction_each_season": 0.6,
+    "minimum_nonzero_months_each_season": 4
+  },
+  "prohibited_inputs": ["classifier", "target_mask", "pca_anomaly", "option5_anomaly", "heuristic_depth_layers"],
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "app_depth_enabled": false
+}
