@@ -1,0 +1,45 @@
+{
+  "candidate": "Mt Whaleback TP#1 and TP#2",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "site_area": "W22 overburden storage area",
+  "construction_date": "1997-02",
+  "plot_area_hectares_each": 1.0,
+  "design_comparison": {
+    "tp1_target_thickness_m": 2.0,
+    "tp2_target_thickness_m": 4.0,
+    "common_cover_material": "run-of-mine Banded Iron Formation material",
+    "common_surface": "bare block-dumped hummocky surface",
+    "topsoil_applied": false,
+    "seeded": false
+  },
+  "monitoring": {
+    "started": "1997-08",
+    "last_public_plot_specific_date": "2009-09",
+    "years": 12,
+    "large_scale_lysimeters": true,
+    "instrumented_moisture_profiles": true
+  },
+  "passed": {
+    "large_clean_area_in_principle": true,
+    "same_cover_material": true,
+    "same_surface_treatment": true,
+    "large_depth_contrast": true,
+    "pre_2010_stability": true
+  },
+  "failed": {
+    "surveyed_final_thickness_grid": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "post_2014_plot_specific_stability": true
+  },
+  "reason": "The public record provides operational 2 m and 4 m target profiles but not surveyed final polygon-level thicknesses, uncertainty, coordinate geometry, or Sentinel-1-era stability for the exact plots.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
