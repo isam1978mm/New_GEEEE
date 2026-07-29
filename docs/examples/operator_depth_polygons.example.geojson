@@ -1,0 +1,70 @@
+{
+  "type": "FeatureCollection",
+  "template_only": true,
+  "instructions": "Replace every example geometry and property. GeoJSON coordinates are EPSG:4326 unless --input-crs is changed.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_id": "replace-with-shallow-anchor-id",
+        "role": "anchor",
+        "depth_min_m": 0.4,
+        "depth_best_m": 0.5,
+        "depth_max_m": 0.6
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-108.4100, 32.7100],
+            [-108.4080, 32.7100],
+            [-108.4080, 32.7120],
+            [-108.4100, 32.7120],
+            [-108.4100, 32.7100]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_id": "replace-with-deep-anchor-id",
+        "role": "anchor",
+        "depth_min_m": 1.4,
+        "depth_best_m": 1.5,
+        "depth_max_m": 1.6
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-108.4060, 32.7100],
+            [-108.4040, 32.7100],
+            [-108.4040, 32.7120],
+            [-108.4060, 32.7120],
+            [-108.4060, 32.7100]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_id": "replace-with-candidate-id",
+        "role": "candidate"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-108.4020, 32.7100],
+            [-108.4000, 32.7100],
+            [-108.4000, 32.7120],
+            [-108.4020, 32.7120],
+            [-108.4020, 32.7100]
+          ]
+        ]
+      }
+    }
+  ]
+}
