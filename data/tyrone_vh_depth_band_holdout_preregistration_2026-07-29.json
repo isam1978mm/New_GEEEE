@@ -1,0 +1,84 @@
+{
+  "schema_version": "tyrone_vh_two_band_temporal_holdout_preregistration_v1",
+  "date": "2026-07-29",
+  "development_period": [
+    "2018-01-01",
+    "2024-01-01"
+  ],
+  "fresh_holdout_period": [
+    "2024-01-01",
+    "2026-07-01"
+  ],
+  "source": {
+    "catalog": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "orbit_state": "descending",
+    "relative_orbit": 56,
+    "polarization": "VH",
+    "monthly_reducer": "median"
+  },
+  "geometry": {
+    "status": "provisional_derived_geometry_40m_core",
+    "spatial_splits": [
+      "west_anchor_east_holdout",
+      "east_anchor_west_holdout",
+      "north_anchor_south_holdout",
+      "south_anchor_north_holdout"
+    ]
+  },
+  "fixed_formula": {
+    "anchor_separation_min_db": 0.25,
+    "relative_position": "(holdout_vh-anchor_tp5_vh)/(anchor_tp6_vh-anchor_tp5_vh)",
+    "no_extrapolation_interval": [
+      0.0,
+      1.0
+    ],
+    "shallow_if_position_at_most": 0.3333333333333333,
+    "deep_if_position_at_least": 0.6666666666666666,
+    "otherwise": "abstain"
+  },
+  "reported_numeric_bands_m": {
+    "shallow": [
+      0.65532,
+      0.70612
+    ],
+    "deep": [
+      0.8509,
+      1.04902
+    ]
+  },
+  "periods": [
+    "all",
+    "year_2024",
+    "year_2025_to_h1_2026"
+  ],
+  "pass_rules": {
+    "all": {
+      "minimum_eligible_months": 12,
+      "minimum_zone_coverage": 0.5,
+      "minimum_zone_accuracy": 0.8,
+      "minimum_paired_classified_months": 6,
+      "minimum_paired_correct_fraction": 0.8
+    },
+    "year_2024": {
+      "minimum_eligible_months": 5,
+      "minimum_zone_coverage": 0.4,
+      "minimum_zone_accuracy": 0.75,
+      "minimum_paired_classified_months": 2,
+      "minimum_paired_correct_fraction": 0.75
+    },
+    "year_2025_to_h1_2026": {
+      "minimum_eligible_months": 8,
+      "minimum_zone_coverage": 0.4,
+      "minimum_zone_accuracy": 0.75,
+      "minimum_paired_classified_months": 3,
+      "minimum_paired_correct_fraction": 0.75
+    },
+    "minimum_passing_spatial_splits": 3
+  },
+  "decision_if_passed": "eligible_for_tyrone_only_experimental_depth_band_implementation",
+  "decision_if_failed": "depth_band_not_supported_by_fresh_temporal_holdout",
+  "continuous_unknown_depth_ready_before_test": false,
+  "depth_band_ready_before_test": false,
+  "app_depth_enabled_before_test": false
+}
