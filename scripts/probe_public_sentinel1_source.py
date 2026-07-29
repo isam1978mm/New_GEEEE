@@ -35,11 +35,36 @@ PREFERRED_ASSET_KEYS = (
     "data",
 )
 
+METADATA_EXTRA_KEYS = (
+    "raster:bands",
+    "file:size",
+    "file:checksum",
+    "proj:epsg",
+    "proj:shape",
+    "proj:transform",
+)
+
 
 def bounded_url(value: str) -> str:
     """Return URL without query string so signed tokens are never recorded."""
     parts = urlsplit(value)
     return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
+def json_safe(value: Any) -> Any:
+    try:
+        json.dumps(value)
+        return value
+    except TypeError:
+        return str(value)
+
+
+def selected_extra_fields(extra_fields: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: json_safe(extra_fields[key])
+        for key in METADATA_EXTRA_KEYS
+        if key in extra_fields
+    }
 
 
 def asset_summary(asset: Any) -> dict[str, Any]:
@@ -50,6 +75,18 @@ def asset_summary(asset: Any) -> dict[str, Any]:
         "roles": list(asset.roles or []),
         "title": asset.title,
         "extra_field_keys": sorted(asset.extra_fields.keys()),
+        "selected_extra_fields": selected_extra_fields(asset.extra_fields),
+    }
+
+
+def item_asset_summary(asset_definition: Any) -> dict[str, Any]:
+    extra_fields = getattr(asset_definition, "extra_fields", {}) or {}
+    return {
+        "media_type": getattr(asset_definition, "media_type", None),
+        "roles": list(getattr(asset_definition, "roles", None) or []),
+        "title": getattr(asset_definition, "title", None),
+        "extra_field_keys": sorted(extra_fields.keys()),
+        "selected_extra_fields": selected_extra_fields(extra_fields),
     }
 
 
@@ -108,10 +145,13 @@ def property_subset(properties: dict[str, Any]) -> dict[str, Any]:
         "s1:processing_level",
         "s1:product_timeliness",
         "s1:resolution",
+        "view:incidence_angle",
         "proj:epsg",
+        "proj:shape",
+        "proj:transform",
         "gsd",
     }
-    return {key: properties.get(key) for key in sorted(allowed_exact) if key in properties}
+    return {key: json_safe(properties.get(key)) for key in sorted(allowed_exact) if key in properties}
 
 
 def main() -> int:
@@ -139,18 +179,20 @@ def main() -> int:
         sentinel_collections = [
             collection
             for collection in collections
-            if "sentinel-1" in collection.id.lower()
-            or "sentinel 1" in (collection.title or "").lower()
-            or "sentinel-1" in (collection.description or "").lower()
+            if collection.id in {"sentinel-1-grd", "sentinel-1-rtc"}
         ]
         result["sentinel1_collection_ids"] = sorted(collection.id for collection in sentinel_collections)
 
         for collection in sentinel_collections:
             collection_row: dict[str, Any] = {
                 "title": collection.title,
-                "description_prefix": (collection.description or "")[:500],
+                "description_prefix": (collection.description or "")[:1000],
                 "license": collection.license,
                 "item_asset_keys": sorted((collection.item_assets or {}).keys()),
+                "item_assets": {
+                    key: item_asset_summary(asset_definition)
+                    for key, asset_definition in (collection.item_assets or {}).items()
+                },
                 "sample_items": [],
             }
             search = catalog.search(
@@ -165,6 +207,7 @@ def main() -> int:
                 item_row: dict[str, Any] = {
                     "id": item.id,
                     "bbox": item.bbox,
+                    "property_keys": sorted(item.properties.keys()),
                     "properties": property_subset(item.properties),
                     "asset_keys": sorted(item.assets.keys()),
                     "assets": {key: asset_summary(asset) for key, asset in item.assets.items()},
