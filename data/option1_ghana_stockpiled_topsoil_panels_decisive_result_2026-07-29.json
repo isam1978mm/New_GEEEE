@@ -1,0 +1,36 @@
+{
+  "candidate": "Unnamed Ghana stockpiled-topsoil waste-rock-dump panels",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "design": {
+    "waste_rock_dump_area_hectares": 5.6,
+    "panel_count": 4,
+    "approximate_panel_area_hectares": 1.4,
+    "topsoil_subsoil_profiles_cm": [[0, 100], [20, 80], [30, 70], [40, 60]],
+    "subsoil_material": "saprolite"
+  },
+  "monitoring_ages": ["6 months", "1 year", "4 years"],
+  "passed": {
+    "large_area_in_principle": true,
+    "same_general_soil_system": true,
+    "multiple_depth_profiles": true
+  },
+  "failed": {
+    "named_mine_and_exact_location": true,
+    "published_panel_dimensions": true,
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "certified_as_built_layer_depths": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "post_2014_exact_panel_stability": true
+  },
+  "reason": "The paper describes large panels but does not identify the mine, publish execution geometry, measured final layer depths, uncertainty, or Sentinel-1-era stability for the exact panels.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
