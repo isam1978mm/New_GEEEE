@@ -1,0 +1,40 @@
+{
+  "candidate": "River Road Landfill",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "disposal_area_acres": 37.5,
+  "closure_period": "1986-1987",
+  "cover_design": {
+    "minimum_final_cover_feet": 3.0,
+    "common_design": true,
+    "on_site_borrow_material": true
+  },
+  "certification": {
+    "cover_pit_count": 129,
+    "approximate_pits_per_acre": 2,
+    "surveyed_location_map_referenced": true,
+    "pit_by_pit_thickness_reports_referenced": true,
+    "deficient_areas_corrected_and_recertified": true
+  },
+  "public_package_missing": {
+    "appendix_a_field_reports": true,
+    "appendix_b_soil_reports": true,
+    "sheet_1_final_cover_certification_map": true
+  },
+  "failed": {
+    "pit_by_pit_measured_depths_available": true,
+    "coordinate_tied_pit_map_available": true,
+    "two_official_broad_depth_zones": true,
+    "polygon_level_uncertainty": true,
+    "stable_post_2014_exact_zone_period": true
+  },
+  "reason": "The official narrative references 129 surveyed certification pits, Appendix A thickness reports and Sheet 1 mapping, but those decisive attachments are absent from the public scan. The closure certified one corrected three-foot minimum cover rather than separate depth treatments.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
