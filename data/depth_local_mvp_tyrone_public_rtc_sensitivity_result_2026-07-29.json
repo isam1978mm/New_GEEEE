@@ -1,0 +1,93 @@
+{
+  "candidate_id": "tyrone_3x_test_plots_5_6",
+  "date": "2026-07-29",
+  "decision": "not_good_to_go_for_automatic_unknown_aoi_interpolation",
+  "status": "ordering_inconsistent",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "asset_scale": "linear_intensity",
+    "conversion_to_db": "10*log10(value)"
+  },
+  "selected_orbit": {
+    "orbit_state": "descending",
+    "relative_orbit": 56,
+    "acquisition_count": 177,
+    "distinct_months": 72
+  },
+  "geometry": {
+    "translation_hypotheses": 9,
+    "ground_transforms": 4,
+    "total_placements": 36,
+    "edge_buffer_m": 20,
+    "fixed_grid_crs": "EPSG:32613",
+    "fixed_grid_resolution_m": 10,
+    "fixed_grid_width": 47,
+    "fixed_grid_height": 45,
+    "minimum_buffered_zone_pixels": 81,
+    "maximum_buffered_zone_pixels": 100
+  },
+  "primary_feature": "monthly_median_VV_dB_minus_monthly_median_VH_dB",
+  "pass_rule": {
+    "minimum_usable_months_per_placement": 24,
+    "minimum_dominant_sign_fraction": 0.70,
+    "minimum_usable_months_per_season": 4,
+    "minimum_season_sign_fraction": 0.60,
+    "minimum_passing_placements": 29,
+    "all_passing_placements_must_share_one_sign": true
+  },
+  "result": {
+    "catalog_item_count": 264,
+    "successful_source_item_count": 177,
+    "failed_source_item_count": 0,
+    "usable_months": 72,
+    "placement_month_rows": 2592,
+    "passing_placement_count": 9,
+    "required_passing_placement_count": 29,
+    "positive_sign_passing_placements": 8,
+    "negative_sign_passing_placements": 1,
+    "placement_support_fraction": 0.25,
+    "all_passing_signs_equal": false
+  },
+  "independent_validation": {
+    "unique_placements": 36,
+    "unique_months": 72,
+    "duplicate_placement_month_rows": 0,
+    "all_source_reads_succeeded": true,
+    "all_source_items_descending_relative_orbit_56": true,
+    "package_counts_match_recomputation": true,
+    "package_fractions_match_recomputation": true,
+    "package_pass_fail_matches_recomputation": true
+  },
+  "known_zone_ranges_metres": {
+    "tyrone_tp5": {
+      "minimum": 0.65532,
+      "best": 0.68072,
+      "maximum": 0.70612
+    },
+    "tyrone_tp6": {
+      "minimum": 0.85090,
+      "best": 0.94996,
+      "maximum": 1.04902
+    }
+  },
+  "forbidden_conclusions": [
+    "automatic_unknown_aoi_depth_from_tyrone_pair",
+    "two_anchor_radar_interpolation",
+    "global_calibration_row",
+    "post_result_geometry_selection",
+    "post_result_threshold_change"
+  ],
+  "next_feasible_product_step": "operator_calibrated_local_aoi_depth",
+  "execution_state": {
+    "local_depth_mvp_merged": true,
+    "known_zone_ranges_available": true,
+    "public_rtc_query_executed": true,
+    "calibration_record_created": false,
+    "global_training_started": false,
+    "unknown_aoi_depth_enabled": false,
+    "app_depth_enabled_for_unknown_candidates": false
+  }
+}
