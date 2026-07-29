@@ -1,0 +1,37 @@
+{
+  "schema_version": "operator_local_depth_first_aoi_preflight_status_v1",
+  "date": "2026-07-29",
+  "status": "implementation_complete_validation_pending_final_head",
+  "default_enabled": false,
+  "first_aoi_template_ready": true,
+  "browser_preflight_ready": true,
+  "checks": {
+    "template_only_rejected": true,
+    "placeholder_ids_rejected": true,
+    "duplicate_ids_rejected": true,
+    "roles_validated": true,
+    "polygon_geometry_validated": true,
+    "closed_rings_required": true,
+    "finite_coordinates_required": true,
+    "anchor_depth_ranges_validated": true,
+    "distinct_anchor_best_depths_required": true,
+    "minimum_two_anchors_required": true,
+    "minimum_one_candidate_required": true
+  },
+  "decisive_backend_checks_unchanged": [
+    "raster_intersection",
+    "boundary_erosion",
+    "minimum_valid_pixels",
+    "eroded_interior_nonoverlap",
+    "run_quality",
+    "anchor_signal_monotonicity",
+    "candidate_signal_support",
+    "no_extrapolation"
+  ],
+  "scientific_boundary": {
+    "local_only": true,
+    "transferable": false,
+    "global_model": false,
+    "automatic_tyrone_depth": false
+  }
+}
