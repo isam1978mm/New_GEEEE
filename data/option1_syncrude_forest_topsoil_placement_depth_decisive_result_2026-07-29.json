@@ -1,0 +1,35 @@
+{
+  "candidate": "Syncrude forest-topsoil salvage and placement-depth trial",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "design": {
+    "salvage_depths_cm": [10, 25],
+    "placement_depths_cm": [10, 20],
+    "substrates": ["approximately 1 m sand", "approximately 1 m 50:50 peat-mineral mix"],
+    "replicates_per_combination": 3,
+    "replicate_dimensions_m": [15, 70]
+  },
+  "monitoring_years": [1, 3],
+  "passed": {
+    "operational_scale_construction": true,
+    "replicated_design": true,
+    "same_material_pair_exists_within_factorial_design": true
+  },
+  "failed": {
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "depth_only_design_across_full_experiment": true,
+    "certified_as_built_placement_depths": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "stable_long_post_construction_interval": true
+  },
+  "reason": "Each replicate is only 15 m wide. The factorial design also varies salvage depth and substrate, operational equipment reduced placement precision, and no certified depth or execution geometry is published.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
