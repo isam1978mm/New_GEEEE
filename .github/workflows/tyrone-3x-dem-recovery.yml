@@ -1,0 +1,74 @@
+name: Tyrone 3X DEM recovery
+
+on:
+  push:
+    branches:
+      - agent/tyrone-3x-no1-asbuilt-recovery-20260729
+    paths:
+      - .github/workflows/tyrone-3x-dem-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tyrone-3x-dem-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: python -m pip install --disable-pip-version-check requests
+
+      - name: Query USGS polygon and download 3DEP elevation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import requests
+
+          out=Path('recovered')
+          headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'}
+          s=requests.Session()
+          qurl='https://energy.usgs.gov/arcgis/rest/services/Hosted/National_Mine_Waste_Inventory/FeatureServer/1/query'
+          params={'where':"site_name='Tyrone' AND ftr_name='Tailings Impoundment No. 3X'",'outFields':'*','returnGeometry':'true','outSR':'4326','f':'geojson'}
+          r=s.get(qurl,params=params,headers=headers,timeout=180); r.raise_for_status()
+          data=r.json(); feature=data['features'][0]
+          (out/'tyrone_3x_usgs.geojson').write_text(json.dumps(data,indent=2),encoding='utf-8')
+          pts=feature['geometry']['coordinates'][0]
+          xs=[p[0] for p in pts]; ys=[p[1] for p in pts]
+          pad=0.003
+          bbox=(min(xs)-pad,min(ys)-pad,max(xs)+pad,max(ys)+pad)
+          width=2048; height=2048
+          service='https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage'
+          ep={
+              'bbox':','.join(map(str,bbox)),
+              'bboxSR':'4326','imageSR':'4326',
+              'size':f'{width},{height}',
+              'format':'tiff','pixelType':'F32',
+              'interpolation':'RSP_BilinearInterpolation',
+              'f':'image',
+          }
+          dem=s.get(service,params=ep,headers=headers,timeout=900); dem.raise_for_status()
+          (out/'usgs_3dep_dem.tif').write_bytes(dem.content)
+          (out/'request_metadata.json').write_text(json.dumps({'bbox_wgs84':bbox,'width':width,'height':height,'url':dem.url,'content_type':dem.headers.get('content-type'),'bytes':len(dem.content)},indent=2),encoding='utf-8')
+          if len(dem.content)<100000:
+              raise RuntimeError(f'DEM response too small: {len(dem.content)} bytes; {dem.content[:500]!r}')
+          PY
+
+      - name: Upload DEM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-3x-dem-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
