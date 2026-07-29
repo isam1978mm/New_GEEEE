@@ -1,0 +1,114 @@
+name: Tyrone 3X and No1 as-built recovery
+
+on:
+  push:
+    branches:
+      - agent/tyrone-3x-no1-asbuilt-recovery-20260729
+    paths:
+      - .github/workflows/tyrone-3x-no1-asbuilt-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tyrone-3x-no1-asbuilt-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check requests beautifulsoup4
+
+      - name: Scrape official links and download five records
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/pdfs recovered/text
+          python - <<'PY'
+          import json, re, time
+          from pathlib import Path
+          from urllib.parse import urljoin, urlparse, unquote
+          import requests
+          from bs4 import BeautifulSoup
+
+          page_url = "https://www.emnrd.nm.gov/mmd/mining-act-reclamation-program/pending-and-approved-mine-applications/mining-applications-regular-existing/gr010retyrone-mine-revision-09-1/"
+          wanted = {
+              "Comprehensive Cover Performance Evaluation": "cover_performance",
+              "3X Tailing Annual Summary": "3x_annual",
+              "3X Tailing As-Built": "3x_asbuilt",
+              "No. 1 Stockpile Annual Summary": "no1_annual",
+              "No. 1 Stockpile As-Built": "no1_asbuilt",
+          }
+          out = Path("recovered")
+          headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
+          s = requests.Session()
+          r = s.get(page_url, headers=headers, timeout=120)
+          r.raise_for_status()
+          (out / "page.html").write_bytes(r.content)
+          soup = BeautifulSoup(r.text, "html.parser")
+
+          found = []
+          for a in soup.find_all("a", href=True):
+              label = " ".join(a.get_text(" ", strip=True).split())
+              if label in wanted:
+                  found.append({"label": label, "slug": wanted[label], "url": urljoin(page_url, a["href"])})
+          by_label = {x["label"]: x for x in found}
+          missing = [label for label in wanted if label not in by_label]
+          if missing:
+              raise SystemExit(f"Missing official links: {missing}")
+          records = [by_label[label] for label in wanted]
+          (out / "LINKS.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
+          (out / "LINKS.txt").write_text("\n".join(f'{x["label"]}\t{x["url"]}' for x in records), encoding="utf-8")
+
+          for i, item in enumerate(records, 1):
+              path = out / "pdfs" / f'{i:02d}_{item["slug"]}.pdf'
+              print(f'Downloading {item["label"]}: {item["url"]}')
+              rr = s.get(item["url"], headers=headers, timeout=900)
+              rr.raise_for_status()
+              path.write_bytes(rr.content)
+              if rr.content[:4] != b"%PDF":
+                  raise RuntimeError(f'Not PDF: {item["url"]}; type={rr.headers.get("content-type")}; bytes={len(rr.content)}')
+              time.sleep(0.3)
+          PY
+
+      - name: Extract text and targeted evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          : > recovered/TARGETED_EXTRACTS.txt
+          for pdf in recovered/pdfs/*.pdf; do
+            base="$(basename "${pdf%.pdf}")"
+            txt="recovered/text/${base}.txt"
+            pdftotext -layout "$pdf" "$txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,35p'
+              echo
+            } >> recovered/INVENTORY.txt
+            {
+              echo "================ ${base}.txt ================"
+              grep -inE -C 8 'Table 3|Figure 4|Figure 5|Figure 6|Plate 1|test plot.? ?5|test plot.? ?6|TP.?5|TP.?6|cover thickness|95% confidence|mean thickness|range of cover|survey|coordinate|northing|easting|station|acre|slope length|as-built|as built|repair|disturb|erosion|vegetation|seed|top surface|control|uncovered' "$txt" || true
+              echo
+            } >> recovered/TARGETED_EXTRACTS.txt
+          done
+          find recovered -maxdepth 3 -type f -printf '%P\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Upload recovered records
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-3x-no1-asbuilt-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
