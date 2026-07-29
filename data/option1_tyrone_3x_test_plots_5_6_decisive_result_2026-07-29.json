@@ -1,0 +1,58 @@
+{
+  "candidate_id": "tyrone_3x_test_plots_5_6",
+  "date": "2026-07-29",
+  "canonical_option": "option_1_global_numerical_depth",
+  "option_3_active": false,
+  "decision": "not_good_to_go_external_record_blocker",
+  "positive_evidence": {
+    "plot_5_area_acres": 4.06,
+    "plot_6_area_acres": 4.5,
+    "plot_5_measurements_inches": [28, 26, 26, 28, 26],
+    "plot_5_mean_inches": 26.8,
+    "plot_5_95ci_inches": [25.8, 27.8],
+    "plot_6_measurements_inches": [40, 35, 42, 36, 34],
+    "plot_6_mean_inches": 37.4,
+    "plot_6_95ci_inches": [33.5, 41.3],
+    "full_scale_clean_zone_possible": true,
+    "comparable_radar_facing_surface_supported": true,
+    "same_borrow_system": true,
+    "same_upper_cover_specification": true,
+    "same_seed_mix_and_revegetation_process": true,
+    "reclamation_completed_year": 2005,
+    "top_surface_channel_correction_completed": "2007-Q1"
+  },
+  "fatal_blockers": {
+    "coordinate_tied_test_plot_polygons": false,
+    "official_wgs84_or_survey_corner_geometry": false,
+    "plot_specific_post_2014_stability": false,
+    "mapped_later_repair_history": false
+  },
+  "localized_disturbance_to_exclude_if_reopened": [
+    "lysimeter subsidence areas",
+    "monitoring nests",
+    "instrument cables",
+    "storm-water channel and correction area",
+    "plot boundaries and adjacent drainage"
+  ],
+  "gate_status": {
+    "full_scale_clean_zones": "pass_in_principle",
+    "final_measured_numerical_depths": "pass",
+    "numerical_uncertainty": "pass",
+    "matched_radar_facing_surfaces": "pass",
+    "coordinate_tied_geometry": "fail_external_record_blocker",
+    "stable_sentinel1_period": "fail_external_record_blocker",
+    "option_4_confirmed_control": "not_established"
+  },
+  "execution_state": {
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "usable_calibration_rows_added": 0,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "reopen_only_if": [
+    "official CAD GIS surveyed corners or coordinate-controlled plot geometry is recovered",
+    "plot-specific post-2014 inspection repair and maintenance records establish a stable interval"
+  ]
+}
