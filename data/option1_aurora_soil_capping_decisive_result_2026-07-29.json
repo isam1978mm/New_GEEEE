@@ -1,0 +1,65 @@
+{
+  "candidate": "Aurora Soil Capping Study",
+  "date": "2026-07-29",
+  "strategy_classification": "Option 1 evidence research",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "failure_type": "public_as_built_record_missing",
+  "evidence": {
+    "large_scale_cells": true,
+    "cell_count": 36,
+    "approximate_cell_area_hectares": 1,
+    "replicate_count_per_treatment": 3,
+    "construction_year": 2012,
+    "different_nominal_depths": true,
+    "final_measured_polygon_depths": false,
+    "numerical_depth_uncertainty": false,
+    "coordinate_tied_treatment_polygons": false,
+    "matched_radar_facing_surfaces_proven": false,
+    "stable_sentinel1_period_proven": false,
+    "confirmed_option4_control": false
+  },
+  "strongest_nominal_pair": {
+    "description": "30 cm peat over overburden versus 30 cm peat plus 120 cm subsoil over overburden",
+    "usable_for_calibration": false,
+    "blockers": [
+      "nominal design rather than final surveyed polygon depth",
+      "no construction-thickness uncertainty",
+      "no coordinate-tied treatment polygons",
+      "slope, aspect, drainage, roughness and vegetation comparability not proven",
+      "stable Sentinel-1 period not proven"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Characterizing uncertainty in the hydraulic parameters of oil sands mine reclamation covers and its influence on water balance predictions",
+      "year": 2020,
+      "doi": "10.5194/hess-24-735-2020",
+      "sha256": "e65ff750becd47700e14568bfa4c0b71193c4a3e9050a4af6a46d1d2f059a61b"
+    },
+    {
+      "title": "Degradation and Mobility of Petroleum Hydrocarbons in an Oil Sands Waste at Aurora Fort Hills Disposal Area",
+      "year": 2013,
+      "repository": "University of Saskatchewan",
+      "sha256": "3d8b470daa301ad4fe91ea606d1e46b29f9499d9721d4dedc6fbbfc8f534e25c"
+    }
+  ],
+  "outputs": {
+    "usable_positive_depth_site_groups_added": 0,
+    "usable_confirmed_negative_site_groups_added": 0,
+    "usable_calibration_rows_added": 0,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "reopen_only_if": [
+    "official final surveyed cell thicknesses",
+    "numerical construction tolerance or survey uncertainty",
+    "coordinate-tied CAD, GIS or as-built treatment polygons",
+    "documented matched surface and landscape conditions",
+    "plot-specific stable Sentinel-1 period"
+  ],
+  "next_action": "Target Aitik WRD6 official construction-quality and as-built records unless a stronger Tyrone agency response arrives first."
+}
