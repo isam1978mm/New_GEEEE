@@ -1,0 +1,36 @@
+{
+  "date": "2026-07-29",
+  "active_plan": {
+    "option_5_anomaly_review_not_depth": true,
+    "local_provisional_numerical_depth_mvp": true,
+    "global_option_1_research_background_only": true,
+    "option_3_active": false
+  },
+  "first_calibration_site": "Tyrone 3X Test Plots 5 and 6",
+  "anchors": [
+    {
+      "area_id": "tyrone_3x_test_plot_5",
+      "depth_best_m": 0.68072,
+      "depth_min_m": 0.65532,
+      "depth_max_m": 0.70612,
+      "geometry_quality": "derived_operator_review_required",
+      "stability_quality": "provisional"
+    },
+    {
+      "area_id": "tyrone_3x_test_plot_6",
+      "depth_best_m": 0.94996,
+      "depth_min_m": 0.85090,
+      "depth_max_m": 1.04902,
+      "geometry_quality": "derived_operator_review_required",
+      "stability_quality": "provisional"
+    }
+  ],
+  "output_status": "calibrated_range",
+  "validation_status": "provisional_local_only",
+  "transferability": "not_transferable",
+  "global_validated_calibration_rows": 0,
+  "earth_engine_query_executed": false,
+  "training_started": false,
+  "app_depth_enabled": false,
+  "next_step": "Implement the private local package loader, schema, stage skeleton, provisional statuses, warnings, and unit tests."
+}
