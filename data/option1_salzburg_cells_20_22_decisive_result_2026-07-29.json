@@ -1,0 +1,41 @@
+{
+  "candidate": "Salzburg Landfill Cells 20-22",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "closed_effective_date": "2017-08-02",
+  "closed_area_acres": 7.2,
+  "common_cover_design": {
+    "topsoil_inches": 6,
+    "protective_soil_inches": 18,
+    "foundation_soil_inches": 12
+  },
+  "design_cqa_requirements": {
+    "survey_instrument_precision_feet": 0.01,
+    "vertical_tolerance_feet": 0.1,
+    "typical_maximum_spacing_feet": 100,
+    "same_coordinate_comparison_required_where_possible": true,
+    "licensed_professional_surveyor_required": true
+  },
+  "passed": {
+    "completed_closure": true,
+    "large_enough_in_principle": true,
+    "common_surface_assembly": true,
+    "strong_design_survey_requirements": true
+  },
+  "failed": {
+    "final_measured_thickness_table_public": true,
+    "coordinate_tied_final_depth_polygons": true,
+    "two_broad_measured_depth_zones": true,
+    "polygon_level_uncertainty": true,
+    "stable_post_2017_exact_zone_period": true
+  },
+  "reason": "The public package contains the design and CQA requirements but not the final 2017 same-coordinate construction-certification dataset. One repeated cover design was specified across Cells 20-22.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
