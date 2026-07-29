@@ -1,0 +1,57 @@
+name: Tyrone 3X execution-path inventory
+
+on:
+  push:
+    branches:
+      - agent/tyrone-3x-no1-asbuilt-recovery-20260729
+    paths:
+      - .github/workflows/tyrone-3x-execution-path-inventory.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tyrone-3x-execution-path-inventory.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inventory Earth Engine execution paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p inventory/relevant
+          {
+            echo '=== WORKFLOWS ==='
+            find .github/workflows -maxdepth 1 -type f -printf '%p\n' | sort
+            echo
+            echo '=== EARTH ENGINE REFERENCES ==='
+            grep -RInE --exclude-dir=.git --exclude='*.ipynb' 'ee\.Initialize|earthengine|Earth Engine|GOOGLE_APPLICATION_CREDENTIALS|service.?account|COPERNICUS/S1_GRD|Sentinel-1' . || true
+          } > inventory/earth_engine_inventory.txt
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            case "$file" in
+              *.py|*.yml|*.yaml|*.json|*.md|*.toml|*.txt)
+                mkdir -p "inventory/relevant/$(dirname "$file")"
+                cp "$file" "inventory/relevant/$file"
+                ;;
+            esac
+          done < <(grep -RIlE --exclude-dir=.git --exclude='*.ipynb' 'ee\.Initialize|earthengine|Earth Engine|GOOGLE_APPLICATION_CREDENTIALS|service.?account|COPERNICUS/S1_GRD|Sentinel-1' . || true)
+
+          find inventory -type f -printf '%p\t%s bytes\n' | sort > inventory/FILES.txt
+
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-3x-execution-path-inventory
+          path: inventory/
+          if-no-files-found: error
+          retention-days: 7
