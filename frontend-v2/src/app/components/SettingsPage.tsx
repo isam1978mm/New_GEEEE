@@ -121,17 +121,17 @@ export function SettingsPage({
               className="font-mono"
               style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
             >
-              Operator private overlays
+              Operator private tools
             </span>
           </div>
           <div className="px-4 py-3 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--gs-navy)" }}>
-                  Operator-only private preview
+                  Operator-only private tools
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--gs-slate)", marginTop: "2px", lineHeight: "1.5" }}>
-                  Disabled by default. Requires the backend preview flag and trusted upstream operator authentication. Private overlay must show coordinate-free summaries only; verify existing UI safety tests before changing this panel.
+                  Shows coordinate-free private previews and the reviewed local-depth calibration panel. Both backend capabilities remain separately gated and disabled by default. Local depth also requires measured anchor polygons and explicit operator review.
                 </div>
               </div>
               <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
@@ -150,7 +150,7 @@ export function SettingsPage({
               style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
             >
               <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them before the backend allows preview access. No public downloads, public overlay layer, private geometry, KMZ contents, raw payloads, coordinates, or filesystem paths are shown.
+                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them in network deployments. Local development remains loopback-only. Private geometry is never returned in the local-depth response, and private overlays remain coordinate-free.
               </div>
             </div>
           </div>
