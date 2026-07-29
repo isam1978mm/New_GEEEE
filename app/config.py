@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     operator_auth_oidc_issuer_url: str | None = Field(default=None)
     operator_auth_oidc_client_id: str | None = Field(default=None)
     operator_auth_oidc_jwks_uri: str | None = Field(default=None)
+    local_depth_mode: str = Field(default="off")
+    local_depth_package_dir: Path | None = Field(default=None)
 
     @property
     def database_url(self) -> str:
