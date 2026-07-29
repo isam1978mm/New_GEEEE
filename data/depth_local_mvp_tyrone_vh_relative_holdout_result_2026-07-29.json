@@ -1,0 +1,53 @@
+{
+  "date": "2026-07-29",
+  "decision": "continuous_relative_vh_interpolation_not_supported",
+  "workflow_run_id": 30490944902,
+  "artifact_id": 8739699062,
+  "selected_acquisitions": 177,
+  "read_successes": 177,
+  "read_failures": 0,
+  "passing_splits": 0,
+  "required_passing_splits": 3,
+  "split_summary": {
+    "west_anchor_east_holdout": {
+      "usable_months": 48,
+      "tp5_median_absolute_error_m": 0.1442098737690512,
+      "tp6_median_absolute_error_m": 0.13627795982976265,
+      "tp6_deeper_fraction": 0.625,
+      "passed": false
+    },
+    "east_anchor_west_holdout": {
+      "usable_months": 40,
+      "tp5_median_absolute_error_m": 0.17708549436530507,
+      "tp6_median_absolute_error_m": 0.204361013214319,
+      "tp6_deeper_fraction": 0.75,
+      "passed": false
+    },
+    "north_anchor_south_holdout": {
+      "usable_months": 47,
+      "tp5_median_absolute_error_m": 0.15057220484143385,
+      "tp6_median_absolute_error_m": 0.12809444583702834,
+      "tp6_deeper_fraction": 0.574468085106383,
+      "passed": false
+    },
+    "south_anchor_north_holdout": {
+      "usable_months": 31,
+      "tp5_median_absolute_error_m": 0.1999453012000495,
+      "tp6_median_absolute_error_m": 0.07190871659993914,
+      "tp6_deeper_fraction": 0.7419354838709677,
+      "passed": false
+    }
+  },
+  "known_zone_ranges_m": {
+    "tp5": [0.65532, 0.70612],
+    "tp6": [0.85090, 1.04902]
+  },
+  "post_hoc_observation": "overall_median_estimates_classified_both_known_zones_correctly_in_all_four_splits",
+  "post_hoc_observation_is_validation": false,
+  "next_test": "fresh_2024_to_2026_two_band_temporal_holdout",
+  "continuous_unknown_depth_ready": false,
+  "depth_band_ready": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "app_depth_enabled_by_default": false
+}
