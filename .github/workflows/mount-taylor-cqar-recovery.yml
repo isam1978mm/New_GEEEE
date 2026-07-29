@@ -1,0 +1,121 @@
+name: Mount Taylor CQAR recovery
+
+on:
+  push:
+    branches:
+      - agent/mount-taylor-cqar-recovery-20260729
+    paths:
+      - .github/workflows/mount-taylor-cqar-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/mount-taylor-cqar-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check requests beautifulsoup4
+
+      - name: Download CQAR, comments, and 2022 closure reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/pdfs recovered/text recovered/renders
+          python - <<'PY'
+          import json, re, time
+          from pathlib import Path
+          from urllib.parse import urljoin, urlparse, unquote
+          import requests
+          from bs4 import BeautifulSoup
+
+          out = Path('recovered')
+          headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'}
+          s = requests.Session()
+
+          fixed = [
+            ('cqar','https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2021-05-14-CQAR-Disposal-Cell.pdf'),
+            ('agency_comments','https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2022-03-17-Joint-NMEDMMD-RGR-Disposal-Cell-CQAR-Comments.pdf'),
+          ]
+
+          page_url='https://www.emnrd.nm.gov/mmd/mining-act-reclamation-program/pending-and-approved-mine-applications/mining-applications-regular-existing/ci002re-mount-taylor-mine-modification-20-1/ci002re-mt-taylor-mine-modification-20-1-closure-activity-reports/'
+          r=s.get(page_url,headers=headers,timeout=120); r.raise_for_status()
+          (out/'closure_reports_page.html').write_bytes(r.content)
+          soup=BeautifulSoup(r.text,'html.parser')
+          current_year=None
+          monthly=[]
+          for node in soup.find_all(['p','div','td','a','h2','h3','h4']):
+              text=' '.join(node.get_text(' ',strip=True).split())
+              if text == '2022': current_year='2022'
+              if node.name=='a' and node.get('href') and current_year=='2022':
+                  label=text
+                  if label in {'January','February','March','April','May','June','July','August','September'}:
+                      monthly.append((f'2022_{label.lower()}',urljoin(page_url,node['href'])))
+          # Fallback: accept links whose nearby parent contains 2022 and month labels.
+          if not monthly:
+              for a in soup.find_all('a',href=True):
+                  label=' '.join(a.get_text(' ',strip=True).split())
+                  if label in {'January','February','March','April','May','June','July','August','September'}:
+                      href=urljoin(page_url,a['href'])
+                      if '.pdf' in href.lower(): monthly.append((f'2022_{label.lower()}',href))
+          records=fixed+monthly
+          seen=set(); dedup=[]
+          for name,url in records:
+              if url not in seen:
+                  seen.add(url); dedup.append((name,url))
+          (out/'LINKS.json').write_text(json.dumps([{'name':n,'url':u} for n,u in dedup],indent=2),encoding='utf-8')
+          for i,(name,url) in enumerate(dedup,1):
+              dest=out/'pdfs'/f'{i:02d}_{name}.pdf'
+              print('Downloading',url)
+              rr=s.get(url,headers=headers,timeout=600); rr.raise_for_status()
+              dest.write_bytes(rr.content)
+              if rr.content[:4] != b'%PDF':
+                  raise RuntimeError(f'Not PDF {url}: {rr.headers.get("content-type")} {len(rr.content)}')
+              time.sleep(0.2)
+          PY
+
+      - name: Extract text and render decisive sheets
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          : > recovered/TARGETED_EXTRACTS.txt
+          for pdf in recovered/pdfs/*.pdf; do
+            base="$(basename "${pdf%.pdf}")"
+            txt="recovered/text/${base}.txt"
+            pdftotext -layout "$pdf" "$txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,30p'
+              echo
+            } >> recovered/INVENTORY.txt
+            {
+              echo "================ ${base}.txt ================"
+              grep -inE -C 7 '2.? thick|18.? of loam|clean soils|cover|growth media|growth medium|radon barrier|south slope|west slope|as-built|as built|thickness|survey|compaction|tolerance|uncertaint|seed|vegetation|erosion|disturb|construction' "$txt" || true
+              echo
+            } >> recovered/TARGETED_EXTRACTS.txt
+          done
+          CQAR="$(ls recovered/pdfs/*_cqar.pdf | head -1)"
+          pdftoppm -f 6 -l 12 -png -r 220 "$CQAR" recovered/renders/cqar_page >/dev/null
+          find recovered -maxdepth 3 -type f -printf '%P\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Upload recovered records
+        uses: actions/upload-artifact@v4
+        with:
+          name: mount-taylor-cqar-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
