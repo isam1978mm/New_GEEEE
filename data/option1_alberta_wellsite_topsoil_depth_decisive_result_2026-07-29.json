@@ -1,0 +1,33 @@
+{
+  "candidate": "Alberta abandoned-wellsite topsoil-depth experiment",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "sites": ["Strathmore", "Hesketh", "Rosedale"],
+  "design": {
+    "topsoil_replacement_percentages": [0, 50, 100, 150],
+    "main_plot_dimensions_m": [8, 10],
+    "subplot_dimensions_m": [8, 2],
+    "replicates_per_site": 4,
+    "amendment_subtreatments": 5
+  },
+  "measured_100_percent_depths_cm": {
+    "Strathmore": 9.0,
+    "Hesketh": 8.0,
+    "Rosedale": 9.0
+  },
+  "failed": {
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "depth_only_design": true,
+    "official_coordinate_polygons": true,
+    "post_2014_exact_plot_stability": true
+  },
+  "reason": "The topsoil-depth main plots are only 8 m by 10 m and amendment subplots only 8 m by 2 m, far below the radar-support requirement.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
