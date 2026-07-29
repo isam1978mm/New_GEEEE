@@ -1,0 +1,59 @@
+{
+  "candidate_id": "tyrone_3x_test_plots_5_6",
+  "date": "2026-07-29",
+  "result_kind": "provisional_geometry_multi_placement_sensitivity",
+  "decision": "not_good_to_go_unknown_aoi_radar_depth",
+  "status": "ordering_inconsistent",
+  "scientific_query_executed": true,
+  "earth_engine_query_executed": false,
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "selected_orbit_state": "descending",
+    "selected_relative_orbit": 56,
+    "successful_acquisition_count": 177,
+    "usable_month_count": 72
+  },
+  "geometry_sensitivity": {
+    "map_fit_hypothesis_count": 4,
+    "shift_count_per_fit": 9,
+    "geometry_hypothesis_count": 36,
+    "edge_buffer_m": 20,
+    "minimum_mask_pixel_count": 81,
+    "maximum_mask_pixel_count": 100,
+    "passing_placement_count": 9,
+    "same_sign_passing_placement_count": 8,
+    "required_passing_placement_count": 29,
+    "opposite_sign_seen_in_passing_placement": true
+  },
+  "primary_feature": "monthly_median_VV_dB_minus_monthly_median_VH_dB",
+  "classifier_output_used": false,
+  "pca_anomaly_used": false,
+  "thresholds_changed_after_value_inspection": false,
+  "measured_local_anchors": {
+    "tyrone_tp5": {
+      "depth_min_m": 0.65532,
+      "depth_best_m": 0.68072,
+      "depth_max_m": 0.70612
+    },
+    "tyrone_tp6": {
+      "depth_min_m": 0.8509,
+      "depth_best_m": 0.94996,
+      "depth_max_m": 1.04902
+    }
+  },
+  "execution_state": {
+    "local_known_zone_mvp_available": true,
+    "local_known_zone_mvp_default_enabled": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "unknown_aoi_depth_enabled": false,
+    "app_depth_enabled": false
+  },
+  "reopen_only_if": [
+    "official coordinate-controlled Test Plot 5 and 6 geometry is recovered",
+    "or a defensible georeference reduces uncertainty and a preregistered sensitivity test passes consistently"
+  ]
+}
