@@ -10,6 +10,22 @@ Proceed on three controlled tracks:
 
 Option 3 remains on hold pending New Mexico EMNRD request `N000019-070026` for Tyrone Dam 3X records.
 
+## Strategy interpretation lock — added 2026-07-29
+
+The active plan is **Option 5 + Option 1**, with **Option 4 available but inactive**.
+
+**Option 3 is not active.**
+
+Reviewing, recovering, or completing a candidate such as Tyrone, Aurora, Aitik, Faro, or Detour is part of **Option 1 evidence research** when the purpose is to collect evidence for the global transferable-depth model. Candidate recovery does not automatically activate Option 3.
+
+Option 3 may become active only after an explicit user instruction to switch to or proceed with `Option 3 — Complete Candidates`.
+
+Do not describe the plan as `Option 1 through Option 3`, `Option 1 + Option 3`, or `Option 3 is the foreground route` unless the user explicitly changes the strategy.
+
+The controlling strategy-status document is:
+
+`docs/DEPTH_ACTIVE_STRATEGY_LOCK_2026-07-29.md`
+
 ## First Option 5 implementation slice
 
 The app already computes PCA anomaly scores and writes these public-safe object summaries in `objects_index.csv`:
@@ -69,17 +85,18 @@ No training begins until a real calibration package passes the repository valida
 ## Current status
 
 ```text
-Option 5 anomaly UI source = implemented on isolated branch
+Option 5 anomaly UI source = implemented and merged
 Option 5 production SPA build = passed and synchronized
 Option 5 temporal change output = not implemented
 Option 1 evidence search = active in parallel
-Option 3 Tyrone records = pending
+Tyrone records request = pending; this does not activate Option 3
+Option 3 complete-candidates strategy = not active
 Option 4 local AOI = available but inactive
 usable calibration rows = 0
 training started = no
 numerical depth ready = no
 app depth enabled = no
-full repository CI = final synchronized-head rerun pending
+full repository CI = passed at Option 5 merge
 ```
 
 ## Verification required before merge
