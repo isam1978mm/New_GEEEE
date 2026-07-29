@@ -19,7 +19,7 @@ permissions:
 jobs:
   recover:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
@@ -50,26 +50,10 @@ jobs:
               "No. 1 Stockpile As-Built": "no1_asbuilt",
           }
           later = [
-              {
-                  "label": "2020 Closure Plan Text Figures Plates Tables",
-                  "slug": "2020_closure_plan",
-                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2-18106417_004RRev1_Tyrone_CCP_Update_20200429.pdf",
-              },
-              {
-                  "label": "2020 Appendix A Reclamation Design Drawings",
-                  "slug": "2020_appendixA_drawings",
-                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/3-AppendixA_ReclamationDesignDrawings_Rev1.pdf",
-              },
-              {
-                  "label": "2018 FMI Response to Updated CCP Comments",
-                  "slug": "2018_fmi_response",
-                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2018-04-13FMIResponsetoCommentsUpdatedCCP_Tyrone_GR010RE.pdf",
-              },
-              {
-                  "label": "2008 FMI Responses to Primary Issues",
-                  "slug": "2008_fmi_responses",
-                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2008-06-23_FMIResponsestoPrimaryIssuesTyroneUpdatedCCP.pdf",
-              },
+              {"label": "2020 Closure Plan Text Figures Plates Tables", "slug": "2020_closure_plan", "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2-18106417_004RRev1_Tyrone_CCP_Update_20200429.pdf"},
+              {"label": "2020 Appendix A Reclamation Design Drawings", "slug": "2020_appendixA_drawings", "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/3-AppendixA_ReclamationDesignDrawings_Rev1.pdf"},
+              {"label": "2018 FMI Response to Updated CCP Comments", "slug": "2018_fmi_response", "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2018-04-13FMIResponsetoCommentsUpdatedCCP_Tyrone_GR010RE.pdf"},
+              {"label": "2008 FMI Responses to Primary Issues", "slug": "2008_fmi_responses", "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2008-06-23_FMIResponsestoPrimaryIssuesTyroneUpdatedCCP.pdf"},
           ]
           out = Path("recovered")
           headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
@@ -101,6 +85,59 @@ jobs:
               if rr.content[:4] != b"%PDF":
                   raise RuntimeError(f'Not PDF: {item["url"]}; type={rr.headers.get("content-type")}; bytes={len(rr.content)}')
               time.sleep(0.3)
+          PY
+
+      - name: Query official USGS mine-waste service near Tyrone
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/usgs_nmwi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import requests
+
+          root = "https://energy.usgs.gov/arcgis/rest/services/Hosted/National_Mine_Waste_Inventory/FeatureServer"
+          out = Path("recovered/usgs_nmwi")
+          headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
+          session = requests.Session()
+
+          for layer in (0, 1):
+              meta = session.get(f"{root}/{layer}", params={"f": "pjson"}, headers=headers, timeout=120)
+              meta.raise_for_status()
+              (out / f"layer_{layer}_metadata.json").write_bytes(meta.content)
+
+              params = {
+                  "where": "1=1",
+                  "geometry": "-108.55,32.48,-108.15,32.88",
+                  "geometryType": "esriGeometryEnvelope",
+                  "inSR": "4326",
+                  "spatialRel": "esriSpatialRelIntersects",
+                  "outFields": "*",
+                  "returnGeometry": "true",
+                  "outSR": "4326",
+                  "f": "geojson",
+              }
+              response = session.get(f"{root}/{layer}/query", params=params, headers=headers, timeout=300)
+              response.raise_for_status()
+              (out / f"layer_{layer}_near_tyrone.geojson").write_bytes(response.content)
+              data = response.json()
+              print(f"Layer {layer}: {len(data.get('features', []))} features near Tyrone")
+              for feature in data.get("features", []):
+                  props = feature.get("properties", {})
+                  print(json.dumps({k: props.get(k) for k in ("site_id", "site_name", "ftr_id", "ftr_name", "ftr_type", "loc_descr", "area_sqkm", "remarks")}, ensure_ascii=False))
+
+          text_params = {
+              "where": "UPPER(site_name) LIKE '%TYRONE%' OR UPPER(ftr_name) LIKE '%TYRONE%' OR UPPER(loc_descr) LIKE '%TYRONE%'",
+              "outFields": "*",
+              "returnGeometry": "true",
+              "outSR": "4326",
+              "f": "geojson",
+          }
+          response = session.get(f"{root}/1/query", params=text_params, headers=headers, timeout=300)
+          response.raise_for_status()
+          (out / "polygons_text_match_tyrone.geojson").write_bytes(response.content)
+          print("Text-match polygons:", len(response.json().get("features", [])))
           PY
 
       - name: Extract text and targeted evidence
