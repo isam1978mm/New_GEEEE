@@ -4,17 +4,15 @@ import {
   type OperatorLocalDepthEstimate,
   type OperatorLocalDepthResult,
 } from "../api/operatorLocalDepth";
+import {
+  buildOperatorLocalDepthTemplate,
+  inspectOperatorLocalDepthGeojson,
+  type ReviewedFileSummary,
+} from "../localDepthPreflight";
 
 interface OperatorLocalDepthPanelProps {
   runId: string;
   operatorAccessToken?: string | null;
-}
-
-interface ReviewedFileSummary {
-  fileName: string;
-  featureCount: number;
-  anchorCount: number;
-  candidateCount: number;
 }
 
 export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: OperatorLocalDepthPanelProps) {
@@ -43,12 +41,25 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
     }
     try {
       const parsed = JSON.parse(await file.text()) as unknown;
-      const summary = inspectFeatureCollection(parsed, file.name);
+      const summary = inspectOperatorLocalDepthGeojson(parsed, file.name);
       setGeojson(parsed as Record<string, unknown>);
       setFileSummary(summary);
     } catch (error) {
       setFileError(error instanceof Error ? error.message : "The selected GeoJSON file is not valid.");
     }
+  }
+
+  function handleDownloadTemplate() {
+    const template = buildOperatorLocalDepthTemplate();
+    const blob = new Blob([`${JSON.stringify(template, null, 2)}\n`], { type: "application/geo+json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "operator-local-depth-first-aoi-template.geojson";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   async function handleRun() {
@@ -117,21 +128,33 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
             </Field>
           </div>
 
-          <Field label="Reviewed anchor and candidate polygons">
-            <input
-              type="file"
-              accept=".geojson,.json,application/geo+json,application/json"
-              onChange={(event) => { void handleFileChange(event); }}
-              style={{ fontSize: "11px", color: "var(--gs-slate)" }}
-            />
-          </Field>
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Reviewed anchor and candidate polygons">
+              <input
+                type="file"
+                accept=".geojson,.json,application/geo+json,application/json"
+                onChange={(event) => { void handleFileChange(event); }}
+                style={{ fontSize: "11px", color: "var(--gs-slate)" }}
+              />
+            </Field>
+            <button type="button" onClick={handleDownloadTemplate} className="rounded px-3 py-2" style={secondaryButtonStyle}>
+              Download blank GeoJSON template
+            </button>
+          </div>
 
-          {fileError && <StatusBox tone="error" message={fileError} />}
+          {fileError && <StatusBox tone="error" message={`Preflight failed: ${fileError}`} />}
           {fileSummary && (
             <StatusBox
-              tone="neutral"
-              message={`${fileSummary.fileName}: ${fileSummary.featureCount} features — ${fileSummary.anchorCount} measured anchors and ${fileSummary.candidateCount} candidates.`}
+              tone="success"
+              message={`Preflight passed — ${fileSummary.fileName}: ${fileSummary.featureCount} features, ${fileSummary.anchorCount} measured anchors, ${fileSummary.candidateCount} candidates, anchor support ${formatMetres(fileSummary.minimumAnchorDepthM)}–${formatMetres(fileSummary.maximumAnchorDepthM)} m.`}
             />
+          )}
+          {fileSummary && (
+            <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+              <div><strong style={{ color: "var(--gs-navy)" }}>Anchors:</strong> {summariseIds(fileSummary.anchorIds)}</div>
+              <div><strong style={{ color: "var(--gs-navy)" }}>Candidates:</strong> {summariseIds(fileSummary.candidateIds)}</div>
+              <div style={{ marginTop: "4px" }}>This structural preflight does not replace the backend raster-intersection, pixel-count, overlap, run-quality, or no-extrapolation checks.</div>
+            </div>
           )}
 
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
@@ -278,38 +301,11 @@ function StatusBox({ tone, message }: { tone: "neutral" | "warning" | "error" | 
   return <div className="rounded px-3 py-2" style={{ ...styles, fontSize: "11px", lineHeight: "1.5" }}>{message}</div>;
 }
 
-function inspectFeatureCollection(value: unknown, fileName: string): ReviewedFileSummary {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("The selected file must contain a GeoJSON FeatureCollection.");
+function summariseIds(values: string[]): string {
+  if (values.length <= 5) {
+    return values.join(", ");
   }
-  const document = value as Record<string, unknown>;
-  if (document.type !== "FeatureCollection" || !Array.isArray(document.features) || document.features.length === 0) {
-    throw new Error("The selected file must contain a non-empty GeoJSON FeatureCollection.");
-  }
-  let anchorCount = 0;
-  let candidateCount = 0;
-  for (const feature of document.features) {
-    if (!feature || typeof feature !== "object" || Array.isArray(feature)) {
-      throw new Error("The GeoJSON contains an invalid feature.");
-    }
-    const properties = (feature as Record<string, unknown>).properties;
-    if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
-      throw new Error("Every feature must contain properties.");
-    }
-    const role = (properties as Record<string, unknown>).role;
-    if (role === "anchor") {
-      anchorCount += 1;
-    } else if (role === "candidate") {
-      candidateCount += 1;
-    }
-  }
-  if (anchorCount < 2) {
-    throw new Error("At least two measured anchor features are required.");
-  }
-  if (candidateCount < 1) {
-    throw new Error("At least one candidate feature is required.");
-  }
-  return { fileName, featureCount: document.features.length, anchorCount, candidateCount };
+  return `${values.slice(0, 5).join(", ")} and ${values.length - 5} more`;
 }
 
 function clampInteger(value: string, minimum: number, maximum: number, fallback: number): number {
@@ -329,6 +325,16 @@ const inputStyle = {
   backgroundColor: "white",
   color: "var(--gs-navy)",
   fontSize: "11px",
+} as const;
+
+const secondaryButtonStyle = {
+  alignSelf: "flex-start",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "var(--gs-navy)",
+  backgroundColor: "var(--accent)",
+  border: "1px solid rgba(28,43,94,0.18)",
+  cursor: "pointer",
 } as const;
 
 const checkboxStyle = {
