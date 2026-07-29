@@ -1,0 +1,35 @@
+{
+  "candidate": "Judy Creek Test Mine soil-depth experiment",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "study_period": "1979-1983",
+  "design": {
+    "plot_count": 9,
+    "depth_treatments_cm": [0, 30, 70],
+    "randomized_block_design": true,
+    "replacement_material": "Grey Luvisol surface soil with mixed A and B horizons",
+    "underlying_material": "till subsoil"
+  },
+  "passed": {
+    "same_material_depth_experiment": true,
+    "replicated_design": true,
+    "common_revegetation_program": true
+  },
+  "failed": {
+    "published_plot_dimensions": true,
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "post_2014_exact_plot_stability": true
+  },
+  "reason": "The public record confirms the treatment design but does not publish plot dimensions, measured as-built depths, uncertainty, official execution geometry, or Sentinel-1-era stability for the exact plots.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
