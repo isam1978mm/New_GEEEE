@@ -19,7 +19,7 @@ permissions:
 jobs:
   recover:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -29,15 +29,15 @@ jobs:
           sudo apt-get install -y poppler-utils
           python -m pip install --disable-pip-version-check requests beautifulsoup4
 
-      - name: Scrape official links and download five records
+      - name: Scrape official links and download records
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p recovered/pdfs recovered/text
           python - <<'PY'
-          import json, re, time
+          import json, time
           from pathlib import Path
-          from urllib.parse import urljoin, urlparse, unquote
+          from urllib.parse import urljoin
           import requests
           from bs4 import BeautifulSoup
 
@@ -49,6 +49,28 @@ jobs:
               "No. 1 Stockpile Annual Summary": "no1_annual",
               "No. 1 Stockpile As-Built": "no1_asbuilt",
           }
+          later = [
+              {
+                  "label": "2020 Closure Plan Text Figures Plates Tables",
+                  "slug": "2020_closure_plan",
+                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2-18106417_004RRev1_Tyrone_CCP_Update_20200429.pdf",
+              },
+              {
+                  "label": "2020 Appendix A Reclamation Design Drawings",
+                  "slug": "2020_appendixA_drawings",
+                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/3-AppendixA_ReclamationDesignDrawings_Rev1.pdf",
+              },
+              {
+                  "label": "2018 FMI Response to Updated CCP Comments",
+                  "slug": "2018_fmi_response",
+                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2018-04-13FMIResponsetoCommentsUpdatedCCP_Tyrone_GR010RE.pdf",
+              },
+              {
+                  "label": "2008 FMI Responses to Primary Issues",
+                  "slug": "2008_fmi_responses",
+                  "url": "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/2008-06-23_FMIResponsestoPrimaryIssuesTyroneUpdatedCCP.pdf",
+              },
+          ]
           out = Path("recovered")
           headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
           s = requests.Session()
@@ -66,14 +88,14 @@ jobs:
           missing = [label for label in wanted if label not in by_label]
           if missing:
               raise SystemExit(f"Missing official links: {missing}")
-          records = [by_label[label] for label in wanted]
+          records = [by_label[label] for label in wanted] + later
           (out / "LINKS.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
           (out / "LINKS.txt").write_text("\n".join(f'{x["label"]}\t{x["url"]}' for x in records), encoding="utf-8")
 
           for i, item in enumerate(records, 1):
               path = out / "pdfs" / f'{i:02d}_{item["slug"]}.pdf'
               print(f'Downloading {item["label"]}: {item["url"]}')
-              rr = s.get(item["url"], headers=headers, timeout=900)
+              rr = s.get(item["url"], headers=headers, timeout=1200)
               rr.raise_for_status()
               path.write_bytes(rr.content)
               if rr.content[:4] != b"%PDF":
@@ -99,7 +121,7 @@ jobs:
             } >> recovered/INVENTORY.txt
             {
               echo "================ ${base}.txt ================"
-              grep -inE -C 8 'Table 3|Figure 4|Figure 5|Figure 6|Plate 1|test plot.? ?5|test plot.? ?6|TP.?5|TP.?6|cover thickness|95% confidence|mean thickness|range of cover|survey|coordinate|northing|easting|station|acre|slope length|as-built|as built|repair|disturb|erosion|vegetation|seed|top surface|control|uncovered' "$txt" || true
+              grep -inE -C 8 'Table 3|Figure 4|Figure 5|Figure 6|Plate 1|test plot.? ?5|test plot.? ?6|TP.?5|TP.?6|cover thickness|95% confidence|mean thickness|range of cover|survey|coordinate|northing|easting|state plane|NAD|station|acre|slope length|as-built|as built|No.? ?3X|Dam 3X|3X Dam|repair|disturb|erosion|inspection|vegetation|seed|top surface|control|uncovered|reclamation status|completed reclamation|future earthwork|regrade' "$txt" || true
               echo
             } >> recovered/TARGETED_EXTRACTS.txt
           done
