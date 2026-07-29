@@ -1,0 +1,29 @@
+{
+  "candidate": "Boreal Shield Technosol lysimeter trial",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "design": {
+    "placement_depths_cm": [30, 60],
+    "material_ratios": ["60% mine rock / 40% woody residuals", "20% mine rock / 80% woody residuals"],
+    "installation_type": "mine-rock lysimeters",
+    "monitoring_period": "late 2012-2015"
+  },
+  "failed": {
+    "field_scale_polygons": true,
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "depth_only_design": true,
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "long_stable_sentinel1_period": true
+  },
+  "reason": "The 30 cm and 60 cm treatments were lysimeter-scale and material composition also varied. They cannot support broad radar calibration polygons.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
