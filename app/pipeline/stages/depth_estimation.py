@@ -4,11 +4,18 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
-from app.pipeline.depth.package import LocalDepthPackage, LocalDepthPackageError, load_local_depth_package
+from app.pipeline.depth.interpolation import (
+    OPERATOR_CANDIDATES_SCHEMA,
+    OPERATOR_METHOD_KIND,
+    OperatorCandidateInput,
+    OperatorInterpolationPackage,
+)
+from app.pipeline.depth.loader import DepthPackage, DepthPackageError, load_depth_package
+from app.pipeline.depth.package import PACKAGE_METHOD_KIND, LocalDepthPackage
 from app.pipeline.depth.schema import (
     DEPTH_STATUS_CALIBRATED_RANGE,
     DEPTH_STATUS_INSUFFICIENT_DATA,
@@ -21,10 +28,13 @@ from app.pipeline.depth.schema import (
 DEPTH_MODE_OFF = "off"
 DEPTH_MODE_LOCAL_CALIBRATED = "local_calibrated"
 DEPTH_CANDIDATES_SCHEMA = "local_depth_candidates_v1"
+DEPTH_OPERATOR_CANDIDATES_SCHEMA = OPERATOR_CANDIDATES_SCHEMA
 DEPTH_SUMMARY_SCHEMA = "depth_summary_v1"
 DEPTH_DIR_NAME = "depth"
 DEPTH_INPUT_RELATIVE_PATH = Path("depth_inputs") / "candidates.json"
 RUN_QUALITY_RELATIVE_PATH = Path("QA") / "run_quality" / "run_quality_summary.json"
+
+DepthCandidate: TypeAlias = CandidateDepthInput | OperatorCandidateInput
 
 CSV_FIELDNAMES = [
     "candidate_id",
@@ -55,30 +65,45 @@ def _read_json_object(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _read_candidate_inputs(run_dir: Path) -> tuple[list[CandidateDepthInput], str | None]:
+def _candidate_zone_id(candidate: DepthCandidate) -> str:
+    return candidate.zone_id if isinstance(candidate, CandidateDepthInput) else ""
+
+
+def _read_candidate_inputs(
+    run_dir: Path,
+) -> tuple[list[DepthCandidate], str | None, str]:
     payload = _read_json_object(run_dir / DEPTH_INPUT_RELATIVE_PATH)
     if payload is None:
-        return [], "missing_or_unreadable_depth_candidate_inputs"
-    if payload.get("schema_version") != DEPTH_CANDIDATES_SCHEMA:
-        return [], "unsupported_depth_candidate_input_schema"
+        return [], "missing_or_unreadable_depth_candidate_inputs", ""
+
+    schema_version = str(payload.get("schema_version") or "")
+    if schema_version not in {
+        DEPTH_CANDIDATES_SCHEMA,
+        DEPTH_OPERATOR_CANDIDATES_SCHEMA,
+    }:
+        return [], "unsupported_depth_candidate_input_schema", schema_version
+
     raw_candidates = payload.get("candidates")
     if not isinstance(raw_candidates, list):
-        return [], "invalid_depth_candidate_list"
+        return [], "invalid_depth_candidate_list", schema_version
 
-    candidates: list[CandidateDepthInput] = []
+    candidates: list[DepthCandidate] = []
     seen_ids: set[str] = set()
     try:
         for raw_candidate in raw_candidates:
             if not isinstance(raw_candidate, dict):
-                return [], "invalid_depth_candidate_entry"
-            candidate = CandidateDepthInput.from_mapping(raw_candidate)
+                return [], "invalid_depth_candidate_entry", schema_version
+            if schema_version == DEPTH_CANDIDATES_SCHEMA:
+                candidate: DepthCandidate = CandidateDepthInput.from_mapping(raw_candidate)
+            else:
+                candidate = OperatorCandidateInput.from_mapping(raw_candidate)
             if candidate.candidate_id in seen_ids:
-                return [], "duplicate_depth_candidate_id"
+                return [], "duplicate_depth_candidate_id", schema_version
             seen_ids.add(candidate.candidate_id)
             candidates.append(candidate)
     except ValueError:
-        return [], "invalid_depth_candidate_entry"
-    return candidates, None
+        return [], "invalid_depth_candidate_entry", schema_version
+    return candidates, None, schema_version
 
 
 def _read_run_quality(run_dir: Path) -> tuple[str, bool]:
@@ -112,19 +137,29 @@ def _count_status(estimates: list[CandidateDepthEstimate], status: str) -> int:
     return sum(1 for estimate in estimates if estimate.depth_status == status)
 
 
-def _recoverable_package_load(package_dir: Path | None) -> tuple[LocalDepthPackage | None, str | None]:
+def _recoverable_package_load(
+    package_dir: Path | None,
+) -> tuple[DepthPackage | None, str | None]:
     if package_dir is None:
         return None, "local_depth_package_not_configured"
     try:
-        return load_local_depth_package(package_dir), None
-    except LocalDepthPackageError:
+        return load_depth_package(package_dir), None
+    except DepthPackageError:
         return None, "local_depth_package_invalid"
+
+
+def _package_method_kind(package: DepthPackage | None) -> str:
+    if isinstance(package, OperatorInterpolationPackage):
+        return OPERATOR_METHOD_KIND
+    if isinstance(package, LocalDepthPackage):
+        return PACKAGE_METHOD_KIND
+    return ""
 
 
 def _build_estimates(
     *,
-    candidates: list[CandidateDepthInput],
-    package: LocalDepthPackage | None,
+    candidates: list[DepthCandidate],
+    package: DepthPackage | None,
     package_issue: str | None,
     run_quality_status: str,
     run_quality_usable: bool,
@@ -134,7 +169,7 @@ def _build_estimates(
         return [
             CandidateDepthEstimate.unavailable(
                 candidate_id=candidate.candidate_id,
-                zone_id=candidate.zone_id,
+                zone_id=_candidate_zone_id(candidate),
                 status=DEPTH_STATUS_NOT_AVAILABLE,
                 warnings=[warning],
             )
@@ -148,7 +183,7 @@ def _build_estimates(
         return [
             CandidateDepthEstimate.unavailable(
                 candidate_id=candidate.candidate_id,
-                zone_id=candidate.zone_id,
+                zone_id=_candidate_zone_id(candidate),
                 status=DEPTH_STATUS_INSUFFICIENT_DATA,
                 warnings=["run_quality_not_supported"],
             )
@@ -157,6 +192,35 @@ def _build_estimates(
 
     estimates: list[CandidateDepthEstimate] = []
     for candidate in candidates:
+        if isinstance(package, OperatorInterpolationPackage):
+            if not isinstance(candidate, OperatorCandidateInput):
+                estimates.append(
+                    CandidateDepthEstimate.unavailable(
+                        candidate_id=candidate.candidate_id,
+                        zone_id=_candidate_zone_id(candidate),
+                        status=DEPTH_STATUS_INSUFFICIENT_DATA,
+                        warnings=["candidate_input_not_supported_by_package"],
+                    )
+                )
+                continue
+            extra_warnings = (
+                ["run_quality_warning_allowed_by_package"]
+                if run_quality_status == "WARNING"
+                else []
+            )
+            estimates.append(package.estimate(candidate, extra_warnings=extra_warnings))
+            continue
+
+        if not isinstance(candidate, CandidateDepthInput):
+            estimates.append(
+                CandidateDepthEstimate.unavailable(
+                    candidate_id=candidate.candidate_id,
+                    status=DEPTH_STATUS_INSUFFICIENT_DATA,
+                    warnings=["candidate_input_not_supported_by_package"],
+                )
+            )
+            continue
+
         zone = package.zone(candidate.zone_id)
         if zone is None:
             estimates.append(
@@ -199,7 +263,7 @@ def write_depth_outputs(
     depth_dir = run_dir / DEPTH_DIR_NAME
     depth_dir.mkdir(parents=True, exist_ok=True)
 
-    candidates, candidate_issue = _read_candidate_inputs(run_dir)
+    candidates, candidate_issue, candidate_schema = _read_candidate_inputs(run_dir)
     run_quality_status, run_quality_usable = _read_run_quality(run_dir)
     package, package_issue = _recoverable_package_load(package_dir)
 
@@ -227,6 +291,7 @@ def write_depth_outputs(
         "stage": "depth_estimation",
         "mode": DEPTH_MODE_LOCAL_CALIBRATED,
         "status": status,
+        "candidate_schema_version": candidate_schema,
         "candidate_count": len(candidates),
         "estimated_count": _count_status(estimates, DEPTH_STATUS_CALIBRATED_RANGE)
         + _count_status(estimates, DEPTH_STATUS_VALIDATED_RANGE),
@@ -234,6 +299,7 @@ def write_depth_outputs(
         "validated_range_count": _count_status(estimates, DEPTH_STATUS_VALIDATED_RANGE),
         "insufficient_data_count": _count_status(estimates, DEPTH_STATUS_INSUFFICIENT_DATA),
         "not_available_count": _count_status(estimates, DEPTH_STATUS_NOT_AVAILABLE),
+        "method_kind": _package_method_kind(package),
         "method_version": method_version,
         "calibration_dataset_version": calibration_version,
         "run_quality_status": run_quality_status,
