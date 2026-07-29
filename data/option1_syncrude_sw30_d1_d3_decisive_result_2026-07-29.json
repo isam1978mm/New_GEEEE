@@ -1,0 +1,53 @@
+{
+  "candidate": "Syncrude SW30-Dump D1 versus D3",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "construction_year": 1999,
+  "plot_dimensions": {
+    "width_m": 50,
+    "reported_length_m_range": [150, 200],
+    "approximate_area_hectares_each": 1.0
+  },
+  "comparison": {
+    "d1_nominal_total_m": 0.5,
+    "d1_peat_m": 0.2,
+    "d1_secondary_till_m": 0.3,
+    "d3_nominal_total_m": 1.0,
+    "d3_peat_m": 0.2,
+    "d3_secondary_till_m": 0.8,
+    "same_material_family": true,
+    "same_upper_surface_layer": true,
+    "same_slope_position": true,
+    "same_revegetation_program": true
+  },
+  "monitoring_evidence": {
+    "instrumented_watersheds": true,
+    "ten_soil_profiles_per_cover": true,
+    "sampling_increment_cm": 10,
+    "2012_field_program_included_original_plots": true,
+    "later_research_identified_site": true
+  },
+  "passed": {
+    "large_clean_area_in_principle": true,
+    "same_upper_surface": true,
+    "same_material_family": true,
+    "same_slope": true,
+    "same_vegetation_program": true,
+    "long_running_research_site": true
+  },
+  "failed": {
+    "certified_plot_wide_measured_thickness": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "post_2014_exact_plot_stability": true
+  },
+  "reason": "The public record repeatedly uses nominal or design thicknesses and does not publish a certified as-built thickness surface, numerical uncertainty, official plot polygons, or plot-specific repair-free Sentinel-1-era continuity.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
