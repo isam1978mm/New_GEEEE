@@ -1,0 +1,97 @@
+name: Tyrone 3X georeference recovery
+
+on:
+  push:
+    branches:
+      - agent/tyrone-3x-no1-asbuilt-recovery-20260729
+    paths:
+      - .github/workflows/tyrone-3x-georef-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tyrone-3x-georef-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python tools
+        run: python -m pip install --disable-pip-version-check requests pillow
+
+      - name: Query USGS polygon and download georeferenced basemaps
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import requests
+          from PIL import Image
+
+          out = Path('recovered')
+          headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'}
+          s = requests.Session()
+
+          root = 'https://energy.usgs.gov/arcgis/rest/services/Hosted/National_Mine_Waste_Inventory/FeatureServer/1/query'
+          params = {
+              'where': "site_name='Tyrone' AND ftr_name='Tailings Impoundment No. 3X'",
+              'outFields':'*',
+              'returnGeometry':'true',
+              'outSR':'4326',
+              'f':'geojson',
+          }
+          r=s.get(root,params=params,headers=headers,timeout=180); r.raise_for_status()
+          data=r.json()
+          if len(data.get('features',[])) != 1:
+              raise SystemExit(f'Expected one 3X feature, got {len(data.get("features",[]))}')
+          (out/'tyrone_3x_usgs.geojson').write_text(json.dumps(data,indent=2),encoding='utf-8')
+          coords=data['features'][0]['geometry']['coordinates'][0]
+          xs=[p[0] for p in coords]; ys=[p[1] for p in coords]
+          minx,miny,maxx,maxy=min(xs),min(ys),max(xs),max(ys)
+          pad=0.0025
+          bbox=(minx-pad,miny-pad,maxx+pad,maxy+pad)
+          width=4096; height=4096
+          meta={'bbox_wgs84':bbox,'width':width,'height':height,'pixel_size_degrees':[(bbox[2]-bbox[0])/width,(bbox[3]-bbox[1])/height]}
+          (out/'georef_metadata.json').write_text(json.dumps(meta,indent=2),encoding='utf-8')
+
+          services = {
+              'world_imagery':'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export',
+              'world_topo':'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/export',
+          }
+          for name,url in services.items():
+              q={
+                  'bbox':','.join(map(str,bbox)),
+                  'bboxSR':'4326','imageSR':'4326',
+                  'size':f'{width},{height}',
+                  'format':'png32','transparent':'false','f':'image',
+              }
+              rr=s.get(url,params=q,headers=headers,timeout=600); rr.raise_for_status()
+              path=out/f'{name}.png'; path.write_bytes(rr.content)
+              im=Image.open(path); im.verify()
+              if im.size != (width,height):
+                  raise RuntimeError(f'Unexpected {name} size: {im.size}')
+
+              xres=(bbox[2]-bbox[0])/width
+              yres=-(bbox[3]-bbox[1])/height
+              xcenter=bbox[0]+xres/2
+              ycenter=bbox[3]+yres/2
+              (out/f'{name}.pgw').write_text(f'{xres}\n0.0\n0.0\n{yres}\n{xcenter}\n{ycenter}\n',encoding='ascii')
+              (out/f'{name}.prj').write_text('GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]',encoding='ascii')
+          PY
+
+      - name: Upload georeference package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-3x-georef-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
