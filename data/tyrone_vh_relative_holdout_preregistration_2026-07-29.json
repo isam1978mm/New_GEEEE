@@ -1,0 +1,46 @@
+{
+  "protocol": "tyrone_vh_same_month_relative_holdout_v1",
+  "date": "2026-07-29",
+  "status": "preregistered_before_holdout_query",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "orbit_state": "descending",
+    "relative_orbit": 56,
+    "feature": "vh_db"
+  },
+  "geometry": {
+    "status": "provisional_derived_geometry_40m_core",
+    "crs": "EPSG:32612",
+    "pixel_size_m": 10,
+    "subset_pixel_counts": {
+      "tp5": {"west": 8, "east": 12, "south": 6, "north": 14},
+      "tp6": {"west": 12, "east": 17, "south": 9, "north": 20}
+    }
+  },
+  "splits": [
+    "west_anchor_east_holdout",
+    "east_anchor_west_holdout",
+    "north_anchor_south_holdout",
+    "south_anchor_north_holdout"
+  ],
+  "minimum_subset_pixels": 5,
+  "minimum_anchor_separation_db": 0.25,
+  "depth_anchors_m": {"tp5": 0.68072, "tp6": 0.94996},
+  "formula": "d5 + ((candidate_vh-anchor5_vh)/(anchor6_vh-anchor5_vh))*(d6-d5)",
+  "period_rules": {
+    "all": {"minimum_months": 18, "maximum_median_absolute_error_m": 0.10, "minimum_within_0_20_fraction": 0.75, "minimum_order_fraction": 0.75},
+    "early": {"minimum_months": 8, "maximum_median_absolute_error_m": 0.15, "minimum_within_0_20_fraction": 0.65, "minimum_order_fraction": 0.65},
+    "late": {"minimum_months": 8, "maximum_median_absolute_error_m": 0.15, "minimum_within_0_20_fraction": 0.65, "minimum_order_fraction": 0.65}
+  },
+  "minimum_passing_splits": 3,
+  "interpretation": "spatial_reproducibility_only_not_third_depth_validation",
+  "prohibited_inputs": ["vv_db", "log_ratio_db", "classifier", "pca_anomaly", "option5_anomaly", "heuristic_layers"],
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "unknown_aoi_depth_ready": false,
+  "app_depth_enabled": false
+}
