@@ -1,0 +1,101 @@
+name: Silver Bow completion recovery
+
+on:
+  push:
+    branches:
+      - agent/silver-bow-completion-recovery-20260729
+    paths:
+      - .github/workflows/silver-bow-completion-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/silver-bow-completion-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --upgrade beautifulsoup4 requests
+
+      - name: Recover DEQ report links and PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.parse import urljoin
+          import requests
+          from bs4 import BeautifulSoup
+
+          page = "https://deq.mt.gov/cleanupandrec/Programs/superfundfed"
+          headers = {"User-Agent": "Mozilla/5.0 Chrome/126 Safari/537.36"}
+          r = requests.get(page, headers=headers, timeout=90)
+          r.raise_for_status()
+          Path("recovered/superfundfed.html").write_bytes(r.content)
+          soup = BeautifulSoup(r.text, "html.parser")
+          wanted = []
+          for a in soup.find_all("a", href=True):
+              text = " ".join(a.get_text(" ", strip=True).split())
+              href = urljoin(page, a["href"])
+              if any(k.lower() in text.lower() or k.lower() in href.lower() for k in [
+                  "Residual Tailings RA Construction Completion Report",
+                  "SSTOU RA Construction Completion",
+                  "Construction Completion Years",
+              ]):
+                  wanted.append((text, href))
+          Path("recovered/discovered_links.txt").write_text(
+              "\n".join(f"{t}\t{u}" for t,u in wanted) + "\n", encoding="utf-8"
+          )
+          if not wanted:
+              raise SystemExit("No matching report links discovered")
+          for i, (text, url) in enumerate(wanted, 1):
+              out = Path(f"recovered/report_{i}.pdf")
+              rr = requests.get(url, headers=headers, timeout=300, allow_redirects=True)
+              rr.raise_for_status()
+              out.write_bytes(rr.content)
+              if not rr.content.startswith(b"%PDF"):
+                  Path(f"recovered/report_{i}_not_pdf.html").write_bytes(rr.content)
+                  raise SystemExit(f"Not PDF: {url}")
+              Path(f"recovered/report_{i}_source.txt").write_text(
+                  f"title={text}\nurl={url}\nbytes={len(rr.content)}\n", encoding="utf-8"
+              )
+          PY
+
+      - name: Extract searchable text and inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          for pdf in recovered/*.pdf; do
+            base="${pdf%.pdf}"
+            pdftotext -layout "$pdf" "${base}.txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,25p'
+              echo
+            } >> recovered/INVENTORY.txt
+          done
+          grep -RniE "excavat|depth|as-built|survey|replacement soil|topsoil|reveget|uncert|tolerance|coordinate|polygon|reach" recovered/*.txt > recovered/key_hits.txt || true
+          find recovered -maxdepth 1 -type f -printf '%f\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Upload recovered records
+        uses: actions/upload-artifact@v4
+        with:
+          name: silver-bow-completion-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
