@@ -1,0 +1,80 @@
+{
+  "date": "2026-07-29",
+  "decision": "provisional_local_ordering_supported_vh_only",
+  "good_to_go_for_local_ordering_research": true,
+  "good_to_go_for_unknown_aoi_depth": false,
+  "protocol": "tyrone_tp56_provisional_pc_rtc_v1",
+  "workflow_run_id": 30489997733,
+  "artifact_id": 8739341555,
+  "geometry_status": "provisional_derived_geometry_40m_core",
+  "geometry_registration_uncertainty_m": 40,
+  "grid": {
+    "crs": "EPSG:32612",
+    "pixel_size_m": 10,
+    "tp5_pixel_count": 20,
+    "tp6_pixel_count": 29
+  },
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "orbit_state": "descending",
+    "relative_orbit": 56,
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "selected_acquisitions": 177,
+    "read_successes": 177,
+    "read_failures": 0,
+    "usable_months": 72
+  },
+  "feature_results": {
+    "vv_db": {
+      "passed": false,
+      "positive_months": 50,
+      "negative_months": 22,
+      "dominant_fraction": 0.6944444444444444,
+      "failure_reason": "below_0.70_overall_and_djf_below_0.60"
+    },
+    "vh_db": {
+      "passed": true,
+      "positive_months": 54,
+      "negative_months": 18,
+      "dominant_fraction": 0.75,
+      "wilson_95": [0.6390649259565606, 0.8356094877452105],
+      "mean_difference_db_tp6_minus_tp5": 0.5499494561579044,
+      "median_difference_db_tp6_minus_tp5": 0.6139014248634229,
+      "season_positive_fractions": {
+        "DJF": 0.8333333333333334,
+        "MAM": 0.6666666666666666,
+        "JJA": 0.7777777777777778,
+        "SON": 0.7222222222222222
+      }
+    },
+    "log_ratio_db": {
+      "passed": false,
+      "positive_months": 36,
+      "negative_months": 36,
+      "dominant_fraction": 0.5
+    }
+  },
+  "temporal_stability_check": {
+    "2018_2020": {
+      "mean_vh_difference_db": 0.3124833753821077,
+      "positive_fraction": 0.6666666666666666
+    },
+    "2021_2023": {
+      "mean_vh_difference_db": 0.787415536933701,
+      "positive_fraction": 0.8333333333333334
+    },
+    "absolute_vh_conversion_approved": false,
+    "reason": "vh_separation_changes_materially_over_time"
+  },
+  "next_method": "same_month_relative_vh_interpolation_with_spatial_and_temporal_holdouts_and_abstention",
+  "classifier_output_used": false,
+  "pca_anomaly_used": false,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "unknown_aoi_depth_ready": false,
+  "global_depth_ready": false,
+  "app_depth_enabled_by_default": false
+}
