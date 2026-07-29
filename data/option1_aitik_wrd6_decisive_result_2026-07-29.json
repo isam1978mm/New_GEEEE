@@ -1,0 +1,75 @@
+{
+  "candidate": "Aitik WRD6 cover-system field trials",
+  "date": "2026-07-29",
+  "strategy_classification": "Option 1 evidence research",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "failure_type": "official_as_built_depth_and_geometry_missing",
+  "evidence": {
+    "construction_year": 2013,
+    "trial_count": 2,
+    "combined_footprint_hectares_approximate": 1,
+    "plateau_dimensions_m_approximate": [50, 50],
+    "slope_ratio": "3H:1V",
+    "field_trial_1_nominal_total_depth_m": 1.6,
+    "field_trial_2_nominal_total_depth_m": 2.1,
+    "nominal_depth_difference_m": 0.5,
+    "same_nominal_compacted_till_layer": true,
+    "same_nominal_growth_medium_layer": true,
+    "long_term_monitoring_years": 11,
+    "vegetation_established": true,
+    "macro_scale_erosion_reported": false,
+    "final_measured_polygon_depths": false,
+    "numerical_depth_uncertainty": false,
+    "coordinate_tied_trial_polygons": false,
+    "equivalent_clean_interiors_proven": false,
+    "stable_sentinel1_period": "strongly_supported_in_general_not_polygon_finalized",
+    "confirmed_option4_control": false
+  },
+  "nominal_profiles": {
+    "field_trial_1": {
+      "compacted_till_m": 0.3,
+      "protective_non_compacted_till_m": 1.0,
+      "till_organic_mix_m": 0.3,
+      "nominal_total_m": 1.6
+    },
+    "field_trial_2": {
+      "compacted_till_m": 0.3,
+      "protective_non_compacted_till_m": 1.5,
+      "till_organic_mix_m": 0.3,
+      "nominal_total_m": 2.1
+    }
+  },
+  "sources": [
+    {
+      "title": "Evaluation of Cover System Field Trials with Compacted Till Layers for Waste Rock Dumps at the Boliden Aitik Copper Mine, Northern Sweden",
+      "year": 2015,
+      "publisher": "10th ICARD / IMWA Annual Conference",
+      "sha256": "831e8cedb538f3177aacc26a537fb701d18b89e66fce84d7c4e32672ae4ec33d"
+    },
+    {
+      "title": "Assessing mine closure and cover system design strategies with consideration for climate change risks at Aitik mine",
+      "year": 2025,
+      "doi": "10.36487/ACG_repo/2515_93",
+      "sha256": "3cbd9630327d2e84e3f8401c9352de4fbb3339d427a3bb8943fc11b85d9da006"
+    }
+  ],
+  "outputs": {
+    "usable_positive_depth_site_groups_added": 0,
+    "usable_confirmed_negative_site_groups_added": 0,
+    "usable_calibration_rows_added": 0,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "reopen_only_if": [
+    "official final surveyed thicknesses for both plateaus",
+    "numerical construction tolerance or survey accuracy",
+    "coordinate-tied CAD, GIS or as-built polygons",
+    "instrumentation and exclusion geometry proving clean interiors",
+    "plot-specific maintenance and disturbance history"
+  ],
+  "next_action": "Check for the pending New Mexico EMNRD Tyrone response; otherwise continue only with an explicitly identified official CQA or as-built record route."
+}
