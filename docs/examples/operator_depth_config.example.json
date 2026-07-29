@@ -1,0 +1,36 @@
+{
+  "method_version": "replace-with-method-version",
+  "calibration_dataset_version": "replace-with-calibration-version",
+  "site_id": "replace-with-local-site-id",
+  "validation_status": "provisional",
+  "allow_run_quality_warning": false,
+  "signal_name": "local_vv_minus_vh_db",
+  "signal_units": "dB",
+  "default_signal_uncertainty": 0.1,
+  "warnings": [
+    "operator_review_required",
+    "example_values_must_be_replaced"
+  ],
+  "anchors": [
+    {
+      "anchor_id": "replace-with-shallow-anchor",
+      "signal_value": 1.0,
+      "depth_min_m": 0.4,
+      "depth_best_m": 0.5,
+      "depth_max_m": 0.6,
+      "warnings": [
+        "measured_local_anchor"
+      ]
+    },
+    {
+      "anchor_id": "replace-with-deep-anchor",
+      "signal_value": 3.0,
+      "depth_min_m": 1.4,
+      "depth_best_m": 1.5,
+      "depth_max_m": 1.6,
+      "warnings": [
+        "measured_local_anchor"
+      ]
+    }
+  ]
+}

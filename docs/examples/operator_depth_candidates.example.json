@@ -1,0 +1,11 @@
+{
+  "schema_version": "local_depth_candidates_v2",
+  "candidates": [
+    {
+      "candidate_id": "replace-with-candidate-id",
+      "signal_name": "local_vv_minus_vh_db",
+      "signal_value": 2.0,
+      "signal_uncertainty": 0.1
+    }
+  ]
+}
