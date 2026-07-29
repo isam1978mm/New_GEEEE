@@ -1,0 +1,34 @@
+{
+  "candidates": ["Norris Mine topsoil wedge", "Sunspot Mine soil-replacement treatments"],
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "norris": {
+    "topsoil_gradient_cm": [0, 61],
+    "continuous_wedge": true,
+    "fatal_issue": "No broad official uniform-depth polygons; any shallow/deep zones would be analyst-defined from a continuous gradient."
+  },
+  "sunspot": {
+    "treatments": [
+      "topsoil over replaced B horizon",
+      "topsoil over dragline spoil",
+      "B horizon over dragline spoil",
+      "dragline spoil only"
+    ],
+    "fatal_issue": "Underlying material architecture changes between treatments, so depth is confounded."
+  },
+  "failed": {
+    "two_broad_same_material_measured_depth_zones": true,
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "post_2014_exact_zone_stability": true
+  },
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
