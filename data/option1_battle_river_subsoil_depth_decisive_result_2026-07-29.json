@@ -1,0 +1,39 @@
+{
+  "candidate": "Battle River subsoil-depth experiment",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "construction_period": "1980-1981",
+  "treatment_system": {
+    "common_topsoil_cm": 15,
+    "reported_2014_subsoil_depths_cm": [0, 25, 65, 135, 165, 335],
+    "replicate_blocks": 3,
+    "same_general_subsoil_material_system": true
+  },
+  "monitoring": {
+    "annual_1980s_monitoring": true,
+    "resampled_year": 2013,
+    "post_2014_plot_specific_stability_proven": false
+  },
+  "passed": {
+    "same_material_depth_experiment": true,
+    "common_upper_topsoil": true,
+    "large_depth_contrast": true,
+    "long_term_follow_up": true
+  },
+  "failed": {
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "post_2014_exact_plot_stability": true
+  },
+  "reason": "The public record provides replicated treatment labels and long-term soil monitoring but not certified measured as-built depths, uncertainty, official plot polygons, conservative radar interiors, or Sentinel-1-era stability for the exact plots.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
