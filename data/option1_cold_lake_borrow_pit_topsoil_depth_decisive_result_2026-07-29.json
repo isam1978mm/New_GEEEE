@@ -1,0 +1,34 @@
+{
+  "candidate": "Cold Lake borrow-pit topsoil-depth trial",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "design": {
+    "topsoil_depths_cm": [22, 14],
+    "other_treatments": ["14 cm plus peat", "14 cm plus biochar"],
+    "replicate_blocks": 3,
+    "plot_dimensions_m": [20, 20],
+    "buffer_m": 2,
+    "monitoring_period": "2015-2019"
+  },
+  "passed": {
+    "same_site_depth_pair_in_principle": true,
+    "common_unamended_surface_pair": true,
+    "replicated_design": true
+  },
+  "failed": {
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "long_stable_sentinel1_period": true
+  },
+  "reason": "Each plot is only 20 m by 20 m before 2 m buffers, far below the conservative radar-support requirement.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
