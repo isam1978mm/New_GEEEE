@@ -1,0 +1,36 @@
+{
+  "candidate_id": "syncrude_1983_soil_reconstruction_project",
+  "date": "2026-07-29",
+  "canonical_option": "option_1_global_numerical_depth",
+  "option_3_active": false,
+  "decision": "not_good_to_go_geometry_failure",
+  "positive_evidence": {
+    "soil_mixtures": 9,
+    "depth_treatments_cm": [20, 40],
+    "replicates_per_treatment": 3,
+    "treatment_plot_count": 54,
+    "same_mixture_depth_pair_available": true,
+    "plot_dimensions_m": [44, 22]
+  },
+  "fatal_blockers": {
+    "minimum_clean_width_30_40m": false,
+    "coordinate_tied_plot_polygons": false,
+    "stable_post_2014_period": false
+  },
+  "gate_status": {
+    "same_mixture_depth_design": "pass",
+    "replication": "pass",
+    "full_scale_clean_zone": "fail",
+    "coordinate_tied_geometry": "fail",
+    "stable_sentinel1_period": "fail"
+  },
+  "execution_state": {
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "usable_calibration_rows_added": 0,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "permanent_failure_reason": "The 22 m plot width cannot retain a defensible 30-40 m clean radar interior after exclusions."
+}
