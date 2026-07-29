@@ -1,0 +1,70 @@
+{
+  "candidate": "Faro Mine Landform, Cover and Revegetation Pilot",
+  "review_date": "2026-07-29",
+  "strategy": {
+    "option_1_active": true,
+    "option_5_active": true,
+    "option_4_available_but_inactive": true,
+    "option_3_active": false
+  },
+  "decision": "not_good_to_go",
+  "classification": "public_record_missing_decisive_as_built_calibration_evidence",
+  "proven": {
+    "phase_1_completed_2022": true,
+    "mine_area_cover_trial_panels": 15,
+    "tailings_area_trial_pads": 6,
+    "multiple_nominal_thicknesses": true,
+    "multiple_materials": true,
+    "multiple_placement_methods": true,
+    "plateau_slope_percent": 5,
+    "side_slope_percent": 33,
+    "gps_guided_construction": true,
+    "gps_compaction_pass_tracking": true,
+    "quality_control_check_sheets": true,
+    "geotechnical_monitoring_installed": true,
+    "continued_monitoring_planned": true
+  },
+  "fatal_blockers": {
+    "final_measured_panel_depths_public": false,
+    "numerical_depth_uncertainty_public": false,
+    "coordinate_tied_panel_polygons_public": false,
+    "matched_depth_only_pair_public": false,
+    "plot_specific_stable_sentinel1_period_proven": false
+  },
+  "confounders": [
+    "cover material",
+    "cover thickness",
+    "placement method",
+    "slope class",
+    "revegetation treatment",
+    "surface roughness",
+    "moisture and drainage",
+    "ongoing monitoring and remediation activity"
+  ],
+  "reopening_requirements": [
+    "complete panel and pad treatment matrix",
+    "final measured as-built thickness by panel",
+    "numerical construction or survey uncertainty",
+    "official GIS CAD or surveyed panel corners",
+    "matched surface construction and vegetation details",
+    "plot-specific repair and stability history"
+  ],
+  "safety_state": {
+    "usable_positive_depth_site_groups_added": 0,
+    "usable_confirmed_negative_site_groups_added": 0,
+    "usable_calibration_rows_added": 0,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  },
+  "sources": [
+    "Domitter et al. 2023 Faro Mine Landform Cover and Revegetation Pilot Yukon",
+    "US EPA CLU-IN indexed abstract",
+    "ACL Construction Ltd. Faro Mine project summary",
+    "MERX R.112406.605 procurement notice",
+    "CIRNAC Faro Mine Remediation Project progress page"
+  ],
+  "result_document": "docs/DEPTH_OPTION1_FARO_MINE_PILOT_DECISIVE_RESULT_2026-07-29.md"
+}
