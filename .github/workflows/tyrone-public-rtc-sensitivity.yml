@@ -1,0 +1,57 @@
+name: Tyrone public RTC multi-placement sensitivity
+
+on:
+  push:
+    branches:
+      - agent/tyrone-depth-sensitivity-20260729
+    paths:
+      - scripts/run_tyrone_multi_placement_pc_rtc.py
+      - scripts/run_tyrone_multi_placement_sensitivity.py
+      - docs/DEPTH_LOCAL_MVP_TYRONE_MULTI_PLACEMENT_PC_RTC_PROTOCOL_V2_2026-07-29.md
+      - .github/workflows/tyrone-public-rtc-sensitivity.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/run_tyrone_multi_placement_pc_rtc.py
+      - scripts/run_tyrone_multi_placement_sensitivity.py
+      - docs/DEPTH_LOCAL_MVP_TYRONE_MULTI_PLACEMENT_PC_RTC_PROTOCOL_V2_2026-07-29.md
+      - .github/workflows/tyrone-public-rtc-sensitivity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sensitivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install public RTC dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy rasterio pyproj shapely pystac-client planetary-computer
+
+      - name: Validate script syntax
+        run: python -m py_compile scripts/run_tyrone_multi_placement_pc_rtc.py
+
+      - name: Run preregistered public RTC sensitivity test
+        run: python scripts/run_tyrone_multi_placement_pc_rtc.py
+
+      - name: Upload bounded result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-public-rtc-multi-placement-sensitivity
+          path: artifacts/tyrone_multi_placement_pc_rtc/
+          if-no-files-found: error
+          retention-days: 7
