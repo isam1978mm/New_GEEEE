@@ -1,0 +1,71 @@
+{
+  "date": "2026-07-29",
+  "decision": "fresh_temporal_depth_band_not_supported",
+  "workflow_run_id": 30492045036,
+  "artifact_id": 8740083260,
+  "selected_acquisitions": 73,
+  "read_successes": 73,
+  "read_failures": 0,
+  "holdout_period": [
+    "2024-01-01",
+    "2026-07-01"
+  ],
+  "reported_numeric_bands_m": {
+    "shallow": [
+      0.65532,
+      0.70612
+    ],
+    "deep": [
+      0.8509,
+      1.04902
+    ]
+  },
+  "passing_splits": 0,
+  "required_passing_splits": 3,
+  "all_period_summary": {
+    "west_anchor_east_holdout": {
+      "eligible_months": 16,
+      "tp5_coverage": 0.3125,
+      "tp5_accuracy": 0.8,
+      "tp6_coverage": 0.375,
+      "tp6_accuracy": 0.5,
+      "paired_correct_fraction": 0.6666666666666666,
+      "passed": false
+    },
+    "east_anchor_west_holdout": {
+      "eligible_months": 23,
+      "tp5_coverage": 0.30434782608695654,
+      "tp5_accuracy": 0.7142857142857143,
+      "tp6_coverage": 0.30434782608695654,
+      "tp6_accuracy": 0.8571428571428571,
+      "paired_correct_fraction": 0.25,
+      "passed": false
+    },
+    "north_anchor_south_holdout": {
+      "eligible_months": 21,
+      "tp5_coverage": 0.2857142857142857,
+      "tp5_accuracy": 0.8333333333333334,
+      "tp6_coverage": 0.3333333333333333,
+      "tp6_accuracy": 0.42857142857142855,
+      "paired_correct_fraction": 0.5,
+      "passed": false
+    },
+    "south_anchor_north_holdout": {
+      "eligible_months": 17,
+      "tp5_coverage": 0.35294117647058826,
+      "tp5_accuracy": 0.5,
+      "tp6_coverage": 0.17647058823529413,
+      "tp6_accuracy": 1.0,
+      "paired_correct_fraction": 1.0,
+      "paired_classified_months": 1,
+      "passed": false
+    }
+  },
+  "continuous_unknown_depth_ready": false,
+  "tyrone_automatic_depth_band_ready": false,
+  "operator_calibrated_local_aoi_ready": true,
+  "calibration_record_created_from_tyrone": false,
+  "training_started": false,
+  "app_depth_enabled_by_default": false,
+  "next_step": "app_interface_for_operator_calibrated_local_aoi"
+}
