@@ -26,6 +26,8 @@ jobs:
   sensitivity:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      PYTHONPATH: .
 
     steps:
       - name: Check out branch
