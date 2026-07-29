@@ -1,0 +1,42 @@
+{
+  "candidate": "NAS Alameda IR Site 2",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "official_report": "Final Remedial Action Completion Report, Installation Restoration Site 2, Alameda Point, January 2017",
+  "cover_area_acres": 79,
+  "cover_design": {
+    "lower_compacted_soil_inches": 18,
+    "upper_vegetative_soil_inches": 6,
+    "minimum_total_inches": 24
+  },
+  "measurement_grid_spacing_feet": 100,
+  "recovered_monument_rows": 341,
+  "measured_thickness_feet": {
+    "minimum": 2.0,
+    "maximum": 3.1,
+    "mean": 2.22,
+    "reported_report_average": 2.2
+  },
+  "passed": {
+    "coordinate_tied_points": true,
+    "licensed_survey_verification": true,
+    "common_surface_assembly": true,
+    "large_area": true,
+    "measured_final_point_thicknesses": true
+  },
+  "failed": {
+    "independent_constructed_depth_treatments": true,
+    "official_polygon_level_depth_labels": true,
+    "polygon_level_depth_uncertainty": true,
+    "stable_post_2014_exact_zone_period": true
+  },
+  "reason": "One uniform two-foot minimum cover was constructed. Thicker measurements are local overfill and settlement-related variation. Converting point measurements into shallow/deep polygons would require unsupported interpolation and thresholding.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
