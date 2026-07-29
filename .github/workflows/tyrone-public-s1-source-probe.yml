@@ -1,0 +1,50 @@
+name: Tyrone public Sentinel-1 source probe
+
+on:
+  push:
+    branches:
+      - agent/tyrone-depth-sensitivity-20260729
+    paths:
+      - scripts/probe_public_sentinel1_source.py
+      - .github/workflows/tyrone-public-s1-source-probe.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/probe_public_sentinel1_source.py
+      - .github/workflows/tyrone-public-s1-source-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install public STAC clients
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests pystac-client planetary-computer
+
+      - name: Probe anonymous Sentinel-1 source
+        run: python scripts/probe_public_sentinel1_source.py
+
+      - name: Upload bounded source report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-public-sentinel1-source-probe
+          path: artifacts/tyrone_public_s1_source_probe/
+          if-no-files-found: error
+          retention-days: 7
