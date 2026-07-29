@@ -1,0 +1,110 @@
+name: Tyrone USNR record recovery
+
+on:
+  push:
+    branches:
+      - agent/tyrone-usnr-record-recovery-20260729
+    paths:
+      - .github/workflows/tyrone-usnr-record-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tyrone-usnr-record-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official Tyrone USNR records
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered
+
+          download_pdf() {
+            local url="$1"
+            local output="$2"
+            echo "Downloading ${url}"
+            curl --fail --location --retry 6 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 30 --max-time 600 \
+              --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36" \
+              --header "Accept: application/pdf,*/*;q=0.8" \
+              --output "${output}" "${url}"
+            if [ "$(head -c 4 "${output}")" != "%PDF" ]; then
+              echo "Not a PDF: ${url}"
+              file "${output}" || true
+              head -c 1000 "${output}" || true
+              return 1
+            fi
+            test "$(stat -c%s "${output}")" -gt 10000
+          }
+
+          download_pdf \
+            "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/12380014_USNR_Test_Plot_As-Built_Rpt_F_20170308.pdf" \
+            "recovered/usnr_2017_as_built_report.pdf"
+
+          download_pdf \
+            "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/20180430-100_Tyrone_USNR_Annual_Report_2.pdf" \
+            "recovered/usnr_2018_annual_report.pdf"
+
+          download_pdf \
+            "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/12380014-R-Rev0-USNR_AnnRpt_2018-20190425.pdf" \
+            "recovered/usnr_2019_annual_report.pdf"
+
+          download_pdf \
+            "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/19122576-002-R-Rev0-USNR_AnnRpt_2020_04282021_unlocked.pdf" \
+            "recovered/usnr_2020_annual_report.pdf"
+
+          download_pdf \
+            "https://www.emnrd.nm.gov/mmd/wp-content/uploads/sites/5/20250313-100_Final-Suitability-Report-1.pdf" \
+            "recovered/pcg_2025_final_suitability_report.pdf"
+
+      - name: Extract searchable text and metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/INVENTORY.txt
+          for pdf in recovered/*.pdf; do
+            base="${pdf%.pdf}"
+            pdftotext -layout "$pdf" "${base}.txt"
+            {
+              echo "==== $(basename "$pdf") ===="
+              sha256sum "$pdf"
+              pdfinfo "$pdf" | sed -n '1,30p'
+              echo
+            } >> recovered/INVENTORY.txt
+          done
+          find recovered -maxdepth 1 -type f -printf '%f\t%s bytes\n' | sort >> recovered/INVENTORY.txt
+
+      - name: Build targeted evidence extracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > recovered/TARGETED_EXTRACTS.txt
+          for txt in recovered/*.txt; do
+            echo "================ $(basename "$txt") ================" >> recovered/TARGETED_EXTRACTS.txt
+            grep -inE -C 5 'as-built|as built|thickness|depth|survey|coordinate|northing|easting|polygon|test plot|USNR|cover|uncertaint|tolerance|CQA|CQC|lift|compaction|control|reference|seed|vegetation|erosion' "$txt" \
+              >> recovered/TARGETED_EXTRACTS.txt || true
+            echo >> recovered/TARGETED_EXTRACTS.txt
+          done
+
+      - name: Upload recovered records
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-usnr-records
+          path: recovered/
+          if-no-files-found: error
+          retention-days: 7
