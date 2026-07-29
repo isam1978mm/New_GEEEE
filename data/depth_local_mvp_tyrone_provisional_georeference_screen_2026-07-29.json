@@ -1,0 +1,81 @@
+{
+  "candidate_id": "tyrone_3x_test_plots_5_6",
+  "date": "2026-07-29",
+  "decision": "not_good_to_go_as_single_fixed_execution_polygon",
+  "local_depth_mvp_merged": true,
+  "known_zone_ranges_available": true,
+  "method": {
+    "source_figure_year": 2006,
+    "target_figure_year": 2020,
+    "source_scale_ft_per_pixel": 2.7777777778,
+    "target_scale_ft_per_pixel": 13.75,
+    "fixed_scale_ratio": 0.2020202020,
+    "rotation_locked_north_up": true,
+    "translation_only_search": true,
+    "best_translation_pixels": {
+      "x": 484,
+      "y": 504
+    },
+    "near_best_translation_basin_pixels": {
+      "x_min": 481,
+      "x_max": 505,
+      "y_min": 477,
+      "y_max": 507
+    }
+  },
+  "sensitivity_span": {
+    "east_west_feet": 330.0,
+    "north_south_feet": 412.5,
+    "formal_survey_confidence_interval": false
+  },
+  "plot_geometry_screen": {
+    "tp5_approx_minimum_dimension_feet": 381.0,
+    "tp6_approx_minimum_dimension_feet": 401.0,
+    "half_north_south_sensitivity_feet": 206.25,
+    "radar_edge_exclusion_feet": 65.62,
+    "required_width_for_symmetric_clean_interior_feet": 543.74,
+    "tp5_clean_interior_survives": false,
+    "tp6_clean_interior_survives": false
+  },
+  "image_to_ground_cross_check": {
+    "control_facilities": [
+      "Tailings Impoundment No. 3",
+      "Tailings Impoundment No. 3X",
+      "Tailings Impoundment No. 2"
+    ],
+    "facility_centroid_residual_metres": [37.7, 93.4, 55.6],
+    "single_fixed_10m_polygon_supported": false
+  },
+  "measured_ranges_metres": {
+    "tyrone_tp5": {
+      "minimum": 0.65532,
+      "best": 0.68072,
+      "maximum": 0.70612
+    },
+    "tyrone_tp6": {
+      "minimum": 0.85090,
+      "best": 0.94996,
+      "maximum": 1.04902
+    }
+  },
+  "approved_next_step": "multi_placement_raw_sentinel1_ordering_sensitivity_test",
+  "allowed_features": [
+    "VV_dB",
+    "VH_dB",
+    "incidence_angle",
+    "neutral_vv_vh_transforms"
+  ],
+  "forbidden_depth_evidence": [
+    "classifier_output",
+    "pca_anomaly",
+    "target_mask",
+    "report_layer"
+  ],
+  "execution_state": {
+    "earth_engine_sensitivity_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "unknown_aoi_radar_depth_ready": false,
+    "app_depth_enabled": false
+  }
+}
