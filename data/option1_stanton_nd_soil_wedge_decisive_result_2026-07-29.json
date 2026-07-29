@@ -1,0 +1,42 @@
+{
+  "candidate": "Stanton North Dakota soil-wedge experiment",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "construction_year": 1974,
+  "overall_wedge_dimensions_m": [240, 65],
+  "summit_height_m": 2.1,
+  "main_treatment_blocks": 12,
+  "replications": 3,
+  "topsoil_treatments_cm": [0, 20, 60],
+  "mixed_treatment": "3:1 subsoil-topsoil mix with no separate topsoil",
+  "crop_strips_per_main_block": 4,
+  "approximate_crop_strip_width_m": 4,
+  "estimated_main_block_cross_width_m_range": [16, 20],
+  "overall_site_coordinates_published": true,
+  "monitoring": {
+    "intensive_soil_data_period": "1976-1981",
+    "long_term_revisits_years_after_construction": [24, 28]
+  },
+  "passed": {
+    "same_topsoil_depth_experiment": true,
+    "replicated_design": true,
+    "large_overall_experimental_wedge": true,
+    "long_term_ecological_follow_up": true
+  },
+  "failed": {
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_treatment_polygons": true,
+    "post_2014_exact_plot_stability": true
+  },
+  "reason": "The individual treatment/crop layout is strip-based. Four approximately 4 m crop strips occupy only about 16-20 m of treatment width, below the radar-support gate. The public record also lacks certified plot-wide depth, uncertainty, official treatment polygons and post-2014 continuity.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
