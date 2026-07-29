@@ -1,0 +1,55 @@
+{
+  "candidate_id": "syncrude_1990_oil_sands_tailings_capping_study",
+  "date": "2026-07-29",
+  "canonical_option": "option_1_global_numerical_depth",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "positive_evidence": {
+    "treatments": [
+      "70_cm_fair",
+      "50_cm_fair",
+      "30_cm_fair",
+      "70_cm_poor"
+    ],
+    "replicates_per_treatment": 3,
+    "plot_dimensions_m": [60, 60],
+    "measurements_per_plot": 50,
+    "measured_fair_treatment_means_cm": {
+      "70_cm_target": 80,
+      "50_cm_target": 58,
+      "30_cm_target": 39
+    },
+    "same_material_depth_pair_available": true,
+    "same_surface_preparation": true,
+    "same_species_pattern": true
+  },
+  "fatal_blockers": {
+    "numerical_polygon_depth_uncertainty": false,
+    "coordinate_tied_plot_polygons": false,
+    "official_wgs84_or_survey_corner_geometry": false,
+    "stable_post_2014_period": false
+  },
+  "documented_disturbances": [
+    "first-year wind-blown tailings deposition",
+    "surrounding-area capping and seeding in 1991",
+    "small erosion gully in Block 3",
+    "bison intrusion",
+    "groundwater well installation"
+  ],
+  "gate_status": {
+    "full_scale_clean_zones": "pass_in_principle",
+    "final_measured_numerical_depths": "pass",
+    "same_material_depth_contrast": "pass",
+    "numerical_depth_uncertainty": "fail",
+    "coordinate_tied_geometry": "fail",
+    "stable_sentinel1_period": "fail"
+  },
+  "execution_state": {
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "usable_calibration_rows_added": 0,
+    "training_started": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false
+  }
+}
