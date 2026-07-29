@@ -1,5 +1,6 @@
 name: Tyrone depth multi-placement sensitivity
 
+# Branch-push retry: the PR event correctly abstained because secrets were unavailable.
 on:
   push:
     branches:
