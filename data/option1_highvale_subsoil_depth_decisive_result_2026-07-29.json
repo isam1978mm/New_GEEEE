@@ -1,0 +1,40 @@
+{
+  "candidate": "Highvale subsoil-depth experiment",
+  "date": "2026-07-29",
+  "track": "Option 1",
+  "option_3_active": false,
+  "decision": "not_good_to_go",
+  "construction_year": 1982,
+  "treatment_system": {
+    "subsoil_depth_labels_m": [0.0, 0.25, 0.5, 1.0, 1.5, 3.0],
+    "replicate_blocks": 3,
+    "crop_subplots": ["forage", "cereal"],
+    "same_general_reconstructed_soil_system": true
+  },
+  "monitoring": {
+    "neutron_access_tube_locations_program_wide": 108,
+    "two_sampling_locations_per_subsoil_subplot": true,
+    "additional_sampling_where_depth_anomalies_occurred": true,
+    "contact_sampling": ["topsoil_subsoil", "subsoil_spoil"]
+  },
+  "passed": {
+    "same_material_depth_experiment": true,
+    "replicated_design": true,
+    "large_overall_compound": true,
+    "intensive_soil_monitoring": true
+  },
+  "failed": {
+    "certified_as_built_thickness_surface": true,
+    "numerical_depth_uncertainty": true,
+    "official_coordinate_polygons": true,
+    "clean_30_40_m_uniform_depth_interiors": true,
+    "post_2014_exact_plot_stability": true
+  },
+  "reason": "The public record provides randomized treatment labels and intensive monitoring, but not certified plot-wide measured depths, uncertainty, official polygons, conservative radar interiors, or Sentinel-1-era stability for the exact plots. Local depth anomalies were explicitly encountered.",
+  "usable_calibration_rows_added": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "numerical_depth_ready": false,
+  "app_depth_enabled": false
+}
