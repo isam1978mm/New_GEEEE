@@ -1,0 +1,55 @@
+{
+  "schema_version": "depth_local_mvp_recovery_result_v1",
+  "date": "2026-07-29",
+  "site_id": "tyrone_3x",
+  "route": "attachment_i_electronic_files",
+  "status": "closed_no_execution_geometry_recovered",
+  "decision": "NOT_GOOD_TO_GO_FOR_COORDINATE_RECOVERY",
+  "official_records_recovered": [
+    "GR010RE_20081223_FAReduction-AttachmentI.pdf",
+    "GR010RE_20081223_FAReduction-Application.pdf"
+  ],
+  "attachment_i": {
+    "page_count": 1,
+    "description": "Electronic Files for This Application",
+    "embedded_attachments": 0,
+    "annotation_uris": 0,
+    "filename_manifest_found": false,
+    "cad_or_gis_payload_found": false
+  },
+  "application": {
+    "page_count": 5,
+    "text_layer_usable": false,
+    "pages_visually_inspected": 5,
+    "attachment_i_description": "Electronic Copy of Application Materials (provided on CD)",
+    "cd_manifest_found": false,
+    "cad_or_gis_filenames_found": false,
+    "plot_coordinates_found": false,
+    "mine_grid_conversion_found": false,
+    "general_location_figure_only": true
+  },
+  "local_depth_mvp_merged": true,
+  "local_depth_mvp_main_commit": "775bda4758f9b420d6f33967582ce7763fd5c1b1",
+  "known_zone_ranges_available": true,
+  "anchors": [
+    {
+      "zone_id": "tyrone_tp5",
+      "depth_min_m": 0.65532,
+      "depth_best_m": 0.68072,
+      "depth_max_m": 0.70612
+    },
+    {
+      "zone_id": "tyrone_tp6",
+      "depth_min_m": 0.8509,
+      "depth_best_m": 0.94996,
+      "depth_max_m": 1.04902
+    }
+  ],
+  "official_plot_geometry_recovered": false,
+  "unknown_aoi_radar_depth_ready": false,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "training_started": false,
+  "global_validated_depth_ready": false,
+  "next_step": "Quantify provisional manual georeferencing uncertainty, erode both plots by uncertainty plus boundary exclusion, and run only a raw Sentinel-1 local ordering screen if usable interiors survive."
+}
