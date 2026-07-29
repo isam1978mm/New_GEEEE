@@ -1,0 +1,44 @@
+name: Tyrone electronic files recovery
+
+on:
+  push:
+    branches:
+      - agent/tyrone-electronic-files-recovery-20260729
+    paths:
+      - scripts/recover_tyrone_electronic_files.py
+      - .github/workflows/tyrone-electronic-files-recovery.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/recover_tyrone_electronic_files.py
+      - .github/workflows/tyrone-electronic-files-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install recovery tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils qpdf
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 pypdf
+
+      - name: Recover official electronic-file record
+        run: python scripts/recover_tyrone_electronic_files.py
+
+      - name: Upload recovered evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-electronic-files-records
+          path: artifacts/tyrone_electronic_files_recovery/
+          if-no-files-found: error
+          retention-days: 7
