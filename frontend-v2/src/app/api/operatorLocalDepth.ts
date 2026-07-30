@@ -1,4 +1,4 @@
-export type OperatorLocalDepthOutcome = "completed" | "denied" | "error";
+export type OperatorLocalDepthOutcome = "completed" | "not_available" | "denied" | "error";
 
 export interface OperatorLocalDepthEstimate {
   candidateId: string;
@@ -32,6 +32,8 @@ export interface OperatorLocalDepthResult {
   localOnly: boolean;
   transferable: boolean;
   appDepthEnabledByDefault: boolean;
+  automaticFindingCandidates: boolean;
+  resultsAttachedToFindings: boolean;
   message?: string;
   requestId?: string;
   supportReference?: string;
@@ -50,16 +52,37 @@ export interface OperatorLocalDepthInput {
   operatorConfirmedReview: boolean;
 }
 
+export async function fetchOperatorLocalDepthResult(
+  runId: string,
+  options?: { accessToken?: string | null },
+): Promise<OperatorLocalDepthResult> {
+  const headers = authorizationHeaders(options?.accessToken);
+  try {
+    const response = await fetch(`/runs/${encodeURIComponent(runId)}/operator/local-depth`, {
+      headers,
+    });
+    const payload = await readJson(response);
+    if (response.status === 403) {
+      return mapResult(payload, runId, "denied");
+    }
+    if (!response.ok) {
+      return mapResult(payload, runId, "error");
+    }
+    return mapResult(payload, runId);
+  } catch (_error) {
+    return errorResult(runId, "Finding-depth results are temporarily unavailable.");
+  }
+}
+
 export async function runOperatorLocalDepth(
   runId: string,
   input: OperatorLocalDepthInput,
   options?: { accessToken?: string | null },
 ): Promise<OperatorLocalDepthResult> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = (options?.accessToken ?? "").trim();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...authorizationHeaders(options?.accessToken),
+  };
 
   try {
     const response = await fetch(`/runs/${encodeURIComponent(runId)}/operator/local-depth`, {
@@ -69,7 +92,7 @@ export async function runOperatorLocalDepth(
         geojson: input.geojson,
         site_id: input.siteId,
         calibration_dataset_version: input.calibrationDatasetVersion,
-        method_version: input.methodVersion ?? "operator_local_depth_app_v1",
+        method_version: input.methodVersion ?? "operator_local_depth_app_v2",
         input_crs: input.inputCrs ?? "EPSG:4326",
         erosion_pixels: input.erosionPixels ?? 2,
         minimum_valid_pixels: input.minimumValidPixels ?? 20,
@@ -87,7 +110,7 @@ export async function runOperatorLocalDepth(
     }
     return mapResult(payload, runId, "completed");
   } catch (_error) {
-    return errorResult(runId, "Local depth processing is temporarily unavailable.");
+    return errorResult(runId, "Finding-depth processing is temporarily unavailable.");
   }
 }
 
@@ -123,6 +146,8 @@ export function mapResult(
     localOnly: dto.local_only === true,
     transferable: dto.transferable === true,
     appDepthEnabledByDefault: dto.app_depth_enabled_by_default === true,
+    automaticFindingCandidates: dto.automatic_finding_candidates === true,
+    resultsAttachedToFindings: dto.results_attached_to_findings === true,
     message: asString(dto.message) || undefined,
     requestId: asString(dto.request_id) || undefined,
     supportReference: asString(dto.support_reference) || undefined,
@@ -144,6 +169,11 @@ function mapEstimate(value: unknown): OperatorLocalDepthEstimate | null {
     depthQuality: asString(dto.depth_quality) || "",
     warnings: asStringArray(dto.warnings),
   };
+}
+
+function authorizationHeaders(accessToken?: string | null): Record<string, string> {
+  const token = (accessToken ?? "").trim();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function errorResult(runId: string, message: string): OperatorLocalDepthResult {
@@ -169,6 +199,8 @@ function errorResult(runId: string, message: string): OperatorLocalDepthResult {
     localOnly: true,
     transferable: false,
     appDepthEnabledByDefault: false,
+    automaticFindingCandidates: true,
+    resultsAttachedToFindings: true,
     message,
   };
 }
@@ -182,7 +214,12 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function mapOutcome(value: unknown): OperatorLocalDepthOutcome {
-  return value === "completed" || value === "denied" || value === "error" ? value : "error";
+  return value === "completed" ||
+    value === "not_available" ||
+    value === "denied" ||
+    value === "error"
+    ? value
+    : "error";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
