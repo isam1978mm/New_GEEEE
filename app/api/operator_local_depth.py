@@ -14,6 +14,7 @@ from app.services.operator_local_depth_app import (
     OperatorLocalDepthAppError,
     build_denied_operator_local_depth_result,
     evaluate_operator_local_depth_access,
+    get_operator_local_depth_result,
     run_operator_local_depth_app,
 )
 
@@ -25,7 +26,7 @@ class OperatorLocalDepthRequest(BaseModel):
     site_id: str = Field(min_length=1, max_length=120)
     calibration_dataset_version: str = Field(min_length=1, max_length=120)
     method_version: str = Field(
-        default="operator_local_depth_app_v1",
+        default="operator_local_depth_app_v2",
         min_length=1,
         max_length=120,
     )
@@ -37,25 +38,17 @@ class OperatorLocalDepthRequest(BaseModel):
     operator_confirmed_review: bool = False
 
 
-@router.post("/runs/{run_id}/operator/local-depth")
-async def run_operator_local_depth(
+def _resolve_access(
+    *,
+    settings: Settings,
     run_id: str,
-    payload: OperatorLocalDepthRequest,
-    settings: Settings = Depends(get_settings_from_request),
-    x_operator_authenticated: str | None = Header(default=None),
-    x_operator_id: str | None = Header(default=None),
-    x_operator_roles: str | None = Header(default=None),
-    x_operator_authorized_runs: str | None = Header(default=None),
-    x_request_id: str | None = Header(default=None),
-    authorization: str | None = Header(default=None),
-) -> JSONResponse:
-    """Run private operator-calibrated local depth for a completed run.
-
-    Uploaded GeoJSON is accepted as JSON rather than streamed as a file. Denied
-    requests are rejected before any run file is read or written. Successful
-    responses contain no geometry, coordinates, local paths, or download URLs.
-    """
-
+    x_operator_authenticated: str | None,
+    x_operator_id: str | None,
+    x_operator_roles: str | None,
+    x_operator_authorized_runs: str | None,
+    x_request_id: str | None,
+    authorization: str | None,
+):
     auth_context = resolve_operator_auth_context(
         trusted_proxy_enabled=settings.operator_auth_trusted_proxy_enabled,
         x_operator_authenticated=x_operator_authenticated,
@@ -72,6 +65,79 @@ async def run_operator_local_depth(
         actor_id=auth_context.actor_id,
         is_authenticated=auth_context.is_authenticated,
         roles=auth_context.roles,
+    )
+    return auth_context, decision
+
+
+@router.get("/runs/{run_id}/operator/local-depth")
+async def read_operator_local_depth(
+    run_id: str,
+    settings: Settings = Depends(get_settings_from_request),
+    x_operator_authenticated: str | None = Header(default=None),
+    x_operator_id: str | None = Header(default=None),
+    x_operator_roles: str | None = Header(default=None),
+    x_operator_authorized_runs: str | None = Header(default=None),
+    x_request_id: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> JSONResponse:
+    auth_context, decision = _resolve_access(
+        settings=settings,
+        run_id=run_id,
+        x_operator_authenticated=x_operator_authenticated,
+        x_operator_id=x_operator_id,
+        x_operator_roles=x_operator_roles,
+        x_operator_authorized_runs=x_operator_authorized_runs,
+        x_request_id=x_request_id,
+        authorization=authorization,
+    )
+    if not decision.allowed:
+        denied = build_denied_operator_local_depth_result(
+            request_id=auth_context.request_id,
+            reason=decision.reason,
+        )
+        return JSONResponse(status_code=denied.status_code, content=denied.body)
+
+    try:
+        result = await run_in_threadpool(
+            get_operator_local_depth_result,
+            settings=settings,
+            run_id=run_id,
+        )
+    except OperatorLocalDepthAppError as exc:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "outcome": "error",
+                "status": "local_depth_result_unreadable",
+                "message": _safe_operator_message(exc),
+                "geometry_returned": False,
+                "filesystem_only": True,
+            },
+        )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/runs/{run_id}/operator/local-depth")
+async def run_operator_local_depth(
+    run_id: str,
+    payload: OperatorLocalDepthRequest,
+    settings: Settings = Depends(get_settings_from_request),
+    x_operator_authenticated: str | None = Header(default=None),
+    x_operator_id: str | None = Header(default=None),
+    x_operator_roles: str | None = Header(default=None),
+    x_operator_authorized_runs: str | None = Header(default=None),
+    x_request_id: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> JSONResponse:
+    auth_context, decision = _resolve_access(
+        settings=settings,
+        run_id=run_id,
+        x_operator_authenticated=x_operator_authenticated,
+        x_operator_id=x_operator_id,
+        x_operator_roles=x_operator_roles,
+        x_operator_authorized_runs=x_operator_authorized_runs,
+        x_request_id=x_request_id,
+        authorization=authorization,
     )
     if not decision.allowed:
         denied = build_denied_operator_local_depth_result(
