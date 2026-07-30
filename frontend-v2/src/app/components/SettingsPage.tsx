@@ -157,7 +157,7 @@ export function SettingsPage({
               style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)" }}
             >
               <div style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them in network deployments. Local development remains loopback-only. Private previews must remain coordinate-free. No public overlay layer, private geometry, KMZ contents, raw payloads, coordinates, or filesystem paths are shown.
+                The browser does not create operator identity, role, or run-authorization headers. A trusted upstream layer must provide them in network deployments. Local development remains loopback-only. Private overlay must show coordinate-free summaries only; verify existing UI safety tests before changing this panel. No public downloads, public overlay layer, private geometry, KMZ contents, raw payloads, coordinates, or filesystem paths are shown.
               </div>
             </div>
           </div>
