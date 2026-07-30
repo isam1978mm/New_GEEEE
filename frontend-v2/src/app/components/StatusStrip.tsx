@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { WifiOff, CheckCircle2, Loader2, XCircle, Clock } from "lucide-react";
 import type { RunState } from "../api/client";
+import { rememberSelectedRunId } from "../selectedRun";
 
 interface StatusStripProps {
   runId: string;
@@ -83,6 +85,13 @@ function Chip({
 
 export function StatusStrip({ runId, state, stage }: StatusStripProps) {
   const cfg = stateCfg[state];
+
+  useEffect(() => {
+    if (runId !== "Not started") {
+      rememberSelectedRunId(runId);
+    }
+  }, [runId]);
+
   return (
     <div
       className="flex items-center gap-2 px-5"
