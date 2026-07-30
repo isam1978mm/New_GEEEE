@@ -55,7 +55,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "operator-local-depth-first-aoi-template.geojson";
+    link.download = "operator-local-depth-measured-anchors-template.geojson";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -85,6 +85,11 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
     );
     setResult(nextResult);
     setProcessing(false);
+    if (nextResult.outcome === "completed") {
+      window.dispatchEvent(
+        new CustomEvent("operator-local-depth-updated", { detail: { runId } }),
+      );
+    }
   }
 
   const ready = Boolean(
@@ -109,7 +114,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
             className="font-mono"
             style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
           >
-            Local depth calibration — operator only
+            Depth calibration setup — measured anchors
           </span>
         </summary>
 
@@ -129,7 +134,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <Field label="Reviewed anchor and candidate polygons">
+            <Field label="Reviewed measured anchor polygons">
               <input
                 type="file"
                 accept=".geojson,.json,application/geo+json,application/json"
@@ -138,7 +143,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
               />
             </Field>
             <button type="button" onClick={handleDownloadTemplate} className="rounded px-3 py-2" style={secondaryButtonStyle}>
-              Download blank GeoJSON template
+              Download measured-anchor template
             </button>
           </div>
 
@@ -146,19 +151,21 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
           {fileSummary && (
             <StatusBox
               tone="success"
-              message={`Preflight passed — ${fileSummary.fileName}: ${fileSummary.featureCount} features, ${fileSummary.anchorCount} measured anchors, ${fileSummary.candidateCount} candidates, anchor support ${formatMetres(fileSummary.minimumAnchorDepthM)}–${formatMetres(fileSummary.maximumAnchorDepthM)} m.`}
+              message={`Preflight passed — ${fileSummary.fileName}: ${fileSummary.anchorCount} measured anchors, support ${formatMetres(fileSummary.minimumAnchorDepthM)}–${formatMetres(fileSummary.maximumAnchorDepthM)} m. Every classifier finding will be used automatically.`}
             />
           )}
           {fileSummary && (
             <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-              <div><strong style={{ color: "var(--gs-navy)" }}>Anchors:</strong> {summariseIds(fileSummary.anchorIds)}</div>
-              <div><strong style={{ color: "var(--gs-navy)" }}>Candidates:</strong> {summariseIds(fileSummary.candidateIds)}</div>
-              <div style={{ marginTop: "4px" }}>This structural preflight does not replace the backend raster-intersection, pixel-count, overlap, run-quality, or no-extrapolation checks.</div>
+              <div><strong style={{ color: "var(--gs-navy)" }}>Measured anchors:</strong> {summariseIds(fileSummary.anchorIds)}</div>
+              <div style={{ marginTop: "4px" }}>
+                No candidate AOI is uploaded. The app reads all findings from this completed run and adds a depth range or an honest no-estimate status to each finding.
+              </div>
+              <div style={{ marginTop: "4px" }}>This structural preflight does not replace the backend raster-intersection, pixel-count, run-quality, or no-extrapolation checks.</div>
             </div>
           )}
 
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
-            <Field label="Boundary erosion (pixels)">
+            <Field label="Anchor boundary erosion (pixels)">
               <input
                 type="number"
                 min={0}
@@ -168,7 +175,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
                 style={inputStyle}
               />
             </Field>
-            <Field label="Minimum valid pixels">
+            <Field label="Minimum valid anchor pixels">
               <input
                 type="number"
                 min={1}
@@ -186,11 +193,11 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
           </label>
           <label style={checkboxStyle}>
             <input type="checkbox" checked={replaceExisting} onChange={(event) => setReplaceExisting(event.target.checked)} />
-            Replace this run's previous private local-depth inputs and results.
+            Replace this run's previous measured anchors and finding-depth results.
           </label>
           <label style={checkboxStyle}>
             <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-            I reviewed these polygons and the measured anchor depth ranges.
+            I reviewed these measured anchor polygons and depth ranges.
           </label>
 
           <button
@@ -208,7 +215,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
               cursor: ready ? "pointer" : "not-allowed",
             }}
           >
-            {processing ? "Processing local calibration..." : "Run local depth calibration"}
+            {processing ? "Estimating all findings..." : "Calibrate and estimate all findings"}
           </button>
 
           {result && <ResultBody result={result} />}
@@ -221,30 +228,33 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
 function BoundaryNotice() {
   return (
     <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--gs-amber-bg)", border: "1px solid var(--gs-amber-border)", fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.55" }}>
-      <strong style={{ color: "var(--gs-navy)" }}>What this does:</strong> uses your measured local anchor polygons to estimate candidates inside the same signal range. It does not discover depth without measured anchors, never extrapolates, and is not transferable to another site.
+      <strong style={{ color: "var(--gs-navy)" }}>What this does:</strong> uses your measured same-site anchors to estimate every finding already detected by the app. You do not draw or upload candidate AOIs. Findings outside the measured signal range receive no metre estimate.
     </div>
   );
 }
 
 function ResultBody({ result }: { result: OperatorLocalDepthResult }) {
   if (result.outcome === "denied") {
-    return <StatusBox tone="warning" message={result.message || "Operator local depth access is not available."} />;
+    return <StatusBox tone="warning" message={result.message || "Measured-anchor calibration access is not available."} />;
   }
   if (result.outcome === "error") {
-    return <StatusBox tone="error" message={result.message || "The local depth request could not be processed."} />;
+    return <StatusBox tone="error" message={result.message || "The finding-depth request could not be processed."} />;
+  }
+  if (result.outcome === "not_available") {
+    return <StatusBox tone="neutral" message="No finding-depth calibration has been saved for this run." />;
   }
 
   return (
     <div className="flex flex-col gap-3">
       <StatusBox
         tone={result.estimatedCount > 0 ? "success" : "warning"}
-        message={`${result.estimatedCount} of ${result.candidateCount} candidates received a local calibrated metre range. ${result.insufficientDataCount + result.notAvailableCount} abstained.`}
+        message={`${result.estimatedCount} of ${result.candidateCount} classifier findings received a local calibrated metre range. ${result.insufficientDataCount + result.notAvailableCount} received no estimate. Results are now shown in the normal findings table.`}
       />
       <div className="rounded overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
           <thead style={{ backgroundColor: "var(--accent)", color: "var(--gs-navy)" }}>
             <tr>
-              <Header>Candidate</Header>
+              <Header>Finding</Header>
               <Header>Status</Header>
               <Header>Local depth range</Header>
               <Header>Best</Header>
@@ -256,7 +266,7 @@ function ResultBody({ result }: { result: OperatorLocalDepthResult }) {
         </table>
       </div>
       <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-        Private filesystem-only output. Geometry returned: {result.geometryReturned ? "yes" : "no"}. Transferable: {result.transferable ? "yes" : "no"}. Enabled by default: {result.appDepthEnabledByDefault ? "yes" : "no"}.
+        Measured anchors remain private. Finding-depth values are linked to the existing classifier objects. Geometry returned: {result.geometryReturned ? "yes" : "no"}. Transferable to another site: {result.transferable ? "yes" : "no"}.
       </div>
     </div>
   );
@@ -266,12 +276,18 @@ function EstimateRow({ estimate }: { estimate: OperatorLocalDepthEstimate }) {
   const ranged = estimate.estimatedDepthMinM !== null && estimate.estimatedDepthMaxM !== null;
   return (
     <tr style={{ borderTop: "1px solid var(--border)", color: "var(--gs-slate)" }}>
-      <Cell mono>{estimate.candidateId}</Cell>
+      <Cell mono>{friendlyFindingId(estimate.candidateId)}</Cell>
       <Cell>{estimate.depthStatus}</Cell>
       <Cell>{ranged ? `${formatMetres(estimate.estimatedDepthMinM)}–${formatMetres(estimate.estimatedDepthMaxM)} m` : "No metre range"}</Cell>
       <Cell>{estimate.estimatedDepthBestM === null ? "—" : `${formatMetres(estimate.estimatedDepthBestM)} m`}</Cell>
     </tr>
   );
+}
+
+function friendlyFindingId(candidateId: string): string {
+  return candidateId.startsWith("finding-object-")
+    ? `Object ${candidateId.slice("finding-object-".length)}`
+    : candidateId;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
