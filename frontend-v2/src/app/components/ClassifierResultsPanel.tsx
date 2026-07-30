@@ -9,21 +9,32 @@ import {
   type ClassifierObjectRow,
   type ClassifierSummary,
 } from "../api/classifierResults";
+import {
+  fetchOperatorLocalDepthResult,
+  type OperatorLocalDepthEstimate,
+  type OperatorLocalDepthResult,
+} from "../api/operatorLocalDepth";
+import { useOperatorAccessToken } from "./OperatorSessionContext";
 
 interface ClassifierResultsPanelProps {
   runId: string;
 }
 
-
 export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
+  const operatorAccessToken = useOperatorAccessToken();
   const [summary, setSummary] = useState<ClassifierSummary | null>(null);
   const [objects, setObjects] = useState<ClassifierObjectRow[]>([]);
+  const [depthResult, setDepthResult] = useState<OperatorLocalDepthResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const downloadLinks = useMemo(() => classifierDownloadLinks(runId), [runId]);
   const finalAreaFindings = useMemo(
     () => summary?.finalAreaFindings ?? buildLegacyFinalAreaFindings(objects, runId),
     [objects, runId, summary],
+  );
+  const depthByCandidateId = useMemo(
+    () => new Map((depthResult?.estimates ?? []).map((estimate) => [estimate.candidateId, estimate])),
+    [depthResult],
   );
 
   useEffect(() => {
@@ -34,14 +45,17 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
       setUnavailable(false);
       setSummary(null);
       setObjects([]);
+      setDepthResult(null);
       try {
-        const [nextSummary, nextObjects] = await Promise.all([
+        const [nextSummary, nextObjects, nextDepth] = await Promise.all([
           fetchClassifierSummary(runId),
           fetchClassifierObjects(runId).catch(() => []),
+          fetchOperatorLocalDepthResult(runId, { accessToken: operatorAccessToken }).catch(() => null),
         ]);
         if (!cancelled) {
           setSummary(nextSummary);
           setObjects(nextObjects);
+          setDepthResult(nextDepth);
         }
       } catch (_error) {
         if (!cancelled) {
@@ -58,7 +72,33 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [runId]);
+  }, [runId, operatorAccessToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshDepthResult() {
+      const nextDepth = await fetchOperatorLocalDepthResult(runId, {
+        accessToken: operatorAccessToken,
+      }).catch(() => null);
+      if (!cancelled) {
+        setDepthResult(nextDepth);
+      }
+    }
+
+    function handleDepthUpdated(event: Event) {
+      const detail = (event as CustomEvent<{ runId?: string }>).detail;
+      if (!detail?.runId || detail.runId === runId) {
+        void refreshDepthResult();
+      }
+    }
+
+    window.addEventListener("operator-local-depth-updated", handleDepthUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("operator-local-depth-updated", handleDepthUpdated);
+    };
+  }, [runId, operatorAccessToken]);
 
   const scoreLevelEntries = Object.entries(summary?.classCounts ?? {})
     .filter(([, count]) => count > 0)
@@ -157,7 +197,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                   </div>
                 )}
                 <div className="mt-2" style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-                  Depth estimate: not available.
+                  {depthSummaryText(depthResult)}
                 </div>
               </div>
             )}
@@ -204,7 +244,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                 All objects, sorted by score ({objects.length})
               </summary>
               <div className="mt-2 overflow-auto" style={{ maxHeight: "460px", border: "1px solid rgba(28,43,94,0.12)", borderRadius: "4px" }}>
-                <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "1080px" }}>
+                <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "1380px" }}>
                   <thead>
                     <tr style={{ backgroundColor: "var(--accent)" }}>
                       {[
@@ -213,6 +253,9 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                         "Score",
                         "Score level",
                         "Finding label",
+                        "Depth range",
+                        "Best depth",
+                        "Depth status",
                         "Finding reason",
                         "Review order",
                         "Row start",
@@ -225,21 +268,27 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {objects.map((row) => (
-                      <tr key={`${row.objectId}-${row.clusterId}`}>
-                        <td style={tableCellStyle}>{row.objectId}</td>
-                        <td style={tableCellStyle}>{row.clusterId}</td>
-                        <td style={tableCellStyle}>{row.score.toFixed(3)}</td>
-                        <td style={tableCellStyle}>{row.scoreLevel}</td>
-                        <td style={tableCellStyle}>{row.findingLabel}</td>
-                        <td style={tableCellStyle}>{row.findingReason}</td>
-                        <td style={tableCellStyle}>{row.reviewOrder}</td>
-                        <td style={tableCellStyle}>{row.rowStart}</td>
-                        <td style={tableCellStyle}>{row.rowEnd}</td>
-                        <td style={tableCellStyle}>{row.columnStart}</td>
-                        <td style={tableCellStyle}>{row.columnEnd}</td>
-                      </tr>
-                    ))}
+                    {objects.map((row) => {
+                      const estimate = depthByCandidateId.get(candidateIdForObject(row.objectId));
+                      return (
+                        <tr key={`${row.objectId}-${row.clusterId}`}>
+                          <td style={tableCellStyle}>{row.objectId}</td>
+                          <td style={tableCellStyle}>{row.clusterId}</td>
+                          <td style={tableCellStyle}>{row.score.toFixed(3)}</td>
+                          <td style={tableCellStyle}>{row.scoreLevel}</td>
+                          <td style={tableCellStyle}>{row.findingLabel}</td>
+                          <td style={tableCellStyle}>{depthRangeText(estimate)}</td>
+                          <td style={tableCellStyle}>{bestDepthText(estimate)}</td>
+                          <td style={tableCellStyle}>{depthStatusText(estimate, depthResult)}</td>
+                          <td style={tableCellStyle}>{row.findingReason}</td>
+                          <td style={tableCellStyle}>{row.reviewOrder}</td>
+                          <td style={tableCellStyle}>{row.rowStart}</td>
+                          <td style={tableCellStyle}>{row.rowEnd}</td>
+                          <td style={tableCellStyle}>{row.columnStart}</td>
+                          <td style={tableCellStyle}>{row.columnEnd}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -271,6 +320,40 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
       </div>
     </section>
   );
+}
+
+function candidateIdForObject(objectId: string): string {
+  return `finding-object-${objectId}`;
+}
+
+function depthSummaryText(result: OperatorLocalDepthResult | null): string {
+  if (result?.outcome === "completed") {
+    return `Depth estimates: ${result.estimatedCount} of ${result.candidateCount} findings received a local metre range; ${result.insufficientDataCount + result.notAvailableCount} received no estimate.`;
+  }
+  return "Depth estimates: measured-anchor calibration has not been completed for this run.";
+}
+
+function depthRangeText(estimate: OperatorLocalDepthEstimate | undefined): string {
+  if (!estimate || estimate.estimatedDepthMinM === null || estimate.estimatedDepthMaxM === null) {
+    return "—";
+  }
+  return `${estimate.estimatedDepthMinM.toFixed(3)}–${estimate.estimatedDepthMaxM.toFixed(3)} m`;
+}
+
+function bestDepthText(estimate: OperatorLocalDepthEstimate | undefined): string {
+  return !estimate || estimate.estimatedDepthBestM === null
+    ? "—"
+    : `${estimate.estimatedDepthBestM.toFixed(3)} m`;
+}
+
+function depthStatusText(
+  estimate: OperatorLocalDepthEstimate | undefined,
+  result: OperatorLocalDepthResult | null,
+): string {
+  if (estimate) {
+    return estimate.depthStatus;
+  }
+  return result?.outcome === "completed" ? "not_available" : "not_calibrated";
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
