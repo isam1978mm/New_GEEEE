@@ -2,9 +2,7 @@ export interface ReviewedFileSummary {
   fileName: string;
   featureCount: number;
   anchorCount: number;
-  candidateCount: number;
   anchorIds: string[];
-  candidateIds: string[];
   minimumAnchorDepthM: number;
   maximumAnchorDepthM: number;
 }
@@ -22,7 +20,6 @@ export function inspectOperatorLocalDepthGeojson(value: unknown, fileName: strin
 
   const featureIds = new Set<string>();
   const anchorIds: string[] = [];
-  const candidateIds: string[] = [];
   const anchorBestDepths: number[] = [];
   let minimumAnchorDepthM = Number.POSITIVE_INFINITY;
   let maximumAnchorDepthM = Number.NEGATIVE_INFINITY;
@@ -43,34 +40,28 @@ export function inspectOperatorLocalDepthGeojson(value: unknown, fileName: strin
     }
     featureIds.add(featureId);
 
-    const role = requiredText(properties.role, `Feature ${featureId} must contain role anchor or candidate.`).toLowerCase();
-    if (role !== "anchor" && role !== "candidate") {
-      throw new Error(`Feature ${featureId} has unsupported role ${role}; use anchor or candidate.`);
+    const role = requiredText(properties.role, `Feature ${featureId} must contain role anchor.`).toLowerCase();
+    if (role !== "anchor") {
+      throw new Error(
+        `Feature ${featureId} must use role anchor. Do not upload candidate polygons; the app automatically uses every classifier finding.`,
+      );
     }
 
     validateGeometry(feature.geometry, featureId);
-
-    if (role === "anchor") {
-      const minimum = requiredDepth(properties.depth_min_m, featureId, "depth_min_m");
-      const best = requiredDepth(properties.depth_best_m, featureId, "depth_best_m");
-      const maximum = requiredDepth(properties.depth_max_m, featureId, "depth_max_m");
-      if (!(minimum <= best && best <= maximum)) {
-        throw new Error(`Anchor ${featureId} must satisfy depth_min_m <= depth_best_m <= depth_max_m.`);
-      }
-      anchorIds.push(featureId);
-      anchorBestDepths.push(best);
-      minimumAnchorDepthM = Math.min(minimumAnchorDepthM, minimum);
-      maximumAnchorDepthM = Math.max(maximumAnchorDepthM, maximum);
-    } else {
-      candidateIds.push(featureId);
+    const minimum = requiredDepth(properties.depth_min_m, featureId, "depth_min_m");
+    const best = requiredDepth(properties.depth_best_m, featureId, "depth_best_m");
+    const maximum = requiredDepth(properties.depth_max_m, featureId, "depth_max_m");
+    if (!(minimum <= best && best <= maximum)) {
+      throw new Error(`Anchor ${featureId} must satisfy depth_min_m <= depth_best_m <= depth_max_m.`);
     }
+    anchorIds.push(featureId);
+    anchorBestDepths.push(best);
+    minimumAnchorDepthM = Math.min(minimumAnchorDepthM, minimum);
+    maximumAnchorDepthM = Math.max(maximumAnchorDepthM, maximum);
   });
 
   if (anchorIds.length < 2) {
     throw new Error("At least two measured anchor features are required.");
-  }
-  if (candidateIds.length < 1) {
-    throw new Error("At least one candidate feature is required.");
   }
   if (new Set(anchorBestDepths.map((value) => value.toPrecision(15))).size < 2) {
     throw new Error("Measured anchors must include at least two distinct best-depth values.");
@@ -80,9 +71,7 @@ export function inspectOperatorLocalDepthGeojson(value: unknown, fileName: strin
     fileName,
     featureCount: document.features.length,
     anchorCount: anchorIds.length,
-    candidateCount: candidateIds.length,
     anchorIds,
-    candidateIds,
     minimumAnchorDepthM,
     maximumAnchorDepthM,
   };
@@ -93,29 +82,30 @@ export function buildOperatorLocalDepthTemplate(): JsonRecord {
     type: "FeatureCollection",
     template_only: true,
     instructions: [
+      "This file is for measured anchor polygons only.",
       "Replace every placeholder feature_id.",
-      "Replace every null coordinate with the reviewed polygon coordinates.",
-      "Enter measured depth ranges in metres for anchors only.",
+      "Replace every null coordinate with the reviewed anchor polygon coordinates.",
+      "Enter measured depth ranges in metres for both anchors.",
+      "Do not add candidate polygons. The app uses every classifier finding automatically.",
       "Remove template_only before uploading the completed file.",
     ],
     features: [
-      templateFeature("replace-with-shallow-anchor-id", "anchor", [0.4, 0.5, 0.6]),
-      templateFeature("replace-with-deep-anchor-id", "anchor", [1.4, 1.5, 1.6]),
-      templateFeature("replace-with-candidate-id", "candidate"),
+      templateAnchor("replace-with-shallow-anchor-id", [0.4, 0.5, 0.6]),
+      templateAnchor("replace-with-deep-anchor-id", [1.4, 1.5, 1.6]),
     ],
   };
 }
 
-function templateFeature(featureId: string, role: "anchor" | "candidate", depth?: [number, number, number]): JsonRecord {
-  const properties: JsonRecord = { feature_id: featureId, role };
-  if (depth) {
-    properties.depth_min_m = depth[0];
-    properties.depth_best_m = depth[1];
-    properties.depth_max_m = depth[2];
-  }
+function templateAnchor(featureId: string, depth: [number, number, number]): JsonRecord {
   return {
     type: "Feature",
-    properties,
+    properties: {
+      feature_id: featureId,
+      role: "anchor",
+      depth_min_m: depth[0],
+      depth_best_m: depth[1],
+      depth_max_m: depth[2],
+    },
     geometry: {
       type: "Polygon",
       coordinates: [
