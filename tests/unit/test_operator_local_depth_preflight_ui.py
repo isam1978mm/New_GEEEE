@@ -49,16 +49,34 @@ def test_local_depth_preflight_rejects_common_operator_input_errors() -> None:
     assert "replace-with" in source
 
 
-def test_local_depth_panel_uses_anchors_and_automatic_findings() -> None:
+def test_site_calibration_is_a_settings_workflow() -> None:
+    settings_source = _read("frontend-v2/src/app/components/SettingsPage.tsx")
+    private_overlay_source = _read(
+        "frontend-v2/src/app/components/OperatorPrivateOverlayPanel.tsx"
+    )
+    panel_source = _read(
+        "frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx"
+    )
+
+    assert "<OperatorLocalDepthPanel" in settings_source
+    assert "readSelectedRunId" in settings_source
+    assert "<OperatorLocalDepthPanel" not in private_overlay_source
+    assert "Site depth calibration — one-time setup" in panel_source
+    assert "Known-depth reference zones (surveyed)" in panel_source
+    assert "Calibration only — not a new AOI analysis" in panel_source
+    assert "No finding or candidate AOI is uploaded" in panel_source
+    assert "Dashboard → Classifier Results" in panel_source
+
+
+def test_saved_calibration_hides_setup_and_points_to_classifier_results() -> None:
     source = _read("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx")
 
-    assert "Download measured-anchor template" in source
-    assert "operator-local-depth-measured-anchors-template.geojson" in source
-    assert "Preflight failed" in source
-    assert "Preflight passed" in source
-    assert "Every classifier finding will be used automatically" in source
-    assert "Calibrate and estimate all findings" in source
-    assert "No candidate AOI is uploaded" in source
+    assert "fetchOperatorLocalDepthResult" in source
+    assert "hasCompletedCalibration && !editing" in source
+    assert "Replace saved calibration" in source
+    assert "setup form is hidden because this run is already calibrated" in source
+    assert "Save calibration and estimate every finding" in source
+    assert "<Header>Finding</Header>" not in source
 
 
 def test_classifier_table_surfaces_depth_for_each_object() -> None:
@@ -71,6 +89,17 @@ def test_classifier_table_surfaces_depth_for_each_object() -> None:
     assert "fetchOperatorLocalDepthResult" in source
 
 
+def test_selected_run_is_remembered_without_storing_credentials() -> None:
+    selected_run_source = _read("frontend-v2/src/app/selectedRun.ts")
+    status_source = _read("frontend-v2/src/app/components/StatusStrip.tsx")
+
+    assert "gs_selected_run_id_v1" in selected_run_source
+    assert "rememberSelectedRunId(runId)" in status_source
+    assert "accessToken" not in selected_run_source
+    assert "Authorization" not in selected_run_source
+
+
 def test_env_example_keeps_operator_local_depth_default_off() -> None:
     source = _read(".env.example")
+
     assert "OPERATOR_LOCAL_DEPTH_APP_ENABLED=false" in source
