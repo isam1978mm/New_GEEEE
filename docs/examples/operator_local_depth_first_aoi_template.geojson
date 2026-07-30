@@ -2,9 +2,11 @@
   "type": "FeatureCollection",
   "template_only": true,
   "instructions": [
+    "This file is for measured anchor polygons only.",
     "Replace every placeholder feature_id.",
-    "Replace every null coordinate with reviewed polygon coordinates.",
-    "Enter measured depth ranges in metres for anchors only.",
+    "Replace every null coordinate with the reviewed anchor polygon coordinates.",
+    "Enter measured depth ranges in metres for both anchors.",
+    "Do not add candidate polygons. The app uses every classifier finding automatically.",
     "Remove template_only before uploading the completed file."
   ],
   "features": [
@@ -38,25 +40,6 @@
         "depth_min_m": 1.4,
         "depth_best_m": 1.5,
         "depth_max_m": 1.6
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [null, null],
-            [null, null],
-            [null, null],
-            [null, null],
-            [null, null]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "feature_id": "replace-with-candidate-id",
-        "role": "candidate"
       },
       "geometry": {
         "type": "Polygon",
