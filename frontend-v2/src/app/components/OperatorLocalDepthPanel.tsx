@@ -1,7 +1,7 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import {
+  fetchOperatorLocalDepthResult,
   runOperatorLocalDepth,
-  type OperatorLocalDepthEstimate,
   type OperatorLocalDepthResult,
 } from "../api/operatorLocalDepth";
 import {
@@ -28,13 +28,39 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
   const [fileSummary, setFileSummary] = useState<ReviewedFileSummary | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<OperatorLocalDepthResult | null>(null);
+  const [savedResult, setSavedResult] = useState<OperatorLocalDepthResult | null>(null);
+  const [requestResult, setRequestResult] = useState<OperatorLocalDepthResult | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedCalibration() {
+      setLoadingSaved(true);
+      const nextResult = await fetchOperatorLocalDepthResult(runId, {
+        accessToken: operatorAccessToken,
+      });
+      if (!cancelled) {
+        setSavedResult(nextResult);
+        setSiteId(nextResult.siteId || "");
+        setDatasetVersion(nextResult.calibrationDatasetVersion || "");
+        setEditing(nextResult.outcome !== "completed");
+        setLoadingSaved(false);
+      }
+    }
+
+    void loadSavedCalibration();
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, operatorAccessToken]);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setGeojson(null);
     setFileSummary(null);
     setFileError(null);
-    setResult(null);
+    setRequestResult(null);
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -55,7 +81,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "operator-local-depth-measured-anchors-template.geojson";
+    link.download = "site-depth-known-reference-zones-template.geojson";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -67,7 +93,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
       return;
     }
     setProcessing(true);
-    setResult(null);
+    setRequestResult(null);
     const nextResult = await runOperatorLocalDepth(
       runId,
       {
@@ -83,13 +109,26 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
       },
       { accessToken: operatorAccessToken },
     );
-    setResult(nextResult);
+    setRequestResult(nextResult);
     setProcessing(false);
     if (nextResult.outcome === "completed") {
+      setSavedResult(nextResult);
+      setEditing(false);
+      setReplaceExisting(false);
       window.dispatchEvent(
         new CustomEvent("operator-local-depth-updated", { detail: { runId } }),
       );
     }
+  }
+
+  function beginReplacement() {
+    setEditing(true);
+    setReplaceExisting(true);
+    setConfirmed(false);
+    setGeojson(null);
+    setFileSummary(null);
+    setFileError(null);
+    setRequestResult(null);
   }
 
   const ready = Boolean(
@@ -99,128 +138,159 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
       datasetVersion.trim() &&
       !processing,
   );
+  const hasCompletedCalibration = savedResult?.outcome === "completed";
 
   return (
     <section
-      className="rounded-lg bg-card overflow-hidden mt-4"
+      className="rounded-lg bg-card overflow-hidden"
       style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
     >
-      <details>
-        <summary
-          className="px-4 py-2"
-          style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)", cursor: "pointer" }}
+      <div
+        className="px-4 py-2"
+        style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)" }}
+      >
+        <span
+          className="font-mono"
+          style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
         >
-          <span
-            className="font-mono"
-            style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
-          >
-            Depth calibration setup — measured anchors
-          </span>
-        </summary>
+          Site depth calibration — one-time setup
+        </span>
+      </div>
 
-        <div className="px-4 py-3 flex flex-col gap-3">
-          <BoundaryNotice />
+      <div className="px-4 py-3 flex flex-col gap-3">
+        <BoundaryNotice />
 
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))" }}>
-            <Field label="Site ID">
-              <input value={siteId} onChange={(event) => setSiteId(event.target.value)} placeholder="example-site" style={inputStyle} />
-            </Field>
-            <Field label="Calibration dataset version">
-              <input value={datasetVersion} onChange={(event) => setDatasetVersion(event.target.value)} placeholder="survey-2026-v1" style={inputStyle} />
-            </Field>
-            <Field label="GeoJSON coordinate system">
-              <input value={inputCrs} onChange={(event) => setInputCrs(event.target.value)} style={inputStyle} />
-            </Field>
-          </div>
+        {loadingSaved && <StatusBox tone="neutral" message="Checking this run's saved site calibration..." />}
 
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label="Reviewed measured anchor polygons">
-              <input
-                type="file"
-                accept=".geojson,.json,application/geo+json,application/json"
-                onChange={(event) => { void handleFileChange(event); }}
-                style={{ fontSize: "11px", color: "var(--gs-slate)" }}
-              />
-            </Field>
-            <button type="button" onClick={handleDownloadTemplate} className="rounded px-3 py-2" style={secondaryButtonStyle}>
-              Download measured-anchor template
-            </button>
-          </div>
+        {!loadingSaved && hasCompletedCalibration && !editing && savedResult && (
+          <SavedCalibrationSummary result={savedResult} onReplace={beginReplacement} />
+        )}
 
-          {fileError && <StatusBox tone="error" message={`Preflight failed: ${fileError}`} />}
-          {fileSummary && (
-            <StatusBox
-              tone="success"
-              message={`Preflight passed — ${fileSummary.fileName}: ${fileSummary.anchorCount} measured anchors, support ${formatMetres(fileSummary.minimumAnchorDepthM)}–${formatMetres(fileSummary.maximumAnchorDepthM)} m. Every classifier finding will be used automatically.`}
-            />
-          )}
-          {fileSummary && (
-            <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-              <div><strong style={{ color: "var(--gs-navy)" }}>Measured anchors:</strong> {summariseIds(fileSummary.anchorIds)}</div>
-              <div style={{ marginTop: "4px" }}>
-                No candidate AOI is uploaded. The app reads all findings from this completed run and adds a depth range or an honest no-estimate status to each finding.
-              </div>
-              <div style={{ marginTop: "4px" }}>This structural preflight does not replace the backend raster-intersection, pixel-count, run-quality, or no-extrapolation checks.</div>
+        {!loadingSaved && (!hasCompletedCalibration || editing) && (
+          <>
+            {savedResult?.outcome === "denied" && (
+              <StatusBox tone="warning" message={savedResult.message || "Site depth calibration access is not available."} />
+            )}
+            {savedResult?.outcome === "error" && (
+              <StatusBox tone="error" message={savedResult.message || "Saved calibration status could not be loaded."} />
+            )}
+
+            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))" }}>
+              <Field label="Site ID">
+                <input value={siteId} onChange={(event) => setSiteId(event.target.value)} placeholder="example-site" style={inputStyle} />
+              </Field>
+              <Field label="Calibration dataset version">
+                <input value={datasetVersion} onChange={(event) => setDatasetVersion(event.target.value)} placeholder="survey-2026-v1" style={inputStyle} />
+              </Field>
+              <Field label="GeoJSON coordinate system">
+                <input value={inputCrs} onChange={(event) => setInputCrs(event.target.value)} style={inputStyle} />
+              </Field>
             </div>
-          )}
 
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
-            <Field label="Anchor boundary erosion (pixels)">
-              <input
-                type="number"
-                min={0}
-                max={10}
-                value={erosionPixels}
-                onChange={(event) => setErosionPixels(clampInteger(event.target.value, 0, 10, 2))}
-                style={inputStyle}
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label="Known-depth reference zones (surveyed)">
+                <input
+                  type="file"
+                  accept=".geojson,.json,application/geo+json,application/json"
+                  onChange={(event) => { void handleFileChange(event); }}
+                  style={{ fontSize: "11px", color: "var(--gs-slate)" }}
+                />
+              </Field>
+              <button type="button" onClick={handleDownloadTemplate} className="rounded px-3 py-2" style={secondaryButtonStyle}>
+                Download known-depth reference template
+              </button>
+            </div>
+
+            {fileError && <StatusBox tone="error" message={`Preflight failed: ${fileError}`} />}
+            {fileSummary && (
+              <StatusBox
+                tone="success"
+                message={`Preflight passed — ${fileSummary.fileName}: ${fileSummary.anchorCount} known-depth references, support ${formatMetres(fileSummary.minimumAnchorDepthM)}–${formatMetres(fileSummary.maximumAnchorDepthM)} m.`}
               />
-            </Field>
-            <Field label="Minimum valid anchor pixels">
-              <input
-                type="number"
-                min={1}
-                max={100000}
-                value={minimumValidPixels}
-                onChange={(event) => setMinimumValidPixels(clampInteger(event.target.value, 1, 100000, 20))}
-                style={inputStyle}
-              />
-            </Field>
-          </div>
+            )}
+            {fileSummary && (
+              <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.12)", fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
+                <div><strong style={{ color: "var(--gs-navy)" }}>Known-depth references:</strong> {summariseIds(fileSummary.anchorIds)}</div>
+                <div style={{ marginTop: "4px" }}>
+                  No finding or candidate AOI is uploaded. The app automatically applies this calibration to every classifier finding in the selected run.
+                </div>
+                <div style={{ marginTop: "4px" }}>
+                  Numerical results appear only in Dashboard → Classifier Results, beside each classifier object.
+                </div>
+              </div>
+            )}
 
-          <label style={checkboxStyle}>
-            <input type="checkbox" checked={allowWarning} onChange={(event) => setAllowWarning(event.target.checked)} />
-            Permit an otherwise usable run-quality WARNING. PASS remains preferred.
-          </label>
-          <label style={checkboxStyle}>
-            <input type="checkbox" checked={replaceExisting} onChange={(event) => setReplaceExisting(event.target.checked)} />
-            Replace this run's previous measured anchors and finding-depth results.
-          </label>
-          <label style={checkboxStyle}>
-            <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-            I reviewed these measured anchor polygons and depth ranges.
-          </label>
+            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
+              <Field label="Reference boundary erosion (pixels)">
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={erosionPixels}
+                  onChange={(event) => setErosionPixels(clampInteger(event.target.value, 0, 10, 2))}
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Minimum valid reference pixels">
+                <input
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={minimumValidPixels}
+                  onChange={(event) => setMinimumValidPixels(clampInteger(event.target.value, 1, 100000, 20))}
+                  style={inputStyle}
+                />
+              </Field>
+            </div>
 
-          <button
-            type="button"
-            disabled={!ready}
-            onClick={() => { void handleRun(); }}
-            className="rounded px-3 py-2"
-            style={{
-              alignSelf: "flex-start",
-              fontSize: "11px",
-              fontWeight: 700,
-              color: ready ? "white" : "var(--gs-slate)",
-              backgroundColor: ready ? "var(--gs-navy)" : "var(--accent)",
-              border: "1px solid rgba(28,43,94,0.18)",
-              cursor: ready ? "pointer" : "not-allowed",
-            }}
-          >
-            {processing ? "Estimating all findings..." : "Calibrate and estimate all findings"}
-          </button>
+            <label style={checkboxStyle}>
+              <input type="checkbox" checked={allowWarning} onChange={(event) => setAllowWarning(event.target.checked)} />
+              Permit an otherwise usable run-quality WARNING. PASS remains preferred.
+            </label>
+            {hasCompletedCalibration && (
+              <label style={checkboxStyle}>
+                <input type="checkbox" checked={replaceExisting} onChange={(event) => setReplaceExisting(event.target.checked)} />
+                Replace this run's saved calibration and finding-depth results.
+              </label>
+            )}
+            <label style={checkboxStyle}>
+              <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+              I verified these are surveyed same-site zones with known depth ranges.
+            </label>
 
-          {result && <ResultBody result={result} />}
-        </div>
-      </details>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!ready}
+                onClick={() => { void handleRun(); }}
+                className="rounded px-3 py-2"
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: ready ? "white" : "var(--gs-slate)",
+                  backgroundColor: ready ? "var(--gs-navy)" : "var(--accent)",
+                  border: "1px solid rgba(28,43,94,0.18)",
+                  cursor: ready ? "pointer" : "not-allowed",
+                }}
+              >
+                {processing ? "Applying calibration to all findings..." : "Save calibration and estimate every finding"}
+              </button>
+              {hasCompletedCalibration && editing && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="rounded px-3 py-2"
+                  style={secondaryButtonStyle}
+                >
+                  Cancel replacement
+                </button>
+              )}
+            </div>
+
+            {requestResult && requestResult.outcome !== "completed" && <RequestStatus result={requestResult} />}
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -228,66 +298,48 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
 function BoundaryNotice() {
   return (
     <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--gs-amber-bg)", border: "1px solid var(--gs-amber-border)", fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.55" }}>
-      <strong style={{ color: "var(--gs-navy)" }}>What this does:</strong> uses your measured same-site anchors to estimate every finding already detected by the app. You do not draw or upload candidate AOIs. Findings outside the measured signal range receive no metre estimate.
+      <strong style={{ color: "var(--gs-navy)" }}>Calibration only — not a new AOI analysis:</strong> upload surveyed same-site reference zones whose depths are already known. The app uses every existing classifier finding automatically. Depth results are shown only in the classifier table.
     </div>
   );
 }
 
-function ResultBody({ result }: { result: OperatorLocalDepthResult }) {
-  if (result.outcome === "denied") {
-    return <StatusBox tone="warning" message={result.message || "Measured-anchor calibration access is not available."} />;
-  }
-  if (result.outcome === "error") {
-    return <StatusBox tone="error" message={result.message || "The finding-depth request could not be processed."} />;
-  }
-  if (result.outcome === "not_available") {
-    return <StatusBox tone="neutral" message="No finding-depth calibration has been saved for this run." />;
-  }
-
+function SavedCalibrationSummary({ result, onReplace }: { result: OperatorLocalDepthResult; onReplace: () => void }) {
   return (
     <div className="flex flex-col gap-3">
       <StatusBox
-        tone={result.estimatedCount > 0 ? "success" : "warning"}
-        message={`${result.estimatedCount} of ${result.candidateCount} classifier findings received a local calibrated metre range. ${result.insufficientDataCount + result.notAvailableCount} received no estimate. Results are now shown in the normal findings table.`}
+        tone="success"
+        message={`Calibration saved for ${result.siteId || "this site"}. ${result.estimatedCount} of ${result.candidateCount} classifier findings received a metre range; ${result.insufficientDataCount + result.notAvailableCount} received no estimate.`}
       />
-      <div className="rounded overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
-          <thead style={{ backgroundColor: "var(--accent)", color: "var(--gs-navy)" }}>
-            <tr>
-              <Header>Finding</Header>
-              <Header>Status</Header>
-              <Header>Local depth range</Header>
-              <Header>Best</Header>
-            </tr>
-          </thead>
-          <tbody>
-            {result.estimates.map((estimate) => <EstimateRow key={estimate.candidateId} estimate={estimate} />)}
-          </tbody>
-        </table>
-      </div>
+      <dl className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}>
+        <Metric label="Dataset" value={result.calibrationDatasetVersion || "not reported"} />
+        <Metric label="Known-depth references" value={String(result.anchorCount)} />
+        <Metric label="Classifier findings" value={String(result.candidateCount)} />
+        <Metric label="Estimated findings" value={String(result.estimatedCount)} />
+      </dl>
       <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-        Measured anchors remain private. Finding-depth values are linked to the existing classifier objects. Geometry returned: {result.geometryReturned ? "yes" : "no"}. Transferable to another site: {result.transferable ? "yes" : "no"}.
+        View the numerical depth range, best depth, and depth status in Dashboard → Classifier Results. The setup form is hidden because this run is already calibrated.
       </div>
+      <button type="button" onClick={onReplace} className="rounded px-3 py-2" style={secondaryButtonStyle}>
+        Replace saved calibration
+      </button>
     </div>
   );
 }
 
-function EstimateRow({ estimate }: { estimate: OperatorLocalDepthEstimate }) {
-  const ranged = estimate.estimatedDepthMinM !== null && estimate.estimatedDepthMaxM !== null;
-  return (
-    <tr style={{ borderTop: "1px solid var(--border)", color: "var(--gs-slate)" }}>
-      <Cell mono>{friendlyFindingId(estimate.candidateId)}</Cell>
-      <Cell>{estimate.depthStatus}</Cell>
-      <Cell>{ranged ? `${formatMetres(estimate.estimatedDepthMinM)}–${formatMetres(estimate.estimatedDepthMaxM)} m` : "No metre range"}</Cell>
-      <Cell>{estimate.estimatedDepthBestM === null ? "—" : `${formatMetres(estimate.estimatedDepthBestM)} m`}</Cell>
-    </tr>
-  );
+function RequestStatus({ result }: { result: OperatorLocalDepthResult }) {
+  if (result.outcome === "denied") {
+    return <StatusBox tone="warning" message={result.message || "Site depth calibration access is not available."} />;
+  }
+  return <StatusBox tone="error" message={result.message || "The site depth calibration could not be processed."} />;
 }
 
-function friendlyFindingId(candidateId: string): string {
-  return candidateId.startsWith("finding-object-")
-    ? `Object ${candidateId.slice("finding-object-".length)}`
-    : candidateId;
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded px-3 py-2" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.1)" }}>
+      <div className="font-mono" style={{ fontSize: "9.5px", color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+      <div className="font-mono" style={{ fontSize: "12px", fontWeight: 700, color: "var(--gs-navy)", marginTop: "2px" }}>{value}</div>
+    </div>
+  );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -297,14 +349,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
-}
-
-function Header({ children }: { children: React.ReactNode }) {
-  return <th style={{ padding: "7px 9px", textAlign: "left", fontWeight: 700 }}>{children}</th>;
-}
-
-function Cell({ children, mono = false }: { children: React.ReactNode; mono?: boolean }) {
-  return <td className={mono ? "font-mono" : undefined} style={{ padding: "7px 9px", verticalAlign: "top" }}>{children}</td>;
 }
 
 function StatusBox({ tone, message }: { tone: "neutral" | "warning" | "error" | "success"; message: string }) {
