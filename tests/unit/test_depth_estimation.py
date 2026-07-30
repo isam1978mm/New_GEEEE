@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import csv
@@ -73,7 +73,7 @@ def _write_package(package_dir: Path) -> Path:
     manifest_path = package_dir / "depth_method_manifest.json"
     manifest_text = json.dumps(manifest, indent=2, sort_keys=True)
     manifest_path.write_text(manifest_text, encoding="utf-8")
-    digest = hashlib.sha256(manifest_text.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
     (package_dir / "checksums.sha256").write_text(
         f"{digest}  depth_method_manifest.json\n",
         encoding="utf-8",
@@ -204,3 +204,4 @@ def test_enabled_stage_outputs_private_non_http_artifacts(tmp_path: Path) -> Non
     assert len(result.artifacts) == 3
     assert all(artifact.artifact_class is ArtifactClass.FILESYSTEM_ONLY for artifact in result.artifacts)
     assert all(artifact.http_servable is False for artifact in result.artifacts)
+
