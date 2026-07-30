@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import hashlib
@@ -59,7 +59,7 @@ def build_tyrone_local_depth_package(output_dir: Path, *, force: bool = False) -
     manifest_path = output_dir / MANIFEST_NAME
     manifest_path.write_text(manifest_text, encoding="utf-8")
 
-    digest = hashlib.sha256(manifest_text.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
     (output_dir / CHECKSUMS_NAME).write_text(
         f"{digest}  {MANIFEST_NAME}\n",
         encoding="utf-8",
@@ -121,3 +121,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
