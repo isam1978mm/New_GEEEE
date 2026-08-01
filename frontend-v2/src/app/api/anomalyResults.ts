@@ -13,6 +13,18 @@ export interface AnomalySummary {
   strongestPeak: number | null;
 }
 
+export type RelativeDisturbanceReviewLevel = "higher" | "medium" | "lower" | "only zone";
+
+export interface AnomalyZoneSummary {
+  zoneId: string;
+  objectCount: number;
+  totalAreaPixels: number;
+  areaShare: number;
+  areaWeightedMeanAnomaly: number;
+  strongestPeak: number;
+  relativeDisturbanceReview: RelativeDisturbanceReviewLevel;
+}
+
 const OBJECTS_ARTIFACT_NAME = "objects_index";
 const OBJECTS_FILENAME = "objects_index.csv";
 
@@ -52,8 +64,81 @@ export function summarizeAnomalyObjects(rows: AnomalyObjectRow[]): AnomalySummar
   };
 }
 
+export function summarizeAnomalyZones(rows: AnomalyObjectRow[]): AnomalyZoneSummary[] {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const grouped = new Map<string, {
+    objectCount: number;
+    totalAreaPixels: number;
+    weightedMeanTotal: number;
+    unweightedMeanTotal: number;
+    strongestPeak: number;
+  }>();
+
+  for (const row of rows) {
+    const zoneId = row.clusterId.trim() || "unclustered";
+    const current = grouped.get(zoneId) ?? {
+      objectCount: 0,
+      totalAreaPixels: 0,
+      weightedMeanTotal: 0,
+      unweightedMeanTotal: 0,
+      strongestPeak: Number.NEGATIVE_INFINITY,
+    };
+
+    current.objectCount += 1;
+    current.totalAreaPixels += row.areaPixels;
+    current.weightedMeanTotal += row.meanAnomaly * row.areaPixels;
+    current.unweightedMeanTotal += row.meanAnomaly;
+    current.strongestPeak = Math.max(current.strongestPeak, row.peakAnomaly);
+    grouped.set(zoneId, current);
+  }
+
+  const totalAreaPixels = Array.from(grouped.values())
+    .reduce((total, zone) => total + zone.totalAreaPixels, 0);
+
+  const ranked = Array.from(grouped.entries())
+    .map(([zoneId, zone]) => ({
+      zoneId,
+      objectCount: zone.objectCount,
+      totalAreaPixels: zone.totalAreaPixels,
+      areaShare: totalAreaPixels > 0 ? zone.totalAreaPixels / totalAreaPixels : 0,
+      areaWeightedMeanAnomaly: zone.totalAreaPixels > 0
+        ? zone.weightedMeanTotal / zone.totalAreaPixels
+        : zone.unweightedMeanTotal / zone.objectCount,
+      strongestPeak: zone.strongestPeak,
+    }))
+    .sort((left, right) => (
+      right.strongestPeak - left.strongestPeak
+      || right.areaWeightedMeanAnomaly - left.areaWeightedMeanAnomaly
+      || right.totalAreaPixels - left.totalAreaPixels
+      || left.zoneId.localeCompare(right.zoneId)
+    ));
+
+  return ranked.map((zone, index) => ({
+    ...zone,
+    relativeDisturbanceReview: relativeReviewLevel(index, ranked.length),
+  }));
+}
+
 export function anomalyDownloadUrl(runId: string): string {
   return `/runs/${encodeURIComponent(runId)}/artifacts/${OBJECTS_ARTIFACT_NAME}/download/${OBJECTS_FILENAME}`;
+}
+
+function relativeReviewLevel(index: number, zoneCount: number): RelativeDisturbanceReviewLevel {
+  if (zoneCount <= 1) {
+    return "only zone";
+  }
+
+  const percentile = index / (zoneCount - 1);
+  if (percentile <= 0.25) {
+    return "higher";
+  }
+  if (percentile <= 0.75) {
+    return "medium";
+  }
+  return "lower";
 }
 
 function mapAnomalyObjectRow(row: Record<string, string>): AnomalyObjectRow | null {

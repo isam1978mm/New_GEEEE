@@ -1,0 +1,28 @@
+{
+  "date": "2026-08-01",
+  "plan": "combined_option1_option5",
+  "operator_calibration_panel_touched": false,
+  "option5": {
+    "anomaly_review_active": true,
+    "cluster_zone_comparison_implemented": true,
+    "relative_disturbance_review_implemented": true,
+    "surface_change_status": "not_available",
+    "surface_change_reason": "single_run_objects_index_has_no_validated_before_after_pair",
+    "measured_settlement_ready": false,
+    "numerical_depth_ready": false,
+    "source_artifact": "objects_index.csv",
+    "new_artifacts_required": false,
+    "earth_engine_processing_added": false,
+    "coordinates_exposed": false,
+    "private_paths_exposed": false
+  },
+  "option1": {
+    "targeted_evidence_recovery_active": true,
+    "broad_unbounded_search_restarted": false,
+    "highest_value_pending_dependency": "Tyrone EMNRD agency records",
+    "usable_global_calibration_rows": 0,
+    "global_training_started": false,
+    "global_numerical_depth_ready": false
+  },
+  "merge_status": "pending_validation"
+}
