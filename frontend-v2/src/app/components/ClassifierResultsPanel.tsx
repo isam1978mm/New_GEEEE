@@ -4,6 +4,7 @@ import {
   anomalyDownloadUrl,
   fetchAnomalyObjects,
   summarizeAnomalyObjects,
+  summarizeAnomalyZones,
   type AnomalyObjectRow,
 } from "../api/anomalyResults";
 import {
@@ -34,6 +35,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
     [objects, runId, summary],
   );
   const anomalySummary = useMemo(() => summarizeAnomalyObjects(anomalyObjects), [anomalyObjects]);
+  const anomalyZones = useMemo(() => summarizeAnomalyZones(anomalyObjects), [anomalyObjects]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +134,58 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                 <Metric label="median_mean_anomaly" value={formatScore(anomalySummary.medianObjectMean)} />
                 <Metric label="strongest_peak_anomaly" value={formatScore(anomalySummary.strongestPeak)} />
               </dl>
+
+              {anomalyZones.length > 0 && (
+                <div className="rounded px-3 py-3 mt-3" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.14)" }}>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <SectionLabel>Cluster-zone comparison and disturbance review</SectionLabel>
+                    <Badge text="WITHIN RUN" />
+                    <Badge text="NOT MEASURED CHANGE" warning />
+                  </div>
+                  <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5", marginBottom: "10px" }}>
+                    Existing anomaly objects are grouped by cluster ID and ranked only against other clusters in this run. The relative disturbance-review tier is a review priority, not measured displacement, settlement, temporal surface change, physical confirmation, or depth.
+                  </p>
+
+                  <dl className="grid gap-2" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+                    <Metric label="cluster_zones" value={String(anomalyZones.length)} />
+                    <Metric label="highest_review_zone" value={anomalyZones[0]?.zoneId ?? "Not available"} />
+                    <Metric label="leading_area_share" value={formatPercent(anomalyZones[0]?.areaShare ?? null)} />
+                    <Metric label="surface_change_status" value="Not available" />
+                  </dl>
+
+                  <div className="rounded px-3 py-2 flex items-start gap-2 mt-3" style={{ backgroundColor: "var(--card)", border: "1px solid rgba(28,43,94,0.12)", color: "var(--gs-slate)" }}>
+                    <Info size={13} className="shrink-0" style={{ marginTop: "2px" }} />
+                    <span style={{ fontSize: "11.5px", lineHeight: "1.5" }}>
+                      A validated before/after radar pair is required for a measured surface-change result. This single-run object artifact cannot provide one.
+                    </span>
+                  </div>
+
+                  <div className="mt-3 overflow-auto" style={tableContainerStyle}>
+                    <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "820px" }}>
+                      <thead>
+                        <tr style={{ backgroundColor: "var(--card)" }}>
+                          {["Cluster zone", "Objects", "Area px", "Area share", "Weighted mean anomaly", "Peak anomaly", "Relative disturbance review"].map((header) => (
+                            <th key={header} className="font-mono" style={tableHeaderStyle}>{header}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {anomalyZones.map((zone) => (
+                          <tr key={zone.zoneId}>
+                            <td style={tableCellStyle}>{zone.zoneId}</td>
+                            <td style={tableCellStyle}>{zone.objectCount}</td>
+                            <td style={tableCellStyle}>{zone.totalAreaPixels}</td>
+                            <td style={tableCellStyle}>{formatPercent(zone.areaShare)}</td>
+                            <td style={tableCellStyle}>{zone.areaWeightedMeanAnomaly.toFixed(3)}</td>
+                            <td style={tableCellStyle}>{zone.strongestPeak.toFixed(3)}</td>
+                            <td style={tableCellStyle}>{zone.relativeDisturbanceReview}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {anomalyObjects.length > 0 && (
                 <details className="mt-3" open>
@@ -319,6 +373,10 @@ function DownloadLink({ href, label }: { href: string; label: string }) {
 
 function formatScore(value: number | null): string {
   return value === null ? "Not available" : value.toFixed(3);
+}
+
+function formatPercent(value: number | null): string {
+  return value === null ? "Not available" : `${(value * 100).toFixed(1)}%`;
 }
 
 function scoreLevelLabel(classId: string): string {
