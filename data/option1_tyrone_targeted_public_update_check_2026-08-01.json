@@ -1,0 +1,22 @@
+{
+  "date": "2026-08-01",
+  "option": 1,
+  "scope": "official_emnrd_tyrone_pages_only",
+  "broad_candidate_search_restarted": false,
+  "gmail_checked": false,
+  "agency_contacted": false,
+  "material_new_public_evidence_found": false,
+  "new_coordinate_controlled_plot_5_6_geometry_found": false,
+  "new_grid_conversion_found": false,
+  "new_post_2014_repair_exclusion_map_found": false,
+  "new_independent_measured_depth_pair_found": false,
+  "records_request_status_publicly_determinable": false,
+  "decision": "not_good_to_go",
+  "usable_global_calibration_rows": 0,
+  "earth_engine_query_executed": false,
+  "calibration_record_created": false,
+  "global_training_started": false,
+  "global_numerical_depth_ready": false,
+  "option_3_active": false,
+  "next_action": "wait_for_materially_new_agency_geometry_or_stability_records"
+}
