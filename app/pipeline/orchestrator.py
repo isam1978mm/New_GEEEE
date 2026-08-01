@@ -35,8 +35,33 @@ class Orchestrator:
     ) -> None:
         self.settings = settings
         self.session_factory = session_factory
-        self.stages = self._with_optional_local_depth_stage(list(stages))
+        self.stages = self._with_optional_surface_change_stage(list(stages))
+        self.stages = self._with_optional_local_depth_stage(self.stages)
         self._validate_stage_registry()
+
+    def _with_optional_surface_change_stage(self, stages: list[Stage]) -> list[Stage]:
+        enabled = bool(getattr(self.settings, "option5_surface_change_enabled", True))
+        real_execution = bool(getattr(self.settings, "ee_real_execution_enabled", False))
+        if not enabled or not real_execution:
+            return stages
+        if any(stage.name == "surface_change" for stage in stages):
+            return stages
+
+        sar_index = next(
+            (index for index, stage in enumerate(stages) if stage.name == "sar_rtc"),
+            None,
+        )
+        if sar_index is None:
+            return stages
+
+        from app.pipeline.stages.surface_change import SurfaceChangeStage
+
+        insertion_index = sar_index + 1
+        return [
+            *stages[:insertion_index],
+            SurfaceChangeStage(),
+            *stages[insertion_index:],
+        ]
 
     def _with_optional_local_depth_stage(self, stages: list[Stage]) -> list[Stage]:
         mode = str(getattr(self.settings, "local_depth_mode", "off")).strip().lower()

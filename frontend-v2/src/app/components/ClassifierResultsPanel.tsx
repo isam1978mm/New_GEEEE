@@ -16,6 +16,10 @@ import {
   type ClassifierObjectRow,
   type ClassifierSummary,
 } from "../api/classifierResults";
+import {
+  fetchSurfaceChangeSummary,
+  type SurfaceChangeSummary,
+} from "../api/surfaceChangeResults";
 
 interface ClassifierResultsPanelProps {
   runId: string;
@@ -25,9 +29,11 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
   const [summary, setSummary] = useState<ClassifierSummary | null>(null);
   const [objects, setObjects] = useState<ClassifierObjectRow[]>([]);
   const [anomalyObjects, setAnomalyObjects] = useState<AnomalyObjectRow[]>([]);
+  const [surfaceChange, setSurfaceChange] = useState<SurfaceChangeSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [classifierUnavailable, setClassifierUnavailable] = useState(false);
   const [anomalyUnavailable, setAnomalyUnavailable] = useState(false);
+  const [surfaceChangeUnavailable, setSurfaceChangeUnavailable] = useState(false);
 
   const downloadLinks = useMemo(() => classifierDownloadLinks(runId), [runId]);
   const finalAreaFindings = useMemo(
@@ -45,15 +51,18 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
       setSummary(null);
       setObjects([]);
       setAnomalyObjects([]);
+      setSurfaceChange(null);
       setClassifierUnavailable(false);
       setAnomalyUnavailable(false);
+      setSurfaceChangeUnavailable(false);
 
-      const [classifierResult, anomalyResult] = await Promise.allSettled([
+      const [classifierResult, anomalyResult, surfaceChangeResult] = await Promise.allSettled([
         Promise.all([
           fetchClassifierSummary(runId),
           fetchClassifierObjects(runId).catch(() => []),
         ]),
         fetchAnomalyObjects(runId),
+        fetchSurfaceChangeSummary(runId),
       ]);
 
       if (cancelled) {
@@ -71,6 +80,12 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
         setAnomalyObjects(anomalyResult.value);
       } else {
         setAnomalyUnavailable(true);
+      }
+
+      if (surfaceChangeResult.status === "fulfilled") {
+        setSurfaceChange(surfaceChangeResult.value);
+      } else {
+        setSurfaceChangeUnavailable(true);
       }
 
       setLoading(false);
@@ -150,13 +165,13 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                     <Metric label="cluster_zones" value={String(anomalyZones.length)} />
                     <Metric label="highest_review_zone" value={anomalyZones[0]?.zoneId ?? "Not available"} />
                     <Metric label="leading_area_share" value={formatPercent(anomalyZones[0]?.areaShare ?? null)} />
-                    <Metric label="surface_change_status" value="Not available" />
+                    <Metric label="surface_change_status" value={surfaceChange?.status ?? "Not available"} />
                   </dl>
 
                   <div className="rounded px-3 py-2 flex items-start gap-2 mt-3" style={{ backgroundColor: "var(--card)", border: "1px solid rgba(28,43,94,0.12)", color: "var(--gs-slate)" }}>
                     <Info size={13} className="shrink-0" style={{ marginTop: "2px" }} />
                     <span style={{ fontSize: "11.5px", lineHeight: "1.5" }}>
-                      A validated before/after radar pair is required for a measured surface-change result. This single-run object artifact cannot provide one.
+                      A validated before/after radar pair is required for temporal surface-change review. This single-run object artifact cannot provide one. The separate dual-window result appears below when available.
                     </span>
                   </div>
 
@@ -186,6 +201,44 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                   </div>
                 </div>
               )}
+
+              <div className="rounded px-3 py-3 mt-3" style={{ backgroundColor: "var(--accent)", border: "1px solid rgba(28,43,94,0.14)" }}>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <SectionLabel>Dual-window radar surface-change review</SectionLabel>
+                  <Badge text="RADAR BACKSCATTER ONLY" />
+                  <Badge text="NOT DEPTH OR SETTLEMENT" warning />
+                </div>
+                <p style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5", marginBottom: "10px" }}>
+                  This compares compatible before and after Sentinel-1 log-ratio composites. It can prioritize radar-return changes for review, but moisture, vegetation and surface roughness may contribute. It is not measured displacement, settlement, physical confirmation, or depth.
+                </p>
+
+                {surfaceChangeUnavailable || surfaceChange === null ? (
+                  <UnavailableNotice text="No dual-window radar surface-change summary exists for this run. Older runs must be rerun after this stage is enabled." />
+                ) : surfaceChange.status === "not_available" ? (
+                  <UnavailableNotice text={`Surface-change review abstained: ${surfaceChangeReason(surfaceChange.reason)}.`} />
+                ) : (
+                  <>
+                    <dl className="grid gap-2" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+                      <Metric label="status" value="available" />
+                      <Metric label="review_pixel_fraction" value={formatPercent(surfaceChange.change_review_pixel_fraction ?? null)} />
+                      <Metric label="p95_abs_delta_db" value={formatDb(surfaceChange.p95_absolute_centered_delta_db)} />
+                      <Metric label="review_threshold_db" value={formatDb(surfaceChange.review_threshold_db)} />
+                    </dl>
+                    <dl className="grid gap-2 mt-2" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+                      <Metric label="before_window" value={formatWindow(surfaceChange.before_window)} />
+                      <Metric label="after_window" value={formatWindow(surfaceChange.after_window)} />
+                      <Metric label="valid_pixel_fraction" value={formatPercent(surfaceChange.valid_pixel_fraction ?? null)} />
+                      <Metric label="pair_support" value={`${surfaceChange.before_pair_count ?? "?"} before / ${surfaceChange.after_pair_count ?? "?"} after`} />
+                    </dl>
+                    <div className="rounded px-3 py-2 flex items-start gap-2 mt-3" style={{ backgroundColor: "var(--card)", border: "1px solid rgba(28,43,94,0.12)", color: "var(--gs-slate)" }}>
+                      <Info size={13} className="shrink-0" style={{ marginTop: "2px" }} />
+                      <span style={{ fontSize: "11.5px", lineHeight: "1.5" }}>
+                        {surfaceChange.indicator_interpretation ?? "Values at or above 1 meet the run-specific robust radar-change review threshold."}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {anomalyObjects.length > 0 && (
                 <details className="mt-3" open>
@@ -377,6 +430,27 @@ function formatScore(value: number | null): string {
 
 function formatPercent(value: number | null): string {
   return value === null ? "Not available" : `${(value * 100).toFixed(1)}%`;
+}
+
+function formatDb(value: number | null | undefined): string {
+  return value === null || value === undefined ? "Not available" : `${value.toFixed(3)} dB`;
+}
+
+function formatWindow(window: { start: string; end: string } | undefined): string {
+  return window ? `${window.start} to ${window.end}` : "Not available";
+}
+
+function surfaceChangeReason(reason: string | undefined): string {
+  const labels: Record<string, string> = {
+    insufficient_compatible_pixels: "too few pixels passed the grid, nodata and incidence-angle gates",
+    insufficient_after_pairs: "the current SAR window has fewer than two compatible pairs",
+    insufficient_before_pairs: "the preceding SAR window has fewer than two compatible pairs",
+    orbit_signature_mismatch: "the before and after composites do not use the same relative-orbit tracks",
+    configured_after_window_too_short: "the configured SAR window is too short",
+    surface_change_prerequisite_failed: "a required run artifact or metadata record is missing",
+    surface_change_processing_unavailable: "the historical radar comparison could not be completed",
+  };
+  return reason ? (labels[reason] ?? reason.replaceAll("_", " ")) : "required evidence was unavailable";
 }
 
 function scoreLevelLabel(classId: string): string {
