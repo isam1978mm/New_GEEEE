@@ -171,7 +171,7 @@ export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
                   <div className="rounded px-3 py-2 flex items-start gap-2 mt-3" style={{ backgroundColor: "var(--card)", border: "1px solid rgba(28,43,94,0.12)", color: "var(--gs-slate)" }}>
                     <Info size={13} className="shrink-0" style={{ marginTop: "2px" }} />
                     <span style={{ fontSize: "11.5px", lineHeight: "1.5" }}>
-                      A validated before/after radar pair is required for temporal surface-change review. The cluster table itself is single-run only; the separate dual-window result appears below when available.
+                      A validated before/after radar pair is required for temporal surface-change review. This single-run object artifact cannot provide one. The separate dual-window result appears below when available.
                     </span>
                   </div>
 
