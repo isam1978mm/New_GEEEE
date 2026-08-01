@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     operator_auth_oidc_jwks_uri: str | None = Field(default=None)
     local_depth_mode: str = Field(default="off")
     local_depth_package_dir: Path | None = Field(default=None)
+    option5_surface_change_enabled: bool = Field(default=True)
 
     @property
     def database_url(self) -> str:
