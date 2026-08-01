@@ -34,6 +34,7 @@ class Orchestrator:
         stages: Iterable[Stage],
     ) -> None:
         self.settings = settings
+        self.session_factory = session_factory
         self.stages = self._with_optional_surface_change_stage(list(stages))
         self.stages = self._with_optional_local_depth_stage(self.stages)
         self._validate_stage_registry()
