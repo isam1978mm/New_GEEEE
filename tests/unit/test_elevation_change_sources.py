@@ -38,6 +38,19 @@ class TestCatalogue:
         for source in ELEVATION_SOURCES:
             assert source.asset_kind in {ASSET_IMAGE, ASSET_IMAGE_COLLECTION}
 
+    def test_no_source_uses_a_known_deprecated_asset(self) -> None:
+        # Earth Engine reported each of these as superseded during a live run.
+        # Deprecated assets keep working for a while and then stop, so pinning
+        # the replacement now avoids a silent failure later.
+        superseded = {
+            "USGS/NED": "USGS/3DEP/10m_collection",
+            "USGS/3DEP/10m": "USGS/3DEP/10m_collection",
+            "JAXA/ALOS/AW3D30/V3_2": "JAXA/ALOS/AW3D30/V4_1",
+        }
+        in_use = {source.asset_id for source in ELEVATION_SOURCES}
+        for old, replacement in superseded.items():
+            assert old not in in_use, f"{old} is deprecated; use {replacement}"
+
     def test_lidar_is_the_only_source_fine_enough_for_a_thin_cover(self) -> None:
         fine = [
             source
@@ -60,8 +73,16 @@ class TestCoverageTiers:
     def test_global_excludes_united_states_only_sources(self) -> None:
         keys = {source.key for source in sources_for_coverage(COVERAGE_GLOBAL)}
         assert "usgs_3dep_1m" not in keys
-        assert "usgs_ned" not in keys
-        assert "copernicus_glo30" in keys
+        assert "usgs_3dep_10m" not in keys
+        assert keys == {"nasadem", "alos_aw3d30", "copernicus_glo30"}
+
+    def test_global_tier_has_three_epochs_over_any_land(self) -> None:
+        # Confirmed against the live catalogue at a real non-US site: NASADEM,
+        # ALOS and Copernicus all returned data, while every 3DEP source
+        # returned nothing. A non-US site therefore has three usable epochs and
+        # no lidar at all.
+        keys = {source.key for source in sources_for_coverage(COVERAGE_GLOBAL)}
+        assert len(keys) >= 3
 
     def test_rejects_an_unknown_tier(self) -> None:
         with pytest.raises(ElevationSourceError, match="unsupported coverage"):

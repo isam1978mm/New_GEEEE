@@ -135,11 +135,38 @@ def measure_elevation_depth_for_existing_run(
         "zone_count": summary["zone_count"],
         "anchor_count": summary["anchor_count"],
         "candidate_count": summary["candidate_count"],
-        "minimum_detectable_thickness_m": (
+        "predicted_minimum_detectable_thickness_m": (
             summary["source_pair"]["minimum_detectable_thickness_m"]
             if summary.get("source_pair")
             else None
         ),
+        # The predicted figure above is a conservative worldwide average for the
+        # products involved. The two below are what this pair actually achieved
+        # over this ground, and they are the ones to judge a result by.
+        "measured_noise_floor_sigma_m": (
+            summary["coregistration"]["stable_ground"]["sigma_m"]
+            if summary.get("coregistration")
+            else None
+        ),
+        "measured_minimum_detectable_thickness_m": (
+            round(1.96 * summary["coregistration"]["stable_ground"]["sigma_m"], 4)
+            if summary.get("coregistration")
+            else None
+        ),
+        "vertical_offset_removed_m": (
+            summary["coregistration"]["stable_ground"]["offset_m"]
+            if summary.get("coregistration")
+            else None
+        ),
+        "measured_thickness_m": [
+            {
+                "zone_id": zone["zone_id"],
+                "role": zone["role"],
+                "thickness_m": zone["mean_change_m"],
+                "uncertainty_m": zone["sigma_m"],
+            }
+            for zone in summary.get("zones", [])
+        ],
         "warnings": summary["warnings"],
         "outputs": [
             artifact.relative_path for artifact in stage_result.artifacts

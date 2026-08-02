@@ -122,6 +122,40 @@ class TestMeasurementOnly:
         assert result["anchor_count"] >= 2
         assert result["candidate_count"] >= 1
 
+    def test_reports_the_measured_noise_floor_not_just_the_predicted_one(
+        self, tmp_path: Path
+    ) -> None:
+        # The predicted floor is a conservative worldwide average for the
+        # products involved. What a result should be judged by is what the pair
+        # actually achieved over this particular ground, so both are reported
+        # and the measured one is named unambiguously.
+        run_dir = _build_run(tmp_path)
+
+        result = measure_elevation_depth_for_existing_run(
+            run_dir=run_dir,
+            offline_early=tmp_path / "early.tif",
+            offline_late=tmp_path / "late.tif",
+        )
+
+        assert result["measured_noise_floor_sigma_m"] == pytest.approx(0.0707, abs=0.01)
+        assert result["measured_minimum_detectable_thickness_m"] < (
+            result["predicted_minimum_detectable_thickness_m"]
+        )
+        assert result["vertical_offset_removed_m"] == pytest.approx(3.25, abs=0.02)
+
+    def test_reports_each_measured_thickness(self, tmp_path: Path) -> None:
+        run_dir = _build_run(tmp_path)
+
+        result = measure_elevation_depth_for_existing_run(
+            run_dir=run_dir,
+            offline_early=tmp_path / "early.tif",
+            offline_late=tmp_path / "late.tif",
+        )
+
+        thicknesses = sorted(item["thickness_m"] for item in result["measured_thickness_m"])
+        for expected in (0.60, 1.00, 1.60):
+            assert any(abs(value - expected) < 0.10 for value in thicknesses)
+
     def test_does_not_drive_the_depth_engine_unless_asked(self, tmp_path: Path) -> None:
         run_dir = _build_run(tmp_path)
 
