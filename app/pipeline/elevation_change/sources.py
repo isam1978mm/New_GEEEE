@@ -362,19 +362,18 @@ def select_source_pair(
     return ElevationPair(early=best.early, late=best.late, warnings=tuple(warnings))
 
 
-def build_ee_elevation_image(epoch: ElevationEpoch, region: Any, *, ee_module: Any = None) -> Any:
+def build_ee_elevation_image(epoch: ElevationEpoch, region: Any, *, ee_module: Any) -> Any:
     """Build the Earth Engine image for one epoch, clipped to ``region``.
 
     A multi-vintage collection is filtered to the epoch's acquisition window
     before mosaicking, which is what makes an early-lidar/late-lidar difference
     possible from a single collection.
 
-    ``ee_module`` is injectable so this can be exercised without an Earth Engine
-    session; production callers leave it unset.
+    ``ee_module`` is required rather than imported here on purpose. This module
+    stays free of any Earth Engine import so the catalogue and the pair
+    arithmetic remain testable without a session; ``ee_fetch`` is the only place
+    in the package allowed to import ``ee``, and a test enforces that.
     """
-
-    if ee_module is None:  # pragma: no cover - exercised only with a live session
-        import ee as ee_module  # type: ignore[no-redef]
 
     source = epoch.source
     if source.asset_kind == ASSET_IMAGE_COLLECTION:
