@@ -15,7 +15,7 @@ from app.errors import ArtifactClassError, ParityMetadataError, StageError
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult
 from app.pipeline.manifest import save_stage_manifest
 from app.services.run_history import append_run_event
-from app.services.storage import initialize_run_storage, summarize_run_directory
+from app.services.storage import get_run_dir, initialize_run_storage, summarize_run_directory
 
 
 @dataclass(slots=True)
@@ -136,19 +136,78 @@ class Orchestrator:
         append_run_event(self.settings, run_id, "run_done")
         return records
 
+    async def run_stage_for_existing_run(
+        self,
+        run_id: str,
+        stage: Stage,
+        *,
+        force: bool = False,
+    ) -> StageExecutionRecord:
+        """Execute one stage for an existing terminal run without changing run status."""
+
+        self._validate_stage(stage)
+        run = await self._get_run(run_id)
+        if run.status in {RunStatus.QUEUED, RunStatus.RUNNING}:
+            raise StageError("Cannot run an existing-run stage while the run is active.")
+
+        run_dir = get_run_dir(self.settings, run_id)
+        if not run_dir.is_dir():
+            raise StageError("Run storage is unavailable.")
+
+        stage_manifest_path = run_dir / f"stage_{stage.name}.manifest.json"
+        if stage_manifest_path.exists() and not force:
+            raise StageError(f"Stage {stage.name!r} already has a manifest; use force to rerun it.")
+
+        try:
+            append_run_event(self.settings, run_id, "stage_started", stage_name=stage.name)
+            await self._persist_stage_status(run_id, stage.name, "running", stage, artifact_count=0)
+            result = await stage.run(StageContext(run_id=run.id, settings=self.settings, run_dir=run_dir))
+            self._validate_stage_result(result)
+            await self._record_artifacts(run.id, result)
+            await self._persist_stage_status(
+                run_id,
+                stage.name,
+                "done",
+                stage,
+                artifact_count=len(result.artifacts),
+                metadata=result.metadata,
+            )
+            await self._persist_run_disk_summary(run_id)
+            append_run_event(self.settings, run_id, "stage_done", stage_name=stage.name)
+            return StageExecutionRecord(
+                stage_name=stage.name,
+                artifact_count=len(result.artifacts),
+                status="done",
+            )
+        except Exception:
+            await self._persist_stage_status(
+                run_id,
+                stage.name,
+                "failed",
+                stage,
+                artifact_count=0,
+                metadata={"failure": "stage_failed"},
+            )
+            await self._persist_run_disk_summary(run_id)
+            append_run_event(self.settings, run_id, "stage_failed", stage_name=stage.name)
+            raise
+
     def _validate_stage_registry(self) -> None:
         for stage in self.stages:
-            if not isinstance(stage, Stage):
-                raise ParityMetadataError("Stage registry must contain Stage instances.")
-            if not stage.name:
-                raise ParityMetadataError("Stage name is required.")
-            if not isinstance(stage.parity_category, ParityCategory):
-                raise ParityMetadataError(f"Stage {stage.name!r} is missing parity_category.")
-            if stage.parity_category in {
-                ParityCategory.PARITY_CORRECTS,
-                ParityCategory.PARITY_REPLACES,
-            } and not stage.parity_reason:
-                raise ParityMetadataError(f"Stage {stage.name!r} is missing parity_reason.")
+            self._validate_stage(stage)
+
+    def _validate_stage(self, stage: Stage) -> None:
+        if not isinstance(stage, Stage):
+            raise ParityMetadataError("Stage registry must contain Stage instances.")
+        if not stage.name:
+            raise ParityMetadataError("Stage name is required.")
+        if not isinstance(stage.parity_category, ParityCategory):
+            raise ParityMetadataError(f"Stage {stage.name!r} is missing parity_category.")
+        if stage.parity_category in {
+            ParityCategory.PARITY_CORRECTS,
+            ParityCategory.PARITY_REPLACES,
+        } and not stage.parity_reason:
+            raise ParityMetadataError(f"Stage {stage.name!r} is missing parity_reason.")
 
     def _validate_stage_result(self, result: StageResult) -> None:
         for artifact in result.artifacts:
