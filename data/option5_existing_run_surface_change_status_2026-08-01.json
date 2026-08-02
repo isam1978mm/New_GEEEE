@@ -19,6 +19,12 @@
   "numerical_depth_ready": false,
   "measured_settlement_ready": false,
   "result_scope": "radar_backscatter_surface_change_review_only",
-  "validation_status": "pending_ci",
-  "next_action": "run_full_ci_then_execute_against_one_completed_real_ee_run"
+  "validation_status": "passed",
+  "focused_tests_passed": true,
+  "full_repository_suite_passed": true,
+  "authentication_guard_passed": true,
+  "direct_file_streaming_guard_passed": true,
+  "notebook_safety_guard_passed": true,
+  "merge_status": "ready",
+  "next_action": "execute_against_one_completed_real_ee_run"
 }
