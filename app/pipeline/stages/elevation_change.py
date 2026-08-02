@@ -73,6 +73,24 @@ STATUS_MEASURED = "measured"
 STATUS_NO_MEASURABLE_CHANGE = "no_measurable_change"
 STATUS_NOT_AVAILABLE = "not_available"
 
+# A zone must cover at least this many cells of the *source* data, not of the
+# run grid. The run grid is 10 m while the coarsest sources are 30 m, so a
+# threshold expressed in grid pixels silently admits zones only two or three
+# real samples across. Such a zone is a noise excursion wearing a feature's
+# clothes: its interior pixels are copies of each other, so its apparent
+# precision is fabricated by resampling.
+MIN_SOURCE_CELLS_PER_ZONE = 25
+
+
+def minimum_zone_pixels(*, source_resolution_m: float, grid_scale_m: float,
+                        min_source_cells: int = MIN_SOURCE_CELLS_PER_ZONE) -> int:
+    """Translate a source-cell requirement into run-grid pixels."""
+
+    if source_resolution_m <= 0 or grid_scale_m <= 0:
+        raise ValueError("resolutions must be positive")
+    cells_per_axis = max(1.0, float(source_resolution_m) / float(grid_scale_m))
+    return int(round(int(min_source_cells) * cells_per_axis * cells_per_axis))
+
 # Fetches both epochs, so a fetcher signature identical to the DEM stage's.
 EpochTileFetcher = Callable[..., np.ndarray]
 
@@ -162,7 +180,7 @@ class ElevationChangeStage(Stage):
         late_tile_fetcher: EpochTileFetcher | None = None,
         tile_size: int = 320,
         erosion_pixels: int = 2,
-        min_pixels: int = 20,
+        min_pixels: int | None = None,
         band_count: int = 3,
         correlation_length_m: float = DEFAULT_CORRELATION_LENGTH_M,
         detection_sigma: float = DEFAULT_DETECTION_SIGMA,
@@ -175,7 +193,9 @@ class ElevationChangeStage(Stage):
         self.late_tile_fetcher = late_tile_fetcher
         self.tile_size = int(tile_size)
         self.erosion_pixels = int(erosion_pixels)
-        self.min_pixels = int(min_pixels)
+        # None means "derive it from the source resolution once the pair is
+        # chosen", which is the only way to express the requirement honestly.
+        self.min_pixels = None if min_pixels is None else int(min_pixels)
         self.band_count = int(band_count)
         self.correlation_length_m = float(correlation_length_m)
         self.detection_sigma = float(detection_sigma)
@@ -268,14 +288,23 @@ class ElevationChangeStage(Stage):
             shape=change_raster.shape,
         )
 
-        pixel_area_m2 = float(self.grid_spec.manifest.scale_m) ** 2
+        grid_scale_m = float(self.grid_spec.manifest.scale_m)
+        pixel_area_m2 = grid_scale_m**2
+        min_pixels = self.min_pixels
+        if min_pixels is None:
+            min_pixels = minimum_zone_pixels(
+                source_resolution_m=pair.working_resolution_m,
+                grid_scale_m=grid_scale_m,
+            )
+            warnings.append(f"minimum_zone_pixels_derived_from_source_resolution:{min_pixels}")
+
         zones = generate_measured_zones(
             coregistration.delta_m,
             sigma_stable_m=coregistration.stats.sigma_m,
             pixel_area_m2=pixel_area_m2,
             band_count=self.band_count,
             erosion_pixels=self.erosion_pixels,
-            min_pixels=self.min_pixels,
+            min_pixels=min_pixels,
             correlation_length_m=self.correlation_length_m,
             detection_sigma=self.detection_sigma,
         )

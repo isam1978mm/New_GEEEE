@@ -18,6 +18,7 @@ from app.pipeline.stages.elevation_change import (
     SUMMARY_NAME,
     ZONES_GEOJSON_NAME,
     ElevationChangeStage,
+    minimum_zone_pixels,
 )
 from app.pipeline.stages.grid import DEFAULT_NODATA, grid_spec_from_manifest
 from app.services.grid import GridManifest
@@ -223,6 +224,50 @@ class TestSourceSelectionFailure:
         assert summary["status"] == "not_available"
         assert any("source_selection_failed" in warning for warning in summary["warnings"])
         assert result.metadata["status"] == "not_available"
+
+
+class TestMinimumZonePixels:
+    """A zone must be big enough in the SOURCE data, not the run grid.
+
+    Regression on a real result. With a 10 m run grid and 30 m source data, a
+    threshold of 20 grid pixels admitted zones only two or three real samples
+    across. All nine zones a live run produced were 2.2 to 4.4 source cells,
+    which is noise-scale, not feature-scale.
+    """
+
+    def test_coarse_sources_demand_many_more_grid_pixels(self) -> None:
+        coarse = minimum_zone_pixels(source_resolution_m=30.0, grid_scale_m=10.0)
+        assert coarse == 25 * 9
+
+    def test_source_finer_than_the_grid_is_not_discounted(self) -> None:
+        # 1 m lidar on a 10 m grid must not lower the bar below one cell each.
+        fine = minimum_zone_pixels(source_resolution_m=1.0, grid_scale_m=10.0)
+        assert fine == 25
+
+    def test_matching_resolutions_pass_through(self) -> None:
+        assert minimum_zone_pixels(source_resolution_m=10.0, grid_scale_m=10.0) == 25
+
+    def test_rejects_nonsense_resolutions(self) -> None:
+        with pytest.raises(ValueError):
+            minimum_zone_pixels(source_resolution_m=0.0, grid_scale_m=10.0)
+
+    def test_the_old_default_would_have_admitted_noise(self) -> None:
+        # The threshold that produced the bad live result, for the record.
+        assert minimum_zone_pixels(source_resolution_m=30.0, grid_scale_m=10.0) > 20 * 10
+
+    def test_stage_derives_the_threshold_and_records_it(self, tmp_path: Path) -> None:
+        _, summary, _ = _run_stage(tmp_path, coverage="global")
+        assert any(
+            warning.startswith("minimum_zone_pixels_derived_from_source_resolution")
+            for warning in summary["warnings"]
+        )
+
+    def test_stage_still_honours_an_explicit_threshold(self, tmp_path: Path) -> None:
+        _, summary, _ = _run_stage(tmp_path, min_pixels=50)
+        assert not any(
+            warning.startswith("minimum_zone_pixels_derived_from_source_resolution")
+            for warning in summary["warnings"]
+        )
 
 
 class TestEarthEngineIsolation:
