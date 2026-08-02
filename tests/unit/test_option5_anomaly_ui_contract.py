@@ -2,26 +2,32 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PANEL = ROOT / "frontend-v2" / "src" / "app" / "components" / "ClassifierResultsPanel.tsx"
+PANEL = ROOT / "frontend-v2" / "src" / "app" / "components" / "Option5ResultsPanel.tsx"
+CLASSIFIER_PANEL = (
+    ROOT / "frontend-v2" / "src" / "app" / "components" / "ClassifierOnlyResultsPanel.tsx"
+)
 ADAPTER = ROOT / "frontend-v2" / "src" / "app" / "api" / "anomalyResults.ts"
 
 
-def test_option5_panel_labels_anomaly_as_not_depth() -> None:
+def test_option5_is_a_separate_decision_focused_panel() -> None:
     source = PANEL.read_text(encoding="utf-8")
 
+    assert "Option 5 Results" in source
+    assert "Decision you can take" in source
     assert "Radar anomaly review" in source
     assert "NOT DEPTH" in source
-    assert "unitless, within-run PCA anomaly scores" in source
-    assert "not a probability" in source
-    assert "not a depth estimate" in source
-    assert "Depth estimate: not available" in source
-    assert "Global and local numerical calibration remain disabled" in source
+    assert "Review order" in source
+    assert "Review zone" in source
+    assert "Option 5 only helps choose what area to review first" in source
+    assert "does not provide excavation depth" in source
 
 
-def test_option5_panel_does_not_claim_measured_change_or_numerical_depth() -> None:
+def test_option5_technical_numbers_are_secondary_and_not_physical_claims() -> None:
     source = PANEL.read_text(encoding="utf-8").lower()
 
-    assert "not a measured change" in source
+    assert "technical option 5 numbers" in source
+    assert "explain the ranking only" in source
+    assert "not probabilities, measurements, settlement, physical confirmation, or depth" in source
     assert "estimated depth:" not in source
     assert "depth in metres" not in source
     assert "depth in meters" not in source
@@ -29,18 +35,33 @@ def test_option5_panel_does_not_claim_measured_change_or_numerical_depth() -> No
     assert "confirmed target" not in source
 
 
-def test_option5_zone_comparison_is_relative_and_not_settlement() -> None:
+def test_option5_zone_table_is_relative_review_priority_only() -> None:
     source = PANEL.read_text(encoding="utf-8")
     lower = source.lower()
 
-    assert "Cluster-zone comparison and disturbance review" in source
-    assert "WITHIN RUN" in source
-    assert "NOT MEASURED CHANGE" in source
-    assert "relative disturbance-review tier is a review priority" in lower
-    assert "not measured displacement, settlement, temporal surface change" in lower
-    assert "surface_change_status" in source
+    assert "Share of anomaly area" in source
+    assert "Review earlier" in source
+    assert "Review after higher zones" in source
+    assert "Review later" in source
+    assert "relative priority inside this run" in lower
+    assert "no temporal radar-change confirmation is available" in lower
     assert "A validated before/after radar pair is required" in source
     assert "This single-run object artifact cannot provide one" in source
+
+
+def test_classifier_panel_is_restored_without_option5_content() -> None:
+    source = CLASSIFIER_PANEL.read_text(encoding="utf-8")
+
+    assert "Classifier Results" in source
+    assert "Final area findings summary" in source
+    assert "score level counts" in source
+    assert "All objects, sorted by score" in source
+    assert "Finding reason" in source
+    assert "Row start" in source
+    assert "Column end" in source
+    assert "Radar anomaly review" not in source
+    assert "Dual-window radar surface-change review" not in source
+    assert "Option 5 Results" not in source
 
 
 def test_option5_adapter_reads_only_the_existing_public_safe_object_artifact() -> None:
