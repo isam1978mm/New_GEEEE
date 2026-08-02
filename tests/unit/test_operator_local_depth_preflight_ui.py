@@ -46,15 +46,13 @@ def test_local_depth_preflight_rejects_common_operator_input_errors() -> None:
     assert "replace-with" in source
 
 
-def test_local_depth_panel_surfaces_template_and_preflight_result() -> None:
+def test_local_depth_panel_is_removed_from_visible_operator_ui() -> None:
     source = _read("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx")
 
-    assert "Download blank GeoJSON template" in source
-    assert "operator-local-depth-first-aoi-template.geojson" in source
-    assert "Preflight failed" in source
-    assert "Preflight passed" in source
-    assert "anchor support" in source
-    assert "does not replace the backend raster-intersection" in source
+    assert "return null" in source
+    assert "Local depth calibration" not in source
+    assert "Run local depth calibration" not in source
+    assert "Download blank GeoJSON template" not in source
 
 
 def test_env_example_keeps_operator_local_depth_default_off() -> None:
