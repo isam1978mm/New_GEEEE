@@ -28,6 +28,7 @@ ARTIFACT_DOWNLOAD_FILENAMES = {
     "experimental_classifications": "classifications.csv",
     "experimental_summary": "summary.json",
     "experimental_neutral_labels": "neutral_target_labels.json",
+    "option5_surface_change_summary": "option5_surface_change_summary.json",
 }
 
 
