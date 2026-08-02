@@ -16,10 +16,49 @@ import ee
 import numpy as np
 
 from app.errors import StageError
-from app.pipeline.elevation_change.sources import ElevationEpoch, build_ee_elevation_image
+from app.pipeline.elevation_change.sources import (
+    ASSET_IMAGE_COLLECTION,
+    ElevationEpoch,
+    build_ee_elevation_image,
+)
 from app.pipeline.stages.dem import build_grid_region
 from app.pipeline.stages.grid import GridSpec
 from app.services.ee_session import initialize_ee_session
+
+
+def assert_epoch_has_data(epoch: ElevationEpoch, region: Any) -> int:
+    """Fail early and clearly when an epoch has no imagery over the region.
+
+    Lidar is flown project by project, so a collection covering most of a
+    country is routinely empty over one particular site. Left unchecked, an
+    empty collection mosaics into a band-less image and Earth Engine reports
+    "Band pattern was applied to an Image with no bands", which says nothing
+    about the actual cause. This turns that into a sentence the operator can
+    act on.
+
+    Returns the image count, or 0 for a single-image asset where the concept
+    does not apply.
+    """
+
+    if epoch.source.asset_kind != ASSET_IMAGE_COLLECTION:
+        return 0
+
+    collection = ee.ImageCollection(epoch.source.asset_id).filterBounds(region)
+    if epoch.source.multi_vintage:
+        collection = collection.filterDate(
+            f"{int(epoch.start_year)}-01-01",
+            f"{int(epoch.end_year)}-12-31",
+        )
+    count = int(collection.size().getInfo())
+    if count == 0:
+        raise StageError(
+            f"No {epoch.source.asset_id} imagery covers this area for epoch "
+            f"{epoch.start_year}-{epoch.end_year}. This is a coverage limit of the "
+            "public data at this location, not a software fault. Run "
+            "scripts/inspect_elevation_sources.py to see which sources do have "
+            "data here."
+        )
+    return count
 
 
 def create_ee_elevation_tile_fetcher(
@@ -30,9 +69,11 @@ def create_ee_elevation_tile_fetcher(
     """Build a tile fetcher for one elevation epoch on the run grid."""
 
     initialize_ee_session(settings)
+    region = build_grid_region(grid_spec)
+    assert_epoch_has_data(epoch, region)
     image = build_ee_elevation_image(
         epoch,
-        build_grid_region(grid_spec),
+        region,
         ee_module=ee,
     ).reproject(
         crs=grid_spec.crs,
