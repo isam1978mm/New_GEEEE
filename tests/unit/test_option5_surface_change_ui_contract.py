@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PANEL = ROOT / "frontend-v2" / "src" / "app" / "components" / "ClassifierResultsPanel.tsx"
+PANEL = ROOT / "frontend-v2" / "src" / "app" / "components" / "Option5ResultsPanel.tsx"
 ADAPTER = ROOT / "frontend-v2" / "src" / "app" / "api" / "surfaceChangeResults.ts"
 
 
