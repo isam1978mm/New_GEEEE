@@ -53,9 +53,16 @@ LATE_WINDOW = ("2022-01-01", "2026-08-01")
 # GEDI's own latitude limit: the space station orbit does not reach beyond this.
 GEDI_LATITUDE_LIMIT_DEG = 51.6
 
-# Below this many paired cells, averaging cannot pull the per-shot error down
-# far enough for a sub-metre answer, and the route is not worth building.
-USEFUL_PAIRED_CELLS = 200
+# What matters is paired coverage of the feature being measured, not the raw
+# count of paired cells anywhere in the site. A first version of this script
+# used a flat count of 200 and declared a site usable at 0.37% coverage, where a
+# 100 m target would expect 0.06 paired shots on it. The count was measuring
+# whether the laser had visited the neighbourhood, not whether it had visited
+# the target.
+#
+# A 300 m feature is 144 cells of 25 m. Twenty paired shots on it, enough for
+# averaging to matter, needs roughly 14% paired coverage.
+USEFUL_PAIRED_COVERAGE_FRACTION = 0.14
 
 
 def _safe(callable_obj, default=None):
@@ -178,14 +185,26 @@ def survey(runs_dir: Path) -> int:
         print(f"    early window shots       : {result['early_shots']}")
         print(f"    late  window shots       : {result['late_shots']}")
         paired = result["cells_sampled_in_both_windows"]
+        total = result["total_25m_cells_in_aoi"]
         print(f"    cells sampled in BOTH    : {paired}")
 
-        if isinstance(paired, (int, float)) and paired >= USEFUL_PAIRED_CELLS:
-            print("    -> enough paired samples to be worth building on")
-            usable.append(f"{result['run']}  ({int(paired)} paired cells)")
-        elif isinstance(paired, (int, float)):
-            print(f"    -> too sparse; {USEFUL_PAIRED_CELLS} paired cells is the")
-            print("       minimum where averaging can reach sub-metre")
+        if isinstance(paired, (int, float)) and total:
+            coverage = float(paired) / float(total)
+            print(f"    paired coverage          : {coverage:.2%} of the area")
+            expected_on_100m_target = 16 * coverage
+            print(
+                f"    expected paired shots on a 100 m target: "
+                f"{expected_on_100m_target:.2f}"
+            )
+            if coverage >= USEFUL_PAIRED_COVERAGE_FRACTION:
+                print("    -> dense enough to measure a specific feature")
+                usable.append(f"{result['run']}  ({coverage:.1%} paired coverage)")
+            else:
+                shortfall = USEFUL_PAIRED_COVERAGE_FRACTION / max(coverage, 1e-9)
+                print(
+                    f"    -> too sparse by a factor of about {shortfall:.0f}; the laser "
+                    "visits the neighbourhood, not the target"
+                )
         print()
 
     print("=" * 64)
@@ -198,9 +217,11 @@ def survey(runs_dir: Path) -> int:
     else:
         print("NO RUN HAS ENOUGH PAIRED LASER COVERAGE.")
         print()
-        print("GEDI samples in narrow tracks rather than covering the ground, so")
-        print("a site either accumulates enough shots or it does not. Building")
-        print("the laser route would not help at these locations.")
+        print("GEDI samples in narrow tracks rather than covering the ground. Over")
+        print("these sites its paired coverage is a fraction of one percent, so a")
+        print("specific feature would expect a fraction of one shot on it. Building")
+        print("the laser route would not help at these locations, however many")
+        print("shots land elsewhere in the same square.")
     return 0
 
 
