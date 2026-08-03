@@ -9,6 +9,7 @@ from app.pipeline.elevation_change.coregistration import (
     estimate_stable_ground,
     nmad,
     select_stable_mask,
+    shared_data_fraction,
 )
 from app.pipeline.elevation_change.thickness import (
     DEFAULT_CORRELATION_LENGTH_M,
@@ -213,6 +214,109 @@ class TestCoregistration:
         result = coregister_elevation_pair(early, late, nodata=NODATA)
 
         assert "large_vertical_datum_offset_removed" in result.warnings
+
+
+class TestSharedDataDetection:
+    """Two surfaces that agree exactly are not two measurements.
+
+    Found on real data. Copernicus GLO-30 fills voids from other sources, and
+    over one real site every pixel was filled rather than measured, with 37.7%
+    of the difference against NASADEM exactly zero. The reported noise floor
+    was 0.41 m and looked excellent; it was an artefact of comparing SRTM with
+    itself, and real change in the shared area could not have shown up at all.
+    """
+
+    def test_identical_surfaces_are_refused(self) -> None:
+        rng = np.random.default_rng(1)
+        surface = 100.0 + rng.normal(0.0, 1.0, (200, 200))
+
+        with pytest.raises(CoregistrationError, match="not two independent measurements"):
+            coregister_elevation_pair(surface, surface.copy(), nodata=NODATA)
+
+    def test_partly_shared_surfaces_are_refused(self) -> None:
+        early, late, _ = _placed_material_scene()
+        # Copy a third of the early surface into the late one, as void filling
+        # from a common ancestor would.
+        late[:, :67] = early[:, :67]
+
+        with pytest.raises(CoregistrationError, match="identical over"):
+            coregister_elevation_pair(early, late, nodata=NODATA)
+
+    def test_the_error_names_the_diagnostic(self) -> None:
+        rng = np.random.default_rng(2)
+        surface = 50.0 + rng.normal(0.0, 0.5, (150, 150))
+
+        with pytest.raises(CoregistrationError, match="diagnose_elevation_pair"):
+            coregister_elevation_pair(surface, surface.copy(), nodata=NODATA)
+
+    def test_a_small_shared_patch_only_warns(self) -> None:
+        early, late, _ = _placed_material_scene()
+        late[:, :16] = early[:, :16]  # 8% of the scene
+
+        result = coregister_elevation_pair(early, late, nodata=NODATA)
+
+        assert "some_shared_data_between_epochs" in result.warnings
+        assert 0.05 < result.shared_data_fraction < 0.20
+
+    def test_independent_surfaces_report_no_shared_data(self) -> None:
+        early, late, _ = _placed_material_scene()
+
+        result = coregister_elevation_pair(early, late, nodata=NODATA)
+
+        assert result.shared_data_fraction < 0.01
+        assert "some_shared_data_between_epochs" not in result.warnings
+
+    def test_catches_a_copy_shifted_to_another_vertical_datum(self) -> None:
+        # The same data republished against a different datum differs by a
+        # constant, not by zero. A zero-anchored test sails straight past it,
+        # which is why the check is anchored on the median instead.
+        rng = np.random.default_rng(3)
+        early = 100.0 + rng.normal(0.0, 0.5, (200, 200))
+        late = early.copy() + 5.0
+
+        with pytest.raises(CoregistrationError, match="not two independent measurements"):
+            coregister_elevation_pair(early, late, nodata=NODATA)
+
+    def test_catches_a_verbatim_copy(self) -> None:
+        # The real observed case: void filling copies values across unchanged,
+        # so the difference is exactly zero.
+        rng = np.random.default_rng(4)
+        surface = 40.0 + rng.normal(0.0, 0.5, (200, 200))
+        valid = np.ones(surface.shape, dtype=bool)
+
+        assert shared_data_fraction(surface - surface, valid_mask=valid) == pytest.approx(1.0)
+
+    def test_catches_a_partial_copy_hiding_behind_a_datum_offset(self) -> None:
+        # The hardest case, and the one that broke two earlier versions of this
+        # check. A third of the area is copied so its difference is zero, while
+        # the genuine majority sits at the datum offset. Anchoring on zero or on
+        # the median each miss it; a spike at any single value does not.
+        rng = np.random.default_rng(7)
+        delta = 2.5 + rng.normal(0.0, 0.3, (300, 300))
+        delta[:100, :] = 0.0
+        valid = np.ones(delta.shape, dtype=bool)
+
+        assert shared_data_fraction(delta, valid_mask=valid) == pytest.approx(1 / 3, abs=0.01)
+
+    def test_independent_data_almost_never_lands_on_one_value(self) -> None:
+        rng = np.random.default_rng(5)
+        delta = rng.normal(0.0, 1.0, (300, 300))
+        valid = np.ones(delta.shape, dtype=bool)
+
+        assert shared_data_fraction(delta, valid_mask=valid) < 0.001
+
+    def test_matches_the_share_observed_on_real_data(self) -> None:
+        # Reproduces the live result that prompted this guard: 37.7% of the
+        # NASADEM/Copernicus difference sat exactly at zero over a real site.
+        rng = np.random.default_rng(6)
+        delta = rng.normal(0.0, 1.0, (1000, 1000))
+        delta[:377, :] = 0.0
+        valid = np.ones(delta.shape, dtype=bool)
+
+        fraction = shared_data_fraction(delta, valid_mask=valid)
+
+        assert fraction == pytest.approx(0.377, abs=0.01)
+        assert fraction >= 0.20  # above the refusal threshold
 
 
 class TestCorrelatedUncertainty:

@@ -91,6 +91,7 @@ def measure_elevation_depth_for_existing_run(
     run_dir: Path,
     coverage: str = COVERAGE_UNITED_STATES,
     target_thickness_m: float | None = None,
+    source_keys: list[str] | None = None,
     offline_early: Path | None = None,
     offline_late: Path | None = None,
     drive_depth_engine: bool = False,
@@ -118,6 +119,7 @@ def measure_elevation_depth_for_existing_run(
         grid_spec=grid_spec,
         coverage=coverage,
         target_thickness_m=target_thickness_m,
+        source_keys=source_keys,
         early_tile_fetcher=early_fetcher,
         late_tile_fetcher=late_fetcher,
     )
@@ -253,6 +255,17 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Warn when the expected cover is below the pair's detection floor.",
     )
+    parser.add_argument(
+        "--sources",
+        nargs="+",
+        default=None,
+        metavar="KEY",
+        help=(
+            "Restrict the pair to these source keys, e.g. --sources nasadem "
+            "alos_aw3d30. Use after diagnose_elevation_pair.py shows the default "
+            "pair shares data at your location."
+        ),
+    )
     parser.add_argument("--offline-early", type=Path, default=None)
     parser.add_argument("--offline-late", type=Path, default=None)
     parser.add_argument(
@@ -271,6 +284,7 @@ def main() -> int:
         run_dir=args.run_dir,
         coverage=args.coverage,
         target_thickness_m=args.target_thickness_m,
+        source_keys=args.sources,
         offline_early=args.offline_early,
         offline_late=args.offline_late,
         drive_depth_engine=args.drive_depth_engine,

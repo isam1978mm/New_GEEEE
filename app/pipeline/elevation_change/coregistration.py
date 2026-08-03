@@ -39,6 +39,18 @@ DEFAULT_ROBUST_SIGMA_MULTIPLIER = 3.0
 DEFAULT_ITERATIONS = 3
 MIN_STABLE_PIXELS = 100
 
+# Two surfaces measured by different instruments years apart essentially never
+# agree to the millimetre. Where they do, they are not two measurements: one has
+# been filled in from the other, or from a common ancestor. Copernicus GLO-30,
+# for instance, fills voids from SRTM, and NASADEM *is* SRTM.
+#
+# Shared data is worse than noise. It drives the apparent spread toward zero, so
+# the pair looks far more precise than it is, and it makes real change in the
+# shared area invisible, because the two surfaces cannot disagree there.
+SHARED_DATA_TOLERANCE_M = 1e-4
+SHARED_DATA_WARN_FRACTION = 0.05
+SHARED_DATA_REFUSE_FRACTION = 0.20
+
 
 class CoregistrationError(ValueError):
     """Raised when two elevation surfaces cannot be co-registered honestly."""
@@ -72,14 +84,57 @@ class CoregistrationResult:
     stats: StableGroundStats
     iterations: int
     warnings: tuple[str, ...]
+    shared_data_fraction: float = 0.0
 
     def as_mapping(self) -> dict[str, Any]:
         return {
             "stable_ground": self.stats.as_mapping(),
             "iterations": int(self.iterations),
             "valid_pixel_count": int(self.valid_mask.sum()),
+            "shared_data_fraction": round(float(self.shared_data_fraction), 6),
             "warnings": list(self.warnings),
         }
+
+
+def shared_data_fraction(
+    delta_m: np.ndarray,
+    *,
+    valid_mask: np.ndarray,
+    tolerance_m: float = SHARED_DATA_TOLERANCE_M,
+) -> float:
+    """Largest share of valid pixels sharing one exact difference value.
+
+    This is the direct symptom of one surface having been filled in from the
+    other. Independent instruments produce a continuous spread, so only a
+    vanishing share of pixels lands on any single value.
+
+    The test looks for a spike anywhere, rather than at a chosen anchor, because
+    copied data shows up at three different places depending on how it was
+    copied:
+
+    - verbatim, so the difference is exactly zero;
+    - republished against another vertical datum, so it is a constant;
+    - copied over only part of the area, so the spike sits at zero while the
+      median sits wherever the genuine majority is.
+
+    Anchoring on zero misses the second case and anchoring on the median misses
+    the third. A spike is common to all three.
+
+    One honest caveat: a pair whose sources are both quantised to whole metres
+    would also concentrate on few values and could be refused. That refusal is
+    defensible, because sub-metre change cannot be measured from whole-metre
+    data either way.
+    """
+
+    valid = np.asarray(valid_mask, dtype=bool) & np.isfinite(delta_m)
+    valid_count = int(valid.sum())
+    if valid_count == 0:
+        return 0.0
+
+    quantum = max(float(tolerance_m), 1e-12)
+    buckets = np.round(delta_m[valid] / quantum).astype(np.int64)
+    _, counts = np.unique(buckets, return_counts=True)
+    return float(int(counts.max()) / valid_count)
 
 
 def nmad(values: np.ndarray) -> float:
@@ -245,7 +300,24 @@ def coregister_elevation_pair(
 
     raw_delta = np.where(valid, late - early, np.nan)
 
+    # Checked before the datum correction, and before any measurement is
+    # attempted, because a pair that is partly the same data cannot be rescued
+    # by better processing downstream.
+    shared_fraction = shared_data_fraction(raw_delta, valid_mask=valid)
+    if shared_fraction >= SHARED_DATA_REFUSE_FRACTION:
+        raise CoregistrationError(
+            f"these two elevation surfaces are identical over {shared_fraction:.1%} of "
+            "the area, so they are not two independent measurements. One has been "
+            "filled in from the other or from a shared ancestor. Any noise floor "
+            "computed from this pair would be fictitious, and real change in the "
+            "shared area would be invisible. Choose a different pair of sources, or "
+            "run scripts/diagnose_elevation_pair.py to see which source did the "
+            "filling."
+        )
+
     warnings: list[str] = []
+    if shared_fraction >= SHARED_DATA_WARN_FRACTION:
+        warnings.append("some_shared_data_between_epochs")
     offset = 0.0
     stats = StableGroundStats(offset_m=0.0, sigma_m=0.0, pixel_count=0, pixel_fraction=0.0)
     stable = np.zeros_like(valid, dtype=bool)
@@ -297,4 +369,5 @@ def coregister_elevation_pair(
         stats=final_stats,
         iterations=completed,
         warnings=tuple(warnings),
+        shared_data_fraction=shared_fraction,
     )

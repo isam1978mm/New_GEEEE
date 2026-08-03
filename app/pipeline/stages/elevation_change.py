@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import numpy as np
 
@@ -176,6 +176,7 @@ class ElevationChangeStage(Stage):
         grid_spec: GridSpec,
         coverage: str = COVERAGE_UNITED_STATES,
         target_thickness_m: float | None = None,
+        source_keys: Sequence[str] | None = None,
         early_tile_fetcher: EpochTileFetcher | None = None,
         late_tile_fetcher: EpochTileFetcher | None = None,
         tile_size: int = 320,
@@ -189,6 +190,9 @@ class ElevationChangeStage(Stage):
         self.grid_spec = grid_spec
         self.coverage = coverage
         self.target_thickness_m = target_thickness_m
+        # Lets an operator pin a pair after a diagnostic shows the default
+        # pair shares data at their location.
+        self.source_keys = list(source_keys) if source_keys else None
         self.early_tile_fetcher = early_tile_fetcher
         self.late_tile_fetcher = late_tile_fetcher
         self.tile_size = int(tile_size)
@@ -226,6 +230,7 @@ class ElevationChangeStage(Stage):
             pair = select_source_pair(
                 coverage=self.coverage,
                 target_thickness_m=self.target_thickness_m,
+                available_keys=self.source_keys,
             )
         except ElevationSourceError as exc:
             _write_summary(
