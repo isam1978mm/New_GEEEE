@@ -35,16 +35,21 @@ cd C:\Dev\New_GEE
 
 The script prints JSON only. It writes nothing to the run.
 
-## Conservative filters
+## Filters and diagnostics
 
-When the corresponding ATL08 fields are present, the audit keeps:
+The audit keeps finite snow-free land segments with at least three terrain
+photons. ATL08 `h_te_uncertainty` is reported as a distribution and as combined
+uncertainty for repeat pairs.
 
-- snow-free land segments;
-- at least three terrain photons;
-- reported terrain-height uncertainty at or below 1.0 m;
-- finite terrain median height and coordinates.
+There is no mandatory uncertainty ceiling by default. The first implementation
+used a 1.0 m ceiling and rejected every returned segment before repeat precision
+could be measured. Apply a ceiling only when explicitly required:
 
-Repeat matching is stricter than a generic nearest-neighbour join:
+```powershell
+  --maximum-uncertainty-m 2.0
+```
+
+Repeat matching remains conservative:
 
 1. early and late observations must have the same reference ground track;
 2. they must use the same orientation-independent detector spot;
@@ -61,8 +66,12 @@ or 10 m bands has:
 - a measured 95% detection floor at or below the requested target, default
   0.7 m.
 
-A pass would still not prove placed-material thickness. The paired observations
-must also fall on the actual target and bracket a known construction event.
+The output also reports the ATL08-provided uncertainty distribution. A pass in
+measured repeat spread would still require review of those reported uncertainties,
+target overlap, and event timing before any thickness interpretation.
+
+A pass would not prove placed-material thickness. The paired observations must
+also fall on the actual target and bracket a known construction event.
 
 ## Explicit non-goals
 
