@@ -193,12 +193,45 @@ an untouched holdout, remain required before any transferable claim.
 | Reports removal separately from depth | Passing |
 | Generated zones satisfy every preflight rule | Passing |
 | Generated zones drive the unmodified engine | Passing |
-| Real two-epoch lidar over a real site | **Not yet run** — needs Earth Engine credentials |
+| Runs against live Earth Engine | **Passing** — verified on real runs |
+| Refuses a pair that shares data | **Passing** — refused two real pairs |
+| Produces a trustworthy noise floor on real data | **Passing** — see below |
 
-The last row is the one that matters for a real claim. Everything above it is
-synthetic, and synthetic data cannot tell you whether two lidar vintages
-actually overlap your AOI, or whether their co-registration survives real
-terrain.
+## What the first live runs established
+
+Ten real runs were screened. Nine had genuinely independent global sources; one
+did not, and it happened to be the first one tried.
+
+**The contaminated site.** Copernicus GLO-30's Filling Mask showed no pixel over
+that area was measured by TanDEM-X at all: 38.8% filled from one source, 61.0%
+from another. 37.7% of its difference against NASADEM was exactly zero, because
+the fill is SRTM and NASADEM is SRTM. ALOS was worse at 44.1%, since it fills
+from SRTM too. The pair reported a 0.41 m noise floor, a vertical offset of
+exactly 0.000 m, and nine zones. All of it was an artefact of differencing SRTM
+against itself. This is what the shared-data guard now refuses.
+
+**A clean site.** NASADEM against Copernicus, 0.0% shared:
+
+```text
+vertical offset removed          = -0.80 m      (real, not zero)
+measured noise floor sigma       =  2.67 m
+measured detection floor         =  5.23 m
+zones found                      =  0
+status                           =  no_measurable_change
+```
+
+That is the method working. A non-zero datum offset and a physically plausible
+noise floor are what two independent 30 m products should produce, and the
+correct answer at that site is that nothing moved by more than about 5 m between
+2000 and 2013.
+
+**The practical ceiling for global sources.** A measured detection floor of
+around 5 m is the realistic best case for 30 m public DEMs. Large earthworks are
+in reach: landfill cell construction, quarry cut and fill, dam works. Soil covers
+of 0.6-1.0 m are not, and no processing changes that.
+
+Sub-metre work requires US lidar, and US lidar is only available in the United
+States. Outside it, the free elevation record cannot resolve a soil cover.
 
 ## Not yet done
 
