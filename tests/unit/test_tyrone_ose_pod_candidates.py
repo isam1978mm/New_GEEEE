@@ -39,16 +39,18 @@ def test_parse_bbox_rejects_invalid_values(raw: str) -> None:
         parse_bbox(raw)
 
 
-def test_build_query_params_preserves_required_quality_fields() -> None:
+def test_build_query_params_uses_published_truncated_quality_fields() -> None:
     params = build_query_params(BBox(-108.5, 32.55, -108.25, 32.75))
 
     assert params["geometryType"] == "esriGeometryEnvelope"
     assert params["inSR"] == "4326"
     assert params["outSR"] == "4326"
     assert params["returnGeometry"] == "true"
-    assert "utm_accuracy" in params["outFields"]
-    assert "xy_accuracy" in params["outFields"]
+    assert "utm_accura" in params["outFields"]
+    assert "xy_accurac" in params["outFields"]
+    assert "nmwrrs_wrs" in params["outFields"]
     assert "datum" in params["outFields"]
+    assert "utm_accuracy" not in params["outFields"]
 
 
 def test_score_candidate_prioritizes_map_label_and_coordinate_quality() -> None:
@@ -70,7 +72,7 @@ def test_score_candidate_prioritizes_map_label_and_coordinate_quality() -> None:
     assert "published_utm_accuracy" in reasons
 
 
-def test_normalize_feature_keeps_wgs84_and_published_utm_fields() -> None:
+def test_normalize_feature_maps_hosted_field_names_to_stable_output_names() -> None:
     row = normalize_feature(
         {
             "attributes": {
@@ -80,6 +82,9 @@ def test_normalize_feature_keeps_wgs84_and_published_utm_fields() -> None:
                 "northing": 3456789.0,
                 "utm_zone": "12",
                 "datum": "NAD83",
+                "utm_accura": "1",
+                "xy_accurac": "A",
+                "nmwrrs_wrs": "https://example.test/well",
             },
             "geometry": {"x": -108.4, "y": 32.65},
         }
@@ -90,7 +95,10 @@ def test_normalize_feature_keeps_wgs84_and_published_utm_fields() -> None:
     assert row["latitude"] == 32.65
     assert row["easting"] == 123456.7
     assert row["northing"] == 3456789.0
-    assert row["priority_score"] >= 113
+    assert row["utm_accuracy"] == "1"
+    assert row["xy_accuracy"] == "A"
+    assert row["nmwrrs_wrsum_url"] == "https://example.test/well"
+    assert row["priority_score"] >= 117
 
 
 def test_normalize_features_sorts_highest_priority_first() -> None:
@@ -119,6 +127,7 @@ def test_write_outputs_keeps_geometry_blocked(tmp_path: Path) -> None:
                     "OBJECTID": 2,
                     "pod_name": "27-2005-04",
                     "datum": "NAD83",
+                    "utm_accura": "1",
                 },
                 "geometry": {"x": -108.4, "y": 32.65},
             }
@@ -141,6 +150,7 @@ def test_write_outputs_keeps_geometry_blocked(tmp_path: Path) -> None:
     with csv_path.open(newline="", encoding="utf-8") as handle:
         csv_rows = list(csv.DictReader(handle))
     assert csv_rows[0]["pod_name"] == "27-2005-04"
+    assert csv_rows[0]["utm_accuracy"] == "1"
     assert "map_label:27-2005-04" in csv_rows[0]["priority_reasons"]
 
 
