@@ -1,0 +1,16 @@
+{
+  "schema": "icesat2_broad_track_campaign_config_v1",
+  "campaign_id": "southwest_us_earthwork_pilot_v4_el_paso_las_cruces",
+  "description": "Fourth independent broad ATL08 terrain-step discovery campaign with mandatory temporal, terminal-stability, context-priority, and manual-context gates.",
+  "regions": [
+    {
+      "region_id": "el_paso_las_cruces_lower_rio_grande_pilot",
+      "description": "Independent approximately 110 km search box covering the US lower Rio Grande corridor around El Paso and Las Cruces for strict terrain-step candidate discovery.",
+      "west": -107.25,
+      "south": 31.76,
+      "east": -106.05,
+      "north": 32.76,
+      "enabled": true
+    }
+  ]
+}
