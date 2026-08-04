@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[2]
@@ -69,7 +71,7 @@ def test_stable_late_epochs_remain_eligible():
 
     assert audit["status"] == "terminal_stability_not_disproved"
     assert audit["decision"]["direct_thickness_anchor_lookup_recommended"] is True
-    assert audit["median_terminal_retention_fraction"] == 0.9
+    assert audit["median_terminal_retention_fraction"] == pytest.approx(0.9)
 
 
 def test_immediate_reversal_is_rejected():
