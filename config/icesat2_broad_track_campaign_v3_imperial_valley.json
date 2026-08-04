@@ -1,0 +1,16 @@
+{
+  "schema": "icesat2_broad_track_campaign_config_v1",
+  "campaign_id": "southwest_us_earthwork_pilot_v3_imperial_valley",
+  "description": "Third independent broad ATL08 terrain-step discovery campaign with mandatory temporal-recovery finalization.",
+  "regions": [
+    {
+      "region_id": "imperial_valley_salton_south_pilot",
+      "description": "Independent approximately 100 km search box for strict terrain-step candidate discovery.",
+      "west": -116.35,
+      "south": 32.72,
+      "east": -115.25,
+      "north": 33.62,
+      "enabled": true
+    }
+  ]
+}
