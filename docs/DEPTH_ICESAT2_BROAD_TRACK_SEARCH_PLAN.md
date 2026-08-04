@@ -114,6 +114,61 @@ Default private output:
 data/research/icesat2_broad_track_scan/
 ```
 
+## Test
+
+```powershell
+cd C:\Dev\New_GEE_depth
+git pull
+
+cd C:\Dev\New_GEE
+
+.\.venv\Scripts\python.exe -m pytest `
+  ..\New_GEE_depth\tests\unit\test_icesat2_broad_track_campaign.py `
+  ..\New_GEE_depth\tests\unit\test_icesat2_step_scan.py -q
+```
+
+## Run the first campaign
+
+```powershell
+.\.venv\Scripts\python.exe ..\New_GEE_depth\scripts\scan_icesat2_broad_track_campaign.py `
+  --tile-km 25
+```
+
+The default campaign file is resolved from the safe depth worktree, so the
+command can be run from `C:\Dev\New_GEE` without copying configuration files
+into the conflicted main worktree.
+
+## Resume after interruption or tile failure
+
+Run the same command again:
+
+```powershell
+.\.venv\Scripts\python.exe ..\New_GEE_depth\scripts\scan_icesat2_broad_track_campaign.py `
+  --tile-km 25
+```
+
+Every successful tile is read from its private cache. Only missing or stale
+tiles are queried again. Use `--force` only when intentionally replacing all
+cached tile results.
+
+## Decisive output
+
+```text
+data/research/icesat2_broad_track_scan/
+  southwest_us_earthwork_pilot_v1/
+    campaign_summary.json
+```
+
+Decisive fields:
+
+```text
+status
+failed_tile_count
+surviving_candidate_count
+record_lookup_priority
+region_summaries
+```
+
 ## Required interpretation
 
 A surviving cluster means only:
