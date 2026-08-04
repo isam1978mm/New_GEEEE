@@ -56,7 +56,13 @@ def _segment(segment_id: str, *, pattern: str) -> dict[str, object]:
     }
 
 
-def _write_campaign(tmp_path: Path, *, pattern: str) -> Path:
+def _write_campaign(
+    tmp_path: Path,
+    *,
+    pattern: str,
+    median_step_m: float = 0.5,
+    segment_count: int = 4,
+) -> Path:
     campaign_dir = tmp_path / "campaign"
     region_dir = campaign_dir / "region_a"
     region_dir.mkdir(parents=True)
@@ -71,21 +77,27 @@ def _write_campaign(tmp_path: Path, *, pattern: str) -> Path:
                 "region_local_rank": 1,
                 "longitude": -114.97,
                 "latitude": 35.68,
+                "median_step_m": median_step_m,
+                "segment_count": segment_count,
+                "event_start": "2022-05-17T00:00:00+00:00",
+                "event_end": "2022-08-16T00:00:00+00:00",
             }
         ],
     }
+    segments = [
+        _segment(f"{index:03d}", pattern=pattern)
+        for index in range(1, segment_count + 1)
+    ]
     cluster = {
         "centroid_longitude": -114.97,
         "centroid_latitude": 35.68,
-        "segment_count": 3,
-        "median_step_m": 0.5,
+        "segment_count": segment_count,
+        "median_step_m": median_step_m,
         "step_nmad_m": 0.01,
+        "event_start": "2022-05-17T00:00:00+00:00",
+        "event_end": "2022-08-16T00:00:00+00:00",
         "cross_spot_supported": False,
-        "segments": [
-            _segment("001", pattern=pattern),
-            _segment("002", pattern=pattern),
-            _segment("003", pattern=pattern),
-        ],
+        "segments": segments,
     }
     region = {
         "region_id": "region_a",
@@ -100,53 +112,47 @@ def _write_campaign(tmp_path: Path, *, pattern: str) -> Path:
     return campaign_dir
 
 
-def test_recovery_candidate_is_removed_from_record_queue(tmp_path: Path):
+def test_recovery_candidate_is_removed_from_context_queue(tmp_path: Path):
     campaign_dir = _write_campaign(tmp_path, pattern="recovery")
 
     result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
 
     assert result["status"] == "all_spatial_candidates_rejected_by_temporal_recovery"
-    assert result["schema"] == "icesat2_broad_track_campaign_finalized_v2"
+    assert result["schema"] == "icesat2_broad_track_campaign_finalized_v3"
     assert result["source_spatial_candidate_count"] == 1
     assert result["temporal_recovery_rejected_count"] == 1
     assert result["terminal_stability_rejected_count"] == 0
-    assert result["surviving_candidate_count"] == 0
+    assert result["context_priority_deferred_count"] == 0
+    assert result["context_review_candidate_count"] == 0
+    assert result["context_review_priority"] == []
     assert result["record_lookup_priority"] == []
-    assert (
-        result["temporal_recovery_rejections"][0]["temporal_recovery_audit"][
-            "status"
-        ]
-        == "temporary_depression_recovery_pattern"
-    )
-    assert (campaign_dir / "campaign_finalized_summary.json").is_file()
-    assert (campaign_dir / "candidate_001_temporal_recovery_audit.json").is_file()
-    assert (campaign_dir / "candidate_001_terminal_stability_audit.json").is_file()
+    assert result["records_research_ready"] is False
+    assert (campaign_dir / "candidate_001_context_priority_audit.json").is_file()
 
 
-def test_lasting_rise_with_stable_followups_remains_eligible(tmp_path: Path):
+def test_stable_plausible_rise_enters_context_review_only(tmp_path: Path):
     campaign_dir = _write_campaign(tmp_path, pattern="stable")
 
     result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
 
-    assert result["status"] == "finalized_record_candidates_found"
+    assert result["status"] == "finalized_context_review_candidates_found"
     assert result["temporal_recovery_rejected_count"] == 0
     assert result["terminal_stability_rejected_count"] == 0
-    assert result["surviving_candidate_count"] == 1
-    assert len(result["record_lookup_priority"]) == 1
-    candidate = result["record_lookup_priority"][0]
-    assert candidate["finalized_campaign_rank"] == 1
-    assert candidate["temporal_recovery_audit"]["status"] == (
-        "lasting_rise_not_disproved_by_recovery_audit"
-    )
+    assert result["context_priority_deferred_count"] == 0
+    assert result["context_review_candidate_count"] == 1
+    assert result["record_lookup_priority"] == []
+    candidate = result["context_review_priority"][0]
+    assert candidate["context_priority_rank"] == 1
     assert candidate["terminal_stability_audit"]["status"] == (
         "terminal_stability_not_disproved"
     )
-    assert candidate["terminal_stability_audit"][
-        "direct_thickness_anchor_lookup_recommended"
-    ] is True
+    assert candidate["context_priority_audit"]["status"] == (
+        "context_review_priority"
+    )
+    assert candidate["context_priority_audit"]["records_research_recommended"] is False
 
 
-def test_late_epoch_reversal_is_removed_from_record_queue(tmp_path: Path):
+def test_late_epoch_reversal_is_removed_from_context_queue(tmp_path: Path):
     campaign_dir = _write_campaign(tmp_path, pattern="late_reversal")
 
     result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
@@ -154,23 +160,40 @@ def test_late_epoch_reversal_is_removed_from_record_queue(tmp_path: Path):
     assert result["status"] == (
         "all_spatial_candidates_rejected_by_temporal_or_terminal_stability"
     )
-    assert result["temporal_recovery_rejected_count"] == 0
     assert result["terminal_stability_rejected_count"] == 1
-    assert result["surviving_candidate_count"] == 0
+    assert result["context_review_candidate_count"] == 0
     rejected = result["terminal_stability_rejections"][0]
     assert rejected["terminal_stability_audit"]["status"] == (
         "late_epoch_reversal_pattern"
     )
 
 
-def test_immediate_reversal_is_removed_from_record_queue(tmp_path: Path):
+def test_immediate_reversal_is_removed_from_context_queue(tmp_path: Path):
     campaign_dir = _write_campaign(tmp_path, pattern="immediate_reversal")
 
     result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
 
     assert result["terminal_stability_rejected_count"] == 1
-    assert result["surviving_candidate_count"] == 0
+    assert result["context_review_candidate_count"] == 0
     rejected = result["terminal_stability_rejections"][0]
     assert rejected["terminal_stability_audit"]["status"] == (
         "immediate_post_step_reversal_pattern"
+    )
+
+
+def test_extreme_magnitude_is_deferred_before_context_review(tmp_path: Path):
+    campaign_dir = _write_campaign(
+        tmp_path,
+        pattern="stable",
+        median_step_m=12.0,
+    )
+
+    result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
+
+    assert result["status"] == "all_temporal_survivors_deferred_by_context_priority"
+    assert result["context_priority_deferred_count"] == 1
+    assert result["context_review_candidate_count"] == 0
+    deferred = result["context_priority_deferrals"][0]
+    assert deferred["context_priority_audit"]["status"] == (
+        "deferred_direct_thickness_magnitude"
     )
