@@ -19,11 +19,17 @@ sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
 
-def _segment(segment_id: str, *, recovery: bool) -> dict[str, object]:
-    if recovery:
+def _segment(segment_id: str, *, pattern: str) -> dict[str, object]:
+    if pattern == "recovery":
         heights = [100.5, 100.0, 100.0, 100.55, 100.5, 100.52]
-    else:
+    elif pattern == "stable":
         heights = [100.0, 100.0, 100.0, 100.55, 100.5, 100.52]
+    elif pattern == "late_reversal":
+        heights = [100.0, 100.0, 100.0, 100.55, 100.5, 100.05]
+    elif pattern == "immediate_reversal":
+        heights = [100.0, 100.0, 100.0, 100.55, 100.1, 100.5]
+    else:
+        raise ValueError(f"unknown pattern: {pattern}")
     cycles = [12, 14, 15, 16, 17, 24]
     return {
         "classification": "step_up_candidate",
@@ -50,7 +56,7 @@ def _segment(segment_id: str, *, recovery: bool) -> dict[str, object]:
     }
 
 
-def _write_campaign(tmp_path: Path, *, recovery: bool) -> Path:
+def _write_campaign(tmp_path: Path, *, pattern: str) -> Path:
     campaign_dir = tmp_path / "campaign"
     region_dir = campaign_dir / "region_a"
     region_dir.mkdir(parents=True)
@@ -76,9 +82,9 @@ def _write_campaign(tmp_path: Path, *, recovery: bool) -> Path:
         "step_nmad_m": 0.01,
         "cross_spot_supported": False,
         "segments": [
-            _segment("001", recovery=recovery),
-            _segment("002", recovery=recovery),
-            _segment("003", recovery=recovery),
+            _segment("001", pattern=pattern),
+            _segment("002", pattern=pattern),
+            _segment("003", pattern=pattern),
         ],
     }
     region = {
@@ -95,13 +101,15 @@ def _write_campaign(tmp_path: Path, *, recovery: bool) -> Path:
 
 
 def test_recovery_candidate_is_removed_from_record_queue(tmp_path: Path):
-    campaign_dir = _write_campaign(tmp_path, recovery=True)
+    campaign_dir = _write_campaign(tmp_path, pattern="recovery")
 
     result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
 
     assert result["status"] == "all_spatial_candidates_rejected_by_temporal_recovery"
+    assert result["schema"] == "icesat2_broad_track_campaign_finalized_v2"
     assert result["source_spatial_candidate_count"] == 1
     assert result["temporal_recovery_rejected_count"] == 1
+    assert result["terminal_stability_rejected_count"] == 0
     assert result["surviving_candidate_count"] == 0
     assert result["record_lookup_priority"] == []
     assert (
@@ -112,15 +120,17 @@ def test_recovery_candidate_is_removed_from_record_queue(tmp_path: Path):
     )
     assert (campaign_dir / "campaign_finalized_summary.json").is_file()
     assert (campaign_dir / "candidate_001_temporal_recovery_audit.json").is_file()
+    assert (campaign_dir / "candidate_001_terminal_stability_audit.json").is_file()
 
 
-def test_lasting_rise_remains_eligible(tmp_path: Path):
-    campaign_dir = _write_campaign(tmp_path, recovery=False)
+def test_lasting_rise_with_stable_followups_remains_eligible(tmp_path: Path):
+    campaign_dir = _write_campaign(tmp_path, pattern="stable")
 
     result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
 
     assert result["status"] == "finalized_record_candidates_found"
     assert result["temporal_recovery_rejected_count"] == 0
+    assert result["terminal_stability_rejected_count"] == 0
     assert result["surviving_candidate_count"] == 1
     assert len(result["record_lookup_priority"]) == 1
     candidate = result["record_lookup_priority"][0]
@@ -128,6 +138,39 @@ def test_lasting_rise_remains_eligible(tmp_path: Path):
     assert candidate["temporal_recovery_audit"]["status"] == (
         "lasting_rise_not_disproved_by_recovery_audit"
     )
-    assert candidate["temporal_recovery_audit"][
+    assert candidate["terminal_stability_audit"]["status"] == (
+        "terminal_stability_not_disproved"
+    )
+    assert candidate["terminal_stability_audit"][
         "direct_thickness_anchor_lookup_recommended"
     ] is True
+
+
+def test_late_epoch_reversal_is_removed_from_record_queue(tmp_path: Path):
+    campaign_dir = _write_campaign(tmp_path, pattern="late_reversal")
+
+    result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
+
+    assert result["status"] == (
+        "all_spatial_candidates_rejected_by_temporal_or_terminal_stability"
+    )
+    assert result["temporal_recovery_rejected_count"] == 0
+    assert result["terminal_stability_rejected_count"] == 1
+    assert result["surviving_candidate_count"] == 0
+    rejected = result["terminal_stability_rejections"][0]
+    assert rejected["terminal_stability_audit"]["status"] == (
+        "late_epoch_reversal_pattern"
+    )
+
+
+def test_immediate_reversal_is_removed_from_record_queue(tmp_path: Path):
+    campaign_dir = _write_campaign(tmp_path, pattern="immediate_reversal")
+
+    result = MODULE.finalize_campaign(campaign_dir=campaign_dir)
+
+    assert result["terminal_stability_rejected_count"] == 1
+    assert result["surviving_candidate_count"] == 0
+    rejected = result["terminal_stability_rejections"][0]
+    assert rejected["terminal_stability_audit"]["status"] == (
+        "immediate_post_step_reversal_pattern"
+    )
