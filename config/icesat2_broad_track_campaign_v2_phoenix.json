@@ -1,0 +1,16 @@
+{
+  "schema": "icesat2_broad_track_campaign_config_v1",
+  "campaign_id": "southwest_us_earthwork_pilot_v2_phoenix",
+  "description": "Second independent broad ATL08 terrain-step discovery campaign with mandatory temporal-recovery finalization.",
+  "regions": [
+    {
+      "region_id": "west_phoenix_lower_gila_pilot",
+      "description": "Independent approximately 100 km search box west and southwest of Phoenix for strict terrain-step candidate discovery.",
+      "west": -113.35,
+      "south": 33.10,
+      "east": -112.20,
+      "north": 34.00,
+      "enabled": true
+    }
+  ]
+}
