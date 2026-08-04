@@ -1,0 +1,87 @@
+{
+  "schema": "tyrone_3x_depth_evidence_v1",
+  "site_id": "tyrone_3x_test_plots_5_6",
+  "permit_id": "GR010RE",
+  "nmed_discharge_permit_id": "DP-1341",
+  "status": "depth_known_geometry_blocked",
+  "source_documents": [
+    {
+      "title": "3X Tailing As-Built",
+      "public_archive": "EMNRD Tyrone Revision 09-1 Appendix E",
+      "local_expected_filename": "GR010RE_3X_Tailing_AsBuilt_Report.pdf"
+    },
+    {
+      "title": "3X Tailing Annual Summary",
+      "public_archive": "EMNRD Tyrone Revision 09-1 Appendix E",
+      "local_expected_filename": "GR010RE_3X_Tailing_Annual_Summary_Report.pdf"
+    }
+  ],
+  "anchors": [
+    {
+      "plot_id": "tyrone_tp5",
+      "nominal_design_inches": 24.0,
+      "measured_inches": [28.0, 26.0, 26.0, 28.0, 26.0],
+      "measurement_count": 5,
+      "mean_inches": 26.8,
+      "mean_m": 0.68072,
+      "confidence_interval_95_inches": [25.8, 27.8],
+      "confidence_interval_95_m": [0.65532, 0.70612],
+      "measurement_type": "post-placement as-built cover thickness from confirmation pit faces",
+      "geometry_status": "missing_coordinate_tied_polygon",
+      "calibration_ready": false
+    },
+    {
+      "plot_id": "tyrone_tp6",
+      "nominal_design_inches": 36.0,
+      "measured_inches": [40.0, 35.0, 42.0, 36.0, 34.0],
+      "measurement_count": 5,
+      "mean_inches": 37.4,
+      "mean_m": 0.94996,
+      "confidence_interval_95_inches": [33.5, 41.3],
+      "confidence_interval_95_m": [0.8509, 1.04902],
+      "measurement_type": "post-placement as-built cover thickness from confirmation pit faces",
+      "geometry_status": "missing_coordinate_tied_polygon",
+      "calibration_ready": false
+    }
+  ],
+  "geometry_blockers": [
+    "no plot-corner northings or eastings",
+    "no latitude or longitude for plot boundaries",
+    "no stated horizontal datum or coordinate reference system",
+    "no survey-control or benchmark coordinates",
+    "no native CAD, GIS, GPS, CAES, or survey-point files",
+    "no coordinate-tied disturbance masks for instruments, lysimeters, subsidence, ponding, berms, drains, or fertilizer strips"
+  ],
+  "stability_blockers": [
+    "no coordinate-tied post-2014 inspection and repair history for clean plot interiors",
+    "no proven Sentinel-1 observation interval free of regrading, repair, traffic, instrumentation, or erosion disturbance"
+  ],
+  "recovery_targets": [
+    "M3 Engineering August 2006 as-built topographic survey source package",
+    "native DWG or DXF files for Figure 2, Figure 3, and Plate 1",
+    "post-cover GPS survey files",
+    "CAES grade-control exports",
+    "survey point tables with point ID, northing, easting, and elevation",
+    "horizontal datum, projection, units, and benchmark documentation",
+    "coordinate-tied boundaries for Test Plots 5 and 6",
+    "coordinate-tied instrument, lysimeter, meteorological-station, berm, drain, subsidence, ponding, and fertilizer-strip locations",
+    "3X Construction Quality Assurance report or CQDAR with all appendices and plates",
+    "later plot-specific inspection, repair, and maintenance records"
+  ],
+  "custodian_routes": [
+    "EMNRD Mining and Minerals Division - GR010RE",
+    "NMED Ground Water Quality Bureau / Mining Environmental Compliance Section - DP-1341",
+    "Freeport-McMoRan Tyrone environmental and reclamation records",
+    "M3 Engineering and Technology project archive"
+  ],
+  "decision": {
+    "measured_depth_pair_proven": true,
+    "coordinate_tied_geometry_proven": false,
+    "stable_sentinel1_interval_proven": false,
+    "earth_engine_query_allowed": false,
+    "calibration_record_allowed": false,
+    "numerical_depth_ready": false,
+    "app_depth_enabled": false,
+    "campaign_004_status": "paused_fallback"
+  }
+}
