@@ -1,0 +1,86 @@
+{
+  "schema": "tyrone_3x_georeference_control_points_v1",
+  "target_crs": "EPSG:REPLACE_WITH_PROJECTED_CRS",
+  "notes": [
+    "Use drawing pixel coordinates from one fixed-resolution export of the 2006 test-plot drawing.",
+    "Use projected target coordinates in metres from one coordinate-controlled map or orthophoto.",
+    "Fit points and check points must be persistent, unambiguous features visible in both sources.",
+    "Use at least six well-distributed fit points and at least two independent check points.",
+    "Do not use TP5 or TP6 boundary vertices as control points unless independently surveyed.",
+    "Replace every placeholder before running the audit."
+  ],
+  "points": [
+    {
+      "point_id": "fit_01",
+      "role": "fit",
+      "feature_description": "REPLACE persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "fit_02",
+      "role": "fit",
+      "feature_description": "REPLACE persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "fit_03",
+      "role": "fit",
+      "feature_description": "REPLACE persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "fit_04",
+      "role": "fit",
+      "feature_description": "REPLACE persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "fit_05",
+      "role": "fit",
+      "feature_description": "REPLACE persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "fit_06",
+      "role": "fit",
+      "feature_description": "REPLACE persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "check_01",
+      "role": "check",
+      "feature_description": "REPLACE independent persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    },
+    {
+      "point_id": "check_02",
+      "role": "check",
+      "feature_description": "REPLACE independent persistent feature",
+      "drawing_x": 0.0,
+      "drawing_y": 0.0,
+      "target_x_m": 0.0,
+      "target_y_m": 0.0
+    }
+  ]
+}
