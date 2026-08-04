@@ -98,14 +98,15 @@ def _quality_checks(
     segments: list[dict[str, Any]],
 ) -> dict[str, Any]:
     expected_count = int(cluster.get("segment_count", 0) or 0)
+    # Observation timestamps differ by milliseconds along one ATL08 track.
+    # Event identity is therefore the shared orbit/spot and cycle boundary,
+    # not byte-for-byte timestamp equality between neighbouring segments.
     event_keys = {
         (
             item.get("rgt"),
             item.get("spot"),
             item.get("pre_cycle"),
             item.get("post_cycle"),
-            item.get("event_start"),
-            item.get("event_end"),
         )
         for item in segments
     }
