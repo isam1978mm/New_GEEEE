@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[2]
@@ -94,7 +96,7 @@ def test_build_dossier_preserves_and_sorts_segments():
     ]
     assert result["quality_checks"]["cluster_segment_count_matches"] is True
     assert result["quality_checks"]["all_segments_share_one_event_key"] is True
-    assert result["quality_checks"]["segment_step_range_m"] == 0.10
+    assert result["quality_checks"]["segment_step_range_m"] == pytest.approx(0.10)
     assert result["interpretation"]["candidate_is_depth_anchor"] is False
 
 
