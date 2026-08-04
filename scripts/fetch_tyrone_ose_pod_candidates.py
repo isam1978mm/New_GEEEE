@@ -29,7 +29,9 @@ SERVICE_URL = (
 DEFAULT_BBOX = (-108.50, 32.55, -108.25, 32.75)
 DEFAULT_TIMEOUT_SECONDS = 90
 
-OUT_FIELDS = [
+# The hosted FeatureServer uses shapefile-style truncated field names for a few
+# attributes. Keep the real published names here, then normalize them below.
+SOURCE_FIELDS = [
     "OBJECTID",
     "pod_name",
     "pod_file",
@@ -39,12 +41,29 @@ OUT_FIELDS = [
     "northing",
     "utm_zone",
     "datum",
-    "utm_accuracy",
-    "xy_accuracy",
+    "utm_accura",
+    "xy_accurac",
     "own_lname",
     "own_fname",
-    "nmwrrs_wrsum_url",
+    "nmwrrs_wrs",
 ]
+
+SOURCE_TO_OUTPUT_FIELD = {
+    "OBJECTID": "OBJECTID",
+    "pod_name": "pod_name",
+    "pod_file": "pod_file",
+    "well_tag": "well_tag",
+    "other_loc": "other_loc",
+    "easting": "easting",
+    "northing": "northing",
+    "utm_zone": "utm_zone",
+    "datum": "datum",
+    "utm_accura": "utm_accuracy",
+    "xy_accurac": "xy_accuracy",
+    "own_lname": "own_lname",
+    "own_fname": "own_fname",
+    "nmwrrs_wrs": "nmwrrs_wrsum_url",
+}
 
 MAP_LABEL_HINTS = (
     "27-2005-05",
@@ -106,7 +125,7 @@ def build_query_params(bbox: BBox) -> dict[str, str]:
         "geometryType": "esriGeometryEnvelope",
         "inSR": "4326",
         "spatialRel": "esriSpatialRelIntersects",
-        "outFields": ",".join(OUT_FIELDS),
+        "outFields": ",".join(SOURCE_FIELDS),
         "returnGeometry": "true",
         "outSR": "4326",
         "resultRecordCount": "2000",
@@ -142,11 +161,17 @@ def fetch_payload(
     if not isinstance(payload, dict):
         raise PodFetchError("NMOSE POD response must be a JSON object")
     if "error" in payload:
-        error = payload.get("error")
-        raise PodFetchError(f"NMOSE POD service returned an error: {error}")
+        raise PodFetchError(f"NMOSE POD service returned an error: {payload['error']}")
     if not isinstance(payload.get("features"), list):
         raise PodFetchError("NMOSE POD response did not contain a feature list")
     return payload
+
+
+def normalize_attributes(attributes: dict[str, Any]) -> dict[str, Any]:
+    return {
+        output_name: attributes.get(source_name)
+        for source_name, output_name in SOURCE_TO_OUTPUT_FIELD.items()
+    }
 
 
 def _combined_text(attributes: dict[str, Any]) -> str:
@@ -200,20 +225,21 @@ def score_candidate(attributes: dict[str, Any]) -> tuple[int, list[str]]:
 
 
 def normalize_feature(feature: dict[str, Any]) -> dict[str, Any]:
-    attributes = feature.get("attributes")
+    source_attributes = feature.get("attributes")
     geometry = feature.get("geometry")
-    if not isinstance(attributes, dict):
-        attributes = {}
+    if not isinstance(source_attributes, dict):
+        source_attributes = {}
     if not isinstance(geometry, dict):
         geometry = {}
 
+    attributes = normalize_attributes(source_attributes)
     score, reasons = score_candidate(attributes)
     return {
         "priority_score": score,
         "priority_reasons": reasons,
         "longitude": geometry.get("x"),
         "latitude": geometry.get("y"),
-        **{field: attributes.get(field) for field in OUT_FIELDS},
+        **attributes,
     }
 
 
