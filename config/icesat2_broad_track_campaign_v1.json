@@ -1,0 +1,16 @@
+{
+  "schema": "icesat2_broad_track_campaign_config_v1",
+  "campaign_id": "southwest_us_earthwork_pilot_v1",
+  "description": "First independent broad ATL08 terrain-step discovery campaign outside the existing app AOIs.",
+  "regions": [
+    {
+      "region_id": "las_vegas_henderson_pilot",
+      "description": "Independent approximately 100 km search box for strict terrain-step candidate discovery.",
+      "west": -115.75,
+      "south": 35.55,
+      "east": -114.65,
+      "north": 36.45,
+      "enabled": true
+    }
+  ]
+}
