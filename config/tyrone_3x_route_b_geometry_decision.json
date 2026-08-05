@@ -1,0 +1,56 @@
+{
+  "schema": "tyrone_3x_route_b_geometry_decision_v1",
+  "decision_date": "2026-08-05",
+  "status": "route_b_rejected_insufficient_homologous_controls",
+  "target": {
+    "site": "Tyrone Mine No. 3X tailing dam",
+    "plots": ["TP5", "TP6"],
+    "drawing": "GR010RE_3X_Tailing_AsBuilt_Report Figure 2",
+    "target_crs": "EPSG:26913"
+  },
+  "verified_imagery": {
+    "years": [2009, 2011],
+    "pixel_size_m": 1.0,
+    "width": 2207,
+    "height": 2118,
+    "bounds_m": {
+      "left": 179023.0,
+      "bottom": 3621371.0,
+      "right": 181230.0,
+      "top": 3623489.0
+    },
+    "affine_transform": [1.0, 0.0, 179023.0, 0.0, -1.0, 3623489.0]
+  },
+  "strict_gate": {
+    "minimum_fit_points": 6,
+    "minimum_independent_check_points": 2,
+    "maximum_check_rmse_m": 5.0,
+    "maximum_check_residual_m": 7.5
+  },
+  "manual_review": {
+    "broad_no_3x_facility_match": true,
+    "tp5_tp6_plot_lines_visible_in_drawing": true,
+    "tp5_tp6_plot_boundaries_unambiguously_visible_in_imagery": false,
+    "plot_boundaries_consistently_coincident_with_roads_berms_or_drains": false,
+    "six_well_distributed_fit_controls_available_without_guessing": false,
+    "two_independent_check_controls_available_without_reusing_fit_evidence": false,
+    "strict_affine_audit_run": false,
+    "strict_affine_audit_not_run_reason": "No defensible control-point input exists. Running the auditor would require invented or circular point matches."
+  },
+  "evidence": [
+    "The 2009 and 2011 NAIP GeoTIFFs are valid, coordinate-controlled EPSG:26913 rasters with 1 m pixels.",
+    "Figure 2 can be aligned visually with the broad No. 3X dam surface and terrace pattern.",
+    "The green TP5 and TP6 survey boundaries do not consistently coincide with distinct fixed roads, berms, drains, corners, or structures in either historical image.",
+    "A rough visual overlay is not an independent accuracy test and cannot be converted into 6 fit plus 2 withheld check controls without guessing.",
+    "The official native survey/CAD geometry or an equivalent coordinate-tied plot drawing remains required for exact TP5/TP6 polygons."
+  ],
+  "decision": {
+    "route_b_geometry_recovery_succeeded": false,
+    "coordinate_geometry_unblocked": false,
+    "earth_engine_plot_query_allowed": false,
+    "calibration_record_allowed": false,
+    "plot_specific_stability_proven": false,
+    "numerical_depth_unlocked": false
+  },
+  "remaining_route": "Wait for the existing EMNRD response and inspect any attached native survey, CAD, GPS/CAES, GIS, or coordinate-system records. No additional records request is authorized."
+}
