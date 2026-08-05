@@ -1,0 +1,16 @@
+{
+  "schema": "icesat2_broad_track_campaign_config_v1",
+  "campaign_id": "southeast_us_earthwork_pilot_v6_central_florida_phosphate",
+  "description": "Sixth independent broad ATL08 terrain-step discovery campaign targeting the low-relief Central Florida Bone Valley phosphate mining and reclamation district with mandatory temporal, terminal-stability, context-priority, and manual-context gates.",
+  "regions": [
+    {
+      "region_id": "central_florida_bone_valley_phosphate_pilot",
+      "description": "Independent approximately 100 km north-south discovery corridor covering the Central Florida phosphate mining and reclamation district for strict terrain-step candidate discovery in mixed active-mine, reclaimed-land, wetland, agricultural, industrial, and developed context.",
+      "west": -82.20,
+      "south": 27.20,
+      "east": -81.55,
+      "north": 28.20,
+      "enabled": true
+    }
+  ]
+}
