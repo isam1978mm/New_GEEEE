@@ -1,6 +1,12 @@
 # ICESat-2 Broad Track Campaign 004 — El Paso–Las Cruces
 
-Status: configured on the protected depth branch and ready for local validation and execution.
+Status: ACTIVE. Restart explicitly approved by the user on 2026-08-05 after the Tyrone public-imagery geometry route was completed and rejected.
+
+## Restart approval
+
+Campaign 004 is the active non-Tyrone route for finding a different calibration candidate. The restart does not authorize changes to the classifier, frontend, Option 5, production numerical-depth output, or `main`.
+
+The existing Tyrone EMNRD route remains open only for attachments already requested. Campaign 004 must not create or suggest new emails or public-records requests.
 
 ## Purpose
 
