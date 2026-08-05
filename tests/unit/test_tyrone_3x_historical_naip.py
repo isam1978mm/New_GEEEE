@@ -7,6 +7,7 @@ from scripts.probe_tyrone_3x_historical_naip import (
     TYRONE_3X_BBOX_TEXT,
     build_probe_argv,
 )
+from scripts.probe_tyrone_historical_naip import build_parser
 
 
 def test_verified_3x_bbox_is_northern_r1_block() -> None:
@@ -18,10 +19,18 @@ def test_verified_3x_bbox_is_northern_r1_block() -> None:
     assert south > 32.6923
 
 
-def test_wrapper_injects_verified_bbox_before_other_arguments() -> None:
+def test_wrapper_injects_verified_bbox_as_single_safe_argument() -> None:
     argv = build_probe_argv(["--output-dir", "out", "--ee-project", "example"])
-    assert argv[:2] == ["--bbox", TYRONE_3X_BBOX_TEXT]
-    assert argv[2:] == ["--output-dir", "out", "--ee-project", "example"]
+    assert argv[0] == f"--bbox={TYRONE_3X_BBOX_TEXT}"
+    assert argv[1:] == ["--output-dir", "out", "--ee-project", "example"]
+
+
+def test_injected_negative_bbox_parses_without_expected_argument_error() -> None:
+    argv = build_probe_argv(["--output-dir", "out", "--ee-project", "example"])
+    parsed = build_parser().parse_args(argv)
+    assert parsed.bbox == TYRONE_3X_BBOX_TEXT
+    assert str(parsed.output_dir) == "out"
+    assert parsed.ee_project == "example"
 
 
 @pytest.mark.parametrize("argument", ["--bbox", "--bbox=-108,32,-107,33"])
