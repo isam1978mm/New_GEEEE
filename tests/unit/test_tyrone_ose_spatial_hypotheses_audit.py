@@ -5,6 +5,7 @@ from pyproj import Transformer
 
 from scripts.audit_tyrone_ose_spatial_hypotheses import (
     _fit_similarity,
+    _strict_split_pass,
     audit_report,
 )
 
@@ -46,6 +47,32 @@ def test_fit_similarity_recovers_simple_transform() -> None:
     assert np.max(np.abs(predicted - target)) < 1e-9
 
 
+def test_strict_split_rejects_good_checks_when_fit_is_bad() -> None:
+    assert not _strict_split_pass(
+        fit_rmse_m=20.6,
+        fit_max_m=37.1,
+        check_rmse_m=3.98,
+        check_max_m=5.59,
+        fit_rmse_limit_m=5.0,
+        fit_max_limit_m=7.5,
+        check_rmse_limit_m=5.0,
+        check_max_limit_m=7.5,
+    )
+
+
+def test_strict_split_accepts_only_when_fit_and_checks_pass() -> None:
+    assert _strict_split_pass(
+        fit_rmse_m=2.0,
+        fit_max_m=3.0,
+        check_rmse_m=4.0,
+        check_max_m=5.0,
+        fit_rmse_limit_m=5.0,
+        fit_max_limit_m=7.5,
+        check_rmse_limit_m=5.0,
+        check_max_limit_m=7.5,
+    )
+
+
 def test_audit_accepts_consistent_pattern() -> None:
     result = audit_report(_report(with_outliers=False))
     assert result["status"] == "credible_discovery_pattern_found"
@@ -56,12 +83,15 @@ def test_audit_accepts_consistent_pattern() -> None:
 
 def test_audit_rejects_pattern_with_two_large_outliers() -> None:
     result = audit_report(_report(with_outliers=True))
-    assert result["status"] == "all_discovery_patterns_failed_independent_accuracy"
+    assert result["status"] == "all_discovery_patterns_failed_combined_accuracy"
     assert result["credible_hypothesis_count"] == 0
 
 
 def test_audit_keeps_final_geometry_gate_closed() -> None:
     result = audit_report(_report(with_outliers=False))
     assert "final geometry gate" in result["warning"]
+    assert result["thresholds"]["fit_rmse_m_max"] == 5.0
+    assert result["thresholds"]["fit_max_residual_m_max"] == 7.5
     assert result["thresholds"]["check_rmse_m_max"] == 5.0
     assert result["thresholds"]["check_max_residual_m_max"] == 7.5
+    assert "Version 1 incorrectly allowed" in result["correction"]
