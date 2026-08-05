@@ -29,7 +29,10 @@ def build_probe_argv(argv: Sequence[str]) -> list[str]:
             "This dedicated No. 3X wrapper fixes the R1C1/R1C2 AOI; "
             "do not supply --bbox."
         )
-    return ["--bbox", TYRONE_3X_BBOX_TEXT, *supplied]
+    # Keep the negative west longitude in the same argv token as --bbox.
+    # Otherwise argparse can interpret the comma-separated negative value as
+    # another option and report: argument --bbox: expected one argument.
+    return [f"--bbox={TYRONE_3X_BBOX_TEXT}", *supplied]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
