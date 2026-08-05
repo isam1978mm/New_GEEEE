@@ -1,33 +1,49 @@
 # ICESat-2 Broad Track Campaign 004 — El Paso–Las Cruces
 
-Status: ACTIVE. Restart explicitly approved by the user on 2026-08-05 after the Tyrone public-imagery geometry route was completed and rejected.
+Status: CLOSED. Campaign 004 completed on 2026-08-05 with four persistent large-magnitude terrain-step candidates and zero context-review survivors.
 
-## Restart approval
+## Final result
 
-Campaign 004 is the active non-Tyrone route for finding a different calibration candidate. The restart does not authorize changes to the classifier, frontend, Option 5, production numerical-depth output, or `main`.
-
-The existing Tyrone EMNRD route remains open only for attachments already requested. Campaign 004 must not create or suggest new emails or public-records requests.
-
-## Purpose
-
-Campaign 004 continues independent ATL08 terrain-step discovery after:
-
-- Campaign 001 produced one spatial candidate that failed temporal-recovery review;
-- Campaign 002 produced isolated step-up series but no valid spatial clusters;
-- Campaign 003 produced 19 spatial candidates, of which one survived automated context screening and was then closed after Earth Engine and parcel review.
-
-Campaign 003 now has:
+The approved scan and mandatory finalizer completed successfully:
 
 ```text
-context_review_candidate_count = 0
-surviving_candidate_count      = 0
-record_lookup_priority          = []
-records_research_ready          = false
+completed_tile_count              = 25
+failed_tile_count                 = 0
+source_spatial_candidate_count    = 4
+temporal_recovery_rejected_count  = 0
+terminal_stability_rejected_count = 0
+context_priority_deferred_count   = 4
+context_review_candidate_count    = 0
+surviving_candidate_count         = 0
+record_lookup_priority            = []
+records_research_ready            = false
+status                            = all_temporal_survivors_deferred_by_context_priority
 ```
 
-Campaign 004 does not alter the scientific thresholds and does not assume that its search area contains a usable thickness anchor.
+Candidate median rises:
 
-## Campaign identity
+```text
+candidate 001 = 19.07305908203125 m
+candidate 002 = 16.53967285156250 m
+candidate 003 = 12.45123291015625 m
+candidate 004 = 12.67285156250000 m
+```
+
+All four candidates passed temporal-recovery and terminal-stability checks. All four were correctly deferred by the unchanged 5 m context-priority magnitude ceiling. None is a measured placed-material thickness or numerical-depth anchor.
+
+No records research, email, or public-records request is authorized from this result.
+
+Authoritative automated output:
+
+```text
+data/research/icesat2_broad_track_scan/
+southwest_us_earthwork_pilot_v4_el_paso_las_cruces/
+campaign_finalized_summary.json
+```
+
+## Purpose and identity
+
+Campaign 004 continued independent ATL08 terrain-step discovery after Campaigns 001–003 produced no usable depth anchor.
 
 ```text
 campaign_id = southwest_us_earthwork_pilot_v4_el_paso_las_cruces
@@ -49,9 +65,7 @@ east  = -106.05
 north =   32.76
 ```
 
-The approximately 110 km discovery box covers the US lower Rio Grande corridor around El Paso and Las Cruces. It contains a mixture of urban growth, industrial land, flood-control works, open desert, and agricultural land. Those land uses are search context only; they do not establish an engineered project or measured thickness.
-
-## Unchanged first-stage scientific gates
+## Scientific gates used
 
 ```text
 minimum distinct epochs          = 4
@@ -63,23 +77,24 @@ neighbour connection distance    = 250 m
 minimum neighbouring segments    = 3
 maximum cluster step NMAD        = 0.25 m
 cross-spot diagnostic distance   = 500 m
+maximum context step             = 5.00 m
 ```
 
-The following later gates remain mandatory:
+The finalizer also applied:
 
 1. temporal-recovery audit;
 2. immediate and terminal stability audit;
-3. context-priority audit;
-4. Earth Engine land-cover context where a candidate survives;
-5. exact parcel or project-footprint review before any records research.
+3. context-priority audit.
 
-A spatial or temporal survivor is not a depth anchor.
+A spatial or temporal survivor was never treated as a depth anchor.
 
-## Test command
+## Reproduction commands
 
-From `C:\Dev\New_GEE`:
+Validation:
 
 ```powershell
+cd C:\Dev\New_GEE
+
 .\.venv\Scripts\python.exe -m pytest `
   ..\New_GEE_depth\tests\unit\test_icesat2_broad_track_campaign_v4_config.py `
   ..\New_GEE_depth\tests\unit\test_icesat2_broad_track_campaign.py `
@@ -88,7 +103,7 @@ From `C:\Dev\New_GEE`:
   ..\New_GEE_depth\tests\unit\test_icesat2_candidate_temporal_recovery.py -q
 ```
 
-## Scan command
+Scan:
 
 ```powershell
 .\.venv\Scripts\python.exe `
@@ -98,9 +113,7 @@ From `C:\Dev\New_GEE`:
   --tile-km 25
 ```
 
-The tile cache is resumable. Re-running the same command reuses successful cached tiles unless `--force` is supplied.
-
-## Mandatory finalization command
+Finalization:
 
 ```powershell
 .\.venv\Scripts\python.exe `
@@ -109,42 +122,14 @@ The tile cache is resumable. Re-running the same command reuses successful cache
   .\data\research\icesat2_broad_track_scan\southwest_us_earthwork_pilot_v4_el_paso_las_cruces
 ```
 
-Authoritative automated output:
-
-```text
-data/research/icesat2_broad_track_scan/
-southwest_us_earthwork_pilot_v4_el_paso_las_cruces/
-campaign_finalized_summary.json
-```
-
-## Decision rules
-
-### No spatial candidates
-
-Close Campaign 004. No dossier, context audit, parcel review, or records research is needed.
-
-### All spatial candidates fail temporal or stability gates
-
-Close Campaign 004 with zero survivors. Do not research records.
-
-### Automated context-review candidates remain
-
-Only candidates in `context_review_priority` may proceed to land-cover and exact-footprint review. Keep:
-
-```text
-record_lookup_priority = []
-records_research_ready = false
-candidate_is_depth_anchor = false
-```
-
-Records research may begin only after one named engineered project matches the complete supporting line, the event window, and a documented measured placed-material thickness.
-
 ## Protection boundary
 
-This campaign does not modify:
+Campaign 004 did not modify:
 
 - classifier behavior;
 - frontend result pages;
 - Option 5 outputs;
 - production numerical-depth output;
 - `main`.
+
+Campaign 005 is the active independent geographic search route. Tyrone Route A remains limited to attachments already requested.
