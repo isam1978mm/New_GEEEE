@@ -1,0 +1,29 @@
+{
+  "schema": "tyrone_route_b_map_well_pixels_v1",
+  "source_pdf": "GR010RE_Tyrone_2020_CCP_Text_Figures_Plates_Tables.pdf",
+  "source_pdf_page": 138,
+  "source_render": "GR010RE_Tyrone_2020_CCP_Text_Figures_Plates_Tables__page_0138.png",
+  "review_crop": "p138_3x_crop.png",
+  "image_width_pixels": 1100,
+  "image_height_pixels": 1000,
+  "coordinate_type": "manual_marker_center_pixels",
+  "estimated_marker_center_uncertainty_pixels": 3,
+  "purpose": "Discovery-only spatial pattern matching against official NMOSE point records.",
+  "warning": "These are approximate raster marker centers, not surveyed coordinates and not calibration control points.",
+  "points": [
+    {"id": "27-2005-05", "x": 384.174, "y": 119.000},
+    {"id": "27-2005-04", "x": 629.960, "y": 339.400},
+    {"id": "27-2005-06", "x": 383.174, "y": 448.000},
+    {"id": "27-2005-03", "x": 842.040, "y": 600.400},
+    {"id": "27-2004-01", "x": 532.125, "y": 624.667},
+    {"id": "MVR-2", "x": 471.826, "y": 655.435},
+    {"id": "P2-4", "x": 432.500, "y": 683.273}
+  ],
+  "does_not_prove": [
+    "that any OSE point is the named monitoring well",
+    "the Tyrone local-grid to UTM transformation",
+    "coordinate-tied TP5 or TP6 geometry",
+    "stable Sentinel-1 calibration geometry",
+    "numerical depth readiness"
+  ]
+}
