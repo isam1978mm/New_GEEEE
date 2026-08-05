@@ -2,8 +2,10 @@
 """Audit Tyrone OSE spatial-pattern hypotheses with independent checkpoints.
 
 Each seven-point discovery hypothesis is re-fit repeatedly using five points and
-validated on the two withheld points. This is a discovery credibility screen;
-it does not itself establish final TP5/TP6 geometry or unlock numerical depth.
+validated on the two withheld points. Both the five-point fit and the two-point
+independent check must satisfy the accuracy limits. This remains a discovery
+credibility screen; it does not establish final TP5/TP6 geometry or unlock
+numerical depth.
 """
 from __future__ import annotations
 
@@ -18,6 +20,8 @@ from typing import Any
 import numpy as np
 from pyproj import Transformer
 
+DEFAULT_FIT_RMSE_M = 5.0
+DEFAULT_FIT_MAX_M = 7.5
 DEFAULT_CHECK_RMSE_M = 5.0
 DEFAULT_CHECK_MAX_M = 7.5
 OUTPUT_NAME = "tyrone_ose_spatial_pattern_audit.json"
@@ -68,6 +72,26 @@ def _errors(source: np.ndarray, target: np.ndarray, matrix: np.ndarray, offset: 
     return np.sqrt(np.sum((predicted - target) ** 2, axis=1))
 
 
+def _strict_split_pass(
+    *,
+    fit_rmse_m: float,
+    fit_max_m: float,
+    check_rmse_m: float,
+    check_max_m: float,
+    fit_rmse_limit_m: float,
+    fit_max_limit_m: float,
+    check_rmse_limit_m: float,
+    check_max_limit_m: float,
+) -> bool:
+    """Require both fitted controls and withheld checks to pass."""
+    return (
+        fit_rmse_m <= fit_rmse_limit_m
+        and fit_max_m <= fit_max_limit_m
+        and check_rmse_m <= check_rmse_limit_m
+        and check_max_m <= check_max_limit_m
+    )
+
+
 def _map_lookup(report: dict[str, Any]) -> dict[str, tuple[float, float]]:
     points = report.get("map_config", {}).get("points")
     if not isinstance(points, list):
@@ -112,6 +136,8 @@ def audit_hypothesis(
     map_lookup: dict[str, tuple[float, float]],
     transformer: Transformer,
     *,
+    fit_rmse_m: float,
+    fit_max_m: float,
     check_rmse_m: float,
     check_max_m: float,
 ) -> dict[str, Any]:
@@ -132,18 +158,28 @@ def audit_hypothesis(
         matrix, offset, reflected = _fit_similarity(source[fit_indices], target[fit_indices])
         fit_errors = _errors(source[fit_indices], target[fit_indices], matrix, offset)
         check_errors = _errors(source[list(check_indices_tuple)], target[list(check_indices_tuple)], matrix, offset)
-        fit_rmse = float(np.sqrt(np.mean(fit_errors**2)))
-        check_rmse = float(np.sqrt(np.mean(check_errors**2)))
-        check_max = float(np.max(check_errors))
-        strict_pass = check_rmse <= check_rmse_m and check_max <= check_max_m
+        fit_rmse_value = float(np.sqrt(np.mean(fit_errors**2)))
+        fit_max_value = float(np.max(fit_errors))
+        check_rmse_value = float(np.sqrt(np.mean(check_errors**2)))
+        check_max_value = float(np.max(check_errors))
+        strict_pass = _strict_split_pass(
+            fit_rmse_m=fit_rmse_value,
+            fit_max_m=fit_max_value,
+            check_rmse_m=check_rmse_value,
+            check_max_m=check_max_value,
+            fit_rmse_limit_m=fit_rmse_m,
+            fit_max_limit_m=fit_max_m,
+            check_rmse_limit_m=check_rmse_m,
+            check_max_limit_m=check_max_m,
+        )
         splits.append(
             {
                 "fit_point_ids": [ids[index] for index in fit_indices],
                 "check_point_ids": [ids[index] for index in check_indices_tuple],
-                "fit_rmse_m": fit_rmse,
-                "fit_max_m": float(np.max(fit_errors)),
-                "check_rmse_m": check_rmse,
-                "check_max_m": check_max,
+                "fit_rmse_m": fit_rmse_value,
+                "fit_max_m": fit_max_value,
+                "check_rmse_m": check_rmse_value,
+                "check_max_m": check_max_value,
                 "check_residuals_m": {
                     ids[index]: float(error)
                     for index, error in zip(check_indices_tuple, check_errors, strict=True)
@@ -152,11 +188,17 @@ def audit_hypothesis(
                 "strict_pass": strict_pass,
             }
         )
-    splits.sort(key=lambda row: (not row["strict_pass"], row["check_rmse_m"], row["check_max_m"], row["fit_rmse_m"]))
+    splits.sort(
+        key=lambda row: (
+            not row["strict_pass"],
+            max(row["fit_rmse_m"], row["check_rmse_m"]),
+            max(row["fit_max_m"], row["check_max_m"]),
+        )
+    )
     passing = [row for row in splits if row["strict_pass"]]
     return {
         "matched_count": len(ids),
-        "status": "credible_discovery_pattern" if passing else "discovery_pattern_failed_independent_accuracy",
+        "status": "credible_discovery_pattern" if passing else "discovery_pattern_failed_combined_accuracy",
         "strict_passing_split_count": len(passing),
         "best_split": splits[0] if splits else None,
         "split_count": len(splits),
@@ -166,6 +208,8 @@ def audit_hypothesis(
 def audit_report(
     report: dict[str, Any],
     *,
+    fit_rmse_m: float = DEFAULT_FIT_RMSE_M,
+    fit_max_m: float = DEFAULT_FIT_MAX_M,
     check_rmse_m: float = DEFAULT_CHECK_RMSE_M,
     check_max_m: float = DEFAULT_CHECK_MAX_M,
 ) -> dict[str, Any]:
@@ -181,6 +225,8 @@ def audit_report(
                 hypothesis,
                 map_lookup,
                 transformer,
+                fit_rmse_m=fit_rmse_m,
+                fit_max_m=fit_max_m,
                 check_rmse_m=check_rmse_m,
                 check_max_m=check_max_m,
             ),
@@ -191,14 +237,19 @@ def audit_report(
         key=lambda row: (
             row["status"] != "credible_discovery_pattern",
             -row.get("strict_passing_split_count", 0),
-            (row.get("best_split") or {}).get("check_rmse_m", math.inf),
+            max(
+                (row.get("best_split") or {}).get("fit_rmse_m", math.inf),
+                (row.get("best_split") or {}).get("check_rmse_m", math.inf),
+            ),
         )
     )
     credible = [row for row in audited if row["status"] == "credible_discovery_pattern"]
     return {
-        "schema": "tyrone_ose_spatial_pattern_audit_v1",
-        "status": "credible_discovery_pattern_found" if credible else "all_discovery_patterns_failed_independent_accuracy",
+        "schema": "tyrone_ose_spatial_pattern_audit_v2",
+        "status": "credible_discovery_pattern_found" if credible else "all_discovery_patterns_failed_combined_accuracy",
         "thresholds": {
+            "fit_rmse_m_max": fit_rmse_m,
+            "fit_max_residual_m_max": fit_max_m,
             "check_rmse_m_max": check_rmse_m,
             "check_max_residual_m_max": check_max_m,
             "fit_points_per_split": 5,
@@ -207,6 +258,11 @@ def audit_report(
         "input_hypothesis_count": len(hypotheses),
         "credible_hypothesis_count": len(credible),
         "hypotheses": audited,
+        "correction": (
+            "Version 1 incorrectly allowed a split to pass when only the two withheld "
+            "check points met the thresholds. Version 2 also requires all five fit controls "
+            "to meet the same RMSE and maximum-residual limits."
+        ),
         "warning": (
             "Even a credible seven-well discovery pattern is not the final geometry gate. "
             "The final route still requires at least six well-distributed controls, two independent "
@@ -221,15 +277,20 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--hypotheses-json", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--fit-rmse-m", type=float, default=DEFAULT_FIT_RMSE_M)
+    parser.add_argument("--fit-max-m", type=float, default=DEFAULT_FIT_MAX_M)
     parser.add_argument("--check-rmse-m", type=float, default=DEFAULT_CHECK_RMSE_M)
     parser.add_argument("--check-max-m", type=float, default=DEFAULT_CHECK_MAX_M)
     args = parser.parse_args()
     try:
-        if args.check_rmse_m <= 0 or args.check_max_m <= 0:
+        thresholds = (args.fit_rmse_m, args.fit_max_m, args.check_rmse_m, args.check_max_m)
+        if any(value <= 0 for value in thresholds):
             raise ValueError("accuracy thresholds must be positive")
         report = json.loads(args.hypotheses_json.read_text(encoding="utf-8-sig"))
         audit = audit_report(
             report,
+            fit_rmse_m=args.fit_rmse_m,
+            fit_max_m=args.fit_max_m,
             check_rmse_m=args.check_rmse_m,
             check_max_m=args.check_max_m,
         )
@@ -237,26 +298,37 @@ def main() -> int:
         output = args.output_dir / OUTPUT_NAME
         output.write_text(json.dumps(audit, indent=2) + "\n", encoding="utf-8")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(json.dumps({
-            "status": "spatial_hypothesis_audit_failed",
-            "error": str(exc),
-            "coordinate_geometry_unblocked": False,
-            "numerical_depth_unlocked": False,
-        }, indent=2), file=sys.stderr)
+        print(
+            json.dumps(
+                {
+                    "status": "spatial_hypothesis_audit_failed",
+                    "error": str(exc),
+                    "coordinate_geometry_unblocked": False,
+                    "numerical_depth_unlocked": False,
+                },
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
         return 1
 
     best = audit["hypotheses"][0] if audit["hypotheses"] else None
-    print(json.dumps({
-        "status": audit["status"],
-        "input_hypothesis_count": audit["input_hypothesis_count"],
-        "credible_hypothesis_count": audit["credible_hypothesis_count"],
-        "best_hypothesis_index": best.get("hypothesis_index") if best else None,
-        "best_status": best.get("status") if best else None,
-        "best_split": best.get("best_split") if best else None,
-        "json": str(output.resolve()),
-        "coordinate_geometry_unblocked": False,
-        "numerical_depth_unlocked": False,
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "status": audit["status"],
+                "input_hypothesis_count": audit["input_hypothesis_count"],
+                "credible_hypothesis_count": audit["credible_hypothesis_count"],
+                "best_hypothesis_index": best.get("hypothesis_index") if best else None,
+                "best_status": best.get("status") if best else None,
+                "best_split": best.get("best_split") if best else None,
+                "json": str(output.resolve()),
+                "coordinate_geometry_unblocked": False,
+                "numerical_depth_unlocked": False,
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
