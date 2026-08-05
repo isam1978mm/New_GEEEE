@@ -1,0 +1,16 @@
+{
+  "schema": "icesat2_broad_track_campaign_config_v1",
+  "campaign_id": "southwest_us_earthwork_pilot_v5_tucson_marana",
+  "description": "Fifth independent broad ATL08 terrain-step discovery campaign targeting the lower-relief Tucson-Marana Sonoran Desert corridor with mandatory temporal, terminal-stability, context-priority, and manual-context gates.",
+  "regions": [
+    {
+      "region_id": "tucson_marana_santa_cruz_valley_pilot",
+      "description": "Independent approximately 95 km north-south discovery corridor covering the Tucson-Marana Santa Cruz Valley for strict terrain-step candidate discovery in mixed urban, transportation, flood-control, industrial, agricultural, and open-desert context.",
+      "west": -111.30,
+      "south": 31.90,
+      "east": -110.80,
+      "north": 32.75,
+      "enabled": true
+    }
+  ]
+}
