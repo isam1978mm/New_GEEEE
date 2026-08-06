@@ -14,6 +14,7 @@ changed.
 from __future__ import annotations
 
 import math
+import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -55,7 +56,18 @@ def tile_bbox_wgs84(tile: Any) -> tuple[float, float, float, float]:
 
 
 def install_fix() -> None:
+    """Install the coordinate parser on every live canonical campaign module.
+
+    Some focused tests load the Campaign 007 module more than once and replace
+    its canonical ``sys.modules`` entry. Patch both the module captured by this
+    compatibility entry point and the module currently registered under the
+    canonical name so behavior is independent of import and test order.
+    """
+
     campaign._tile_bbox_wgs84 = tile_bbox_wgs84
+    current = sys.modules.get("scan_icesat2_fdep_polygon_campaign")
+    if current is not None:
+        setattr(current, "_tile_bbox_wgs84", tile_bbox_wgs84)
 
 
 def main() -> int:
