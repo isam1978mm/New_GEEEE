@@ -16,9 +16,15 @@ from __future__ import annotations
 import math
 import sys
 from collections.abc import Mapping, Sequence
+from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import scan_icesat2_fdep_polygon_campaign as campaign
+
+
+_CANONICAL_MODULE = "scan_icesat2_fdep_polygon_campaign"
+_CANONICAL_FILENAME = "scan_icesat2_fdep_polygon_campaign.py"
 
 
 def _coordinate_pair(point: object) -> tuple[float, float]:
@@ -55,19 +61,36 @@ def tile_bbox_wgs84(tile: Any) -> tuple[float, float, float, float]:
     return min(longitudes), min(latitudes), max(longitudes), max(latitudes)
 
 
+def _is_campaign_module(value: object) -> bool:
+    if not isinstance(value, ModuleType):
+        return False
+    if value.__name__ == _CANONICAL_MODULE:
+        return True
+    module_file = getattr(value, "__file__", None)
+    return bool(module_file) and Path(module_file).name == _CANONICAL_FILENAME
+
+
+def _patch_campaign_module(module: object) -> None:
+    if _is_campaign_module(module):
+        setattr(module, "_tile_bbox_wgs84", tile_bbox_wgs84)
+
+
 def install_fix() -> None:
     """Install the coordinate parser on every live canonical campaign module.
 
-    Some focused tests load the Campaign 007 module more than once and replace
-    its canonical ``sys.modules`` entry. Patch both the module captured by this
-    compatibility entry point and the module currently registered under the
-    canonical name so behavior is independent of import and test order.
+    Focused tests can load the Campaign 007 source more than once and retain an
+    older module object after replacing its canonical ``sys.modules`` entry.
+    Patch the captured import, the current canonical entry, every loaded copy of
+    the campaign module, and campaign-module references retained by test modules.
     """
 
-    campaign._tile_bbox_wgs84 = tile_bbox_wgs84
-    current = sys.modules.get("scan_icesat2_fdep_polygon_campaign")
-    if current is not None:
-        setattr(current, "_tile_bbox_wgs84", tile_bbox_wgs84)
+    _patch_campaign_module(campaign)
+    _patch_campaign_module(sys.modules.get(_CANONICAL_MODULE))
+
+    for loaded_module in tuple(sys.modules.values()):
+        _patch_campaign_module(loaded_module)
+        if isinstance(loaded_module, ModuleType):
+            _patch_campaign_module(getattr(loaded_module, "campaign", None))
 
 
 def main() -> int:
