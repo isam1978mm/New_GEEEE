@@ -97,8 +97,46 @@ def test_watchdog_surfaces_child_error(monkeypatch):
         )
 
 
-def test_watchdog_rejects_partial_h5coro_resource_alert(monkeypatch):
+def test_watchdog_retries_partial_read_then_accepts_clean_attempt(monkeypatch):
+    expected = {"rows": 31}
+    calls = 0
+
     def fake_run(command, *, check, timeout, capture_output, text):
+        nonlocal calls
+        calls += 1
+        result_path = Path(command[4])
+        with result_path.open("wb") as stream:
+            pickle.dump(expected, stream)
+        if calls == 1:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=(
+                    "Alert <-7>: Failure on resource "
+                    "ATL08_20210504235905_06291102_007_01.h5 beam gt3r: "
+                    "H5Coro::Future read failure on gt3r/land_segments/latitude\n"
+                ),
+                stderr="",
+            )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+
+    result = MODULE._query_atl08_with_timeout(
+        polygon=_polygon(),
+        start="2018-10-13T00:00:00Z",
+        end="2026-08-03T00:00:00Z",
+    )
+
+    assert calls == 2
+    assert result == expected
+
+
+def test_watchdog_rejects_partial_h5coro_after_all_attempts(monkeypatch):
+    calls = 0
+
+    def fake_run(command, *, check, timeout, capture_output, text):
+        nonlocal calls
+        calls += 1
         result_path = Path(command[4])
         with result_path.open("wb") as stream:
             pickle.dump({"rows": 30}, stream)
@@ -116,13 +154,15 @@ def test_watchdog_rejects_partial_h5coro_resource_alert(monkeypatch):
 
     with pytest.raises(
         MODULE.Campaign014PartialReadError,
-        match="ATL08_20210504235905_06291102_007_01.h5",
+        match="remained partial after 3 clean-read attempts",
     ):
         MODULE._query_atl08_with_timeout(
             polygon=_polygon(),
             start="2018-10-13T00:00:00Z",
             end="2026-08-03T00:00:00Z",
         )
+
+    assert calls == MODULE.DEFAULT_ATL08_TILE_ATTEMPTS
 
 
 def test_partial_read_detector_ignores_harmless_worker_output():
