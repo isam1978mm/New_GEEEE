@@ -33,9 +33,11 @@ def _polygon() -> list[dict[str, float]]:
 def test_watchdog_success_reads_child_result(monkeypatch):
     expected = {"rows": 14}
 
-    def fake_run(command, *, check, timeout):
+    def fake_run(command, *, check, timeout, capture_output, text):
         assert check is False
         assert timeout == MODULE.DEFAULT_ATL08_TILE_TIMEOUT_SECONDS
+        assert capture_output is True
+        assert text is True
         assert command[2] == MODULE.WORKER_FLAG
         request_path = Path(command[3])
         result_path = Path(command[4])
@@ -44,7 +46,7 @@ def test_watchdog_success_reads_child_result(monkeypatch):
         assert request["end"] == "2026-08-03T00:00:00Z"
         with result_path.open("wb") as stream:
             pickle.dump(expected, stream)
-        return SimpleNamespace(returncode=0)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
 
@@ -58,7 +60,7 @@ def test_watchdog_success_reads_child_result(monkeypatch):
 
 
 def test_watchdog_converts_timeout_to_tile_failure(monkeypatch):
-    def fake_run(command, *, check, timeout):
+    def fake_run(command, *, check, timeout, capture_output, text):
         raise subprocess.TimeoutExpired(command, timeout)
 
     monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
@@ -72,7 +74,7 @@ def test_watchdog_converts_timeout_to_tile_failure(monkeypatch):
 
 
 def test_watchdog_surfaces_child_error(monkeypatch):
-    def fake_run(command, *, check, timeout):
+    def fake_run(command, *, check, timeout, capture_output, text):
         error_path = Path(command[5])
         error_path.write_text(
             json.dumps(
@@ -83,7 +85,7 @@ def test_watchdog_surfaces_child_error(monkeypatch):
             ),
             encoding="utf-8",
         )
-        return SimpleNamespace(returncode=1)
+        return SimpleNamespace(returncode=1, stdout="", stderr="")
 
     monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
 
@@ -93,6 +95,39 @@ def test_watchdog_surfaces_child_error(monkeypatch):
             start="2018-10-13T00:00:00Z",
             end="2026-08-03T00:00:00Z",
         )
+
+
+def test_watchdog_rejects_partial_h5coro_resource_alert(monkeypatch):
+    def fake_run(command, *, check, timeout, capture_output, text):
+        result_path = Path(command[4])
+        with result_path.open("wb") as stream:
+            pickle.dump({"rows": 30}, stream)
+        return SimpleNamespace(
+            returncode=0,
+            stdout=(
+                "Alert <-7>: Failure on resource "
+                "ATL08_20210504235905_06291102_007_01.h5 beam gt3r: "
+                "H5Coro::Future read failure on gt3r/land_segments/latitude\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+
+    with pytest.raises(
+        MODULE.Campaign014PartialReadError,
+        match="ATL08_20210504235905_06291102_007_01.h5",
+    ):
+        MODULE._query_atl08_with_timeout(
+            polygon=_polygon(),
+            start="2018-10-13T00:00:00Z",
+            end="2026-08-03T00:00:00Z",
+        )
+
+
+def test_partial_read_detector_ignores_harmless_worker_output():
+    assert MODULE._partial_read_lines("normal progress\n", "") == []
+    assert MODULE._partial_read_lines(None, "warning without resource failure") == []
 
 
 def test_install_timeout_hook_changes_only_query_hook():
