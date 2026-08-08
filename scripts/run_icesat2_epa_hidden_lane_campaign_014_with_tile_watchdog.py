@@ -1,17 +1,14 @@
-"""Run Campaign 014 with a strict watchdog around each live ATL08 tile query.
+"""Run Campaign 014 with a strict retrying watchdog around live ATL08 tiles.
 
 This launcher changes only Campaign 014 execution. It installs the approved
 EPA Hidden Lane recent-earthwork campaign, then replaces the live SlideRule
 ATL08 query hook with a subprocess-backed wall-clock watchdog.
 
-In addition to the wall-clock timeout, the parent captures worker stdout/stderr
-and rejects a tile when SlideRule reports a resource/H5Coro read failure even if
-other partial data were returned successfully. This prevents a partial ATL08
-response from being cached and later mistaken for a scientifically complete
-zero-result.
-
-Scientific thresholds, source/event gates, finalizers, and application behavior
-are unchanged.
+The parent captures worker stdout/stderr and rejects any attempt where SlideRule
+reports a resource/H5Coro read failure even when partial data were returned.
+Each tile receives up to three independent full-query attempts; only a clean
+attempt may be cached. Scientific thresholds, source/event gates, finalizers,
+and application behavior are unchanged.
 """
 
 from __future__ import annotations
@@ -32,6 +29,7 @@ if __package__ in (None, ""):
 import scan_icesat2_epa_hidden_lane_recent_earthwork_campaign as campaign014
 
 DEFAULT_ATL08_TILE_TIMEOUT_SECONDS = 300.0
+DEFAULT_ATL08_TILE_ATTEMPTS = 3
 WORKER_FLAG = "--campaign014-atl08-worker"
 _ORIGINAL_QUERY_ATL08 = campaign014.campaign._query_atl08
 _PARTIAL_READ_MARKERS = (
@@ -45,7 +43,7 @@ class Campaign014TileTimeoutError(RuntimeError):
 
 
 class Campaign014PartialReadError(RuntimeError):
-    """Raised when SlideRule returns data while reporting a resource read failure."""
+    """Raised when every retry returns a partial SlideRule resource read."""
 
 
 def _worker_main(
@@ -103,9 +101,14 @@ def _query_atl08_with_timeout(
     start: str,
     end: str,
     timeout_seconds: float = DEFAULT_ATL08_TILE_TIMEOUT_SECONDS,
+    attempts: int = DEFAULT_ATL08_TILE_ATTEMPTS,
 ):
     if timeout_seconds <= 0:
         raise ValueError("ATL08 tile timeout must be positive")
+    if attempts <= 0:
+        raise ValueError("ATL08 tile attempts must be positive")
+
+    partial_history: list[list[str]] = []
 
     with tempfile.TemporaryDirectory(prefix="campaign014_atl08_") as temp_name:
         temp_dir = Path(temp_name)
@@ -133,52 +136,66 @@ def _query_atl08_with_timeout(
             str(result_path),
             str(error_path),
         ]
-        try:
-            completed = subprocess.run(
-                command,
-                check=False,
-                timeout=timeout_seconds,
-                capture_output=True,
-                text=True,
+
+        for attempt_number in range(1, attempts + 1):
+            result_path.unlink(missing_ok=True)
+            error_path.unlink(missing_ok=True)
+            try:
+                completed = subprocess.run(
+                    command,
+                    check=False,
+                    timeout=timeout_seconds,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise Campaign014TileTimeoutError(
+                    "Campaign 014 ATL08 tile query exceeded "
+                    f"{timeout_seconds:.0f} seconds on attempt {attempt_number}/{attempts}"
+                ) from exc
+
+            if error_path.is_file():
+                payload: Any = json.loads(error_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    error_type = payload.get("error_type") or "ATL08WorkerError"
+                    message = payload.get("error") or "unknown child-process failure"
+                else:
+                    error_type = "ATL08WorkerError"
+                    message = "malformed child-process error payload"
+                raise RuntimeError(f"{error_type}: {message}")
+
+            if completed.returncode != 0:
+                raise RuntimeError(
+                    "Campaign 014 ATL08 worker exited without a result "
+                    f"(exit code {completed.returncode})"
+                )
+
+            partial_failures = _partial_read_lines(
+                getattr(completed, "stdout", ""),
+                getattr(completed, "stderr", ""),
             )
-        except subprocess.TimeoutExpired as exc:
-            raise Campaign014TileTimeoutError(
-                "Campaign 014 ATL08 tile query exceeded "
-                f"{timeout_seconds:.0f} seconds"
-            ) from exc
+            if partial_failures:
+                partial_history.append(partial_failures)
+                continue
 
-        if error_path.is_file():
-            payload: Any = json.loads(error_path.read_text(encoding="utf-8"))
-            if isinstance(payload, dict):
-                error_type = payload.get("error_type") or "ATL08WorkerError"
-                message = payload.get("error") or "unknown child-process failure"
-            else:
-                error_type = "ATL08WorkerError"
-                message = "malformed child-process error payload"
-            raise RuntimeError(f"{error_type}: {message}")
+            if not result_path.is_file():
+                raise RuntimeError("Campaign 014 ATL08 worker produced no result file")
 
-        if completed.returncode != 0:
-            raise RuntimeError(
-                "Campaign 014 ATL08 worker exited without a result "
-                f"(exit code {completed.returncode})"
-            )
+            with result_path.open("rb") as stream:
+                return pickle.load(stream)
 
-        partial_failures = _partial_read_lines(
-            getattr(completed, "stdout", ""),
-            getattr(completed, "stderr", ""),
-        )
-        if partial_failures:
-            details = " | ".join(partial_failures[:8])
-            raise Campaign014PartialReadError(
-                "Campaign 014 ATL08 tile returned partial data with SlideRule "
-                f"resource-read failures: {details}"
-            )
-
-        if not result_path.is_file():
-            raise RuntimeError("Campaign 014 ATL08 worker produced no result file")
-
-        with result_path.open("rb") as stream:
-            return pickle.load(stream)
+    unique_failures: list[str] = []
+    seen: set[str] = set()
+    for failures in partial_history:
+        for line in failures:
+            if line not in seen:
+                unique_failures.append(line)
+                seen.add(line)
+    details = " | ".join(unique_failures[:12])
+    raise Campaign014PartialReadError(
+        "Campaign 014 ATL08 tile remained partial after "
+        f"{attempts} clean-read attempts: {details}"
+    )
 
 
 def install_timeout_hook() -> None:
