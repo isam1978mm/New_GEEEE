@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 MODULE_PATH = (
@@ -30,6 +31,14 @@ def _polygon() -> list[dict[str, float]]:
     ]
 
 
+def _partial_alert(resource: str) -> str:
+    return (
+        "Alert <-7>: Failure on resource "
+        f"{resource} beam gt3r: H5Coro::Future read failure on "
+        "gt3r/land_segments/latitude"
+    )
+
+
 def test_watchdog_success_reads_child_result(monkeypatch):
     expected = {"rows": 14}
 
@@ -42,6 +51,7 @@ def test_watchdog_success_reads_child_result(monkeypatch):
         request_path = Path(command[3])
         result_path = Path(command[4])
         request = json.loads(request_path.read_text(encoding="utf-8"))
+        assert request["operation"] == "broad"
         assert request["start"] == "2018-10-13T00:00:00Z"
         assert request["end"] == "2026-08-03T00:00:00Z"
         with result_path.open("wb") as stream:
@@ -110,11 +120,7 @@ def test_watchdog_retries_partial_read_then_accepts_clean_attempt(monkeypatch):
         if calls == 1:
             return SimpleNamespace(
                 returncode=0,
-                stdout=(
-                    "Alert <-7>: Failure on resource "
-                    "ATL08_20210504235905_06291102_007_01.h5 beam gt3r: "
-                    "H5Coro::Future read failure on gt3r/land_segments/latitude\n"
-                ),
+                stdout=_partial_alert("ATL08_20210504235905_06291102_007_01.h5"),
                 stderr="",
             )
         return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -131,38 +137,101 @@ def test_watchdog_retries_partial_read_then_accepts_clean_attempt(monkeypatch):
     assert result == expected
 
 
-def test_watchdog_rejects_partial_h5coro_after_all_attempts(monkeypatch):
+def test_broad_partial_falls_back_to_all_cmr_resources(monkeypatch):
+    resource_a = "ATL08_20210504235905_06291102_007_01.h5"
+    resource_b = "ATL08_20220228215041_10481406_007_01.h5"
+    broad_calls = 0
+    resource_calls: list[str] = []
+
+    def fake_worker(request, *, timeout_seconds):
+        nonlocal broad_calls
+        assert timeout_seconds == MODULE.DEFAULT_ATL08_TILE_TIMEOUT_SECONDS
+        operation = request["operation"]
+        if operation == "broad":
+            broad_calls += 1
+            return pd.DataFrame({"value": [0]}), [_partial_alert(resource_a)]
+        if operation == "cmr":
+            return [resource_a, resource_b], []
+        if operation == "resource":
+            resource = request["resource"]
+            resource_calls.append(resource)
+            value = 1 if resource == resource_a else 2
+            return pd.DataFrame({"value": [value]}), []
+        raise AssertionError(operation)
+
+    monkeypatch.setattr(MODULE, "_run_worker_request", fake_worker)
+
+    result = MODULE._query_atl08_with_timeout(
+        polygon=_polygon(),
+        start="2018-10-13T00:00:00Z",
+        end="2026-08-03T00:00:00Z",
+    )
+
+    assert broad_calls == MODULE.DEFAULT_ATL08_TILE_ATTEMPTS
+    assert resource_calls == [resource_a, resource_b]
+    assert result["value"].tolist() == [1, 2]
+
+
+def test_explicit_resource_retries_partial_then_accepts_clean(monkeypatch):
+    resource = "ATL08_20210504235905_06291102_007_01.h5"
+    resource_attempts = 0
+
+    def fake_worker(request, *, timeout_seconds):
+        nonlocal resource_attempts
+        if request["operation"] == "cmr":
+            return [resource], []
+        assert request["operation"] == "resource"
+        resource_attempts += 1
+        frame = pd.DataFrame({"value": [8]})
+        if resource_attempts < 3:
+            return frame, [_partial_alert(resource)]
+        return frame, []
+
+    monkeypatch.setattr(MODULE, "_run_worker_request", fake_worker)
+
+    result = MODULE._recover_by_explicit_resources(
+        polygon=_polygon(),
+        start="2018-10-13T00:00:00Z",
+        end="2026-08-03T00:00:00Z",
+        timeout_seconds=300,
+    )
+
+    assert resource_attempts == 3
+    assert result["value"].tolist() == [8]
+
+
+def test_explicit_resource_failure_keeps_tile_incomplete(monkeypatch):
+    resource = "ATL08_20210504235905_06291102_007_01.h5"
     calls = 0
 
-    def fake_run(command, *, check, timeout, capture_output, text):
+    def fake_worker(request, *, timeout_seconds):
         nonlocal calls
+        if request["operation"] == "cmr":
+            return [resource], []
         calls += 1
-        result_path = Path(command[4])
-        with result_path.open("wb") as stream:
-            pickle.dump({"rows": 30}, stream)
-        return SimpleNamespace(
-            returncode=0,
-            stdout=(
-                "Alert <-7>: Failure on resource "
-                "ATL08_20210504235905_06291102_007_01.h5 beam gt3r: "
-                "H5Coro::Future read failure on gt3r/land_segments/latitude\n"
-            ),
-            stderr="",
-        )
+        return pd.DataFrame({"value": [9]}), [_partial_alert(resource)]
 
-    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+    monkeypatch.setattr(MODULE, "_run_worker_request", fake_worker)
 
     with pytest.raises(
-        MODULE.Campaign014PartialReadError,
-        match="remained partial after 3 clean-read attempts",
+        MODULE.Campaign014ResourceRecoveryError,
+        match="failed 1/1 CMR-listed resources",
     ):
-        MODULE._query_atl08_with_timeout(
+        MODULE._recover_by_explicit_resources(
             polygon=_polygon(),
             start="2018-10-13T00:00:00Z",
             end="2026-08-03T00:00:00Z",
+            timeout_seconds=300,
         )
 
-    assert calls == MODULE.DEFAULT_ATL08_TILE_ATTEMPTS
+    assert calls == MODULE.DEFAULT_ATL08_RESOURCE_ATTEMPTS
+
+
+def test_unique_resource_names_deduplicates_without_dropping_order():
+    assert MODULE._unique_resource_names(["A.h5", "B.h5", "A.h5", " "]) == [
+        "A.h5",
+        "B.h5",
+    ]
 
 
 def test_partial_read_detector_ignores_harmless_worker_output():
