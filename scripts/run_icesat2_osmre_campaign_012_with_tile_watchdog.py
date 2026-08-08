@@ -5,6 +5,10 @@ without a wall-clock timeout. This Campaign-012-specific launcher installs the
 same subprocess isolation before the first live scan so completed tile caches
 remain resumable and a single remote request cannot freeze the entire campaign.
 
+The launcher uses the Campaign 012 OSMRE source-compatibility entry point, which
+keeps the approved Phase-I/contact/date/40 m gates but applies contact/date/size
+gates locally after a broader Phase-I server query.
+
 Scientific thresholds, OSMRE polygon/date gates, finalizers, and application
 behavior are unchanged.
 """
@@ -24,11 +28,11 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(root))
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import scan_icesat2_osmre_recent_phase1_bond_release_campaign as campaign012
+import scan_icesat2_osmre_recent_phase1_bond_release_campaign_fixed as campaign012
 
 DEFAULT_ATL08_TILE_TIMEOUT_SECONDS = 300.0
 WORKER_FLAG = "--campaign012-atl08-worker"
-_ORIGINAL_QUERY_ATL08 = campaign012.campaign._query_atl08
+_ORIGINAL_QUERY_ATL08 = campaign012.campaign012.campaign._query_atl08
 
 
 class Campaign012TileTimeoutError(RuntimeError):
@@ -143,7 +147,7 @@ def _query_atl08_with_timeout(
 def install_timeout_hook() -> None:
     """Install only the live ATL08 query watchdog for Campaign 012."""
 
-    campaign012.campaign._query_atl08 = _query_atl08_with_timeout
+    campaign012.campaign012.campaign._query_atl08 = _query_atl08_with_timeout
 
 
 def main() -> int:
