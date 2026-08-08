@@ -1,8 +1,8 @@
 """Campaign 012 live-source compatibility layer.
 
 The original Campaign 012 implementation applied the full status/contact/date
-filter in the ArcGIS ``where`` clause.  The first live run returned zero
-eligible polygons before ICESat-2 acquisition.  This compatibility layer keeps
+filter in the ArcGIS ``where`` clause. The first live run returned zero
+eligible polygons before ICESat-2 acquisition. This compatibility layer keeps
 exactly the same approved Campaign 012 target and scientific gates, but asks
 OSMRE only for Phase I records in the spatial envelope and applies the contact,
 date, identity, and >=40 m component filters locally.
@@ -26,6 +26,9 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import scan_icesat2_osmre_recent_phase1_bond_release_campaign as campaign012
+
+# Compatibility alias used by the existing Campaign 012 watchdog/tests.
+campaign = campaign012.campaign
 
 SOURCE_COMPAT_SCHEMA = "campaign012_osmre_source_compat_v1"
 
