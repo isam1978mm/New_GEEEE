@@ -1,0 +1,247 @@
+from __future__ import annotations
+
+import csv
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import rasterio
+
+from app.services.nb_math import build_proxy_layers, compute_point, norm01
+
+NB_SCHEMA = "nb_results_v1"
+NB_METHOD = "notebook_new_ipynb_proxy_addons_v1"
+AIX_MASK_STACK_NAME = "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy"
+
+
+def _not_available(reason: str) -> dict[str, Any]:
+    return {
+        "schema": NB_SCHEMA,
+        "status": "not_available",
+        "method": NB_METHOD,
+        "object_count": 0,
+        "reason": reason,
+        "unavailable_support": [],
+        "limitations": {
+            "physical_confirmation": False,
+            "metal_confirmation": False,
+            "calibrated_numerical_depth": False,
+            "fake_three_meter_fallback_used": False,
+        },
+        "objects": [],
+    }
+
+
+def _load_tif(path: Path, *, expected_shape: tuple[int, int] | None = None) -> np.ndarray | None:
+    if not path.is_file():
+        return None
+    try:
+        with rasterio.open(path) as dataset:
+            array = dataset.read(1).astype(np.float32)
+            nodata = dataset.nodata
+    except (OSError, rasterio.errors.RasterioError):
+        return None
+    if expected_shape is not None and array.shape != expected_shape:
+        return None
+    if nodata is not None and np.isfinite(nodata):
+        array[array == np.float32(nodata)] = np.nan
+    array[~np.isfinite(array)] = np.nan
+    return array
+
+
+def _load_aix_support(run_dir: Path, *, shape: tuple[int, int]) -> tuple[np.ndarray | None, np.ndarray | None]:
+    path = run_dir / "NPY_STACKS" / AIX_MASK_STACK_NAME
+    if not path.is_file():
+        return None, None
+    try:
+        stack = np.load(path).astype(np.float32)
+    except (OSError, ValueError):
+        return None, None
+    if stack.ndim != 3:
+        return None, None
+    if stack.shape[:2] == shape and stack.shape[-1] >= 5:
+        return stack[:, :, 0], stack[:, :, 4]
+    if stack.shape[1:] == shape and stack.shape[0] >= 5:
+        return stack[0], stack[4]
+    return None, None
+
+
+def _read_objects(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        return []
+    try:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            return list(csv.DictReader(handle))
+    except OSError:
+        return []
+
+
+def _object_point(row: dict[str, str], shape: tuple[int, int]) -> tuple[int, int] | None:
+    try:
+        if row.get("row_center") and row.get("col_center"):
+            rr = int(round(float(row["row_center"])))
+            cc = int(round(float(row["col_center"])))
+        else:
+            rr = int(round((float(row["row_min"]) + float(row["row_max"])) / 2.0))
+            cc = int(round((float(row["col_min"]) + float(row["col_max"])) / 2.0))
+    except (KeyError, TypeError, ValueError):
+        return None
+    return max(0, min(shape[0] - 1, rr)), max(0, min(shape[1] - 1, cc))
+
+
+def _sample(array: np.ndarray, row: int, col: int) -> float | None:
+    value = float(array[row, col])
+    return value if np.isfinite(value) else None
+
+
+def build_nb_results(run_dir: Path) -> dict[str, Any]:
+    """Read existing run outputs and build additive NB results. No run file is modified."""
+    object_rows = _read_objects(run_dir / "objects_index.csv")
+    if not object_rows:
+        return _not_available("object_results_unavailable")
+
+    vv_raw = _load_tif(run_dir / "VV_dB.tif")
+    vh_raw = _load_tif(run_dir / "VH_dB.tif")
+    if vv_raw is None or vh_raw is None or vv_raw.shape != vh_raw.shape:
+        return _not_available("radar_support_unavailable")
+    shape = vv_raw.shape
+    unavailable_support: set[str] = set()
+
+    def support(name: str, relative_path: str) -> tuple[np.ndarray, bool]:
+        array = _load_tif(run_dir / relative_path, expected_shape=shape)
+        if array is None:
+            unavailable_support.add(name)
+            return np.zeros(shape, dtype=np.float32), False
+        return array, True
+
+    ratio_raw, ratio_ok = support("radar_logratio", "logRatio_dB.tif")
+    gold_raw, gold_ok = support("gold_signal", "AI_READY_640/AI_READY_640_Secret_Gold_Halo.tif")
+    silver_raw, silver_ok = support("silver_signal", "AI_READY_640/AI_READY_640_Secret_Silver_Oxide.tif")
+    tunnel_raw, tunnel_ok = support("tunnel_signal", "AI_READY_640/AI_READY_640_Secret_Tunnel_Ceiling.tif")
+    thermal_raw, thermal_ok = support("thermal_inertia", "AI_READY_640/AI_READY_640_Secret_Thermal_Inertia.tif")
+    door_raw, door_ok = support("hidden_door_signal", "AI_READY_640/AI_READY_640_Secret_Hidden_Doors.tif")
+    mass_raw, mass_ok = support("mass_signal", "REPORT_640_Mass_Report.tif")
+    pottery_raw, pottery_ok = support("pottery_signal", "REPORT_640_Pottery_Report.tif")
+    tpi_raw, tpi_ok = support("tpi", "TPI.tif")
+    rough_raw, rough_ok = support("roughness", "roughness.tif")
+    curv_raw, curv_ok = support("curvature", "curvature.tif")
+    thermal_day_raw, thermal_day_ok = support("thermal_day", "lst.tif")
+
+    vegroot_raw, clay_raw = _load_aix_support(run_dir, shape=shape)
+    aix_ok = vegroot_raw is not None and clay_raw is not None
+    if not aix_ok:
+        unavailable_support.add("aix_dem_matched_masks")
+        vegroot_raw = np.zeros(shape, dtype=np.float32)
+        clay_raw = np.zeros(shape, dtype=np.float32)
+
+    # These exact notebook support layers are not currently persisted by the production run.
+    # They are represented only as temporary math placeholders; any user-facing field that
+    # depends on them abstains with NOT AVAILABLE rather than using the placeholder as data.
+    unavailable_support.update({"asc_desc_consistency", "thermal_delta"})
+    ascdesc = np.zeros(shape, dtype=np.float32)
+    thermal_delta = np.zeros(shape, dtype=np.float32)
+    ascdesc_ok = False
+    thermal_delta_ok = False
+
+    normalized = {
+        "gold": norm01(gold_raw),
+        "silver": norm01(silver_raw),
+        "tunnel": norm01(tunnel_raw),
+        "thermal": norm01(thermal_raw),
+        "door": norm01(door_raw),
+        "mass": norm01(mass_raw),
+        "pottery": norm01(pottery_raw),
+        "tpi": norm01(tpi_raw),
+        "rough": norm01(rough_raw),
+        "curv": norm01(curv_raw),
+    }
+    proxies = build_proxy_layers(
+        vv=vv_raw,
+        vh=vh_raw,
+        ratio=ratio_raw,
+        gold=gold_raw,
+        silver=silver_raw,
+        thermal_day=thermal_day_raw,
+        thermal_inertia=thermal_raw,
+        rough=rough_raw,
+        curv=curv_raw,
+        tpi=tpi_raw,
+        vegroot=vegroot_raw,
+        clay_thermal=clay_raw,
+        thermal_delta=thermal_delta,
+    )
+
+    proxy_ok = {
+        "quartz": gold_ok and thermal_day_ok and aix_ok and rough_ok,
+        "lime": aix_ok and rough_ok and curv_ok and tpi_ok and thermal_day_ok,
+        "moist": aix_ok and thermal_day_ok and ratio_ok,
+        "oxid": silver_ok and aix_ok and gold_ok,
+        "sar_comp": ratio_ok,
+    }
+    thermal_risk_ok = thermal_day_ok and thermal_delta_ok and thermal_ok
+    proxy_ok["risk"] = all(proxy_ok[name] for name in ("quartz", "lime", "moist", "oxid")) and thermal_risk_ok
+
+    array_ok = {
+        "gold": gold_ok,
+        "silver": silver_ok,
+        "tunnel": tunnel_ok,
+        "thermal": thermal_ok,
+        "door": door_ok,
+        "mass": mass_ok,
+        "pottery": pottery_ok,
+        "tpi": tpi_ok,
+        "rough": rough_ok,
+        "curv": curv_ok,
+        **proxy_ok,
+        "ascdesc": ascdesc_ok,
+        "delta": thermal_delta_ok,
+    }
+
+    vv_lin = np.power(10.0, vv_raw / 10.0).astype(np.float32)
+    vh_lin = np.power(10.0, vh_raw / 10.0).astype(np.float32)
+    nano_depth = np.full(shape, np.nan, dtype=np.float32)
+    valid = np.isfinite(vv_lin) & np.isfinite(vh_lin)
+    nano_depth[valid] = (vv_lin[valid] / (vh_lin[valid] + np.float32(1e-6))).astype(np.float32)
+
+    arrays = {
+        **normalized,
+        **proxies,
+        "ascdesc": ascdesc,
+        "delta": thermal_delta,
+        "nano_depth_penetration": nano_depth,
+    }
+
+    objects: list[dict[str, Any]] = []
+    for row in object_rows:
+        point = _object_point(row, shape)
+        if point is None:
+            continue
+        try:
+            object_id = int(float(row["object_id"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+        rr, cc = point
+        values: dict[str, float | None] = {}
+        for name, array in arrays.items():
+            if name == "nano_depth_penetration" or array_ok.get(name, False):
+                values[name] = _sample(array, rr, cc)
+        objects.append({"object_id": object_id, **compute_point(values)})
+
+    if not objects:
+        return _not_available("object_locations_unavailable")
+
+    return {
+        "schema": NB_SCHEMA,
+        "status": "partial" if unavailable_support else "available",
+        "method": NB_METHOD,
+        "object_count": len(objects),
+        "reason": None,
+        "unavailable_support": sorted(unavailable_support),
+        "limitations": {
+            "physical_confirmation": False,
+            "metal_confirmation": False,
+            "calibrated_numerical_depth": False,
+            "fake_three_meter_fallback_used": False,
+        },
+        "objects": sorted(objects, key=lambda item: int(item["object_id"])),
+    }
