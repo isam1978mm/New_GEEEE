@@ -12,13 +12,12 @@ def test_results_panels_remount_when_an_active_run_reaches_done() -> None:
     assert 'import { getRunDetail } from "../api/client";' in source
     assert 'run.state === "queued" || run.state === "running"' in source
     assert 'run.state === "done" && sawActiveRun' in source
-    assert 'key={`classifier:${runId}:${completionRevision}`}' in source
-    assert 'key={`nb:${runId}:${completionRevision}`}' in source
+    assert 'return <ResultsPanels key={`${runId}:${completionRevision}`} runId={runId} />;' in source
 
 
 def test_results_refresh_fix_preserves_existing_classifier_and_nb_panels() -> None:
     source = PANEL.read_text(encoding="utf-8")
 
-    assert '<ClassifierOnlyResultsPanel' in source
-    assert '<NBResultsPanel' in source
+    assert '<ClassifierOnlyResultsPanel runId={runId} />' in source
+    assert '<NBResultsPanel runId={runId} />' in source
     assert "Option5ResultsPanel" not in source
