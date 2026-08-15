@@ -13,10 +13,14 @@ const RESULTS_COMPLETION_POLL_MS = 2000;
 export function ClassifierResultsPanel({ runId }: ClassifierResultsPanelProps) {
   const completionRevision = useCompletionRevision(runId);
 
+  return <ResultsPanels key={`${runId}:${completionRevision}`} runId={runId} />;
+}
+
+function ResultsPanels({ runId }: ClassifierResultsPanelProps) {
   return (
     <>
-      <ClassifierOnlyResultsPanel key={`classifier:${runId}:${completionRevision}`} runId={runId} />
-      <NBResultsPanel key={`nb:${runId}:${completionRevision}`} runId={runId} />
+      <ClassifierOnlyResultsPanel runId={runId} />
+      <NBResultsPanel runId={runId} />
     </>
   );
 }
