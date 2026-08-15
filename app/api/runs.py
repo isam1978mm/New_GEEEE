@@ -28,6 +28,7 @@ from app.pipeline.stages.gps_compare import GpsComparisonStage
 from app.pipeline.stages.grid import GridSpec, GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
+from app.pipeline.stages.nb_exact_support import NbExactSupportStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.run_quality import RunQualityStage
@@ -418,6 +419,7 @@ async def run_core_pipeline_for_run(
                     S2IndicesStage(grid_spec=grid_spec),
                     DemDerivativesStage(grid_spec=grid_spec),
                     ThermalStage(grid_spec=grid_spec),
+                    NbExactSupportStage(grid_spec=grid_spec),
                     SecretLayersStage(
                         grid_spec=grid_spec,
                         hidden_doors_fetcher=create_ee_hidden_doors_fetcher(settings, grid_spec),
