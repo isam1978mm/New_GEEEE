@@ -6,6 +6,7 @@ PANEL = ROOT / "frontend-v2" / "src" / "app" / "components" / "ClassifierResults
 
 
 # Keep this regression additive: refresh lifecycle only, no classifier/Option 5 replacement.
+# Final-head CI anchor after the generated SPA assets were committed by validation.
 def test_results_panels_wait_for_actual_result_readiness_after_done() -> None:
     source = PANEL.read_text(encoding="utf-8")
 
