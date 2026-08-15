@@ -79,7 +79,6 @@ SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("s2_indices", "Sentinel-2 indices"),
     ("dem_derivatives", "DEM derivatives"),
     ("thermal", "Thermal"),
-    ("nb_exact_support", "Notebook support"),
     ("secret_layers", "Secret layers"),
     ("report_640", "Report 640"),
     ("feature_stacks", "Feature stacks"),
