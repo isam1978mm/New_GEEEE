@@ -12,6 +12,9 @@ from app.services.nb_math import build_proxy_layers, compute_point, norm01
 NB_SCHEMA = "nb_results_v1"
 NB_METHOD = "notebook_new_ipynb_proxy_addons_v1"
 AIX_MASK_STACK_NAME = "AIX_2022_2026FEB_CLOUDLT3_DEM_MATCHED_MASKS_STACK_640.npy"
+STAGE2D_MATRIX_RELATIVE_PATH = Path("NPY_STACKS") / "AI_MASTER_MATRIX_640_STAGE2D_FALSE_SIGNATURE.tif"
+STAGE2D_ASC_DESC_BAND = "FS_ASC_DESC_CONSISTENCY_640"
+STAGE2D_THERMAL_DELTA_BAND = "THERMAL_DELTA_DAY_NIGHT_PROXY"
 
 
 def _not_available(reason: str) -> dict[str, Any]:
@@ -47,6 +50,44 @@ def _load_tif(path: Path, *, expected_shape: tuple[int, int] | None = None) -> n
         array[array == np.float32(nodata)] = np.nan
     array[~np.isfinite(array)] = np.nan
     return array
+
+
+def _load_stage2d_exact_support(
+    run_dir: Path,
+    *,
+    shape: tuple[int, int],
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """Load the exact Stage 2D bands consumed by new.ipynb Stage 5.
+
+    The notebook writes both bands into AI_MASTER_MATRIX_640_STAGE2D_FALSE_SIGNATURE.tif
+    and Stage 5 selects them by the ``asc_desc`` and ``thermal_delta`` names. Stage 2D
+    declares nodata=0.0 even though zero is also a valid normalized value, so this loader
+    intentionally preserves finite zeros instead of treating the dataset nodata metadata
+    as a missing-data mask.
+    """
+    path = run_dir / STAGE2D_MATRIX_RELATIVE_PATH
+    if not path.is_file():
+        return None, None
+    try:
+        with rasterio.open(path) as dataset:
+            if dataset.shape != shape:
+                return None, None
+            band_indexes = {
+                str(description).strip(): index
+                for index, description in enumerate(dataset.descriptions, start=1)
+                if description not in (None, "", " ")
+            }
+            asc_index = band_indexes.get(STAGE2D_ASC_DESC_BAND)
+            delta_index = band_indexes.get(STAGE2D_THERMAL_DELTA_BAND)
+            ascdesc = dataset.read(asc_index).astype(np.float32) if asc_index is not None else None
+            thermal_delta = dataset.read(delta_index).astype(np.float32) if delta_index is not None else None
+    except (OSError, rasterio.errors.RasterioError):
+        return None, None
+
+    for array in (ascdesc, thermal_delta):
+        if array is not None:
+            array[~np.isfinite(array)] = np.nan
+    return ascdesc, thermal_delta
 
 
 def _load_aix_support(run_dir: Path, *, shape: tuple[int, int]) -> tuple[np.ndarray | None, np.ndarray | None]:
@@ -134,14 +175,19 @@ def build_nb_results(run_dir: Path) -> dict[str, Any]:
         vegroot_raw = np.zeros(shape, dtype=np.float32)
         clay_raw = np.zeros(shape, dtype=np.float32)
 
-    # These exact notebook support layers are not currently persisted by the production run.
-    # They are represented only as temporary math placeholders; any user-facing field that
-    # depends on them abstains with NOT AVAILABLE rather than using the placeholder as data.
-    unavailable_support.update({"asc_desc_consistency", "thermal_delta"})
-    ascdesc = np.zeros(shape, dtype=np.float32)
-    thermal_delta = np.zeros(shape, dtype=np.float32)
-    ascdesc_ok = False
-    thermal_delta_ok = False
+    ascdesc_exact, thermal_delta_exact = _load_stage2d_exact_support(run_dir, shape=shape)
+    ascdesc_ok = ascdesc_exact is not None
+    thermal_delta_ok = thermal_delta_exact is not None
+    if ascdesc_ok:
+        ascdesc = ascdesc_exact
+    else:
+        unavailable_support.add("asc_desc_consistency")
+        ascdesc = np.zeros(shape, dtype=np.float32)
+    if thermal_delta_ok:
+        thermal_delta = thermal_delta_exact
+    else:
+        unavailable_support.add("thermal_delta")
+        thermal_delta = np.zeros(shape, dtype=np.float32)
 
     normalized = {
         "gold": norm01(gold_raw),
