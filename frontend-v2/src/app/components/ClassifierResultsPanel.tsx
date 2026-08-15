@@ -31,7 +31,6 @@ function useCompletionRevision(runId: string) {
   useEffect(() => {
     let cancelled = false;
     let retryTimer: number | null = null;
-    let sawActiveRun = false;
 
     async function checkRunState() {
       try {
@@ -41,14 +40,17 @@ function useCompletionRevision(runId: string) {
         }
 
         if (run.state === "queued" || run.state === "running") {
-          sawActiveRun = true;
           retryTimer = window.setTimeout(() => {
             void checkRunState();
           }, RESULTS_COMPLETION_POLL_MS);
           return;
         }
 
-        if (run.state === "done" && sawActiveRun) {
+        // A completed run must force one fresh Results mount even when this
+        // component's first lifecycle check already sees `done`. The previous
+        // implementation required observing queued/running first, which left
+        // stale "not available" results visible until a manual refresh.
+        if (run.state === "done") {
           setRevision((current) => current + 1);
         }
       } catch (_error) {
