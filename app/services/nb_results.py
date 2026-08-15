@@ -7,6 +7,11 @@ from typing import Any
 import numpy as np
 import rasterio
 
+from app.services.nb_exact_support import (
+    ASC_DESC_CONSISTENCY_FILENAME,
+    NB_EXACT_SUPPORT_DIR,
+    THERMAL_DELTA_FILENAME,
+)
 from app.services.nb_math import build_proxy_layers, compute_point, norm01
 
 NB_SCHEMA = "nb_results_v1"
@@ -87,6 +92,17 @@ def _load_stage2d_exact_support(
     for array in (ascdesc, thermal_delta):
         if array is not None:
             array[~np.isfinite(array)] = np.nan
+    return ascdesc, thermal_delta
+
+
+def _load_produced_exact_support(
+    run_dir: Path,
+    *,
+    shape: tuple[int, int],
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    support_dir = run_dir / NB_EXACT_SUPPORT_DIR
+    ascdesc = _load_tif(support_dir / ASC_DESC_CONSISTENCY_FILENAME, expected_shape=shape)
+    thermal_delta = _load_tif(support_dir / THERMAL_DELTA_FILENAME, expected_shape=shape)
     return ascdesc, thermal_delta
 
 
@@ -176,6 +192,12 @@ def build_nb_results(run_dir: Path) -> dict[str, Any]:
         clay_raw = np.zeros(shape, dtype=np.float32)
 
     ascdesc_exact, thermal_delta_exact = _load_stage2d_exact_support(run_dir, shape=shape)
+    produced_ascdesc, produced_thermal_delta = _load_produced_exact_support(run_dir, shape=shape)
+    if ascdesc_exact is None:
+        ascdesc_exact = produced_ascdesc
+    if thermal_delta_exact is None:
+        thermal_delta_exact = produced_thermal_delta
+
     ascdesc_ok = ascdesc_exact is not None
     thermal_delta_ok = thermal_delta_exact is not None
     if ascdesc_ok:
