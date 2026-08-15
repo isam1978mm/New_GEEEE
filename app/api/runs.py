@@ -28,6 +28,7 @@ from app.pipeline.stages.gps_compare import GpsComparisonStage
 from app.pipeline.stages.grid import GridSpec, GridStage, build_run_grid
 from app.pipeline.stages.hypercube import HypercubeStage
 from app.pipeline.stages.location_exports import LocationExportsStage
+from app.pipeline.stages.nb_exact_support import NbExactSupportStage
 from app.pipeline.stages.object_extract import ObjectExtractStage
 from app.pipeline.stages.pca_anomaly import PcaAnomalyStage
 from app.pipeline.stages.run_quality import RunQualityStage
@@ -78,6 +79,7 @@ SAFE_STAGE_PROGRESS: tuple[tuple[str, str], ...] = (
     ("s2_indices", "Sentinel-2 indices"),
     ("dem_derivatives", "DEM derivatives"),
     ("thermal", "Thermal"),
+    ("nb_exact_support", "Notebook support"),
     ("secret_layers", "Secret layers"),
     ("report_640", "Report 640"),
     ("feature_stacks", "Feature stacks"),
@@ -238,7 +240,7 @@ async def get_deletion_audit(
                 deleted_files_count=record.deleted_files_count,
                 deleted_dirs_count=record.deleted_dirs_count,
                 freed_bytes=record.freed_bytes,
-                status=record.status,
+                status="deleted",
                 message=record.message,
             )
             for record in records
@@ -418,6 +420,7 @@ async def run_core_pipeline_for_run(
                     S2IndicesStage(grid_spec=grid_spec),
                     DemDerivativesStage(grid_spec=grid_spec),
                     ThermalStage(grid_spec=grid_spec),
+                    NbExactSupportStage(grid_spec=grid_spec),
                     SecretLayersStage(
                         grid_spec=grid_spec,
                         hidden_doors_fetcher=create_ee_hidden_doors_fetcher(settings, grid_spec),
