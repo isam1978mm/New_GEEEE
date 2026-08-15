@@ -25,29 +25,21 @@ def _valid_mask(array: np.ndarray, *, nodata: float | None) -> np.ndarray:
 
 
 def notebook_robust_norm01(array: np.ndarray, *, nodata: float | None) -> np.ndarray:
-    """Reproduce the notebook Stage 2C/2D 2nd/98th-percentile normalization.
-
-    Invalid pixels are zero-filled after normalization, matching the notebook's
-    normalized matrix behavior. At least ten valid pixels are required so an
-    optional support producer cannot manufacture a layer from insufficient data.
-    """
-    values = np.asarray(array, dtype=np.float32)
+    """Reproduce the notebook Stage 2B/2C/2D robust_norm01 helper."""
+    values = np.asarray(array, dtype=np.float32).copy()
     valid = _valid_mask(values, nodata=nodata)
-    finite_values = values[valid]
-    if finite_values.size < MIN_ROBUST_NORM_VALID_PIXELS:
-        raise ExactNotebookSupportUnavailable("insufficient_valid_pixels")
+    values[~valid] = np.nan
+    if int(valid.sum()) < MIN_ROBUST_NORM_VALID_PIXELS:
+        return np.zeros_like(values, dtype=np.float32)
 
-    low, high = np.percentile(finite_values.astype(np.float64), [2.0, 98.0])
-    output = np.zeros(values.shape, dtype=np.float32)
-    if not np.isfinite(low) or not np.isfinite(high) or high <= low:
-        return output
+    low, high = np.nanpercentile(values[valid], [2.0, 98.0])
+    if abs(float(high) - float(low)) < 1e-6:
+        return np.zeros_like(values, dtype=np.float32)
 
-    output[valid] = np.clip(
-        (values[valid].astype(np.float64) - low) / (high - low),
-        0.0,
-        1.0,
-    ).astype(np.float32)
-    return output
+    output = (values - np.float32(low)) / np.float32(high - low)
+    output = np.clip(output, 0.0, 1.0)
+    output[~np.isfinite(output)] = 0.0
+    return output.astype(np.float32)
 
 
 def compute_asc_desc_consistency(
@@ -58,23 +50,27 @@ def compute_asc_desc_consistency(
     desc_vh: np.ndarray,
     nodata: float | None,
 ) -> np.ndarray:
-    """Reproduce new.ipynb Stage 2D FS_ASC_DESC_CONSISTENCY_640."""
+    """Reproduce Stage 2B normalization plus Stage 2D ASC/DESC consistency."""
     arrays = [np.asarray(value, dtype=np.float32) for value in (asc_vv, asc_vh, desc_vv, desc_vh)]
     shape = arrays[0].shape
     if any(array.shape != shape for array in arrays[1:]):
         raise ExactNotebookSupportUnavailable("asc_desc_shape_mismatch")
 
-    prepared: list[np.ndarray] = []
-    for array in arrays:
-        valid = _valid_mask(array, nodata=nodata)
-        copy = array.astype(np.float32, copy=True)
-        copy[~valid] = np.nan
-        prepared.append(copy)
+    # Stage 2B normalizes every available source layer before it is put in the
+    # AI master matrix. Stage 2D then normalizes the ASC/DESC energies again.
+    asc_vv_n = notebook_robust_norm01(arrays[0], nodata=nodata)
+    asc_vh_n = notebook_robust_norm01(arrays[1], nodata=nodata)
+    desc_vv_n = notebook_robust_norm01(arrays[2], nodata=nodata)
+    desc_vh_n = notebook_robust_norm01(arrays[3], nodata=nodata)
 
-    asc_energy_raw = np.float32(0.5) * prepared[0] + np.float32(0.5) * prepared[1]
-    desc_energy_raw = np.float32(0.5) * prepared[2] + np.float32(0.5) * prepared[3]
-    asc_energy = notebook_robust_norm01(asc_energy_raw, nodata=None)
-    desc_energy = notebook_robust_norm01(desc_energy_raw, nodata=None)
+    asc_energy = notebook_robust_norm01(
+        np.float32(0.5) * asc_vv_n + np.float32(0.5) * asc_vh_n,
+        nodata=None,
+    )
+    desc_energy = notebook_robust_norm01(
+        np.float32(0.5) * desc_vv_n + np.float32(0.5) * desc_vh_n,
+        nodata=None,
+    )
     asc_desc_diff = notebook_robust_norm01(np.abs(asc_energy - desc_energy), nodata=None)
     return np.clip(np.float32(1.0) - asc_desc_diff, 0.0, 1.0).astype(np.float32)
 
