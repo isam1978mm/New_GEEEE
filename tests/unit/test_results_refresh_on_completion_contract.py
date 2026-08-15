@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PANEL = ROOT / "frontend-v2" / "src" / "app" / "components" / "ClassifierResultsPanel.tsx"
 
 
+# Keep this regression additive: refresh lifecycle only, no classifier/Option 5 replacement.
 def test_results_panels_remount_when_an_active_run_reaches_done() -> None:
     source = PANEL.read_text(encoding="utf-8")
 
