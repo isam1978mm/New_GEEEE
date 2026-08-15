@@ -240,7 +240,7 @@ async def get_deletion_audit(
                 deleted_files_count=record.deleted_files_count,
                 deleted_dirs_count=record.deleted_dirs_count,
                 freed_bytes=record.freed_bytes,
-                status="deleted",
+                status=record.status,
                 message=record.message,
             )
             for record in records
