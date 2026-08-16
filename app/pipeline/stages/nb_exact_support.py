@@ -104,10 +104,10 @@ def _sample_multiband(image, *, band_names: list[str], grid_spec: GridSpec) -> d
 
 
 def _speckle_filter(image):
-    return image.focalMean(radius=1.5, kernelType="circle", units="pixels").copyProperties(
-        image,
-        image.propertyNames(),
-    )
+    # Earth Engine copyProperties returns Element even when the destination is an
+    # Image. Re-wrap it so downstream Image methods such as rename remain valid.
+    filtered = image.focalMean(radius=1.5, kernelType="circle", units="pixels")
+    return ee.Image(filtered.copyProperties(image, image.propertyNames()))
 
 
 def _prep_landsat_l2(image):
@@ -117,21 +117,21 @@ def _prep_landsat_l2(image):
     cirrus = qa.bitwiseAnd(1 << 2).eq(0)
     mask = cloud_shadow.And(clouds).And(cirrus)
     lst_k = image.select("ST_B10").multiply(0.00341802).add(149.0).rename("LST_DAY_K_LANDSAT")
-    return lst_k.updateMask(mask).copyProperties(image, ["system:time_start"])
+    return ee.Image(lst_k.updateMask(mask).copyProperties(image, ["system:time_start"]))
 
 
 def _prep_modis_night(image):
     night = image.select("LST_Night_1km").multiply(0.02).rename("LST_NIGHT_K_MODIS_PROXY")
     mask = night.gt(200).And(night.lt(340))
-    return night.updateMask(mask).copyProperties(image, ["system:time_start"])
+    return ee.Image(night.updateMask(mask).copyProperties(image, ["system:time_start"]))
 
 
 def _collection_count(collection) -> int:
     return int(collection.size().getInfo())
 
 
-def create_ee_notebook_support_fetcher(settings, grid_spec: GridSpec) -> NotebookSupportFetcher:
-    """Create a source-equivalent fetcher for the exact new.ipynb support formulas.
+def create_ee_notebook_support_fetcher(settings, grid_spec: GridSpec) -> NotebookSupportInputs:
+    """Fetch source-equivalent inputs for the exact new.ipynb support formulas.
 
     This reproduces notebook Cell 108 Sentinel-1 selection/filtering and Stage 2C
     Landsat-day/MODIS-night delta sourcing. It does not run or alter the app classifier.
@@ -220,6 +220,17 @@ def create_ee_notebook_support_fetcher(settings, grid_spec: GridSpec) -> Noteboo
     )
 
 
+def _resolve_support_inputs(
+    *,
+    settings,
+    grid_spec: GridSpec,
+    support_fetcher: NotebookSupportFetcher | None,
+) -> NotebookSupportInputs:
+    if support_fetcher is not None:
+        return support_fetcher(grid_spec=grid_spec)
+    return create_ee_notebook_support_fetcher(settings, grid_spec)
+
+
 def _valid_count(array: np.ndarray, *, nodata: float) -> int:
     return int((np.isfinite(array) & (array != np.float32(nodata))).sum())
 
@@ -255,8 +266,11 @@ class NbExactSupportStage(Stage):
 
     async def run(self, context: StageContext) -> StageResult:
         try:
-            fetcher = self.support_fetcher or create_ee_notebook_support_fetcher(context.settings, self.grid_spec)
-            inputs = fetcher(grid_spec=self.grid_spec)
+            inputs = _resolve_support_inputs(
+                settings=context.settings,
+                grid_spec=self.grid_spec,
+                support_fetcher=self.support_fetcher,
+            )
             _validate_inputs(inputs, grid_spec=self.grid_spec)
 
             asc_desc_consistency = compute_asc_desc_consistency(
