@@ -83,15 +83,15 @@ export function NBResultsPanel({ runId }: NBResultsPanelProps) {
                   <tr style={{ backgroundColor: "var(--accent)" }}>
                     {[
                       "Object #",
+                      "NB best object interpretation",
+                      "Interpretation score",
+                      "Estimated NB depth",
                       "NB metal signature",
                       "NB void signature",
                       "NB ceramic signature",
                       "NB mass signature",
                       "NB false-signature score",
-                      "NB best object interpretation",
-                      "Interpretation score",
                       "NANO penetration proxy",
-                      "NB depth",
                     ].map((header) => (
                       <th key={header} className="font-mono" style={headerStyle}>{header}</th>
                     ))}
@@ -101,15 +101,15 @@ export function NBResultsPanel({ runId }: NBResultsPanelProps) {
                   {results.objects.map((row) => (
                     <tr key={row.objectId}>
                       <td style={cellStyle}>{row.objectId}</td>
+                      <td style={cellStyle}>{row.nbBestObjectInterpretation ?? "NOT AVAILABLE"}</td>
+                      <td style={cellStyle}>{formatScore(row.nbBestObjectScore)}</td>
+                      <td style={depthCellStyle}>{row.nbDepthAvailable && row.nbDepthM !== null ? `${row.nbDepthM.toFixed(2)} m` : "NOT AVAILABLE"}</td>
                       <td style={cellStyle}>{formatScore(row.nbMetalSignature)}</td>
                       <td style={cellStyle}>{formatScore(row.nbVoidSignature)}</td>
                       <td style={cellStyle}>{formatScore(row.nbCeramicSignature)}</td>
                       <td style={cellStyle}>{formatScore(row.nbMassSignature)}</td>
                       <td style={cellStyle}>{formatScore(row.nbFalseSignatureScore)}</td>
-                      <td style={cellStyle}>{row.nbBestObjectInterpretation ?? "NOT AVAILABLE"}</td>
-                      <td style={cellStyle}>{formatScore(row.nbBestObjectScore)}</td>
                       <td style={cellStyle}>{row.nanoDepthPenetration === null ? "NOT AVAILABLE" : row.nanoDepthPenetration.toFixed(4)}</td>
-                      <td style={cellStyle}>{row.nbDepthAvailable && row.nbDepthM !== null ? `${row.nbDepthM.toFixed(2)} m` : "NOT AVAILABLE"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -117,7 +117,7 @@ export function NBResultsPanel({ runId }: NBResultsPanelProps) {
             </div>
 
             <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-              NB metal signature is an indirect notebook proxy, not confirmed metal. NB depth is the notebook indirect depth proxy, not the separate calibrated Numerical Depth Estimate. The notebook's default 3.0 m display fallback is not used.
+              Estimated NB depth is the notebook indirect depth proxy in metres, not the separate calibrated Numerical Depth Estimate. NB metal signature is an indirect notebook proxy, not confirmed metal. The notebook's default 3.0 m display fallback is not used.
             </div>
           </>
         )}
@@ -142,6 +142,12 @@ const cellStyle = {
   color: "var(--gs-slate)",
   whiteSpace: "nowrap" as const,
   borderBottom: "1px solid rgba(28,43,94,0.08)",
+};
+
+const depthCellStyle = {
+  ...cellStyle,
+  fontWeight: 700,
+  color: "var(--gs-navy)",
 };
 
 function formatScore(value: number | null): string {
