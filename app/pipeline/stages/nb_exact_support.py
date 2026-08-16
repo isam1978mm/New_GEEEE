@@ -104,7 +104,7 @@ def _sample_multiband(image, *, band_names: list[str], grid_spec: GridSpec) -> d
 
 
 def _speckle_filter(image):
-    return image.focal_mean(radius=1.5, kernelType="circle", units="pixels").copyProperties(
+    return image.focalMean(radius=1.5, kernelType="circle", units="pixels").copyProperties(
         image,
         image.propertyNames(),
     )
