@@ -6,6 +6,18 @@ This repository is being treated as a **private/local operator app**, not a publ
 
 Future audits must read this file before judging the app, planning changes, or recommending cleanup.
 
+## Canonical local runtime
+
+The main local FastAPI app uses:
+
+```text
+host = 127.0.0.1
+port = 8007
+base URL = http://127.0.0.1:8007
+```
+
+Future sessions must use port **8007** for normal app/API/health/readiness commands unless the operator explicitly changes it. Do **not** infer port 8000 from Uvicorn defaults. Purpose-specific test harnesses may use their own separately documented ports without changing the main app port.
+
 ## Main rule
 
 Do **not** make public-safe redaction, public exposure hardening, neutralized wording, artifact hiding, or coordinate suppression the default audit priority.
@@ -75,7 +87,8 @@ The app should still avoid unsupported certainty. Satellite/software outputs are
 ## Read order for future sessions
 
 1. Read this file first.
-2. Inspect current git status and recent commits.
-3. Inspect the relevant code/docs for the requested task.
-4. Do not start by applying public-safe assumptions from older documents.
-5. Keep real private samples and sensitive run contents out of Git and chat.
+2. Read `AGENTS.md`, including the canonical local runtime rule (`127.0.0.1:8007`).
+3. Inspect current git status and recent commits.
+4. Inspect the relevant code/docs for the requested task.
+5. Do not start by applying public-safe assumptions from older documents.
+6. Keep real private samples and sensitive run contents out of Git and chat.

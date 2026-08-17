@@ -11,6 +11,8 @@ v1 includes:
 
 The default app surface is local-only. FastAPI binds to `127.0.0.1` by default, `/docs`, `/redoc`, and `/openapi.json` are disabled, and artifact downloads go only through the guarded artifact route.
 
+**Canonical local backend:** `http://127.0.0.1:8007`. Port `8007` is the project convention; do not substitute Uvicorn's default `8000`.
+
 VPS deployment is a separate future milestone and is not assumed by the local-first track.
 
 A local-only Generic OIDC development harness is available at [docs/LOCAL_1_OIDC_DEV_HARNESS.md](docs/LOCAL_1_OIDC_DEV_HARNESS.md) for testing the OIDC valid-token path on a developer machine with no real provider, secret, token, or deployment.
@@ -59,13 +61,14 @@ Copy `.env.example` to `.env`.
 Core settings:
 
 - `ALLOW_NETWORK_BIND=false` keeps the app on `127.0.0.1`.
+- Local FastAPI commands use port `8007`.
 - `EE_SERVICE_ACCOUNT_EMAIL` and `EE_SERVICE_ACCOUNT_KEY_PATH` are required for Earth Engine readiness.
 - `DATA_DIR` and `DATABASE_PATH` default to `./data` and `./data/gee_screening.db`.
 
 ## Run the app
 
 ```bash
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+uvicorn app.main:app --host 127.0.0.1 --port 8007
 ```
 
 The root path serves the local SPA. `/healthz` returns liveness. `/readyz` returns ready only when the Earth Engine service account can initialize.
