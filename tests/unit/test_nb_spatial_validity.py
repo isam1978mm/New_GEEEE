@@ -96,3 +96,54 @@ def test_shadow_qa_passes_compact_candidate_without_surface_flags() -> None:
 
     assert result["status"] == "PASS"
     assert result["reasons"] == []
+
+
+def test_shadow_qa_does_not_mistake_centered_compact_anomaly_for_boundary() -> None:
+    yy, xx = np.mgrid[:64, :64]
+    compact = np.exp(-((xx - 32) ** 2 + (yy - 32) ** 2) / (2.0 * 3.0**2)).astype(np.float32)
+    result = assess_nb_spatial_validity(
+        object_row=_row(area_px=9, row_min=30, row_max=34, col_min=30, col_max=34),
+        shape=(64, 64),
+        row=32,
+        col=32,
+        layers={"vv": compact, "thermal_day": compact},
+    )
+
+    assert result["status"] == "PASS"
+    assert result["boundary_group_count"] == 0
+    assert result["candidate_suppressed"] is False
+    assert result["interpretation_suppressed"] is False
+    assert result["depth_suppressed"] is False
+
+
+def test_shadow_qa_edge_only_is_mixed_not_failed() -> None:
+    flat = np.ones((64, 64), dtype=np.float32)
+    result = assess_nb_spatial_validity(
+        object_row=_row(area_px=5, row_min=30, row_max=32, col_min=0, col_max=1),
+        shape=(64, 64),
+        row=31,
+        col=0,
+        layers={"vv": flat, "thermal_day": flat},
+    )
+
+    assert result["edge_touch"] is True
+    assert result["boundary_group_count"] == 0
+    assert result["status"] == "MIXED"
+    assert result["candidate_suppressed"] is False
+
+
+def test_shadow_qa_treats_cross_group_smooth_surface_gradient_as_diagnostic_only() -> None:
+    gradient = np.tile(np.linspace(0.0, 1.0, 64, dtype=np.float32), (64, 1))
+    result = assess_nb_spatial_validity(
+        object_row=_row(area_px=9, row_min=30, row_max=34, col_min=30, col_max=34),
+        shape=(64, 64),
+        row=32,
+        col=32,
+        layers={"vv": gradient, "thermal_day": gradient},
+    )
+
+    assert result["status"] == "MIXED"
+    assert result["boundary_group_count"] == 2
+    assert result["candidate_suppressed"] is False
+    assert result["interpretation_suppressed"] is False
+    assert result["depth_suppressed"] is False
