@@ -14,6 +14,14 @@ The fixed PRD footer must read:
 
 `End of PRD v0.5.`
 
+## Canonical local runtime
+
+- The operator's canonical FastAPI port is **8007**.
+- The canonical local backend base URL is **`http://127.0.0.1:8007`**.
+- When giving local app, `curl`, PowerShell, browser, health-check, readiness-check, or API commands, use port **8007** unless the operator explicitly changes it.
+- **Do not infer or substitute Uvicorn's default port 8000.** Port 8000 is not the project port.
+- Purpose-specific local test harnesses may use their own explicitly documented ports (for example OIDC/JWKS harness ports); those do not change the main app port of 8007.
+
 ## Project goal
 
 Build the GEE Screening Web App v1.
@@ -213,7 +221,7 @@ pytest tests/notebook_parity/
 Run app:
 
 ```bash
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+uvicorn app.main:app --host 127.0.0.1 --port 8007
 ```
 
 ## Forbidden implementation choices
