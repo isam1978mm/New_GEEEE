@@ -9,7 +9,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { StageStatusPills } from "./StageStatusPills";
-import { KeyDownloads } from "./KeyDownloads";
 import { formatFileSize, type KeyDownload, type Run, type RunDetail } from "../api/client";
 
 function fmtDate(iso: string) {
@@ -112,11 +111,13 @@ interface OverviewTabProps {
   onSelectRun?: (run: Run) => void;
   selectedRun: RunDetail;
   recentRuns: Run[];
+  // Kept in the prop contract while App continues to load the same guarded output payload.
+  // Technical downloads are intentionally rendered only in ExportsTab.
   keyDownloads: KeyDownload[];
   loadingOutputs?: boolean;
 }
 
-export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads, loadingOutputs = false }: OverviewTabProps) {
+export function OverviewTab({ onSelectRun, selectedRun, recentRuns }: OverviewTabProps) {
   const [showArchive, setShowArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState("");
 
@@ -166,170 +167,134 @@ export function OverviewTab({ onSelectRun, selectedRun, recentRuns, keyDownloads
         <FailureNotice run={selectedRun} />
       </div>
 
-      {/* Two-column: Key Downloads | Recent Runs */}
-      <div className="grid gap-3" style={{ gridTemplateColumns: "1fr minmax(280px, 380px)" }}>
-        {/* Left: Key Downloads */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span
-              className="font-mono"
-              style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-slate)", textTransform: "uppercase", letterSpacing: "0.07em" }}
-            >
-              Private Local Outputs
-            </span>
-            <span
-              className="font-mono"
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                color: "var(--gs-blue)",
-                backgroundColor: "var(--gs-blue-bg)",
-                border: "1px solid var(--gs-blue-border)",
-                padding: "1px 5px",
-                borderRadius: "3px",
-                letterSpacing: "0.03em",
-              }}
-            >
-              PRIVATE_LOCAL
-            </span>
-            <span style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.6 }}>
-              pinned downloads
-            </span>
-          </div>
-          <KeyDownloads downloads={keyDownloads} loading={loadingOutputs} />
+      {/* Recent runs stay on the dashboard; downloadable artifacts live in Exports. */}
+      <div
+        className="rounded-lg bg-card overflow-hidden flex flex-col"
+        style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
+      >
+        <div
+          className="flex items-center justify-between px-3 py-2"
+          style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)" }}
+        >
+          <span
+            className="font-mono"
+            style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+          >
+            Recent Runs
+          </span>
+          <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>last 3</span>
         </div>
 
-        {/* Right: Recent Runs + Archive */}
-        <div
-          className="rounded-lg bg-card overflow-hidden flex flex-col"
-          style={{ border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(28,43,94,0.05)" }}
-        >
-          {/* Section: Recent Runs */}
-          <div
-            className="flex items-center justify-between px-3 py-2"
-            style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--accent)" }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}
+        <div className="flex flex-col">
+          {recentRuns.slice(0, 3).map((run, i) => (
+            <div
+              key={run.id}
+              className="flex items-center gap-2 px-3 py-2 hover:bg-accent/30 transition-colors"
+              style={{ borderBottom: i < 2 ? "1px solid var(--border)" : "none" }}
             >
-              Recent Runs
-            </span>
-            <span style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>last 3</span>
-          </div>
-
-          <div className="flex flex-col">
-            {recentRuns.slice(0, 3).map((run, i) => (
-              <div
-                key={run.id}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-accent/30 transition-colors"
-                style={{ borderBottom: i < 2 ? "1px solid var(--border)" : "none" }}
-              >
-                <StateBadge state={run.state} />
-                <div className="flex-1 min-w-0">
-                  <div
-                    className="font-mono truncate"
-                    style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}
-                  >
-                    {run.name}
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.7 }}>
-                    {fmtDate(run.updated)} · Disk used {fmtRunSize(run)}
-                  </div>
-                </div>
-                <button
-                  onClick={() => onSelectRun?.(run)}
-                  className="flex items-center gap-1 px-2 py-1 rounded transition-colors hover:bg-accent shrink-0"
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 500,
-                    color: "var(--gs-navy)",
-                    backgroundColor: "transparent",
-                    border: "1px solid rgba(28,43,94,0.18)",
-                    cursor: "pointer",
-                  }}
+              <StateBadge state={run.state} />
+              <div className="flex-1 min-w-0">
+                <div
+                  className="font-mono truncate"
+                  style={{ fontSize: "12px", fontWeight: 600, color: "var(--gs-navy)" }}
                 >
-                  <ExternalLink size={9} />
-                  Open
-                </button>
+                  {run.name}
+                </div>
+                <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", opacity: 0.7 }}>
+                  {fmtDate(run.updated)} · Disk used {fmtRunSize(run)}
+                </div>
               </div>
-            ))}
-            {recentRuns.length === 0 && (
-              <div className="px-3 py-3" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
-                No recent runs returned by the API.
-              </div>
-            )}
-          </div>
+              <button
+                onClick={() => onSelectRun?.(run)}
+                className="flex items-center gap-1 px-2 py-1 rounded transition-colors hover:bg-accent shrink-0"
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  color: "var(--gs-navy)",
+                  backgroundColor: "transparent",
+                  border: "1px solid rgba(28,43,94,0.18)",
+                  cursor: "pointer",
+                }}
+              >
+                <ExternalLink size={9} />
+                Open
+              </button>
+            </div>
+          ))}
+          {recentRuns.length === 0 && (
+            <div className="px-3 py-3" style={{ fontSize: "11.5px", color: "var(--gs-slate)" }}>
+              No recent runs returned by the API.
+            </div>
+          )}
+        </div>
 
-          {/* Run Archive collapsible */}
-          <div style={{ borderTop: "1px solid var(--border)" }}>
-            <button
-              onClick={() => setShowArchive((p) => !p)}
-              className="flex items-center gap-1.5 px-3 py-2 w-full hover:bg-accent/20 transition-colors"
-              style={{ background: "none", border: "none", cursor: "pointer" }}
-            >
-              {showArchive ? (
-                <ChevronDown size={11} style={{ color: "var(--gs-slate)" }} />
+        <div style={{ borderTop: "1px solid var(--border)" }}>
+          <button
+            onClick={() => setShowArchive((p) => !p)}
+            className="flex items-center gap-1.5 px-3 py-2 w-full hover:bg-accent/20 transition-colors"
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
+            {showArchive ? (
+              <ChevronDown size={11} style={{ color: "var(--gs-slate)" }} />
+            ) : (
+              <ChevronRight size={11} style={{ color: "var(--gs-slate)" }} />
+            )}
+            <span style={{ fontSize: "11px", fontWeight: 500, color: "var(--gs-slate)" }}>
+              Run Archive
+            </span>
+          </button>
+
+          {showArchive && (
+            <div className="px-3 pb-2 flex flex-col gap-1.5">
+              <input
+                type="text"
+                value={archiveSearch}
+                onChange={(e) => setArchiveSearch(e.target.value)}
+                placeholder="Search runs…"
+                className="rounded px-2 py-1 w-full outline-none"
+                style={{
+                  fontSize: "11.5px",
+                  backgroundColor: "var(--input-background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--gs-navy)",
+                }}
+              />
+              {filteredArchive.length === 0 ? (
+                <p style={{ fontSize: "11px", color: "var(--gs-slate)" }}>No runs match.</p>
               ) : (
-                <ChevronRight size={11} style={{ color: "var(--gs-slate)" }} />
-              )}
-              <span style={{ fontSize: "11px", fontWeight: 500, color: "var(--gs-slate)" }}>
-                Run Archive
-              </span>
-            </button>
-
-            {showArchive && (
-              <div className="px-3 pb-2 flex flex-col gap-1.5">
-                <input
-                  type="text"
-                  value={archiveSearch}
-                  onChange={(e) => setArchiveSearch(e.target.value)}
-                  placeholder="Search runs…"
-                  className="rounded px-2 py-1 w-full outline-none"
-                  style={{
-                    fontSize: "11.5px",
-                    backgroundColor: "var(--input-background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--gs-navy)",
-                  }}
-                />
-                {filteredArchive.length === 0 ? (
-                  <p style={{ fontSize: "11px", color: "var(--gs-slate)" }}>No runs match.</p>
-                ) : (
-                  <div className="flex flex-col gap-0.5">
-                    {filteredArchive.map((run) => (
-                      <div
-                        key={run.id}
-                        className="flex items-center gap-2 py-1 px-1 hover:bg-accent/20 rounded transition-colors"
+                <div className="flex flex-col gap-0.5">
+                  {filteredArchive.map((run) => (
+                    <div
+                      key={run.id}
+                      className="flex items-center gap-2 py-1 px-1 hover:bg-accent/20 rounded transition-colors"
+                    >
+                      <StateBadge state={run.state} />
+                      <span
+                        className="font-mono flex-1 truncate"
+                        style={{ fontSize: "11px", color: "var(--gs-navy)" }}
                       >
-                        <StateBadge state={run.state} />
-                        <span
-                          className="font-mono flex-1 truncate"
-                          style={{ fontSize: "11px", color: "var(--gs-navy)" }}
-                        >
-                          {run.name}
-                        </span>
-                        <button
-                          onClick={() => onSelectRun?.(run)}
-                          style={{
-                            fontSize: "10px",
-                            color: "var(--gs-navy)",
-                            backgroundColor: "transparent",
-                            border: "1px solid rgba(28,43,94,0.15)",
-                            borderRadius: "3px",
-                            padding: "1px 6px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Open
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                        {run.name}
+                      </span>
+                      <button
+                        onClick={() => onSelectRun?.(run)}
+                        style={{
+                          fontSize: "10px",
+                          color: "var(--gs-navy)",
+                          backgroundColor: "transparent",
+                          border: "1px solid rgba(28,43,94,0.15)",
+                          borderRadius: "3px",
+                          padding: "1px 6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Open
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
