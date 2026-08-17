@@ -13,6 +13,7 @@ from app.services.nb_exact_support import (
     THERMAL_DELTA_FILENAME,
 )
 from app.services.nb_math import build_proxy_layers, compute_point, norm01
+from app.services.nb_spatial_validity import assess_nb_spatial_validity
 
 NB_SCHEMA = "nb_results_v1"
 NB_METHOD = "notebook_new_ipynb_proxy_addons_v1"
@@ -35,6 +36,13 @@ def _not_available(reason: str) -> dict[str, Any]:
             "metal_confirmation": False,
             "calibrated_numerical_depth": False,
             "fake_three_meter_fallback_used": False,
+        },
+        "spatial_validity": {
+            "mode": "shadow",
+            "candidate_suppression": False,
+            "interpretation_suppression": False,
+            "depth_suppression": False,
+            "classifier_modified": False,
         },
         "objects": [],
     }
@@ -183,6 +191,7 @@ def build_nb_results(run_dir: Path) -> dict[str, Any]:
     rough_raw, rough_ok = support("roughness", "roughness.tif")
     curv_raw, curv_ok = support("curvature", "curvature.tif")
     thermal_day_raw, thermal_day_ok = support("thermal_day", "lst.tif")
+    incidence_raw = _load_tif(run_dir / "incidence.tif", expected_shape=shape)
 
     vegroot_raw, clay_raw = _load_aix_support(run_dir, shape=shape)
     aix_ok = vegroot_raw is not None and clay_raw is not None
@@ -278,6 +287,21 @@ def build_nb_results(run_dir: Path) -> dict[str, Any]:
         "delta": thermal_delta,
         "nano_depth_penetration": nano_depth,
     }
+    spatial_layers: dict[str, np.ndarray | None] = {
+        "vv": vv_raw,
+        "vh": vh_raw,
+        "logratio": ratio_raw if ratio_ok else None,
+        "incidence": incidence_raw,
+        "ascdesc": ascdesc if ascdesc_ok else None,
+        "thermal_day": thermal_day_raw if thermal_day_ok else None,
+        "thermal_inertia": thermal_raw if thermal_ok else None,
+        "thermal_delta": thermal_delta if thermal_delta_ok else None,
+        "rough": rough_raw if rough_ok else None,
+        "tpi": tpi_raw if tpi_ok else None,
+        "curv": curv_raw if curv_ok else None,
+        "mass": mass_raw if mass_ok else None,
+        "pottery": pottery_raw if pottery_ok else None,
+    }
 
     objects: list[dict[str, Any]] = []
     for row in object_rows:
@@ -293,7 +317,21 @@ def build_nb_results(run_dir: Path) -> dict[str, Any]:
         for name, array in arrays.items():
             if name == "nano_depth_penetration" or array_ok.get(name, False):
                 values[name] = _sample(array, rr, cc)
-        objects.append({"object_id": object_id, **compute_point(values)})
+        nb_result = compute_point(values)
+        spatial_validity = assess_nb_spatial_validity(
+            object_row=row,
+            shape=shape,
+            row=rr,
+            col=cc,
+            layers=spatial_layers,
+        )
+        objects.append(
+            {
+                "object_id": object_id,
+                **nb_result,
+                "nb_spatial_validity": spatial_validity,
+            }
+        )
 
     if not objects:
         return _not_available("object_locations_unavailable")
@@ -310,6 +348,13 @@ def build_nb_results(run_dir: Path) -> dict[str, Any]:
             "metal_confirmation": False,
             "calibrated_numerical_depth": False,
             "fake_three_meter_fallback_used": False,
+        },
+        "spatial_validity": {
+            "mode": "shadow",
+            "candidate_suppression": False,
+            "interpretation_suppression": False,
+            "depth_suppression": False,
+            "classifier_modified": False,
         },
         "objects": sorted(objects, key=lambda item: int(item["object_id"])),
     }
