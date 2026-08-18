@@ -1,0 +1,138 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_six_plot_raw_rtc_screen_v1",
+  "decision": "NO_CANDIDATE_DEPTH_RESPONSIVE_SIGNAL",
+  "scientific_route_status": "CLOSED_FOR_VV_VH_LOG_RATIO_UNDER_FROZEN_SIX_PLOT_PROTOCOL",
+  "workflow_run_id": 32167325271,
+  "workflow_job_id": 95809853777,
+  "artifact_id": 9336037036,
+  "artifact_name": "tyrone-six-plot-raw-pc-rtc",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-1-rtc",
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "orbit_state": "descending",
+    "relative_orbit": 56,
+    "pixel_size_m": 10,
+    "geometry_inward_buffer_m": 10
+  },
+  "execution": {
+    "candidate_item_count": 264,
+    "selected_item_count": 177,
+    "read_success_count": 177,
+    "read_failure_count": 0,
+    "usable_month_count": 72,
+    "mask_pixel_counts": {
+      "TP1": 142,
+      "TP2": 160,
+      "TP3": 136,
+      "TP5": 113,
+      "TP6": 124,
+      "TP7": 48
+    }
+  },
+  "frozen_gate": {
+    "minimum_usable_months_per_group": 24,
+    "dominant_monotonic_fraction_required": 0.70,
+    "seasonal_matching_fraction_required": 0.60,
+    "minimum_usable_months_per_season": 4,
+    "candidate_requires_both_surface_groups_pass_and_same_direction": true
+  },
+  "features": {
+    "vv_db": {
+      "outslope": {
+        "dominant_direction": "decreasing",
+        "dominant_fraction": 0.18055555555555555,
+        "increasing_months": 9,
+        "decreasing_months": 13,
+        "nonmonotonic_months": 50,
+        "passed": false
+      },
+      "top_surface": {
+        "dominant_direction": "increasing",
+        "dominant_fraction": 0.3472222222222222,
+        "increasing_months": 25,
+        "decreasing_months": 11,
+        "nonmonotonic_months": 36,
+        "passed": false
+      },
+      "same_direction": false,
+      "candidate_depth_responsive_signal": false
+    },
+    "vh_db": {
+      "outslope": {
+        "dominant_direction": "increasing",
+        "dominant_fraction": 0.2777777777777778,
+        "increasing_months": 20,
+        "decreasing_months": 11,
+        "nonmonotonic_months": 41,
+        "passed": false
+      },
+      "top_surface": {
+        "dominant_direction": "increasing",
+        "dominant_fraction": 0.2777777777777778,
+        "increasing_months": 20,
+        "decreasing_months": 5,
+        "nonmonotonic_months": 47,
+        "passed": false
+      },
+      "same_direction": true,
+      "candidate_depth_responsive_signal": false
+    },
+    "log_ratio_db": {
+      "outslope": {
+        "dominant_direction": "decreasing",
+        "dominant_fraction": 0.3333333333333333,
+        "increasing_months": 9,
+        "decreasing_months": 24,
+        "nonmonotonic_months": 39,
+        "passed": false
+      },
+      "top_surface": {
+        "dominant_direction": "increasing",
+        "dominant_fraction": 0.20833333333333334,
+        "increasing_months": 15,
+        "decreasing_months": 10,
+        "nonmonotonic_months": 47,
+        "passed": false
+      },
+      "same_direction": false,
+      "candidate_depth_responsive_signal": false
+    }
+  },
+  "same_depth_surface_median_differences_db": {
+    "vv_db": {
+      "TP5_minus_TP1": -1.4124636616840567,
+      "TP6_minus_TP2": -1.7367537161788666,
+      "TP7_minus_TP3": -1.2469850669729174
+    },
+    "vh_db": {
+      "TP5_minus_TP1": -2.4301594226871472,
+      "TP6_minus_TP2": -2.5718569033089125,
+      "TP7_minus_TP3": -2.339728010174925
+    },
+    "log_ratio_db": {
+      "TP5_minus_TP1": 0.9676685967327394,
+      "TP6_minus_TP2": 0.9398654283927073,
+      "TP7_minus_TP3": 0.9677297085482888
+    }
+  },
+  "interpretation": [
+    "None of VV dB, VH dB, or VV-VH/log-ratio dB passes the preregistered six-plot depth-responsive signal gate.",
+    "VH has the same nominal increasing direction in both surface groups, but only 20 of 72 months are strictly increasing in each group, far below the frozen 70 percent requirement, and seasonal gates also fail.",
+    "Large systematic same-depth top-surface versus outslope differences remain, showing strong surface/geometry dependence relative to the depth signal.",
+    "Do not tune thresholds, geometry, orbit, period, or feature formula to rescue this route.",
+    "This result does not alter the previously closed NB numerical-depth decision."
+  ],
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  },
+  "next_route": "PREREGISTER_AND_SCREEN_TERRAIN_FEATURE_FAMILY_SEPARATELY"
+}
