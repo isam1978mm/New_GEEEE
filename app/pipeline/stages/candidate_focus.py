@@ -113,6 +113,11 @@ def _effective_top_n(value: Any) -> int:
     return max(1, min(MAX_CANDIDATE_FOCUS_TOP_N, parsed))
 
 
+def _review_order(value: Any) -> str | int:
+    raw = str(value or "99_UNSPECIFIED")
+    return int(raw) if raw.isdigit() else raw
+
+
 def select_candidate_focuses(run_dir: Path, *, top_n: int) -> list[CandidateSelection]:
     path = run_dir / CLASSIFIER_OUTPUT_DIRNAME / CLASSIFICATIONS_CSV_NAME
     if not path.is_file():
@@ -124,29 +129,29 @@ def select_candidate_focuses(run_dir: Path, *, top_n: int) -> list[CandidateSele
     parsed: list[dict[str, Any]] = []
     for row in rows:
         object_id = _safe_int(row.get("object_id"), field="object_id")
-        cluster_id = _safe_int(row.get("cluster_id"), field="cluster_id")
-        row_min = _safe_int(row.get("row_min"), field="row_min")
-        row_max = _safe_int(row.get("row_max"), field="row_max")
-        col_min = _safe_int(row.get("col_min"), field="col_min")
-        col_max = _safe_int(row.get("col_max"), field="col_max")
-        source_score = _safe_float(row.get("finding_score", row.get("class_score")), field="finding_score")
-        raw_review_order = str(row.get("review_order") or "99_UNSPECIFIED")
-        review_order: str | int = int(raw_review_order) if raw_review_order.isdigit() else raw_review_order
         parsed.append(
             {
                 "object_id": object_id,
-                "cluster_id": cluster_id,
-                "row_min": row_min,
-                "row_max": row_max,
-                "col_min": col_min,
-                "col_max": col_max,
-                "source_score": source_score,
-                "review_order": review_order,
+                "cluster_id": _safe_int(row.get("cluster_id"), field="cluster_id"),
+                "row_min": _safe_int(row.get("row_min"), field="row_min"),
+                "row_max": _safe_int(row.get("row_max"), field="row_max"),
+                "col_min": _safe_int(row.get("col_min"), field="col_min"),
+                "col_max": _safe_int(row.get("col_max"), field="col_max"),
+                "source_score": _safe_float(
+                    row.get("finding_score", row.get("class_score")), field="finding_score"
+                ),
+                "review_order": _review_order(row.get("review_order")),
                 "finding_label": str(row.get("finding_label", row.get("class_id", "candidate"))),
             }
         )
 
-    parsed.sort(key=lambda item: (-float(item["source_score"]), str(item["review_order"]), int(item["object_id"])))
+    parsed.sort(
+        key=lambda item: (
+            -float(item["source_score"]),
+            str(item["review_order"]),
+            int(item["object_id"]),
+        )
+    )
     selections: list[CandidateSelection] = []
     for rank, item in enumerate(parsed[: _effective_top_n(top_n)], start=1):
         selections.append(
@@ -187,4 +192,346 @@ def build_candidate_focus_mask(
     focus_radius_m: float = FOCUS_RADIUS_M,
 ) -> np.ndarray:
     if focus_radius_m <= 0:
-        raise StageError
+        raise StageError("Candidate Focus radius must be positive.")
+    pixel_size_m = float((abs(grid_spec.transform[0]) + abs(grid_spec.transform[4])) / 2.0)
+    if pixel_size_m <= 0:
+        raise StageError("Candidate Focus requires a positive authoritative pixel size.")
+    rows, cols = np.meshgrid(np.arange(grid_spec.size), np.arange(grid_spec.size), indexing="ij")
+    radius_px = float(focus_radius_m) / pixel_size_m
+    dist_px = np.sqrt(
+        (rows.astype(np.float64) - float(center_row)) ** 2
+        + (cols.astype(np.float64) - float(center_col)) ** 2
+    )
+    mask = dist_px <= radius_px
+    if not bool(mask.any()):
+        raise StageError("Candidate Focus produced an empty focus mask.")
+    return mask
+
+
+def _candidate_center_coordinates(selection: CandidateSelection, grid_spec: GridSpec) -> dict[str, float]:
+    affine = Affine(*grid_spec.transform)
+    x, y = affine * (selection.center_col + 0.5, selection.center_row + 0.5)
+    transformer = Transformer.from_crs(grid_spec.crs, "EPSG:4326", always_xy=True)
+    lon, lat = transformer.transform(float(x), float(y))
+    return {
+        "utm_e": round(float(x), 3),
+        "utm_n": round(float(y), 3),
+        "lon": round(float(lon), 8),
+        "lat": round(float(lat), 8),
+    }
+
+
+def _crop_masked_window(stack: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    rows, cols = np.where(mask)
+    if rows.size == 0:
+        raise StageError("Candidate Focus cannot crop an empty mask.")
+    row_min, row_max = int(rows.min()), int(rows.max())
+    col_min, col_max = int(cols.min()), int(cols.max())
+    crop = stack[row_min : row_max + 1, col_min : col_max + 1, :].astype(np.float32)
+    crop_mask = mask[row_min : row_max + 1, col_min : col_max + 1, None]
+    return np.where(crop_mask, crop, 0.0).astype(np.float32)
+
+
+def _write_csv(path: Path, rows: Iterable[dict[str, Any]], *, fieldnames: list[str] | None = None) -> None:
+    materialized = list(rows)
+    if fieldnames is None:
+        fieldnames = list(materialized[0].keys()) if materialized else []
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(materialized)
+
+
+def _artifact(name: str, path: Path, run_dir: Path):
+    return build_stage_artifact(
+        name=name,
+        relative_path=path.relative_to(run_dir).as_posix(),
+        artifact_class=ArtifactClass.FILESYSTEM_ONLY,
+        size_bytes=path.stat().st_size,
+        http_servable=False,
+    )
+
+
+def _candidate_dir_name(selection: CandidateSelection) -> str:
+    return f"candidate_{selection.rank:02d}_{selection.candidate_id}"
+
+
+def _enrich_target_geojson(payload: dict[str, Any], selection: CandidateSelection) -> dict[str, Any]:
+    enriched = json.loads(json.dumps(payload))
+    enriched["focus_kind"] = "candidate_focus"
+    enriched["candidate_id"] = selection.candidate_id
+    enriched["candidate_rank"] = selection.rank
+    for feature in enriched.get("features", []):
+        props = feature.setdefault("properties", {})
+        props["focus_kind"] = "candidate_focus"
+        props["candidate_id"] = selection.candidate_id
+        props["candidate_rank"] = selection.rank
+        props["source_object_id"] = selection.object_id
+        props["source_cluster_id"] = selection.cluster_id
+        props["source_score"] = selection.source_score
+    return enriched
+
+
+def _candidate_artifacts(selection: CandidateSelection, paths: dict[str, Path], run_dir: Path) -> list[Any]:
+    prefix = f"candidate_focus_{selection.rank:02d}"
+    names = {
+        "summary": f"{prefix}_summary_json",
+        "mask_npy": f"{prefix}_mask_npy",
+        "mask_tif": f"{prefix}_mask_tif",
+        "window_npy": f"{prefix}_window_npy",
+        "pixel_csv": f"{prefix}_pixel_report_csv",
+        "targets_csv": f"{prefix}_targets_csv",
+        "targets_geojson": f"{prefix}_targets_geojson",
+        "hard_json": f"{prefix}_hard_classifier_json",
+        "hard_csv": f"{prefix}_hard_classifier_csv",
+        "core_json": f"{prefix}_core_ring_json",
+        "core_csv": f"{prefix}_core_ring_csv",
+    }
+    return [_artifact(names[key], path, run_dir) for key, path in paths.items()]
+
+
+def run_candidate_focus_analysis(*, context: StageContext, top_n: int | None = None) -> StageResult:
+    run_dir = context.run_dir
+    grid_spec = load_candidate_focus_grid_spec(run_dir)
+    configured_top_n = _effective_top_n(
+        top_n
+        if top_n is not None
+        else getattr(context.settings, "candidate_focus_top_n", DEFAULT_CANDIDATE_FOCUS_TOP_N)
+    )
+    selections = select_candidate_focuses(run_dir, top_n=configured_top_n)
+    output_root = run_dir.joinpath(*CANDIDATE_FOCUS_DIR_PARTS)
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    analysis_bands = load_focus_analysis_bands(run_dir, grid_spec=grid_spec) if selections else {}
+    support_stack = load_ai_ready_support_stack(run_dir) if selections else None
+    if support_stack is not None and support_stack.shape[:2] != (grid_spec.size, grid_spec.size):
+        raise StageError("Candidate Focus support stack does not match the authoritative grid.")
+
+    artifacts: list[Any] = []
+    index_rows: list[dict[str, Any]] = []
+    index_features: list[dict[str, Any]] = []
+
+    for selection in selections:
+        mask = build_candidate_focus_mask(
+            grid_spec=grid_spec,
+            center_row=selection.center_row,
+            center_col=selection.center_col,
+            focus_radius_m=FOCUS_RADIUS_M,
+        )
+        coords = _candidate_center_coordinates(selection, grid_spec)
+        roi_products = build_focus_roi_analysis_products(
+            focus_mask=mask, analysis_bands=analysis_bands, grid_spec=grid_spec
+        )
+        hard_products = build_hard_type_classifier_products(
+            focus_mask=mask, analysis_bands=analysis_bands, grid_spec=grid_spec
+        )
+        core_products = build_core_ring_scene_decision_products(
+            focus_mask=mask, analysis_bands=analysis_bands, grid_spec=grid_spec
+        )
+        candidate_dir = output_root / _candidate_dir_name(selection)
+        candidate_dir.mkdir(parents=True, exist_ok=True)
+
+        summary = {
+            "schema": "candidate_focus_summary_v1",
+            "focus_kind": "candidate_focus",
+            "candidate_id": selection.candidate_id,
+            "candidate_rank": selection.rank,
+            "source_object_id": selection.object_id,
+            "source_cluster_id": selection.cluster_id,
+            "source_score": selection.source_score,
+            "source_review_order": selection.review_order,
+            "source_finding_label": selection.finding_label,
+            "source_bbox_pixels": {
+                "row_min": selection.row_min,
+                "row_max": selection.row_max,
+                "col_min": selection.col_min,
+                "col_max": selection.col_max,
+            },
+            "center_pixel": {"row": selection.center_row, "col": selection.center_col},
+            "center_projected": {
+                "easting": coords["utm_e"],
+                "northing": coords["utm_n"],
+                "crs": grid_spec.crs,
+            },
+            "center_wgs84": {"lat": coords["lat"], "lon": coords["lon"]},
+            "focus_radius_m": float(FOCUS_RADIUS_M),
+            "focus_diameter_m": float(FOCUS_RADIUS_M * 2.0),
+            "focus_geometry_contract": CANDIDATE_FOCUS_GEOMETRY_CONTRACT,
+            "mask_pixel_count": int(mask.sum()),
+            "analysis_bands": list(FOCUS_ANALYSIS_BANDS),
+            "source_classifier_contract": "existing_classifier_outputs_read_only",
+            "scientific_warning": SCIENTIFIC_WARNING,
+        }
+
+        paths = {
+            "summary": candidate_dir / CANDIDATE_FOCUS_SUMMARY_NAME,
+            "mask_npy": candidate_dir / CANDIDATE_FOCUS_MASK_NPY_NAME,
+            "mask_tif": candidate_dir / CANDIDATE_FOCUS_MASK_TIF_NAME,
+            "window_npy": candidate_dir / CANDIDATE_FOCUS_WINDOW_NPY_NAME,
+            "pixel_csv": candidate_dir / CANDIDATE_FOCUS_PIXEL_REPORT_NAME,
+            "targets_csv": candidate_dir / CANDIDATE_FOCUS_TARGETS_NAME,
+            "targets_geojson": candidate_dir / CANDIDATE_FOCUS_TARGETS_GEOJSON_NAME,
+            "hard_json": candidate_dir / CANDIDATE_FOCUS_HARD_JSON_NAME,
+            "hard_csv": candidate_dir / CANDIDATE_FOCUS_HARD_CSV_NAME,
+            "core_json": candidate_dir / CANDIDATE_FOCUS_CORE_RING_JSON_NAME,
+            "core_csv": candidate_dir / CANDIDATE_FOCUS_CORE_RING_CSV_NAME,
+        }
+        paths["summary"].write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+        np.save(paths["mask_npy"], mask.astype(np.uint8))
+        write_georeferenced_raster(paths["mask_tif"], mask.astype(np.float32), grid_spec)
+        write_raster_sidecar(
+            paths["mask_tif"],
+            grid_manifest=grid_spec.manifest,
+            nodata=grid_spec.nodata,
+            dtype="float32",
+            shape=mask.shape,
+        )
+        assert support_stack is not None
+        np.save(paths["window_npy"], _crop_masked_window(support_stack, mask))
+
+        _write_csv(paths["pixel_csv"], list(roi_products["pixel_records"]))
+        _write_csv(paths["targets_csv"], list(roi_products["target_records"]))
+        target_geojson = _enrich_target_geojson(dict(roi_products["target_geojson"]), selection)
+        paths["targets_geojson"].write_text(
+            json.dumps(target_geojson, indent=2, sort_keys=True), encoding="utf-8"
+        )
+
+        hard_record = dict(hard_products["hard_type_record"])
+        hard_payload = dict(hard_products["hard_type_json"])
+        hard_payload.update(
+            {
+                "focus_kind": "candidate_focus",
+                "candidate_id": selection.candidate_id,
+                "candidate_rank": selection.rank,
+                "scientific_warning": SCIENTIFIC_WARNING,
+            }
+        )
+        _write_csv(paths["hard_csv"], [hard_record])
+        paths["hard_json"].write_text(json.dumps(hard_payload, indent=2, sort_keys=True), encoding="utf-8")
+
+        core_record = dict(core_products["core_ring_scene_record"])
+        core_payload = dict(core_products["core_ring_scene_json"])
+        core_payload.update(
+            {
+                "focus_kind": "candidate_focus",
+                "candidate_id": selection.candidate_id,
+                "candidate_rank": selection.rank,
+                "scientific_warning": SCIENTIFIC_WARNING,
+            }
+        )
+        _write_csv(paths["core_csv"], [core_record])
+        paths["core_json"].write_text(json.dumps(core_payload, indent=2, sort_keys=True), encoding="utf-8")
+        artifacts.extend(_candidate_artifacts(selection, paths, run_dir))
+
+        index_row = {
+            "candidate_rank": selection.rank,
+            "candidate_id": selection.candidate_id,
+            "object_id": selection.object_id,
+            "cluster_id": selection.cluster_id,
+            "source_score": selection.source_score,
+            "source_review_order": selection.review_order,
+            "finding_label": selection.finding_label,
+            "row_min": selection.row_min,
+            "row_max": selection.row_max,
+            "col_min": selection.col_min,
+            "col_max": selection.col_max,
+            "center_row": selection.center_row,
+            "center_col": selection.center_col,
+            "utm_e": coords["utm_e"],
+            "utm_n": coords["utm_n"],
+            "lon": coords["lon"],
+            "lat": coords["lat"],
+            "focus_radius_m": float(FOCUS_RADIUS_M),
+            "focus_diameter_m": float(FOCUS_RADIUS_M * 2.0),
+            "mask_pixel_count": int(mask.sum()),
+            "relative_dir": candidate_dir.relative_to(run_dir).as_posix(),
+        }
+        index_rows.append(index_row)
+        index_features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [coords["lon"], coords["lat"]]},
+                "properties": {
+                    **{key: value for key, value in index_row.items() if key not in {"lon", "lat"}},
+                    "focus_kind": "candidate_focus",
+                    "scientific_warning": SCIENTIFIC_WARNING,
+                },
+            }
+        )
+
+    index_payload = {
+        "schema": CANDIDATE_FOCUS_SCHEMA,
+        "focus_kind": "candidate_focus",
+        "source": "classifier/classifications.csv",
+        "selection_contract": "descending_finding_score_then_review_order_then_object_id",
+        "requested_top_n": configured_top_n,
+        "selected_count": len(index_rows),
+        "focus_radius_m": float(FOCUS_RADIUS_M),
+        "focus_diameter_m": float(FOCUS_RADIUS_M * 2.0),
+        "focus_geometry_contract": CANDIDATE_FOCUS_GEOMETRY_CONTRACT,
+        "user_focus_unchanged": True,
+        "classifier_behavior_changed": False,
+        "scientific_warning": SCIENTIFIC_WARNING,
+        "candidates": index_rows,
+    }
+    index_json_path = output_root / CANDIDATE_FOCUS_INDEX_JSON_NAME
+    index_csv_path = output_root / CANDIDATE_FOCUS_INDEX_CSV_NAME
+    index_geojson_path = output_root / CANDIDATE_FOCUS_INDEX_GEOJSON_NAME
+    index_json_path.write_text(json.dumps(index_payload, indent=2, sort_keys=True), encoding="utf-8")
+    index_fieldnames = [
+        "candidate_rank",
+        "candidate_id",
+        "object_id",
+        "cluster_id",
+        "source_score",
+        "source_review_order",
+        "finding_label",
+        "row_min",
+        "row_max",
+        "col_min",
+        "col_max",
+        "center_row",
+        "center_col",
+        "utm_e",
+        "utm_n",
+        "lon",
+        "lat",
+        "focus_radius_m",
+        "focus_diameter_m",
+        "mask_pixel_count",
+        "relative_dir",
+    ]
+    _write_csv(index_csv_path, index_rows, fieldnames=index_fieldnames)
+    index_geojson_path.write_text(
+        json.dumps({"type": "FeatureCollection", "features": index_features}, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    artifacts.extend(
+        [
+            _artifact("candidate_focus_index_json", index_json_path, run_dir),
+            _artifact("candidate_focus_index_csv", index_csv_path, run_dir),
+            _artifact("candidate_focus_index_geojson", index_geojson_path, run_dir),
+        ]
+    )
+
+    return StageResult(
+        artifacts=artifacts,
+        metadata={
+            "candidate_focus_selected_count": len(index_rows),
+            "candidate_focus_top_n": configured_top_n,
+            "candidate_focus_geometry_contract": CANDIDATE_FOCUS_GEOMETRY_CONTRACT,
+            "classifier_behavior_changed": False,
+        },
+    )
+
+
+class CandidateFocusStage(Stage):
+    name = "candidate_focus"
+    parity_category = ParityCategory.PARITY_REPLACES
+    parity_reason = (
+        "Adds candidate-centered detailed Focus analysis after whole-scene classifier ranking while preserving the existing user Focus."
+    )
+
+    async def run(self, context: StageContext) -> StageResult:
+        return run_candidate_focus_analysis(context=context)
