@@ -19,13 +19,29 @@ interface ExportsTabProps {
   showAdvancedByDefault?: boolean;
 }
 
-type ExportCategoryKey = "result-classifier" | "location-field" | "paid-imagery" | "technical-advanced";
+type ExportCategoryKey =
+  | "result-classifier"
+  | "user-focus"
+  | "candidate-focus"
+  | "location-field"
+  | "paid-imagery"
+  | "technical-advanced";
 
 const EXPORT_CATEGORIES: Array<{ key: ExportCategoryKey; label: string; description: string }> = [
   {
     key: "result-classifier",
     label: "Result & Classifier",
     description: "Preferred classifier result files; legacy classifier copies are used here only when preferred files are absent.",
+  },
+  {
+    key: "user-focus",
+    label: "User Focus",
+    description: "Detailed Focus outputs centered on the original coordinate entered for the run.",
+  },
+  {
+    key: "candidate-focus",
+    label: "Candidate Focus",
+    description: "Detailed Focus outputs for the highest-ranked candidates found automatically in the full scene.",
   },
   {
     key: "location-field",
@@ -61,6 +77,12 @@ function normalizePath(path: string): string {
 function exportCategoryForPath(path: string, preferredClassifierAvailable: boolean): ExportCategoryKey {
   const normalized = normalizePath(path);
 
+  if (normalized.startsWith("full_job/candidate_focus/")) {
+    return "candidate-focus";
+  }
+  if (normalized.startsWith("full_job/focus/")) {
+    return "user-focus";
+  }
   if (PREFERRED_CLASSIFIER_PATHS.has(normalized)) {
     return "result-classifier";
   }
@@ -231,7 +253,7 @@ export function ExportsTab({
           lineHeight: "1.5",
         }}
       >
-        Downloads keep their existing guarded URLs and artifact paths. This page only reorganizes the files for easier use; it does not move, rename or republish them.
+        Downloads keep their existing guarded URLs and artifact paths. User Focus keeps the original run coordinate; Candidate Focus contains the strongest automatically ranked scene candidates. Candidate/anomaly scores are screening evidence, not physical confirmation.
       </div>
 
       {/* Purpose-based export browser */}

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     local_depth_mode: str = Field(default="off")
     local_depth_package_dir: Path | None = Field(default=None)
     option5_surface_change_enabled: bool = Field(default=True)
+    candidate_focus_top_n: int = Field(default=3, ge=1, le=10)
 
     @property
     def database_url(self) -> str:

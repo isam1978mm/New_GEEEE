@@ -13,7 +13,7 @@ REACT_MARKERS = (
     "Exports",
     "Diagnostics",
     "Recent Runs",
-    "Key Downloads",
+    "Candidate Focus",
     "Status History",
 )
 
@@ -89,7 +89,7 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Queue a new screening run" in bundle_text
     assert "Queue Run" in bundle_text
     assert "Target Preview" in bundle_text
-    assert "Advanced / unavailable outputs" in bundle_text
+    assert "Unavailable / status metadata" in bundle_text
     assert "Latitude" in bundle_text
     assert "Longitude" in bundle_text
     assert "Run name" in bundle_text
@@ -153,7 +153,7 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "about a 30% signal" not in bundle_text
     assert "tied for the highest app score" in bundle_text
     assert "Depth estimate: not available." in bundle_text
-    assert "Full export tree and unavailable-output status are available" in bundle_text
+    assert "Export Categories" in bundle_text
     assert "No status history events are available yet. Queued runs may not record detailed stage events until processing starts." in bundle_text
     assert "H5 operator aggregate summary" in bundle_text
     assert "Aggregate prediction summary" in bundle_text

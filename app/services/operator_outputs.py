@@ -72,9 +72,12 @@ OPERATOR_VISIBLE_PATTERNS = (
     "hypercube_norm_params.csv",
     "objects_index.csv",
     "clusters_summary.csv",
+    "classifier/*",
     "experimental/classifications.csv",
     "experimental/summary.json",
     "experimental/neutral_target_labels.json",
+    "full_job/focus/*",
+    "full_job/candidate_focus/*",
     "alignment_qa.json",
     "alignment_audit.csv",
     "alignment_mask_selection.json",
@@ -342,8 +345,15 @@ def _read_json(path: Path, *, source: str) -> tuple[dict[str, Any], OperatorOutp
 
 
 def _group_for_relative_path(relative_path: str) -> str:
-    first = relative_path.split("/", 1)[0]
-    return first if "/" in relative_path else "root"
+    normalized = relative_path.replace("\\", "/")
+    if normalized.startswith("full_job/candidate_focus/"):
+        return "candidate_focus"
+    if normalized.startswith("full_job/focus/"):
+        return "user_focus"
+    if normalized.startswith("classifier/"):
+        return "classifier"
+    first = normalized.split("/", 1)[0]
+    return first if "/" in normalized else "root"
 
 
 def _relative_sort_key(run_dir: Path):
