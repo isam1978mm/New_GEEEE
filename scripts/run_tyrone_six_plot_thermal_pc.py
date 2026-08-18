@@ -154,7 +154,9 @@ def evaluate_item(item: Any, polygons_utm: dict[str, Any]) -> dict[str, Any]:
         win = clip_window(st_src, site_union.bounds)
         transform = st_src.window_transform(win)
         raw = st_src.read(1, window=win, masked=True)
-        raw_data = np.asarray(raw.filled(np.nan), dtype=np.float64)
+        # Preserve the integer source data and carry the mask separately. Calling
+        # raw.filled(np.nan) on a uint16 MaskedArray fails before any value is read.
+        raw_data = np.asarray(raw.data, dtype=np.float64)
         raw_valid = ~np.ma.getmaskarray(raw) & np.isfinite(raw_data) & (raw_data > 0)
 
         with rasterio.open(qa_asset.href, sharing=False) as qa_src:
