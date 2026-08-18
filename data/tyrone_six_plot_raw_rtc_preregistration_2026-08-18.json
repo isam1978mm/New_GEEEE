@@ -1,0 +1,48 @@
+{
+  "protocol": "tyrone_six_plot_raw_rtc_screen_v1",
+  "date": "2026-08-18",
+  "purpose": "Screen raw/less-derived Sentinel-1 RTC features across the six independently measured Tyrone 3X plots before any replacement depth model is fitted.",
+  "geometry_source": "data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson",
+  "geometry_rule": "Apply a fixed 10 m inward buffer to each WGS84 plot after projection to EPSG:32612. Do not alter geometry after seeing feature values.",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "stac": "https://planetarycomputer.microsoft.com/api/stac/v1",
+    "collection": "sentinel-1-rtc",
+    "period_start": "2018-01-01",
+    "period_end_exclusive": "2024-01-01",
+    "orbit_state": "descending",
+    "relative_orbit": 56,
+    "pixel_size_m": 10
+  },
+  "features": ["vv_db", "vh_db", "log_ratio_db"],
+  "monthly_composite": "Pixelwise median of all successful selected acquisitions in each calendar month.",
+  "plot_statistics": ["mean", "median", "std", "q25", "q75", "valid_pixel_count"],
+  "measured_depth_order_only": {
+    "outslope": ["TP1", "TP2", "TP3"],
+    "top_surface": ["TP5", "TP6", "TP7"]
+  },
+  "screening_statistic": "For each usable month and feature, classify each three-plot surface group as strictly increasing with measured depth order, strictly decreasing, or nonmonotonic using the plot median feature value.",
+  "minimum_valid_pixels_per_plot": 15,
+  "minimum_usable_months_per_group": 24,
+  "dominant_monotonic_fraction_required": 0.70,
+  "seasonal_support": {
+    "required_fraction_matching_group_direction": 0.60,
+    "minimum_usable_months_per_season": 4,
+    "seasons": ["DJF", "MAM", "JJA", "SON"]
+  },
+  "candidate_signal_gate": "A feature passes only if both surface groups independently pass the fixed monotonicity and seasonal-support rules and both groups have the same dominant direction.",
+  "same_depth_surface_check": "Report TP1-vs-TP5, TP2-vs-TP6 and TP3-vs-TP7 feature differences descriptively; no pass threshold is fitted from these differences.",
+  "forbidden": [
+    "NB_DEPTH as a predictor",
+    "classifier output as depth evidence",
+    "PCA anomaly as depth evidence",
+    "changing thresholds after results are seen",
+    "training or fitting a replacement depth model",
+    "Earth Engine query",
+    "app depth enablement"
+  ],
+  "result_interpretation": {
+    "pass": "feature is a candidate depth-responsive signal worthy of further independent validation, not a depth formula",
+    "fail": "do not rescue by tuning this protocol; document the failure and move to the next predeclared physical feature family"
+  }
+}
