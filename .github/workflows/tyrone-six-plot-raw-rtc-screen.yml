@@ -10,6 +10,15 @@ on:
       - data/tyrone_six_plot_raw_rtc_preregistration_2026-08-18.json
       - data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson
       - .github/workflows/tyrone-six-plot-raw-rtc-screen.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/run_tyrone_six_plot_raw_pc_rtc.py
+      - docs/TYRONE_SIX_PLOT_RAW_RTC_PREREGISTRATION_2026-08-18.md
+      - data/tyrone_six_plot_raw_rtc_preregistration_2026-08-18.json
+      - data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson
+      - .github/workflows/tyrone-six-plot-raw-rtc-screen.yml
   workflow_dispatch:
 
 permissions:
