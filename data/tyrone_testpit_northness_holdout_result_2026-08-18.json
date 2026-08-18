@@ -1,0 +1,84 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_testpit_northness_holdout_v1",
+  "decision": "NORTHNESS_HOLDOUT_FAILED_CLOSE_WITHOUT_RESCUE",
+  "candidate_status": "CLOSED",
+  "development_candidate": "northness",
+  "preregistration_pr": 86,
+  "experimental_pr": 87,
+  "workflow_run_id": 32191052257,
+  "workflow_job_id": 95885237604,
+  "artifact_id": 9344203887,
+  "artifact_name": "tyrone-testpit-northness-holdout-pc",
+  "primary_source": "3X_CQAR_006_007_R0.pdf AS-BUILT mapped cover-verification test pits",
+  "point_recovery": {
+    "exact_non_censored_primary_points": 43,
+    "plus_values_excluded": true,
+    "range_values_excluded": true,
+    "development_plot_exclusion_m": 20,
+    "all_primary_points_outside_development_exclusion": true,
+    "minimum_distance_to_development_plot_m": 39.09802530,
+    "apex_area_excluded": true,
+    "pdf_to_mine_grid_max_residual_ft_page_1": 0.27020180,
+    "pdf_to_mine_grid_max_residual_ft_page_2": 0.27021891,
+    "maximum_allowed_grid_residual_ft": 5,
+    "global_transform": "data/depth_reference/tyrone_mine_grid_to_global_transform_v1.json",
+    "point_file": "data/depth_reference/tyrone_3x_testpit_northness_holdout_points_v1.csv"
+  },
+  "terrain_source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "3dep-seamless",
+    "item_id": "n33w109-13",
+    "gsd_m": 10,
+    "analysis_crs": "EPSG:32612",
+    "read_success_count": 1,
+    "read_failure_count": 0
+  },
+  "frozen_test": {
+    "expected_direction": "positive",
+    "neighborhood_radii_m": [10, 20],
+    "statistic": "Spearman rank correlation between exact cover depth in inches and median northness",
+    "minimum_rho": 0.30,
+    "maximum_one_sided_permutation_p": 0.05,
+    "permutations": 100000,
+    "random_seed": 314101,
+    "pass_rule": "rho >= 0.30 and one-sided permutation p <= 0.05 at BOTH 10 m and 20 m radii"
+  },
+  "tests": {
+    "10m": {
+      "n": 43,
+      "rho": 0.2635459277985988,
+      "one_sided_p": 0.04211957880421196,
+      "permutation_ge_count": 4211,
+      "passed": false,
+      "reason": "p threshold passes but preregistered rho >= 0.30 effect-size threshold fails"
+    },
+    "20m": {
+      "n": 43,
+      "rho": 0.27084342104020986,
+      "one_sided_p": 0.03845961540384596,
+      "permutation_ge_count": 3845,
+      "passed": false,
+      "reason": "p threshold passes but preregistered rho >= 0.30 effect-size threshold fails"
+    }
+  },
+  "interpretation": [
+    "The independent test-pit holdout does not pass the frozen candidate gate at either radius.",
+    "The positive correlations are weak-to-moderate and statistically positive under the one-sided permutation test, but they are below the preregistered minimum effect size at both radii.",
+    "Because the effect-size threshold was frozen before northness values were extracted, the threshold must not be relaxed after seeing the result.",
+    "Northness is therefore closed as a numerical-depth candidate without rescue.",
+    "This does not change the already closed NB numerical-depth decision or the raw Sentinel-1 failure."
+  ],
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "app_depth_enabled": false,
+    "thresholds_changed_after_result": false,
+    "points_removed_based_on_northness": false
+  },
+  "next_route": "PREREGISTER_THERMAL_FEATURE_FAMILY"
+}
