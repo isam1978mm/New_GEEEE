@@ -1,0 +1,38 @@
+name: Tyrone test-pit northness holdout
+
+on:
+  push:
+    branches:
+      - agent/tyrone-testpit-northness-holdout-run-20260818
+    paths:
+      - scripts/run_tyrone_testpit_northness_holdout_pc.py
+      - data/depth_reference/tyrone_3x_testpit_northness_holdout_points_v1.csv
+      - .github/workflows/tyrone-testpit-northness-holdout.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  northness-holdout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install public terrain holdout dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            numpy scipy rasterio pyproj pystac-client planetary-computer
+      - name: Run frozen Tyrone test-pit northness holdout
+        run: python scripts/run_tyrone_testpit_northness_holdout_pc.py
+      - name: Upload holdout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-testpit-northness-holdout-pc
+          path: artifacts/tyrone_testpit_northness_holdout_pc/
+          if-no-files-found: error
+          retention-days: 7
