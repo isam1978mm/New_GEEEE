@@ -89,7 +89,7 @@ def test_react_bundle_uses_real_run_apis_without_sensitive_content() -> None:
     assert "Queue a new screening run" in bundle_text
     assert "Queue Run" in bundle_text
     assert "Target Preview" in bundle_text
-    assert "Advanced / unavailable outputs" in bundle_text
+    assert "Unavailable / status metadata" in bundle_text
     assert "Latitude" in bundle_text
     assert "Longitude" in bundle_text
     assert "Run name" in bundle_text
