@@ -1,0 +1,45 @@
+name: Tyrone six-plot optical screen
+
+on:
+  push:
+    branches:
+      - agent/tyrone-six-plot-optical-screen-20260818
+    paths:
+      - scripts/run_tyrone_six_plot_optical_pc.py
+      - data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson
+      - .github/workflows/tyrone-six-plot-optical-screen.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/run_tyrone_six_plot_optical_pc.py
+      - data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson
+      - .github/workflows/tyrone-six-plot-optical-screen.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  optical-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install public optical screen dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            numpy rasterio shapely pyproj pystac-client planetary-computer
+      - name: Run frozen Tyrone optical screen
+        run: python scripts/run_tyrone_six_plot_optical_pc.py
+      - name: Upload optical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-six-plot-optical-pc
+          path: artifacts/tyrone_six_plot_optical_pc/
+          if-no-files-found: error
+          retention-days: 7
