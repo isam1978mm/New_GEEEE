@@ -1,0 +1,66 @@
+{
+  "protocol": "tyrone_testpit_northness_holdout_v1",
+  "date": "2026-08-18",
+  "candidate_from_development_screen": "northness",
+  "expected_direction": "positive association with measured cover depth",
+  "independent_source": "3X_CQAR_006_007_R0.pdf AS-BUILT mapped cover-verification test pits",
+  "primary_measurement_inclusion": {
+    "include": "all uniquely mapped test pits with one exact numeric cover depth",
+    "exclude_plus_values": true,
+    "exclude_range_values": true,
+    "reason": "plus and range values are censored/non-exact and will not be converted to invented exact depths"
+  },
+  "independence_filters": {
+    "exclude_inside_or_within_m_of_six_development_plot_polygons": 20,
+    "exclude_inside_sheet_apex_area": true,
+    "reason_apex": "drawing note states no cover-depth verification was performed in the apex area",
+    "no_exclusion_based_on_northness_or_support_for_candidate": true
+  },
+  "location_digitization": {
+    "source": "vector AS-BUILT sheets 3X CQAR 006 and 007",
+    "require_unique_label_to_marker_link": true,
+    "mine_grid_recovery": "fit sheet PDF coordinates to labeled Tyrone mine-grid lines/intersections",
+    "maximum_grid_control_residual_ft": 5,
+    "global_transform": "data/depth_reference/tyrone_mine_grid_to_global_transform_v1.json",
+    "unrecoverable_or_ambiguous_points": "exclude with explicit reason before terrain extraction"
+  },
+  "minimum_primary_holdout_points": 20,
+  "terrain_source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "3dep-seamless",
+    "gsd_m": 10,
+    "feature_definition": "same northness definition used in tyrone_six_plot_terrain_screen_v1"
+  },
+  "fixed_point_summaries": {
+    "neighborhood_radii_m": [10, 20],
+    "statistic": "median northness of valid 10 m terrain pixels whose centers fall within the radius"
+  },
+  "primary_test": {
+    "statistic": "Spearman rank correlation between exact cover depth (inches) and northness",
+    "expected_sign": "positive",
+    "minimum_rho": 0.30,
+    "permutation_test": {
+      "alternative": "greater",
+      "permutations": 100000,
+      "random_seed": 314101,
+      "maximum_p_value": 0.05
+    },
+    "pass_rule": "rho >= 0.30 and one-sided permutation p <= 0.05 at BOTH 10 m and 20 m neighborhood radii"
+  },
+  "decision_rules": {
+    "if_n_below_minimum": "INSUFFICIENT_INDEPENDENT_POINTS; do not relax inclusion or independence rules",
+    "if_fail": "close northness without rescue and move to separately preregistered thermal family",
+    "if_pass": "northness remains a site-specific candidate requiring further independent-site validation; do not fit a transferable depth formula from Tyrone alone"
+  },
+  "forbidden": [
+    "using the six plot averages as holdout observations",
+    "treating plus or range values as exact",
+    "dropping points because their northness contradicts the candidate",
+    "changing radii, rho threshold, p threshold, or direction after results are seen",
+    "NB_DEPTH",
+    "classifier/PCA depth evidence",
+    "depth model fitting",
+    "Earth Engine query",
+    "app depth enablement"
+  ]
+}
