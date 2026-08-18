@@ -1,0 +1,44 @@
+name: Tyrone six-plot raw RTC screen
+
+on:
+  push:
+    branches:
+      - agent/tyrone-six-plot-raw-rtc-screen-20260818
+    paths:
+      - scripts/run_tyrone_six_plot_raw_pc_rtc.py
+      - docs/TYRONE_SIX_PLOT_RAW_RTC_PREREGISTRATION_2026-08-18.md
+      - data/tyrone_six_plot_raw_rtc_preregistration_2026-08-18.json
+      - data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson
+      - .github/workflows/tyrone-six-plot-raw-rtc-screen.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  raw-rtc-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install public RTC screen dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            numpy rasterio shapely pyproj pystac-client planetary-computer
+
+      - name: Run preregistered Tyrone six-plot screen
+        run: python scripts/run_tyrone_six_plot_raw_pc_rtc.py
+
+      - name: Upload raw RTC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-six-plot-raw-pc-rtc
+          path: artifacts/tyrone_six_plot_raw_pc_rtc/
+          if-no-files-found: error
+          retention-days: 7
