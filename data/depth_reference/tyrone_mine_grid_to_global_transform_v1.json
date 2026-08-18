@@ -1,0 +1,44 @@
+{
+  "version": "v1",
+  "status": "validated_for_10m_raster_screening",
+  "source": "Freeport-McMoRan Tyrone Inc. 2024 Emma Part 4 Exploration Permit Application, Attachment A",
+  "source_filename": "GR095ER_Emma-Project_Part-4-Exploration-Permit-Application-1.pdf",
+  "source_fields": "Drillhole ID; Longitude (WGS84); Latitude (WGS84); Easting; Northing",
+  "control_pair_count": 34,
+  "local_coordinate_interpretation": "Tyrone Mine local grid in feet; east positive, west negative; north positive. Corroborated by 2021 Emma well logs explicitly naming the Tyrone Mine coordinate system.",
+  "intermediate_target_crs": "EPSG:32612 WGS84 / UTM zone 12N",
+  "validation": {
+    "method": "fit 2D similarity transform on four spatially distributed controls; hold out remaining 30",
+    "control_ids": ["EM24-07", "EM24-14", "EM24-26", "EM24-33"],
+    "holdout_count": 30,
+    "holdout_mean_residual_m": 0.0013027068996873629,
+    "holdout_median_residual_m": 0.0012494571274053756,
+    "holdout_max_residual_m": 0.002533388532662064,
+    "acceptance_context": "Residuals are far below the 10 m raster pixel scale. No depth values were used to fit or select the transform."
+  },
+  "final_fit": {
+    "method": "2D similarity transform refit to all 34 official coordinate pairs after validation passed",
+    "equations": {
+      "utm_e_m": "a * mine_e_ft - b * mine_n_ft + tx",
+      "utm_n_m": "b * mine_e_ft + a * mine_n_ft + ty"
+    },
+    "a": 0.30480454058024326,
+    "b": 0.0028379210270941257,
+    "tx_m": 743190.6873438816,
+    "ty_m": 3611236.9485833473,
+    "scale_m_per_local_ft": 0.30481775170434083,
+    "rotation_deg": 0.5334441503942344,
+    "mean_residual_m": 0.0010756293358513541,
+    "max_residual_m": 0.001656695175379117
+  },
+  "independent_sanity_check": {
+    "reference": "FCX published Tyrone Tailing Dam 3X location 32°43'13.94N, 108°24'51.07W",
+    "inverse_mine_grid_approx": {"mine_easting_ft": -2393.64, "mine_northing_ft": 39480.04},
+    "result": "Falls inside the Dam 3X local drawing-grid extent and in the expected relative location; used only as a sanity check, not as fitting data."
+  },
+  "limitations": [
+    "This validates the grid-to-global transform, not original CAD/survey plot vertices.",
+    "Six plot boundaries remain digitized from the official AS-BUILT drawing centerlines.",
+    "Do not use the transform to revive or retune the failed NB numerical-depth formula."
+  ]
+}

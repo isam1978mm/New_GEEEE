@@ -4,58 +4,42 @@ Date: 2026-08-18
 
 ## Purpose
 
-This dataset is the source-controlled reference for the Tyrone 3X cover-depth test plots TP1, TP2, TP3, TP5, TP6, and TP7.
+This is the source-controlled Tyrone 3X reference for TP1, TP2, TP3, TP5, TP6 and TP7. It supports scientific screening of replacement numerical-depth methods.
 
-It is intended for scientific screening of replacement numerical-depth methods. It must not be used to claim that the existing NB depth proxy is a validated depth measurement.
+It must **not** be used to claim the existing NB proxy is a validated depth measurement.
 
-## Official source
+## Official plot source
 
-Primary geometry/plot source:
+Primary plot geometry source:
 
 - `3X_CQAR_010_R0.pdf`
-- drawing title: `TAILING IMPOUNDMENT TEST PLOTS AS-BUILT`
-- source page: 1
+- `TAILING IMPOUNDMENT TEST PLOTS AS-BUILT`
 
-The drawing explicitly labels:
+| Plot | Surface | Nominal | Measured mean (m) | Official drawing acreage |
+|---|---|---:|---:|---:|
+| TP1 | outslope | 2 ft | 0.70612 | 4.9 |
+| TP2 | outslope | 3 ft | 0.94996 | 5.4 |
+| TP3 | outslope | 4 ft | 1.28016 | 4.7 |
+| TP5 | top surface | 2 ft | 0.68072 | 4.1 |
+| TP6 | top surface | 3 ft | 0.94996 | 4.5 |
+| TP7 | top surface | 4 ft | 1.30556 | 2.3 |
 
-| Plot | Nominal treatment | Official printed acreage |
-|---|---:|---:|
-| TP1 | 2 ft | 4.9 ac |
-| TP2 | 3 ft | 5.4 ac |
-| TP3 | 4 ft | 4.7 ac |
-| TP5 | 2 ft | 4.1 ac |
-| TP6 | 3 ft | 4.5 ac |
-| TP7 | 4 ft | 2.3 ac |
+All individual measured samples/min/max remain recorded in `tyrone_3x_six_plot_reference_v1.csv` and the local-grid GeoJSON.
 
-## Measured cover-depth references
+## Geometry layers
 
-| Plot | Surface | Samples (in) | Mean (m) | Min (m) | Max (m) |
-|---|---|---|---:|---:|---:|
-| TP1 | outslope | 27, 27, 26, 27, 32 | 0.70612 | 0.66040 | 0.81280 |
-| TP2 | outslope | 36, 34, 39, 42, 36 | 0.94996 | 0.86360 | 1.06680 |
-| TP3 | outslope | 50, 49, 54, 52, 47 | 1.28016 | 1.19380 | 1.37160 |
-| TP5 | top surface | 28, 26, 26, 28, 26 | 0.68072 | 0.66040 | 0.71120 |
-| TP6 | top surface | 40, 35, 42, 36, 34 | 0.94996 | 0.86360 | 1.06680 |
-| TP7 | top surface | 50, 50, 52, 51, 54 | 1.30556 | 1.27000 | 1.37160 |
+### Local source-grid layer
 
-## Geometry provenance
+`tyrone_3x_six_plot_reference_v1.geojson`
 
-The polygons in `tyrone_3x_six_plot_reference_v1.geojson` are digitized from the visible plot-boundary centerlines on the official coordinate-controlled AS-BUILT drawing.
+- Tyrone Mine local drawing grid in feet;
+- W values represented as negative eastings;
+- boundaries digitized from official AS-BUILT drawing centerlines;
+- not original CAD/survey vertices.
 
-Important limitations:
+Digitized planimetric acreage was not adjusted to force agreement with printed acreage:
 
-- They are **not original CAD/survey vertices**.
-- Coordinates are in the drawing's **local Tyrone mine grid in feet**.
-- Westing labels are represented as signed negative W values; northing is positive N.
-- No EPSG code is assigned because no global CRS transform has been verified in this artifact.
-- The GeoJSON is therefore a **source-grid reference**, not WGS84 web-map geometry.
-- Do not overlay it directly on Sentinel/Landsat/DEM rasters until the local-grid-to-run-raster transform is independently verified.
-
-## Acreage QA
-
-The official printed acreage is retained independently from the digitized planimetric polygon area. The geometry was **not adjusted to force an acreage match**.
-
-| Plot | Official (ac) | Digitized planimetric (ac) | Difference |
+| Plot | Official (ac) | Digitized (ac) | Difference |
 |---|---:|---:|---:|
 | TP1 | 4.9 | 4.8261 | -1.51% |
 | TP2 | 5.4 | 5.3456 | -1.01% |
@@ -64,7 +48,34 @@ The official printed acreage is retained independently from the digitized planim
 | TP6 | 4.5 | 4.3725 | -2.83% |
 | TP7 | 2.3 | 2.1934 | -4.63% |
 
-The source material available here does not establish why printed acreage and digitized planimetric area differ. Do not silently interpret the printed acreages as slope-corrected surface area, CAD area, or another quantity without supporting records.
+### WGS84 raster-screening layer — VERIFIED
+
+`tyrone_3x_six_plot_reference_v1_wgs84.geojson`
+
+The previously missing Tyrone Mine grid → global transform has now been independently validated from an official 2024 Freeport-McMoRan Tyrone Emma exploration application containing **34 rows with both WGS84 longitude/latitude and local Easting/Northing**.
+
+A separate official 2021 Tyrone Emma hydrogeologic report explicitly identifies local Northing/Easting as being in the **Tyrone Mine coordinate system**.
+
+Validation design:
+
+- fit only four spatially distributed control rows: EM24-07, EM24-14, EM24-26, EM24-33;
+- hold out the other 30 official coordinate pairs;
+- maximum holdout residual: `0.002533 m`;
+- no depth/NB values used in transform fitting or validation.
+
+After validation passed, the similarity transform was refit to all 34 pairs. Final maximum residual: `0.001657 m`.
+
+Artifacts:
+
+- `tyrone_mine_grid_wgs84_controls_v1.csv`
+- `tyrone_mine_grid_to_global_transform_v1.json`
+- `tyrone_3x_six_plot_reference_v1_wgs84.geojson`
+
+Intermediate CRS: `EPSG:32612` — WGS84 / UTM Zone 12N.
+
+The transform is more than adequate for the intended **10 m raster screening**. The limiting spatial uncertainty is now the drawing-digitized plot boundary, not the grid/global transform.
+
+Do **not** describe the WGS84 vertices as original survey/CAD vertices.
 
 ## Completed Tyrone run
 
@@ -72,29 +83,25 @@ Reference run ID:
 
 `0c6d05ab-798b-40d4-b608-e01deabd6cb8`
 
-The completed run outputs are not committed in the repository. The reference dataset therefore records the run ID but leaves `pixel_count` empty until the verified global transform and run rasters are available together.
+The global six-plot geometry is now raster-ready. Pixel counts remain to be populated during raw-feature extraction from the completed run or existing sensor assets.
 
 ## NB numerical-depth status
 
 **CLOSED / FAILED VALIDATION.**
 
-The existing NB route failed:
+Raw NB may remain only as an **uncalibrated notebook-derived proxy**. Resolving the geometry transform does not reopen or validate NB numerical depth.
 
-- raw absolute numerical depth;
-- TP5/TP6 exact-drawing-geometry numerical accuracy;
-- two-anchor calibration;
-- unseen TP7 holdout;
-- independent TP1/TP2/TP3 depth ordering;
-- same-depth replicate consistency across surface types;
-- individual NB component monotonicity screening.
+## Replacement-method status
 
-Raw NB may remain only as an **uncalibrated notebook-derived proxy**. It must not be presented as measured or validated depth in metres.
+The geometry gate is now **PASSED**.
 
-## Replacement-method gate
+Do not train a replacement model yet. The next scientific step is raw/less-derived feature extraction for all six plots, excluding `NB_DEPTH`, followed by same-depth replicate screening:
 
-Do not train a replacement model yet. First recover/verify the local-mine-grid to completed-run raster transform, then extract raw or less-derived physical features for all six plots, excluding `NB_DEPTH` as the starting variable.
+- TP1 ↔ TP5
+- TP2 ↔ TP6
+- TP3 ↔ TP7
 
-Initial feature families:
+Candidate feature families:
 
 - Sentinel-1 VV and VH;
 - VV/VH or dB difference/ratio;
@@ -103,8 +110,8 @@ Initial feature families:
 - incidence angle;
 - DEM elevation, slope, aspect, roughness, TPI, curvature;
 - thermal/LST and thermal change where available;
-- optical vegetation/surface variables where defensible.
+- optical surface variables where defensible.
 
-For each plot, retain mean, median, standard deviation, Q25, Q75, and pixel count.
+For each plot retain mean, median, standard deviation, Q25, Q75 and pixel count.
 
-The first scientific question is: **after accounting for surface type, does any raw physical feature change consistently with measured depth?**
+First scientific question: **after accounting for surface type, does any raw physical feature change consistently with measured depth?**
