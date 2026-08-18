@@ -28,7 +28,30 @@ The current science/support stack already contains useful inputs including:
 
 Candidate Focus currently performs detailed analysis around selected candidates, but it does not yet combine these independent evidence sources into a clear candidate-validation decision.
 
-A dedicated ASC/DESC consistency decision is also not currently part of Candidate Focus and must not be claimed as present unless the implementation can prove the required ascending and descending data are available for the run.
+## Verified ASC/DESC state before implementation
+
+The ASC/DESC question was checked in the current `main` code before starting Candidate Validation implementation.
+
+The current SAR stage **does acquire and use both Sentinel-1 orbit directions**:
+
+- it builds separate `ASCENDING` and `DESCENDING` collections;
+- it selects matching ascending/descending scene pairs under the existing SAR timing constraints;
+- it records the selected pair metadata, including ascending image ID, descending image ID, dates, and time difference, in `QA/sar/sar_pair_diagnostics.json`.
+
+However, the current processing path combines each selected ascending image and descending image into a median pair image, then combines the pair images again into the final radar product. The completed run therefore preserves the combined radar outputs such as `VV_dB`, `VH_dB`, and `logRatio_dB`, but it does **not** currently preserve separate processed ASC and DESC raster products for later Candidate Focus validation.
+
+Therefore the current verified status is:
+
+- ASC data are acquired: **YES**;
+- DESC data are acquired: **YES**;
+- ASC/DESC pair identities and timing metadata are preserved: **YES**;
+- separate processed ASC raster evidence available to Candidate Focus after the run: **NO**;
+- separate processed DESC raster evidence available to Candidate Focus after the run: **NO**;
+- true candidate-level ASC-versus-DESC spatial consistency test on existing completed runs: **UNAVAILABLE**.
+
+This distinction is important. Pair metadata proves that both viewing directions contributed to the radar processing, but it is not sufficient to prove that a candidate anomaly appears independently in each viewing direction.
+
+No implementation work is authorized by this documentation update.
 
 ## Required next feature
 
@@ -44,11 +67,19 @@ Evaluate whether the candidate is spatially distinct and locally consistent in r
 
 The validation should compare the candidate/core area with a surrounding ring or local background. A signal that appears only in one layer should be treated more cautiously than a spatially aligned signal supported by multiple radar measures.
 
-### 2. ASC/DESC consistency when available
+### 2. ASC/DESC consistency
 
-If independent ascending and descending radar observations are actually available for the run, compare whether the anomaly remains spatially consistent between viewing geometries.
+For existing completed runs produced by the current pipeline, report candidate-level ASC/DESC consistency as `UNAVAILABLE`, because the separately processed ASC and DESC raster products are not preserved after they are combined into the final radar product.
 
-If these data are not available, report the check as unavailable. Do not synthesize or infer ASC/DESC agreement from unrelated layers.
+Do not infer ASC/DESC consistency from:
+
+- the existence of ASC/DESC pair metadata;
+- the final combined `VV_dB`, `VH_dB`, or `logRatio_dB` products;
+- unrelated radar or Focus layers.
+
+For future runs, true ASC/DESC consistency may be added only if the implementation explicitly preserves separate processed ASC and DESC evidence products before the current median combination step. Candidate Validation could then compare whether the anomaly remains spatially consistent between the two viewing geometries.
+
+Preserving separate ASC/DESC evidence must not change the existing final combined radar product or classifier behavior.
 
 ### 3. Thermal evidence
 
@@ -124,10 +155,11 @@ Operator recommendation:
 3. **Do not change the NB depth formula as part of this feature.**
 4. **Do not present NB proxy depth as calibrated or validated numerical depth.**
 5. **Do not convert an interpretation label such as `jar_جرة` or `statue_تمثال` into physical confirmation.** These remain screening interpretations.
-6. **Do not invent unavailable evidence.** Missing ASC/DESC or other evidence must be reported as unavailable.
+6. **Do not invent unavailable evidence.** Existing completed runs must report true candidate-level ASC/DESC consistency as unavailable under the current artifact contract.
 7. **Do not silently create scientific thresholds.** PASS/MIXED/FAIL thresholds and evidence-combination rules must be explicitly designed, documented, tested, and reviewed before implementation.
 8. **Keep User Focus and Candidate Focus behavior intact.** Candidate Validation extends Candidate Focus; it does not replace it.
 9. **Preserve guarded/private artifact handling.** Validation outputs must follow the existing local/private output rules.
+10. **Do not alter the existing combined SAR result when adding future ASC/DESC preservation.** Separate evidence products, if added, are additional validation inputs only.
 
 ## Required implementation sequence
 
@@ -136,12 +168,13 @@ Before code changes, define and review the exact validation contract:
 1. identify which evidence groups are reliably available in completed runs;
 2. define core-versus-ring/local-background measurements for each evidence group;
 3. define shape/compactness metrics;
-4. define handling for missing evidence;
+4. define handling for missing evidence, including current-run ASC/DESC `UNAVAILABLE` behavior;
 5. define explicit, scientifically conservative `PASS`, `MIXED`, and `FAIL` rules;
 6. define an explanation payload showing why each candidate received its result;
-7. add tests proving the classifier and depth paths are unchanged;
-8. expose the result in the UI as a separate Candidate Validation section;
-9. connect paid-imagery recommendation only after the validation decision.
+7. decide separately whether future runs should preserve processed ASC and DESC evidence products before radar combination;
+8. add tests proving the classifier, existing combined SAR result, and depth paths are unchanged;
+9. expose the result in the UI as a separate Candidate Validation section;
+10. connect paid-imagery recommendation only after the validation decision.
 
 ## Intended operator-facing result
 
@@ -153,7 +186,7 @@ Radar: supportive
 Thermal: supportive
 Terrain explanation: low
 Shape: compact
-ASC/DESC: unavailable
+ASC/DESC: unavailable for this completed run
 Recommendation: higher-resolution paid imagery / further verification
 ```
 
@@ -166,6 +199,8 @@ This feature is complete only when:
 - Candidate Validation runs after Candidate Focus without modifying the classifier;
 - each selected candidate receives a traceable `PASS`, `MIXED`, or `FAIL` result;
 - the result includes evidence-group explanations and unavailable-data states;
+- existing completed runs do not falsely claim candidate-level ASC/DESC consistency;
+- if separate ASC/DESC validation is later enabled for future runs, the existing combined SAR output remains unchanged;
 - the app does not claim physical confirmation or validated numerical depth;
 - paid-imagery recommendation follows the validation result rather than raw classifier or interpretation score alone;
 - existing User Focus, Candidate Focus, classifier, and NB/depth behavior remain backward compatible;
