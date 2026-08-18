@@ -14,11 +14,13 @@ def test_dashboard_does_not_render_private_local_key_download_list() -> None:
     assert "Recent Runs" in source
 
 
-def test_exports_use_the_four_operator_facing_categories() -> None:
+def test_exports_keep_operator_categories_and_add_user_and_candidate_focus() -> None:
     source = EXPORTS.read_text(encoding="utf-8")
 
     for label in (
         "Result & Classifier",
+        "User Focus",
+        "Candidate Focus",
         "Location & Field",
         "Paid Imagery",
         "Technical / Advanced Outputs",
@@ -45,4 +47,5 @@ def test_export_cleanup_preserves_existing_download_urls_and_paths() -> None:
     assert "filesByPath.set(file.path, file);" in source
     assert "href={file.downloadUrl}" in source
     assert "download={file.name}" in source
-    assert "does not move, rename or republish them" in source
+    assert 'normalized.startsWith("full_job/focus/")' in source
+    assert 'normalized.startsWith("full_job/candidate_focus/")' in source
