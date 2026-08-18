@@ -1,8 +1,24 @@
 # Next Feature — Candidate-Driven Focus Analysis
 
 Date: 2026-08-17  
-Status: **PLANNED / NOT IMPLEMENTED**  
+Status: **IMPLEMENTED — 2026-08-17**  
 Target branch: `main`
+
+## Implementation result
+
+Implemented in PR #78.
+
+- The existing user-coordinate Focus remains unchanged.
+- Candidate Focus is generated from the existing canonical `classifier/classifications.csv` outputs after whole-scene analysis.
+- The default selection is Top 3 candidates and is configurable with `candidate_focus_top_n` from 1 through 10.
+- Each selected candidate receives its own detailed Focus analysis under `full_job/candidate_focus/`.
+- Candidate rank, object/cluster IDs, source score, source bounding box, authoritative projected coordinates, and WGS84 coordinates remain traceable in the candidate index and per-candidate summaries.
+- The Exports UI clearly separates **User Focus** from **Candidate Focus**.
+- Classifier formulas, thresholds, labels, and classifier behavior were not changed.
+- Candidate/anomaly/classifier scores remain explicitly labeled as screening evidence, not physical confirmation, and this feature does not add numerical physical depth estimation.
+- The 17 m geometry decision is documented in `docs/next/CANDIDATE_DRIVEN_FOCUS_GEOMETRY_DECISION_2026-08-17.md`: preserve the current app's 17 m-radius User Focus and use the same 17 m-radius footprint for Candidate Focus. This is a backward-compatible app decision; the exact unavailable Tesla-v7.2 source cell is not claimed to have been proven equivalent.
+
+The original planning record is preserved below for traceability.
 
 ## Purpose
 
