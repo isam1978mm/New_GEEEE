@@ -13,7 +13,7 @@ REACT_MARKERS = (
     "Exports",
     "Diagnostics",
     "Recent Runs",
-    "Key Downloads",
+    "Candidate Focus",
     "Status History",
 )
 
