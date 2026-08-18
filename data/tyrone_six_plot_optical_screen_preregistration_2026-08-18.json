@@ -1,0 +1,62 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_six_plot_optical_screen_v1",
+  "status": "PREREGISTERED_NO_RESULTS",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-2-l2a",
+    "start": "2018-01-01",
+    "end_exclusive": "2024-01-01",
+    "growing_months": [4, 5, 6, 7, 8, 9, 10],
+    "quality_asset": "SCL",
+    "excluded_scl_classes": [0, 1, 3, 8, 9, 10, 11]
+  },
+  "geometry": {
+    "reference": "PR_81_VALIDATED_WGS84_SIX_PLOT_REFERENCE",
+    "inward_buffer_m": 10,
+    "outslope": ["TP1", "TP2", "TP3"],
+    "top_surface": ["TP5", "TP6", "TP7"]
+  },
+  "features": {
+    "NDVI": {
+      "formula": "(B08-B04)/(B08+B04)",
+      "native_support_m": 10,
+      "minimum_valid_product_pixels_per_plot_per_acquisition": 20
+    },
+    "NDMI": {
+      "formula": "(B8A-B11)/(B8A+B11)",
+      "native_support_m": 20,
+      "minimum_valid_product_pixels_per_plot_per_acquisition": 5
+    }
+  },
+  "composite_unit": "year_month_median_of_acquisition_level_plot_medians",
+  "maximum_possible_growing_season_year_months": 42,
+  "minimum_usable_year_month_composites": 30,
+  "minimum_distinct_years_per_calendar_month": 4,
+  "global_direction_fraction_min": 0.70,
+  "calendar_month_direction_fraction_min": 0.60,
+  "directions": {
+    "increasing": "TP1<TP2<TP3 AND TP5<TP6<TP7",
+    "decreasing": "TP1>TP2>TP3 AND TP5>TP6>TP7"
+  },
+  "surface_confound_pairs": ["TP5-TP1", "TP6-TP2", "TP7-TP3"],
+  "feature_decisions": [
+    "OPTICAL_DIRECT_CANDIDATE",
+    "OPTICAL_DIRECT_FAILED_CLOSE",
+    "OPTICAL_INSUFFICIENT_SUPPORT"
+  ],
+  "on_pass": "preregister independent mapped-test-pit validation before fitting any numerical-depth formula",
+  "on_fail": "close failed optical feature without rescue or combination with prior failed feature families",
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "nb_formula_changed": false,
+    "classifier_changed": false,
+    "ui_changed": false,
+    "training_started": false,
+    "calibration_record_created": false,
+    "app_depth_enabled": false,
+    "results_present": false
+  }
+}
