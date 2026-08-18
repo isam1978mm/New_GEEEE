@@ -7,6 +7,7 @@ from typing import Any
 from app.db.models.enums import ArtifactClass
 from app.pipeline._base import ParityCategory, Stage, StageContext, StageResult, build_stage_artifact
 from app.pipeline.qa_paths import ensure_run_qa_dir
+from app.pipeline.stages.candidate_focus import candidate_focus_inputs_ready, run_candidate_focus_analysis
 
 RUN_QUALITY_DIR_NAME = "run_quality"
 RUN_QUALITY_SUMMARY_JSON_NAME = "run_quality_summary.json"
@@ -264,14 +265,22 @@ class RunQualityStage(Stage):
     async def run(self, context: StageContext) -> StageResult:
         summary_path = write_run_quality_summary(context.run_dir)
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
-        return StageResult(
-            artifacts=[
-                build_stage_artifact(
-                    name="run_quality_summary",
-                    relative_path=summary_path.relative_to(context.run_dir).as_posix(),
-                    artifact_class=ArtifactClass.REDACTED_PUBLIC,
-                    size_bytes=summary_path.stat().st_size,
-                )
-            ],
-            metadata=summary,
-        )
+        artifacts = [
+            build_stage_artifact(
+                name="run_quality_summary",
+                relative_path=summary_path.relative_to(context.run_dir).as_posix(),
+                artifact_class=ArtifactClass.REDACTED_PUBLIC,
+                size_bytes=summary_path.stat().st_size,
+            )
+        ]
+        metadata = dict(summary)
+
+        # Candidate Focus is deliberately downstream of the existing classifier. It reads the
+        # canonical classifier CSV as an input and never changes classifier formulas/thresholds.
+        # The readiness guard preserves existing run-quality behavior for partial/test runs.
+        if candidate_focus_inputs_ready(context.run_dir):
+            candidate_result = run_candidate_focus_analysis(context=context)
+            artifacts.extend(candidate_result.artifacts)
+            metadata["candidate_focus"] = candidate_result.metadata
+
+        return StageResult(artifacts=artifacts, metadata=metadata)
