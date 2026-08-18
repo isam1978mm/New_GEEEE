@@ -1,0 +1,49 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_six_plot_thermal_screen_v1",
+  "status": "PREREGISTERED_NO_RESULTS",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "landsat-c2-l2",
+    "platforms": ["Landsat 8", "Landsat 9"],
+    "feature": "Collection 2 Level-2 daytime surface temperature ST_B10 / lwir11",
+    "start": "2018-01-01",
+    "end_exclusive": "2024-01-01",
+    "native_thermal_gsd_m_approx": 100,
+    "modis_night_proxy_used": false
+  },
+  "geometry": {
+    "reference": "PR_81_VALIDATED_WGS84_SIX_PLOT_REFERENCE",
+    "inward_buffer_m": 10,
+    "outslope": ["TP1", "TP2", "TP3"],
+    "top_surface": ["TP5", "TP6", "TP7"]
+  },
+  "feature_definition": "per-acquisition median daytime surface temperature K in each eroded plot",
+  "minimum_usable_acquisitions": 24,
+  "season_minimum_acquisitions": 4,
+  "global_direction_fraction_min": 0.70,
+  "season_direction_fraction_min": 0.60,
+  "directions": {
+    "increasing": "TP1<TP2<TP3 AND TP5<TP6<TP7",
+    "decreasing": "TP1>TP2>TP3 AND TP5>TP6>TP7"
+  },
+  "season_rule": "the same globally selected direction must reach the seasonal fraction threshold in DJF, MAM, JJA, and SON",
+  "surface_confound_pairs": ["TP5-TP1", "TP6-TP2", "TP7-TP3"],
+  "pass_decision": "THERMAL_DIRECT_CANDIDATE",
+  "fail_decision": "THERMAL_DIRECT_FAILED_CLOSE",
+  "insufficient_decision": "THERMAL_INSUFFICIENT_SUPPORT",
+  "on_pass": "preregister independent mapped-test-pit validation before fitting any numerical-depth formula",
+  "on_fail": "close direct Landsat daytime thermal route without rescue",
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "nb_formula_changed": false,
+    "classifier_changed": false,
+    "ui_changed": false,
+    "training_started": false,
+    "calibration_record_created": false,
+    "app_depth_enabled": false,
+    "results_present": false
+  }
+}
