@@ -1,0 +1,55 @@
+{
+  "protocol": "tyrone_six_plot_terrain_screen_v1",
+  "date": "2026-08-18",
+  "purpose": "Screen terrain variables as possible direct depth-responsive signals and as surface/slope confounders before any replacement model is fitted.",
+  "geometry_source": "data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "3dep-seamless",
+    "gsd_m": 10,
+    "asset": "data",
+    "dem_combination": "pixelwise median of all overlapping returned 10 m 3DEP seamless items",
+    "analysis_crs": "EPSG:32612",
+    "analysis_pixel_size_m": 10
+  },
+  "geometry_sensitivity": {
+    "fixed_inward_buffers_m": [10, 20],
+    "minimum_valid_pixels_per_plot": 15,
+    "candidate_must_pass_both_buffers": true
+  },
+  "features": {
+    "elevation_m": "DEM elevation",
+    "slope_deg": "slope from 10 m finite-difference gradients",
+    "northness": "cosine of downslope aspect",
+    "eastness": "sine of downslope aspect",
+    "roughness_3x3_m": "3x3 local maximum minus minimum elevation",
+    "tpi_50m_m": "elevation minus 11x11 local mean (approximately 50 m radius)",
+    "curvature_laplacian_per_m": "sum of second horizontal derivatives of elevation"
+  },
+  "plot_statistic_for_screen": "median",
+  "depth_levels": {
+    "shallow": ["TP1", "TP5"],
+    "medium": ["TP2", "TP6"],
+    "deep": ["TP3", "TP7"]
+  },
+  "direct_depth_screen": {
+    "increasing_pass": "max(shallow_pair) < min(medium_pair) AND max(medium_pair) < min(deep_pair)",
+    "decreasing_pass": "min(shallow_pair) > max(medium_pair) AND min(medium_pair) > max(deep_pair)",
+    "candidate_rule": "same full-separation direction must pass at both 10 m and 20 m inward buffers",
+    "interpretation": "Exploratory candidate only; six plots cannot validate a transferable numerical depth model."
+  },
+  "surface_confounder_screen": {
+    "matched_pairs": [["TP1", "TP5"], ["TP2", "TP6"], ["TP3", "TP7"]],
+    "rule": "top_surface minus outslope must have the same nonzero sign for all three matched-depth pairs at each buffer, and the sign must agree across both buffers",
+    "interpretation": "Consistent terrain separation by surface type is evidence of confounding, not depth."
+  },
+  "forbidden": [
+    "NB_DEPTH",
+    "classifier/PCA output as depth evidence",
+    "changing features, buffer sizes, source, or rules after seeing results",
+    "fitting a depth formula/model",
+    "Earth Engine query",
+    "app depth enablement"
+  ],
+  "next_if_no_direct_candidate": "Close terrain as a direct depth-signal family and preregister thermal separately."
+}
