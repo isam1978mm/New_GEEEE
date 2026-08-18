@@ -1,0 +1,107 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_six_plot_thermal_screen_v1",
+  "decision": "THERMAL_DIRECT_FAILED_CLOSE",
+  "preregistration_pr": 89,
+  "experimental_pr": 90,
+  "workflow_run_id": 32196894708,
+  "artifact_id": 9346219809,
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "landsat-c2-l2",
+    "surface_temperature_asset": "lwir11",
+    "qa_asset": "qa_pixel",
+    "start": "2018-01-01",
+    "end_exclusive": "2024-01-01",
+    "native_thermal_gsd_m_approx": 100,
+    "candidate_items_with_required_assets": 173,
+    "successful_item_reads": 173,
+    "read_failure_count": 0
+  },
+  "geometry_source": "data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson",
+  "inward_buffer_m": 10.0,
+  "usable_acquisitions": 134,
+  "direction_counts": {
+    "no_support": 115,
+    "increasing": 14,
+    "decreasing": 5
+  },
+  "selected_direction": "increasing",
+  "selected_direction_fraction": 0.1044776119402985,
+  "frozen_global_direction_fraction_min": 0.70,
+  "frozen_minimum_usable_acquisitions": 24,
+  "frozen_season_minimum_acquisitions": 4,
+  "frozen_season_direction_fraction_min": 0.60,
+  "season_results": {
+    "DJF": {
+      "usable_acquisitions": 28,
+      "selected_direction_support_count": 0,
+      "selected_direction_fraction": 0.0,
+      "direction_gate_passed": false
+    },
+    "MAM": {
+      "usable_acquisitions": 35,
+      "selected_direction_support_count": 8,
+      "selected_direction_fraction": 0.22857142857142856,
+      "direction_gate_passed": false
+    },
+    "JJA": {
+      "usable_acquisitions": 37,
+      "selected_direction_support_count": 4,
+      "selected_direction_fraction": 0.10810810810810811,
+      "direction_gate_passed": false
+    },
+    "SON": {
+      "usable_acquisitions": 34,
+      "selected_direction_support_count": 2,
+      "selected_direction_fraction": 0.058823529411764705,
+      "direction_gate_passed": false
+    }
+  },
+  "surface_top_minus_outslope": {
+    "TP5_minus_TP1_k": {
+      "n": 134,
+      "median_k": 2.5780415849999656,
+      "positive_fraction": 0.9925373134328358
+    },
+    "TP6_minus_TP2_k": {
+      "n": 134,
+      "median_k": 1.6756843050000043,
+      "positive_fraction": 0.9925373134328358
+    },
+    "TP7_minus_TP3_k": {
+      "n": 134,
+      "median_k": 1.1134200150000026,
+      "positive_fraction": 0.7985074626865671
+    }
+  },
+  "technical_note": {
+    "first_attempt_workflow_run_id": 32196562720,
+    "first_attempt_status": "INVALID_TECHNICAL_RUN_NO_THERMAL_VALUES_INSPECTED",
+    "first_attempt_error": "uint16 masked-array NaN fill TypeError on all 173 reads",
+    "correction": "read integer data and carry source mask separately",
+    "scientific_protocol_changed": false,
+    "thresholds_changed": false,
+    "geometry_changed": false,
+    "date_window_changed": false
+  },
+  "interpretation": [
+    "Support was sufficient: 134 acquisitions passed the frozen six-plot availability rule.",
+    "Only 14 of 134 usable acquisitions showed increasing monotonic depth ordering in both surface groups; 5 showed decreasing ordering; 115 showed neither.",
+    "The best direction fraction was 0.10448, far below the frozen 0.70 global requirement.",
+    "Every seasonal direction gate also failed.",
+    "Matched-depth top-surface versus outslope thermal offsets were large and persistent, confirming strong surface/topographic thermal confounding.",
+    "The direct Landsat daytime surface-temperature route is closed without rescue and no independent holdout or depth formula is justified."
+  ],
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "app_depth_enabled": false,
+    "thresholds_changed_after_result": false
+  },
+  "next_route": "PREREGISTER_OPTICAL_VEGETATION_MOISTURE_FEATURE_FAMILY"
+}
