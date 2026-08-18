@@ -1,110 +1,112 @@
 # Tyrone 3X Six-Plot Global Transform Gate — 2026-08-18
 
-## Decision
+## CURRENT STATUS — RESOLVED 2026-08-18
 
-The Tyrone six-plot reference dataset is valid as an official-drawing/local-mine-grid reference, but the project does **not** yet have an independently verified Tyrone local-mine-grid → global/raster transform suitable for authoritative 10 m satellite-pixel extraction.
+The geometry/control-data blocker recorded earlier in this document is now **RESOLVED for 10 m raster screening**.
+
+An official 2024 Freeport-McMoRan Tyrone Emma Part 4 Exploration Permit Application contains 34 drill-hole rows with both:
+
+- WGS84 longitude/latitude; and
+- local Easting/Northing values.
+
+A separate official 2021 Tyrone Emma hydrogeologic report explicitly describes local Northing/Easting values as being in the **Tyrone Mine coordinate system**.
+
+These records provide the independent control that was missing when this gate was first written.
+
+## Validation
+
+A two-dimensional similarity transform was fitted using only four spatially distributed official control rows:
+
+- `EM24-07`
+- `EM24-14`
+- `EM24-26`
+- `EM24-33`
+
+The remaining **30 official coordinate pairs were held out**.
+
+Holdout result:
+
+- mean residual: `0.001303 m`
+- median residual: `0.001249 m`
+- maximum residual: `0.002533 m`
+
+This is negligible relative to a 10 m satellite pixel. No cover-depth values or NB values were used to fit, choose, or validate the transform.
+
+After the holdout test passed, the transform was refit to all 34 official coordinate pairs:
+
+```text
+UTM_E_m = a * mine_E_ft - b * mine_N_ft + tx
+UTM_N_m = b * mine_E_ft + a * mine_N_ft + ty
+
+a  = 0.30480454058024326
+b  = 0.0028379210270941257
+tx = 743190.6873438816 m
+ty = 3611236.9485833473 m
+```
+
+Intermediate CRS: `EPSG:32612` — WGS84 / UTM Zone 12N.
+
+Final 34-point fit maximum residual: `0.001657 m`.
+
+Control data and coefficients are source-controlled in:
+
+- `data/depth_reference/tyrone_mine_grid_wgs84_controls_v1.csv`
+- `data/depth_reference/tyrone_mine_grid_to_global_transform_v1.json`
+
+## Six-plot WGS84 geometry
+
+The existing official-drawing local polygons for TP1, TP2, TP3, TP5, TP6 and TP7 were transformed without changing their shapes or measured-depth metadata.
+
+Raster-ready WGS84 reference:
+
+- `data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson`
+
+This resolves the grid-to-global placement problem for the intended **10 m replacement-signal screening**.
+
+### Important remaining geometry limitation
+
+The transform is well constrained, but the plot boundaries are still **digitized from official AS-BUILT drawing centerlines**, not original CAD/survey vertices.
 
 Therefore:
 
-- numerical app depth remains blocked;
-- the current NB numerical-depth route remains closed/failed validation;
-- the six-plot reference remains usable for measured depths, local geometry, surface grouping, and provenance;
-- raw six-plot sensor extraction must remain gated until the global transform is independently verified;
-- the old July visual/image-fit UTM placements must not be promoted to authoritative geometry.
+- do not call the WGS84 plot vertices original survey vertices;
+- do not claim millimetre plot-boundary accuracy;
+- the limiting uncertainty is now the source drawing digitization, not the mine-grid/global transform.
 
-No classifier, UI, NB formula, SAR constraint, or production runtime code is changed by this decision.
+## Independent sanity check
 
-## What is now independently established
+The published Freeport-McMoRan location for Tyrone Tailing Dam 3X (`32°43'13.94"N, 108°24'51.07"W`) inversely maps to approximately:
 
-### Official six-plot geometry and measurements
+- mine Easting `-2393.64 ft` (about W2394)
+- mine Northing `39480.04 ft`
 
-The recovered June 2008 Tyrone 3X Construction Quality Assurance / as-built package independently confirms the six test plots and their configuration. The recovered figures/plates show TP1, TP2, TP3, TP5, TP6, and TP7 on the Dam 3X surface.
+This falls inside the Dam 3X local drawing-grid extent and in the expected relative location. It was used only as a sanity check, not as fitting data.
 
-The recovered original plate reports approximately:
+## Historical blocker — preserved
 
-| Plot | Nominal cover | Plate area |
-|---|---:|---:|
-| TP1 | 2 ft | 4.93 ac |
-| TP2 | 3 ft | 5.40 ac |
-| TP3 | 4 ft | 4.70 ac |
-| TP5 | 2 ft | 4.06 ac |
-| TP6 | 3 ft | 4.50 ac |
-| TP7 | 4 ft | 2.25 ac |
+Before this official coordinate-pair evidence was found, the project correctly rejected the July 2026 provisional visual/manual UTM placements.
 
-These are consistent with the simplified acreages printed on `3X_CQAR_010_R0.pdf` and with the existing measured-depth reference table.
+The surviving `provisional_historical_40m_cores` sensitivity test used 81 translated placements and only 25 preserved TP5 < TP6 ordering. Its decision was `GEOMETRY_SENSITIVE_INCONCLUSIVE`.
 
-### Surveying really occurred
+That result remains valid and the historical visual georeference must **not** be revived. The new transform is independent of it.
 
-The recovered CQA report states that CAES personnel performed layout/staking and cover-thickness verification work, and that final grade was verified by post-cover GPS surveys. This establishes that survey-grade source data existed during construction.
+## NB numerical-depth status
 
-### Local mine grid is real
+**UNCHANGED: CLOSED / FAILED VALIDATION.**
 
-`3X_CQAR_010_R0.pdf` uses a Tyrone local W/E–N drawing grid in feet. Other official Tyrone records also use local Northing/Easting values in feet. The project may therefore preserve the six plot polygons in this local grid without pretending those coordinates are WGS84/UTM.
+Resolving the geometry transform does not validate NB numerical depth and must not be used to retune or rescue the NB formula.
 
-## What was searched and not found
+No classifier, UI, NB formula, SAR constraint, Earth Engine production logic, or application runtime is changed by this resolution.
 
-The transform search checked:
+## Exact next scientific action
 
-1. current project Sources;
-2. current `main` repository files;
-3. historical Tyrone PRs and branches;
-4. the July provisional georeferencing implementation;
-5. later August depth/validation branches;
-6. the recovered official 3X CQA/as-built evidence package;
-7. exact standalone drawing names `3X_CQAR_004_R0` and `3X_CQAR_006_007_R0` in currently accessible project/repository resources.
+The transform gate has passed. Next:
 
-The recovered public CQA/as-built PDF does **not** expose a usable:
+1. use the six WGS84 polygons with the completed Tyrone run or existing sensor assets;
+2. verify usable pixel counts and placement;
+3. extract raw/less-derived physical features excluding `NB_DEPTH`;
+4. summarize mean, median, standard deviation, Q25, Q75 and pixel count per plot;
+5. screen TP1↔TP5, TP2↔TP6 and TP3↔TP7 to separate depth signal from surface/slope effects;
+6. do **not** train a replacement depth model until that screening is complete.
 
-- datum;
-- EPSG/UTM definition;
-- State Plane definition;
-- horizontal survey-control table;
-- benchmark/grid-origin definition;
-- mine-grid → global coordinate conversion;
-- CAES/GPS electronic coordinate export;
-- surveyed plot-vertex table.
-
-The standalone `3X_CQAR_004_R0.pdf` and `3X_CQAR_006_007_R0.pdf` named in earlier project handoffs are not presently available in the current project Sources/repository and were not separately present in the recovered public package.
-
-## Why the historical UTM placements cannot solve this gate
-
-The July 2026 Tyrone work deliberately used provisional visual/manual georeferencing. Historical code tested multiple image-pixel → UTM Zone 12N similarity transforms and translated placements rather than one independently surveyed transform.
-
-The surviving sensitivity output for run `0c6d05ab-798b-40d4-b608-e01deabd6cb8` is explicitly labelled `provisional_historical_40m_cores`. Across 81 ±40 m translation placements, only 25 preserved the TP5 < TP6 ordering (`25/81 ≈ 0.309`), and the predicted TP6−TP5 separation ranged from negative to positive. Decision: `GEOMETRY_SENSITIVE_INCONCLUSIVE`.
-
-That experiment proves that plausible placement uncertainty materially changes the depth result. Reusing one of those visual UTM hypotheses as if it were authoritative would invalidate the replacement-method screening.
-
-## Recovered evidence package
-
-The historical official-record recovery workflow was rerun on 2026-08-18 solely to recreate its expired evidence artifact. This was an evidence-recovery operation only: no Earth Engine run, classifier change, UI change, depth-formula change, or application change.
-
-Recovered package includes the Tyrone 3X as-built/CQA report, annual report material, rendered pages, and provenance. The as-built report confirms survey/GPS activity and original test-plot plans, but not the missing grid-to-global transform.
-
-## Current scientific gate
-
-**Question:** Can the six official local-grid polygons be placed on the completed satellite/raster run using an independently verified transform?
-
-**Answer as of 2026-08-18:** **NO — not yet.**
-
-This is a geometry/control-data blocker, not a depth-measurement blocker. The six measured reference depths are available.
-
-## Exact next action
-
-Use the first available route below that supplies independent control:
-
-1. Inspect original standalone `3X_CQAR_004_R0.pdf` and `3X_CQAR_006_007_R0.pdf` if recovered from the EMNRD package, specifically for datum, benchmark, coordinate-system, survey-control, or grid-conversion notes.
-2. If those sheets do not contain the conversion, obtain the CAES/PDTI/M3 electronic survey deliverable or coordinate/control table associated with the June 2008 3X CQA work: surveyed vertices/control points, CAD/GIS, GPS/CAES export, datum, or mine-grid conversion.
-3. Only if an explicitly provisional fallback is approved, perform a new multi-GCP visual georegistration using the broad as-built Figure 2/roads/topography and predeclare an acceptance threshold. It must remain labelled provisional and must not be called authoritative merely because it fits the imagery.
-
-## Action after the transform passes
-
-Once the transform is independently verified:
-
-1. transform TP1/TP2/TP3/TP5/TP6/TP7 into the completed run CRS;
-2. verify plot placement, area, and usable-pixel counts;
-3. extract raw/less-derived physical features independently of `NB_DEPTH`;
-4. summarize per plot (median, mean, standard deviation, Q25, Q75, pixel count);
-5. screen same-depth replicate pairs TP1↔TP5, TP2↔TP6, TP3↔TP7 for depth signal versus surface/slope effects;
-6. do **not** fit a replacement depth formula/model until that screening is complete.
-
-Candidate raw features include VV, VH, VV/VH or dB ratio, ascending/descending differences where available, temporal SAR variation, incidence angle, DEM elevation/slope/aspect/roughness/TPI/curvature, thermal/LST/change, and carefully selected optical surface variables.
+Candidate features include VV, VH, VV/VH or dB difference/ratio, ascending/descending differences where available, temporal SAR variation, incidence angle, DEM elevation/slope/aspect/roughness/TPI/curvature, thermal/LST/change, and carefully selected optical surface variables.
