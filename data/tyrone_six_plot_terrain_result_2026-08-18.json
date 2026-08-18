@@ -1,0 +1,75 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_six_plot_terrain_screen_v1",
+  "workflow_run_id": 32168252824,
+  "workflow_job_id": 95812939036,
+  "artifact_id": 9336258133,
+  "artifact_name": "tyrone-six-plot-terrain-pc",
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "3dep-seamless",
+    "gsd_m": 10,
+    "candidate_item_count": 1,
+    "read_success_count": 1,
+    "read_failure_count": 0,
+    "analysis_crs": "EPSG:32612",
+    "pixel_size_m": 10,
+    "inward_buffers_m": [10, 20]
+  },
+  "decision": {
+    "direct_depth_candidates": ["northness"],
+    "consistent_surface_confounders": [
+      "elevation_m",
+      "slope_deg",
+      "roughness_3x3_m",
+      "tpi_50m_m",
+      "curvature_laplacian_per_m"
+    ],
+    "northness_status": "EXPLORATORY_CANDIDATE_REQUIRES_INDEPENDENT_TEST_PIT_VALIDATION",
+    "numerical_depth_model_ready": false
+  },
+  "northness": {
+    "10m_buffer_plot_medians": {
+      "TP1": -0.06317280982112375,
+      "TP2": -0.013560429475077037,
+      "TP3": 0.777333967593778,
+      "TP5": -0.4259033076113291,
+      "TP6": 0.18296095898010814,
+      "TP7": 0.6861420052435087
+    },
+    "20m_buffer_plot_medians": {
+      "TP1": -0.0613494440275274,
+      "TP2": -0.01209781285382765,
+      "TP3": 0.78499843438014,
+      "TP5": -0.42328419947686924,
+      "TP6": 0.16903551381748447,
+      "TP7": 0.5925453887784458
+    },
+    "10m_direct_depth_direction": "increasing",
+    "20m_direct_depth_direction": "increasing",
+    "direct_depth_candidate_under_frozen_six_plot_gate": true,
+    "matched_depth_surface_sign": "mixed"
+  },
+  "surface_confounder_examples": {
+    "elevation_top_minus_outslope_m_10m": [3.05682373046875, 4.48675537109375, 1.86090087890625],
+    "slope_top_minus_outslope_deg_10m": [-1.9478037027890571, -8.588290887698198, -0.4794165190898849],
+    "roughness_top_minus_outslope_m_10m": [-0.7227783203125, -3.258056640625, -0.27435302734375],
+    "tpi_top_minus_outslope_m_10m": [-0.6433312282089219, -1.3033649034739483, -0.9837454803721357]
+  },
+  "interpretation": [
+    "Northness fully separates the replicated shallow, medium and deep plot levels in the same increasing direction at both preregistered inward buffers.",
+    "This is exploratory only and may be a placement/design correlation rather than a physical cover-depth response.",
+    "Elevation, slope, roughness, TPI and curvature consistently separate top-surface from outslope at matched depths, confirming strong terrain confounding.",
+    "Do not fit a depth formula from six plot-level terrain values.",
+    "The next required test is independent northness validation using mapped individual AS-BUILT test pits with exact measured cover depths."
+  ],
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "app_depth_enabled": false
+  }
+}
