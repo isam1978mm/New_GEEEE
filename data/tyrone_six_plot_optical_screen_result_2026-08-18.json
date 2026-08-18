@@ -1,0 +1,134 @@
+{
+  "date": "2026-08-18",
+  "protocol": "tyrone_six_plot_optical_screen_v1",
+  "preregistration_pr": 92,
+  "experimental_pr": 93,
+  "workflow_run_id": 32197728930,
+  "artifact_id": 9346630946,
+  "source": {
+    "provider": "Microsoft Planetary Computer",
+    "collection": "sentinel-2-l2a",
+    "start": "2018-01-01",
+    "end_exclusive": "2024-01-01",
+    "growing_months": [4, 5, 6, 7, 8, 9, 10],
+    "candidate_items_with_required_assets": 308,
+    "scene_feature_rows": 616,
+    "technical_failure_count": 0
+  },
+  "geometry_source": "data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson",
+  "inward_buffer_m": 10.0,
+  "frozen_gates": {
+    "minimum_usable_year_month_composites": 30,
+    "minimum_distinct_years_per_calendar_month": 4,
+    "global_direction_fraction_min": 0.70,
+    "calendar_month_direction_fraction_min": 0.60
+  },
+  "feature_results": {
+    "NDVI": {
+      "decision": "OPTICAL_DIRECT_FAILED_CLOSE",
+      "usable_year_month_composites": 42,
+      "direction_counts": {
+        "decreasing": 12,
+        "no_support": 26,
+        "increasing": 4
+      },
+      "selected_direction": "decreasing",
+      "selected_direction_fraction": 0.2857142857142857,
+      "global_direction_gate_passed": false,
+      "support_gate_passed": true,
+      "calendar_month_direction_gate_passed": false,
+      "calendar_month_selected_direction_fractions": {
+        "4": 0.16666666666666666,
+        "5": 0.16666666666666666,
+        "6": 0.16666666666666666,
+        "7": 0.3333333333333333,
+        "8": 0.3333333333333333,
+        "9": 0.6666666666666666,
+        "10": 0.16666666666666666
+      },
+      "surface_top_minus_outslope": {
+        "TP5_minus_TP1": {
+          "n": 42,
+          "median": -0.0005887938749129726,
+          "positive_fraction": 0.47619047619047616,
+          "negative_fraction": 0.5238095238095238
+        },
+        "TP6_minus_TP2": {
+          "n": 42,
+          "median": 0.004326246683611312,
+          "positive_fraction": 0.6666666666666666,
+          "negative_fraction": 0.3333333333333333
+        },
+        "TP7_minus_TP3": {
+          "n": 42,
+          "median": 0.004879145978848788,
+          "positive_fraction": 0.7142857142857143,
+          "negative_fraction": 0.2857142857142857
+        }
+      }
+    },
+    "NDMI": {
+      "decision": "OPTICAL_DIRECT_FAILED_CLOSE",
+      "usable_year_month_composites": 42,
+      "direction_counts": {
+        "no_support": 27,
+        "increasing": 12,
+        "decreasing": 3
+      },
+      "selected_direction": "increasing",
+      "selected_direction_fraction": 0.2857142857142857,
+      "global_direction_gate_passed": false,
+      "support_gate_passed": true,
+      "calendar_month_direction_gate_passed": false,
+      "calendar_month_selected_direction_fractions": {
+        "4": 0.16666666666666666,
+        "5": 0.3333333333333333,
+        "6": 0.6666666666666666,
+        "7": 0.5,
+        "8": 0.0,
+        "9": 0.0,
+        "10": 0.3333333333333333
+      },
+      "surface_top_minus_outslope": {
+        "TP5_minus_TP1": {
+          "n": 42,
+          "median": -0.03359979539622299,
+          "positive_fraction": 0.0,
+          "negative_fraction": 1.0
+        },
+        "TP6_minus_TP2": {
+          "n": 42,
+          "median": -0.036891666319322794,
+          "positive_fraction": 0.0,
+          "negative_fraction": 1.0
+        },
+        "TP7_minus_TP3": {
+          "n": 42,
+          "median": -0.03228929409915367,
+          "positive_fraction": 0.047619047619047616,
+          "negative_fraction": 0.9523809523809523
+        }
+      }
+    }
+  },
+  "interpretation": [
+    "Both features had complete support: all 42 possible April-October year-month composites from 2018-2023 were usable.",
+    "NDVI's strongest direction was decreasing on 12/42 composites (28.57%), far below the frozen 70% requirement.",
+    "NDMI's strongest direction was increasing on 12/42 composites (28.57%), far below the frozen 70% requirement.",
+    "Neither feature passed the frozen calendar-month consistency gates.",
+    "NDMI showed a persistent matched-depth top-surface versus outslope offset at all three depth levels, indicating strong surface-condition confounding rather than stable cover-depth ordering.",
+    "Neither optical feature justifies an independent holdout or numerical-depth formula."
+  ],
+  "decision": "OPTICAL_NDVI_AND_NDMI_DIRECT_ROUTES_CLOSED",
+  "safeguards": {
+    "classifier_output_used": false,
+    "pca_anomaly_used": false,
+    "nb_depth_used": false,
+    "earth_engine_query_executed": false,
+    "calibration_record_created": false,
+    "training_started": false,
+    "app_depth_enabled": false,
+    "thresholds_changed_after_result": false
+  },
+  "next_route": "CHECK_EXISTING_OFFICIAL_RECORDS_FOR_SECOND_INDEPENDENT_MEASURED_DEPTH_SITE_BEFORE_ANY_FURTHER_SURFACE_FEATURE_SCREENING"
+}
