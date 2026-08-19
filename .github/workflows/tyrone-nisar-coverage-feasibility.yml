@@ -1,0 +1,41 @@
+name: Tyrone NISAR coverage feasibility
+
+on:
+  push:
+    branches:
+      - agent/tyrone-nisar-coverage-feasibility-20260818
+    paths:
+      - scripts/check_tyrone_nisar_coverage.py
+      - .github/workflows/tyrone-nisar-coverage-feasibility.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/check_tyrone_nisar_coverage.py
+      - .github/workflows/tyrone-nisar-coverage-feasibility.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install metadata-query dependency
+        run: python -m pip install --disable-pip-version-check requests
+      - name: Query public ASF NISAR metadata at Tyrone
+        run: python scripts/check_tyrone_nisar_coverage.py
+      - name: Upload metadata evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-nisar-coverage-feasibility
+          path: artifacts/tyrone_nisar_coverage_feasibility/
+          if-no-files-found: error
+          retention-days: 7
