@@ -32,9 +32,9 @@ Prior records references may include:
 
 ## New request tracking number
 
-**Pending capture from the GovQA confirmation screen/email.**
+**`N000031-081926`**
 
-Update this file when the new request/reference number is known.
+This is the GovQA tracking/reference number for the targeted 2026-08-19 Tyrone 3X survey-surface request.
 
 ## Scientific status
 
