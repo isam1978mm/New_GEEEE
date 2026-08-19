@@ -1,0 +1,45 @@
+{
+  "status": "complete",
+  "decision": "NISAR_TYRONE_COVERAGE_FOUND",
+  "site": "Tyrone 3X",
+  "query_point_wkt": "POINT(-108.415 32.72)",
+  "query_date_window": [
+    "2026-06-17T00:00:00Z",
+    "2026-08-19T00:00:00Z"
+  ],
+  "dataset": "NISAR PROVISIONAL L-band",
+  "public_release_date": "2026-07-20",
+  "product_counts": {
+    "GCOV": 7,
+    "GSLC": 7
+  },
+  "gcov_acquisitions": [
+    {"start_time": "2026-06-17T12:26:15Z", "flight_direction": "ASCENDING", "path": 48, "frame": 18, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]},
+    {"start_time": "2026-06-28T01:59:33Z", "flight_direction": "DESCENDING", "path": 27, "frame": 72, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]},
+    {"start_time": "2026-06-29T12:26:15Z", "flight_direction": "ASCENDING", "path": 48, "frame": 18, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]},
+    {"start_time": "2026-07-10T01:59:32Z", "flight_direction": "DESCENDING", "path": 27, "frame": 72, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]},
+    {"start_time": "2026-07-11T12:26:14Z", "flight_direction": "ASCENDING", "path": 48, "frame": 18, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]},
+    {"start_time": "2026-07-22T01:59:31Z", "flight_direction": "DESCENDING", "path": 27, "frame": 72, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]},
+    {"start_time": "2026-07-23T12:26:13Z", "flight_direction": "ASCENDING", "path": 48, "frame": 18, "mode": "40+5", "polarizations_frequency_a": ["HH", "HV"]}
+  ],
+  "product_choice_for_next_screen": {
+    "primary": "L2 GCOV PROVISIONAL Frequency A",
+    "reason": "calibrated gamma0 backscatter with radiometric terrain correction on a 10 m square grid for 40 MHz land acquisitions",
+    "frequency_b_excluded": true,
+    "frequency_b_reason": "80 m GCOV posting is too coarse for the Tyrone plots",
+    "gslc_deferred": true,
+    "gslc_reason": "complex phase-preserving products are much larger and unnecessary for the first amplitude-only L-band screen"
+  },
+  "source_query": "ASF Search API metadata only",
+  "imagery_downloaded": false,
+  "backscatter_values_inspected": false,
+  "earth_engine_query_executed": false,
+  "model_fitted": false,
+  "calibration_record_created": false,
+  "classifier_modified": false,
+  "nb_formula_modified": false,
+  "ui_modified": false,
+  "app_depth_enabled": false,
+  "temporary_experiment_pr": 95,
+  "next_action": "Preregister the seven-acquisition Frequency-A GCOV six-plot L-band screen before any backscatter values are inspected."
+}
