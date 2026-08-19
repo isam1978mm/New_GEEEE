@@ -1,0 +1,107 @@
+{
+  "protocol": "tyrone_nisar_gcov_frequency_a_six_plot_screen_v1",
+  "status": "preregistered_no_results",
+  "scientific_question": "Does calibrated NISAR L-band Frequency-A GCOV backscatter show a repeatable cover-depth ordering across both independent Tyrone surface groups?",
+  "source": {
+    "dataset": "NISAR L2 GCOV PROVISIONAL V1",
+    "maturity": "PROVISIONAL",
+    "frequency": "A",
+    "primary_bandwidth_mhz": 40,
+    "pixel_spacing_m": 10,
+    "backscatter_normalization": "radiometrically terrain-corrected gamma0",
+    "polarizations": ["HH", "HV"],
+    "frequency_b_excluded": true,
+    "frequency_b_reason": "80 m GCOV posting is too coarse for the Tyrone plots"
+  },
+  "fixed_granules": [
+    "NISAR_L2_PR_GCOV_023_048_A_018_4005_DHDH_A_20260617T122615_20260617T122650_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_024_027_D_072_4005_DHDH_A_20260628T015933_20260628T020007_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_024_048_A_018_4005_DHDH_A_20260629T122615_20260629T122649_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_025_027_D_072_4005_DHDH_A_20260710T015932_20260710T020007_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_025_048_A_018_4005_DHDH_A_20260711T122614_20260711T122649_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_026_027_D_072_4005_DHDH_A_20260722T015931_20260722T020006_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_026_048_A_018_4005_DHDH_A_20260723T122613_20260723T122648_P05023_N_F_J_001"
+  ],
+  "orbit_counts": {
+    "ascending": 4,
+    "descending": 3
+  },
+  "geometry": {
+    "source": "data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson",
+    "provenance": "validated global transform from PR #81; plot boundaries digitized from official AS-BUILT drawing centerlines",
+    "inward_buffer_m": 10,
+    "plots": ["TP1", "TP2", "TP3", "TP5", "TP6", "TP7"],
+    "outslope_order": ["TP1", "TP2", "TP3"],
+    "top_surface_order": ["TP5", "TP6", "TP7"]
+  },
+  "features": [
+    {
+      "name": "HH_DB",
+      "definition": "10*log10(Frequency-A HHHH gamma0 power)"
+    },
+    {
+      "name": "HV_DB",
+      "definition": "10*log10(Frequency-A HVHV gamma0 power)"
+    },
+    {
+      "name": "HH_MINUS_HV_DB",
+      "definition": "HH_DB - HV_DB = 10*log10(HHHH/HVHV)"
+    }
+  ],
+  "feature_rules": {
+    "evaluated_separately": true,
+    "no_linear_combination": true,
+    "no_feature_selection_after_results": true,
+    "no_threshold_tuning_after_results": true
+  },
+  "pixel_validity": {
+    "use_only_product_quality_or_fill_metadata": true,
+    "backscatter_value_based_filtering_forbidden": true,
+    "require_finite_positive_power_before_db_conversion": true,
+    "minimum_valid_pixels_per_plot_per_feature_per_acquisition": 15,
+    "all_six_plots_required": true
+  },
+  "plot_statistic": "median feature value inside fixed 10 m inward plot polygon",
+  "support_gate": {
+    "all_seven_fixed_acquisitions_must_be_usable": true,
+    "if_not": "NISAR_GCOV_INSUFFICIENT_SUPPORT"
+  },
+  "direction_test": {
+    "increasing": "TP1 < TP2 < TP3 AND TP5 < TP6 < TP7",
+    "decreasing": "TP1 > TP2 > TP3 AND TP5 > TP6 > TP7",
+    "tie_or_mixed": "no_support",
+    "same_direction_required_for_both_surface_groups": true
+  },
+  "pass_gate": {
+    "overall_selected_direction_support_min": "5 of 7 acquisitions",
+    "ascending_selected_direction_support_min": "3 of 4 acquisitions",
+    "descending_selected_direction_support_min": "2 of 3 acquisitions",
+    "same_selected_direction_for_overall_and_both_orbits": true
+  },
+  "matched_depth_surface_offsets": {
+    "pairs": [["TP1", "TP5"], ["TP2", "TP6"], ["TP3", "TP7"]],
+    "role": "confounding diagnostics only",
+    "cannot_rescue_failed_direction_gate": true
+  },
+  "decision_values": [
+    "NISAR_GCOV_DIRECT_CANDIDATE",
+    "NISAR_GCOV_DIRECT_FAILED_CLOSE",
+    "NISAR_GCOV_INSUFFICIENT_SUPPORT"
+  ],
+  "if_candidate": {
+    "immediate_model_fitting_allowed": false,
+    "immediate_calibration_row_allowed": false,
+    "next_gate": "separately preregister independent validation against the 43 exact mapped AS-BUILT Tyrone test pits before inspecting test-pit L-band values"
+  },
+  "provisional_product_caveat": "A passing result is only a provisional L-band signal candidate because the July 2026 NISAR products are calibrated but only partially validated. It does not by itself justify numerical depth.",
+  "safeguards": {
+    "backscatter_values_inspected_before_preregistration": false,
+    "earth_engine_query_executed": false,
+    "classifier_used": false,
+    "nb_depth_used": false,
+    "model_fitted": false,
+    "calibration_record_created": false,
+    "ui_modified": false,
+    "app_depth_enabled": false
+  }
+}
