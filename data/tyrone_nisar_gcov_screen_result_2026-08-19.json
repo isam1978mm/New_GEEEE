@@ -1,0 +1,79 @@
+{
+  "protocol": "tyrone_nisar_gcov_frequency_a_six_plot_screen_v1",
+  "preregistration": "data/tyrone_nisar_gcov_preregistration_2026-08-18.json",
+  "workflow_run": 32261028548,
+  "status": "complete",
+  "decision": "NISAR_GCOV_DIRECT_FAILED_CLOSE",
+  "backscatter_values_inspected": true,
+  "candidate_features": [],
+  "source": {
+    "mission": "NISAR",
+    "product": "PROVISIONAL L2 GCOV",
+    "frequency": "A",
+    "bandwidth_mhz": 40,
+    "polarizations": ["HH", "HV"],
+    "posting_m": 10,
+    "acquisition_count": 7,
+    "ascending_count": 4,
+    "descending_count": 3,
+    "date_min": "2026-06-17",
+    "date_max": "2026-07-23"
+  },
+  "geometry_and_support": {
+    "geometry": "PR #81 validated Tyrone WGS84 six-plot polygons",
+    "inward_buffer_m": 10,
+    "minimum_required_valid_pixels_per_plot_feature_acquisition": 15,
+    "minimum_observed_valid_pixels": 48,
+    "all_seven_acquisitions_usable": true
+  },
+  "frozen_gate": {
+    "same_direction_required_in_both_surface_groups": true,
+    "overall_support_required": "5/7",
+    "ascending_support_required": "3/4",
+    "descending_support_required": "2/3"
+  },
+  "feature_results": {
+    "HH_DB": {
+      "decision": "NISAR_GCOV_DIRECT_FAILED_CLOSE",
+      "direction_counts": {"decreasing": 1, "no_support": 6},
+      "increasing_support": {"overall": 0, "ascending": 0, "descending": 0},
+      "decreasing_support": {"overall": 1, "ascending": 1, "descending": 0}
+    },
+    "HV_DB": {
+      "decision": "NISAR_GCOV_DIRECT_FAILED_CLOSE",
+      "direction_counts": {"no_support": 7},
+      "increasing_support": {"overall": 0, "ascending": 0, "descending": 0},
+      "decreasing_support": {"overall": 0, "ascending": 0, "descending": 0}
+    },
+    "HH_MINUS_HV_DB": {
+      "decision": "NISAR_GCOV_DIRECT_FAILED_CLOSE",
+      "direction_counts": {"no_support": 7},
+      "increasing_support": {"overall": 0, "ascending": 0, "descending": 0},
+      "decreasing_support": {"overall": 0, "ascending": 0, "descending": 0}
+    }
+  },
+  "matched_depth_surface_offset_diagnostics_db": {
+    "HH_DB": {"minimum": -4.9294171691, "maximum": -1.2153858666, "mean": -2.9863893970},
+    "HV_DB": {"minimum": -3.1345058629, "maximum": 0.5947458281, "mean": -1.3726275413},
+    "HH_MINUS_HV_DB": {"minimum": -5.2456877955, "maximum": 1.1903318041, "mean": -1.6931559478}
+  },
+  "interpretation": "Direct NISAR L-band HH, HV, and HH-HV amplitude features do not provide a stable monotonic numerical-depth signal across both replicated Tyrone surface groups under the preregistered gate. Surface-condition offsets remain substantial, especially for HH.",
+  "scientific_safeguards": {
+    "thresholds_changed_after_result": false,
+    "geometry_changed_after_result": false,
+    "granules_changed_after_result": false,
+    "model_fitted": false,
+    "calibration_record_created": false,
+    "earth_engine_query_executed": false,
+    "classifier_used": false,
+    "nb_depth_used": false,
+    "ui_modified": false,
+    "app_depth_enabled": false
+  },
+  "technical_history": {
+    "first_authenticated_attempt": "technical failure before data inspection because earthaccess profile lookup could not reach urs.earthdata.nasa.gov",
+    "implementation_only_fix": "used the already-issued EARTHDATA_TOKEN directly on authenticated HTTPS range requests",
+    "scientific_rules_changed": false
+  },
+  "next_action": "Do not rescue/tune the direct NISAR amplitude route. Numerical app depth remains blocked. Reassess replacement-method strategy using the accumulated negative evidence before testing another feature family."
+}
