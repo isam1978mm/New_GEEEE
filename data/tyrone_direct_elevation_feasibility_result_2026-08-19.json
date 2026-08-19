@@ -1,0 +1,53 @@
+{
+  "status": "DIRECT_ELEVATION_FEASIBILITY_COMPLETE",
+  "site": "Tyrone Tailing Impoundment 3X",
+  "strategy": "direct elevation difference",
+  "decision": "CONDITIONAL_ROUTE_REMAINS_OPEN_PRE_COVER_SURFACE_MISSING",
+  "depth_calculated": false,
+  "model_fitted": false,
+  "earth_engine_query_executed": false,
+  "classifier_modified": false,
+  "nb_formula_modified": false,
+  "ui_modified": false,
+  "app_depth_enabled": false,
+  "modern_surface": {
+    "status": "FOUND_BACKUP_FINAL_SURFACE",
+    "source": "USGS 3DEP NM_SouthCentral_2018_D19 / NM_SouthCentral_B8_2018",
+    "lidar_point_cloud_tiles_found_over_metadata_bbox": 12,
+    "one_meter_dem_found": true,
+    "quality_level": "QL2",
+    "horizontal_reference": "NAD83(2011) / UTM Zone 12N",
+    "vertical_reference": "NAVD88 / GEOID12B",
+    "reported_nonvegetated_vertical_accuracy_95pct_m": 0.066,
+    "reported_vegetated_vertical_accuracy_95th_percentile_m": 0.169,
+    "limitation": "2018/2019 acquisition is about 13 years after 2005 reclamation, so settlement, erosion, maintenance, or other surface evolution may be mixed into a pre/post difference. Treat as backup current/final surface, not as the ideal 2005 as-built surface."
+  },
+  "original_engineering_surfaces": {
+    "existence_supported": true,
+    "evidence": [
+      "The official 3X CQA/as-built report states that subgrade grading used CAES complemented by conventional GPS surveys.",
+      "The same report states that final cover grade was confirmed using CAES and post-cover GPS surveys."
+    ],
+    "actual_caes_gps_cad_tin_surface_recovered": false,
+    "public_electronic_file_recovery": "FAILED_TO_RECOVER_ACTUAL_ELECTRONIC_SURVEY_DATA",
+    "historical_recovery_note": "The July electronic-file recovery inspected PDF annotations, embedded attachments, filenames, same-domain links, and common CAD/GIS/archive extensions; public Attachment I materials were placeholders rather than the actual survey deliverables."
+  },
+  "public_preconstruction_surface": {
+    "status": "NOT_FOUND_YET",
+    "m3_2004_basic_engineering_report": "referenced in official records but not exposed as a recoverable electronic survey surface in the searched public package",
+    "tetra_tech_2004_cover_design_report": "referenced in official CQA bibliography but not recovered as an electronic pre-cover terrain surface",
+    "2005_orthophoto": "not accepted as pre-cover because reclamation began in September 2004 and continued through 2005",
+    "historical_stereo_aerial_inventory": "potential fallback, but USGS M2M inventory access returned 403 without a separate USGS account/token; no imagery was downloaded"
+  },
+  "scientific_gate": {
+    "can_compute_depth_now": false,
+    "reason": "A trustworthy pre-cover/buried-interface elevation surface is still missing.",
+    "do_not": [
+      "infer the buried surface from the known Tyrone depth answers and then claim independent validation",
+      "treat coarse CQAR post-construction contours as a sub-meter pre-cover surface",
+      "treat 2005 imagery as automatically pre-construction",
+      "set the accuracy threshold after inspecting derived depth errors"
+    ]
+  },
+  "exact_next_action": "Submit a narrowly targeted follow-up records request for the original 3X CAES/GPS/CAD/TIN subgrade and final-grade survey deliverables associated with the June 2004 Basic Engineering Report and June/August 2008 CQA/as-built report. Only if those records are unavailable should the project invest in historical stereo-aerial reconstruction."
+}
