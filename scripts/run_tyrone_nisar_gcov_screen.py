@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-import earthaccess
+import fsspec
 import numpy as np
 import xarray as xr
 from pyproj import Transformer
@@ -213,15 +213,18 @@ def main() -> int:
         "model_fitted": False, "calibration_record_created": False, "ui_modified": False,
         "app_depth_enabled": False,
     }
-    if not os.environ.get("EARTHDATA_TOKEN"):
+    token = os.environ.get("EARTHDATA_TOKEN")
+    if not token:
         base.update({"status": "AUTH_REQUIRED", "decision": "NISAR_GCOV_NOT_RUN_AUTH_REQUIRED", "reason": "EARTHDATA_TOKEN is not configured", "backscatter_values_inspected": False})
         save(base)
         print(json.dumps(base, indent=2))
         return 0
     wgs = load_polygons()
     try:
-        earthaccess.login(strategy="environment")
-        fs = earthaccess.get_fsspec_https_session()
+        # Implementation-only authentication path: pass the already-issued Earthdata
+        # bearer token directly to the HTTPS range reader. This avoids the optional
+        # earthaccess profile lookup and does not change any scientific rule.
+        fs = fsspec.filesystem("https", headers={"Authorization": f"Bearer {token}"})
         rows, acquisitions = [], []
         for granule, flight in GRANULES:
             r, a = read_acquisition(fs, granule, flight, wgs)
@@ -243,7 +246,7 @@ def main() -> int:
         print(json.dumps({"status": "complete", "decision": decision, "candidate_features": candidates, "feature_results": feature_results}, indent=2))
         return 0
     except Exception as exc:
-        base.update({"status": "TECHNICAL_FAILURE", "decision": "NISAR_GCOV_NOT_EVALUATED_TECHNICAL_FAILURE", "error_type": type(exc).__name__, "error": str(exc)[:2000]})
+        base.update({"status": "TECHNICAL_FAILURE", "decision": "NISAR_GCOV_NOT_EVALUATED_TECHNICAL_FAILURE", "backscatter_values_inspected": False, "error_type": type(exc).__name__, "error": str(exc)[:2000]})
         save(base)
         raise
 
