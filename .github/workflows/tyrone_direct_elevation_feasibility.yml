@@ -1,0 +1,30 @@
+name: Tyrone direct elevation feasibility
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/check_tyrone_direct_elevation_public_metadata.py'
+      - '.github/workflows/tyrone_direct_elevation_feasibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  metadata-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependency
+        run: python -m pip install --disable-pip-version-check requests
+      - name: Check public Tyrone elevation metadata
+        run: python scripts/check_tyrone_direct_elevation_public_metadata.py
+      - name: Upload metadata evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-direct-elevation-feasibility
+          path: artifacts/tyrone_direct_elevation_feasibility/
+          retention-days: 7
