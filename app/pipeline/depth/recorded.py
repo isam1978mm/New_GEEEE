@@ -5,12 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.pipeline.depth.package import (
-    MANIFEST_NAME,
-    _required_text,
-    _verify_checksums,
-    _warnings,
-)
+from app.pipeline.depth.package import MANIFEST_NAME, _verify_checksums
 from app.pipeline.depth.schema import RecordedDepthMeasurement
 
 RECORDED_PACKAGE_SCHEMA_VERSION = "recorded_depth_package_v1"
@@ -52,6 +47,26 @@ class RecordedDepthPackage:
             "zone_count": len(self.zones),
             "warnings": list(self.warnings),
         }
+
+
+def _required_text(payload: dict[str, Any], key: str) -> str:
+    value = str(payload.get(key) or "").strip()
+    if not value:
+        raise RecordedDepthPackageError(f"missing package field: {key}")
+    return value
+
+
+def _warnings(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise RecordedDepthPackageError("package warnings must be a list")
+    result: list[str] = []
+    for item in value:
+        warning = str(item or "").strip()
+        if warning and warning not in result:
+            result.append(warning)
+    return tuple(result)
 
 
 def load_recorded_depth_package(root: Path) -> RecordedDepthPackage:
