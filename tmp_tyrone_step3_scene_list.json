@@ -1,6 +1,5 @@
 {
-  "status": "STEP3_AREA_SCENE_LIST_COMPLETE",
-  "dataset_alias": "AERIAL_COMBIN",
+  "status": "STEP3_NAPP_COLLECTION_QUERY_COMPLETE",
   "aoi_polygon_latlon": [
     [
       32.716,
@@ -23,11 +22,20 @@
     32.7215,
     -108.4193
   ],
-  "periods": [
+  "date_start": "1995-01-01",
+  "date_end": "1999-12-31",
+  "napp_collections": [
     {
-      "label": "2000_to_aug2004",
-      "date_start": "01/01/2000",
-      "date_end": "08/31/2004",
+      "alias": "napp",
+      "collection_id": "5e83a396ee5f70de",
+      "title": "NAPP"
+    }
+  ],
+  "queries": [
+    {
+      "alias": "napp",
+      "collection_id": "5e83a396ee5f70de",
+      "title": "NAPP",
       "tab1_save": [
         200,
         "1"
@@ -38,27 +46,82 @@
       ],
       "dataset_select_status": 200,
       "scene_search_status": 200,
-      "scene_search_chars": 558,
-      "scene_count": 0,
-      "scenes": []
-    },
-    {
-      "label": "1990s",
-      "date_start": "01/01/1990",
-      "date_end": "12/31/1999",
-      "tab1_save": [
-        200,
-        "1"
-      ],
-      "tab2_save": [
-        200,
-        "0"
-      ],
-      "dataset_select_status": 200,
-      "scene_search_status": 200,
-      "scene_search_chars": 558,
-      "scene_count": 0,
-      "scenes": []
+      "scene_search_chars": 34775,
+      "scene_count": 8,
+      "scenes": [
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "N10NAPPW09639042",
+          "display_id": "N10NAPPW09639042",
+          "scene_id": "5e83a396ee5f70de_N10NAPPW09639042",
+          "corner_points": "32.70893,-108.51758,32.70893,-108.41992,32.79107,-108.41992,32.79107,-108.51758,32.70893,-108.51758",
+          "row_text": "Entity ID: N10NAPPW09639042 Coordinates: 32.75 , -108.46875 Acquisition Date: 1996-10-11"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "N10NAPPW09639043",
+          "display_id": "N10NAPPW09639043",
+          "scene_id": "5e83a396ee5f70de_N10NAPPW09639043",
+          "corner_points": "32.70893,-108.45508,32.70893,-108.35742,32.79107,-108.35742,32.79107,-108.45508,32.70893,-108.45508",
+          "row_text": "Entity ID: N10NAPPW09639043 Coordinates: 32.75 , -108.40625 Acquisition Date: 1996-10-11"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "NP0NAPP009519108",
+          "display_id": "NP0NAPP009519108",
+          "scene_id": "5e83a396ee5f70de_NP0NAPP009519108",
+          "corner_points": "32.70893,-108.45508,32.70893,-108.35742,32.79107,-108.35742,32.79107,-108.45508,32.70893,-108.45508",
+          "row_text": "Entity ID: NP0NAPP009519108 Coordinates: 32.75 , -108.40625 Acquisition Date: 1996-09-28"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "NP0NAPP009519109",
+          "display_id": "NP0NAPP009519109",
+          "scene_id": "5e83a396ee5f70de_NP0NAPP009519109",
+          "corner_points": "32.67768,-108.45507,32.67768,-108.35743,32.75982,-108.35743,32.75982,-108.45507,32.67768,-108.45507",
+          "row_text": "Entity ID: NP0NAPP009519109 Coordinates: 32.71875 , -108.40625 Acquisition Date: 1996-09-28"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "NP0NAPP009519110",
+          "display_id": "NP0NAPP009519110",
+          "scene_id": "5e83a396ee5f70de_NP0NAPP009519110",
+          "corner_points": "32.64643,-108.45505,32.64643,-108.35745,32.72857,-108.35745,32.72857,-108.45505,32.64643,-108.45505",
+          "row_text": "Entity ID: NP0NAPP009519110 Coordinates: 32.6875 , -108.40625 Acquisition Date: 1996-09-28"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "NP0NAPP009519201",
+          "display_id": "NP0NAPP009519201",
+          "scene_id": "5e83a396ee5f70de_NP0NAPP009519201",
+          "corner_points": "32.64643,-108.51755,32.64643,-108.41995,32.72857,-108.41995,32.72857,-108.51755,32.64643,-108.51755",
+          "row_text": "Entity ID: NP0NAPP009519201 Coordinates: 32.6875 , -108.46875 Acquisition Date: 1996-09-28"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "NP0NAPP009519202",
+          "display_id": "NP0NAPP009519202",
+          "scene_id": "5e83a396ee5f70de_NP0NAPP009519202",
+          "corner_points": "32.67768,-108.51757,32.67768,-108.41993,32.75982,-108.41993,32.75982,-108.51757,32.67768,-108.51757",
+          "row_text": "Entity ID: NP0NAPP009519202 Coordinates: 32.71875 , -108.46875 Acquisition Date: 1996-09-28"
+        },
+        {
+          "collection_id": "5e83a396ee5f70de",
+          "dataset_alias": "napp",
+          "entity_id": "NP0NAPP009519203",
+          "display_id": "NP0NAPP009519203",
+          "scene_id": "5e83a396ee5f70de_NP0NAPP009519203",
+          "corner_points": "32.70893,-108.51758,32.70893,-108.41992,32.79107,-108.41992,32.79107,-108.51758,32.70893,-108.51758",
+          "row_text": "Entity ID: NP0NAPP009519203 Coordinates: 32.75 , -108.46875 Acquisition Date: 1996-09-28"
+        }
+      ]
     }
   ],
   "imagery_downloaded": false,
