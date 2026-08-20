@@ -22,12 +22,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y poppler-utils
-          python -m pip install --disable-pip-version-check requests
+          python -m pip install --disable-pip-version-check requests pillow
       - name: Inspect official Appendix A
         run: python scripts/temporary_tyrone_appendixa_3x_check.py
       - name: Upload evidence
         uses: actions/upload-artifact@v4
         with:
           name: tyrone-appendixa-3x-check
-          path: artifacts/tyrone_appendixa_3x_check/result.json
+          path: |
+            artifacts/tyrone_appendixa_3x_check/result.json
+            artifacts/tyrone_appendixa_3x_check/contact_sheet_*.jpg
           retention-days: 7
