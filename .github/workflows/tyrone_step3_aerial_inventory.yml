@@ -1,8 +1,9 @@
 name: Tyrone Step 3 aerial inventory experiment
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - experiment/tyrone-step3-aerial-inventory-20260819
     paths:
       - scripts/temporary_tyrone_step3_aerial_inventory.py
       - .github/workflows/tyrone_step3_aerial_inventory.yml
