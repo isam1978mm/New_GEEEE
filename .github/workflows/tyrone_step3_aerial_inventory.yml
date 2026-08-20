@@ -7,6 +7,10 @@ on:
       - scripts/temporary_tyrone_step3_aerial_inventory.py
       - .github/workflows/tyrone_step3_aerial_inventory.yml
 
+concurrency:
+  group: tyrone-step3-aerial-inventory
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
