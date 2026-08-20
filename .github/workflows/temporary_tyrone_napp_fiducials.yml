@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y p7zip-full gdal-bin libgdal-dev
           python -m pip install --disable-pip-version-check "GDAL==$(gdal-config --version)"
-          python -m pip install --disable-pip-version-check pyyaml spymicmac
+          python -m pip install --disable-pip-version-check pyyaml scikit-learn spymicmac
       - name: Match R2104 Zeiss fiducials
         run: python scripts/temporary_tyrone_napp_fiducials.py
       - name: Upload compact evidence
