@@ -1,0 +1,31 @@
+name: Tyrone Step 3 aerial inventory experiment
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/temporary_tyrone_step3_aerial_inventory.py
+      - .github/workflows/tyrone_step3_aerial_inventory.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install research dependencies
+        run: python -m pip install --disable-pip-version-check requests pyshp
+      - name: Query official USGS aerial coverage inventory
+        run: python scripts/temporary_tyrone_step3_aerial_inventory.py
+      - name: Upload inventory evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-step3-aerial-inventory
+          path: artifacts/tyrone_step3_aerial_inventory/
+          retention-days: 7
