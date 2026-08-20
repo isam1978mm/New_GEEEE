@@ -24,11 +24,13 @@ meta=[]
 previews=[]
 for p in files:
     with Image.open(p) as im:
+        dpi_raw = im.info.get('dpi')
+        dpi = [float(x) for x in dpi_raw] if dpi_raw else None
         info={
             'name':p.name,'bytes':p.stat().st_size,'sha256':sha256(p),
             'width':im.width,'height':im.height,'mode':im.mode,'format':im.format,
-            'dpi':list(im.info.get('dpi',[])) if im.info.get('dpi') else None,
-            'compression':im.info.get('compression'),
+            'dpi':dpi,
+            'compression':str(im.info.get('compression')) if im.info.get('compression') is not None else None,
         }
         meta.append(info)
         prev=im.copy(); prev.thumbnail((1600,1600)); out=ROOT/(p.stem+'_preview.jpg'); prev.convert('RGB').save(out,quality=88); previews.append(out)
