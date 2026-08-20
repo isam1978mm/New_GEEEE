@@ -9,9 +9,9 @@ Numerical depth remains **BLOCKED**. No classifier, UI, or NB formula changes ar
 The elevation-difference strategy remains the preferred physically direct replacement route, but two recovery branches are now active:
 
 1. recover the June 2004 3X engineering/pre-cover surface from a different custodian, especially M3 Engineering or Freeport-McMoRan;
-2. obtain the 1996 NAPP stereo frames and test whether the reconstructed 1996 surface is close enough to the actual 2004 pre-cover/subgrade surface to be scientifically usable.
+2. reconstruct a 1996 NAPP stereo surface and test whether it is accurate enough, and sufficiently uncontaminated by later grading, to support depth.
 
-The 1996 surface must **not** be assumed to equal the cover subgrade without a grading-contamination test.
+The 1996 surface must **not** be assumed to equal the cover subgrade without passing the frozen validation gates below.
 
 ## EMNRD evidence
 
@@ -54,9 +54,7 @@ A reconstructed 1996 terrain surface is genuinely pre-reclamation, but it is **n
 
 Therefore:
 
-> **Direct `modern final surface - 1996 surface = cover depth` is not scientifically authorized without first passing a grading-contamination gate.**
-
-The 1996 route remains worth testing because tailings deposition had already ceased years earlier and the project has unusually strong measured-depth ground truth, but the grading effect must be measured rather than assumed away.
+> **Direct `modern final surface - 1996 surface = cover depth` is not scientifically authorized unless the reconstruction and the depth holdouts pass the frozen gates below.**
 
 ## Existing CQAR drawings checked
 
@@ -93,48 +91,101 @@ No contractor/owner request should be represented as already sent unless the use
 
 ## Fallback B status: 1996 NAPP stereo reconstruction
 
-### Coverage / program feasibility
+### Exact EarthExplorer records now confirmed
 
-Grant County, New Mexico has 1996 NAPP2 coverage in the USDA historical aerial imagery catalog.
+EarthExplorer's NAPP collection returns eight 1996 records intersecting the Tyrone 3X footprint. The strongest same-flight stereo triplet is:
 
-USGS documents NAPP photography as vertical mapping photography, nominally 1:40,000, with approximately 60% forward overlap for stereoscopic viewing.
+| Entity ID | Date | Project | Project No. | Roll | Frame | Flight line | Station | Camera | Lens | Calibrated focal length | Film |
+|---|---|---|---:|---:|---:|---|---:|---:|---:|---:|---|
+| `NP0NAPP009519108` | 1996-09-28 | NAPP | 9638 | 9519 | 108 | 1084E | 281 | 124257 | 124308 | 152.773 mm | Color Infrared |
+| `NP0NAPP009519109` | 1996-09-28 | NAPP | 9638 | 9519 | 109 | 1084E | 280 | 124257 | 124308 | 152.773 mm | Color Infrared |
+| `NP0NAPP009519110` | 1996-09-28 | NAPP | 9638 | 9519 | 110 | 1084E | 279 | 124257 | 124308 | 152.773 mm | Color Infrared |
 
-The validated Tyrone 3X reference places the six plots around approximately 32.720–32.723 N, -108.421 to -108.417 W.
+These are consecutive frames on the same roll and flight line, with overlapping EarthExplorer footprints over 3X. This matches the NAPP program design of approximately 60% forward overlap for stereoscopic viewing.
 
-The standardized NAPP target position derived for that footprint is:
+A second same-area pair exists on 1996-10-11 (`N10NAPPW09639042` and `N10NAPPW09639043`), but the September 28 triplet is the preferred first reconstruction candidate because it supplies three consecutive frames over the target.
 
-- target station: `1084E-0280`
-- likely adjacent stereo neighbors: `1084E-0279` and `1084E-0281`
+Public metadata are available without authentication. EarthExplorer exposes a Download action for the scenes, but the download-options route currently redirects to the EROS Registration System login. Therefore the exact scan product/resolution available for these frames is **not yet confirmed** and must not be assumed.
 
-These exact accepted 1996 frame/roll/entity identifiers still require archive confirmation.
+### Source references
 
-### USGS request status
+- USGS EarthExplorer NAPP collection metadata for the entity IDs above.
+- USGS NAPP archive description: https://www.usgs.gov/centers/eros/science/usgs-eros-archive-aerial-photography-national-aerial-photography-program-napp
+- ASPRS Positional Accuracy Standards for Digital Geospatial Data, Edition 2 Version 2 (2024): https://www.asprs.org/Main/Main/Standards/Positional-Accuracy-Standards.aspx
+- USGS Lidar Base Specification: https://www.usgs.gov/ngp-standards-and-specifications/lidar-base-specification-online
 
-The USGS EROS request is **SENT** as of 2026-08-19 to `custserv@usgs.gov`.
+## STEP 4 — FROZEN photogrammetric and depth-validation gates
 
-It requests confirmation of the actual 1996 NAPP stereo scenes covering:
+**Status: PREREGISTERED BEFORE RECONSTRUCTION. These thresholds must not be loosened after seeing the results.**
 
-- WGS84 point: `32.7215, -108.4193`
-- expected target: `1084E-0280`
-- expected neighbors: `1084E-0279`, `1084E-0281`
+The gate is project-specific. It does not claim that 1996 NAPP photography itself meets a modern ASPRS accuracy class. ASPRS uses RMSE-based vertical accuracy reporting for elevation data, and current USGS QL2 lidar is associated with a 0.10 m RMSEz accuracy class; those standards are used only as a reference framework for reporting and not as proof that this historical reconstruction is accurate.
 
-The request asks for acquisition date, entity/project identifiers, roll/frame numbers, camera/focal-length metadata, stereo-overlap confirmation, existing scan resolution, and photogrammetric-quality scan options.
+### Why the depth limit is 0.10 m
 
-## Required scientific gates before any depth claim
+The independently measured Tyrone plot means include:
 
-Obtaining stereo frames is not enough.
+- TP5 mean: `0.68072 m`
+- TP6 mean: `0.94996 m`
+- TP6 − TP5: `0.26924 m`
 
-### Gate 1 — photogrammetric vertical accuracy
+If two plot estimates can each be wrong by roughly 0.15 m in opposite directions, the real TP5/TP6 separation can be erased or reversed. A 0.10 m maximum plot-mean error leaves a materially safer margin and is therefore frozen **before** any photogrammetric depth result is calculated.
 
-The historical stereo surface must be reconstructed and aligned to modern LiDAR using independent stable terrain/control. A frozen vertical-error threshold must be established before comparing reconstructed depth with Tyrone measured depths.
+### Firewall: measurements cannot be used to manufacture the surface
 
-### Gate 2 — 1996-to-2004 grading contamination
+The known Tyrone cover depths/test-pit depths are **holdout truth only**. They must not be used for:
 
-Even if the 1996 photogrammetric surface is vertically accurate, the project must determine whether 2004 reclamation grading changed the surface materially relative to cover depth.
+- bundle adjustment;
+- camera calibration choices;
+- horizontal registration;
+- vertical offset/tilt correction;
+- selection or rejection of GCPs/control patches;
+- DEM smoothing/interpolation parameters;
+- choosing between alternative reconstructions after seeing which one better matches depth.
 
-The measured Tyrone depths/test pits may be used as **ground-truth validation only**, not to tune or manufacture the historical surface. Any global datum/alignment correction must be derived from independent stable control, not from the known depth answers.
+Any global alignment correction must be derived only from independent stable terrain/control.
 
-If 1996-to-final elevation differences fail against the independent measured-depth references, the route fails; the project must not fit the 1996 surface to the known depths after seeing the result.
+### Gate 4A — historical-surface accuracy before looking at depth
+
+Before any 1996-to-final subtraction is interpreted as depth:
+
+1. Split stable terrain into **alignment/control** and **check/validation** sets before optimization.
+2. Use at least **20 non-overlapping stable check patches** distributed around the 3X footprint; none may be used for alignment.
+3. Compare reconstructed 1996 elevation to the modern reference surface on those held-out stable patches.
+4. The held-out stable-patch residuals must satisfy all of the following:
+   - `RMSEz <= 0.15 m`
+   - `abs(median vertical residual) <= 0.05 m`
+   - `95th percentile absolute vertical residual <= 0.30 m`
+   - a fitted residual plane must imply **<= 0.10 m peak-to-peak vertical drift across the 3X footprint**.
+5. If any item fails, the 1996 surface is not accurate enough for the depth experiment and the route stops before depth comparison.
+
+### Gate 4B — independent depth validation
+
+Only after Gate 4A passes may `final/as-built elevation - reconstructed 1996 elevation` be compared with measured cover depths.
+
+Use every spatially verified mapped 3X measured-depth reference that is valid and inside the reconstructed overlap. The validation set must contain at least **20 independent measured points**; otherwise the evidence is insufficient for a numerical-depth claim.
+
+The candidate depth method passes only if **all** of the following are true without any post-result fitting:
+
+- overall `MAE <= 0.10 m`;
+- overall `RMSE <= 0.15 m`;
+- `abs(median error) <= 0.05 m`;
+- TP5, TP6 and TP7 remain in the correct shallow-to-deep order;
+- each of the TP5, TP6 and TP7 reconstructed plot means has `absolute error <= 0.10 m` against its measured mean;
+- no obvious spatially coherent residual pattern indicates unresolved grading/registration contamination.
+
+If Gate 4B fails, the result may still be reported as **net historical surface change**, but it must **not** be labeled or enabled as cover depth.
+
+### No rescue rule
+
+After the first preregistered reconstruction/validation is run:
+
+- do not relax the thresholds;
+- do not add a fitted scalar offset using measured depths;
+- do not rescale depth to the known answers;
+- do not cherry-pick plots or test pits;
+- do not select a different reconstruction merely because it fits the measured depth better.
+
+A scientifically justified reconstruction failure can be diagnosed later, but any materially changed method must be treated as a **new experiment with a new preregistration before viewing its depth holdouts**.
 
 ## Current route status
 
@@ -142,19 +193,22 @@ If 1996-to-final elevation differences fail against the independent measured-dep
 |---|---|---|
 | Original 3X pre-cover CAES/GPS/electronic survey from EMNRD | **CLOSED / unavailable from EMNRD** | EMNRD states no additional records exist beyond the already-produced package |
 | Q1-2004 / 2004 PDTI AutoCAD/TIN/grid from EMNRD | **CLOSED from EMNRD** | Historical existence documented, native file not in retained/provided records |
-| M3 / Freeport archive recovery of June 2004 3X BER/design surface | **ACTIVE NEXT RECOVERY PATH** | M3 was Engineer of Record and remains operating; potential independent custodian of its own historical design records |
-| 1996 NAPP stereo frame retrieval | **ACTIVE / WAITING ON USGS** | USGS request sent; exact frames not yet confirmed |
-| Direct 1996-to-modern subtraction as cover depth | **BLOCKED pending grading gate** | 3X underwent reclamation grading in 2004, so 1996 is not automatically the immediate pre-cover subgrade |
+| M3 / Freeport archive recovery of June 2004 3X BER/design surface | **ACTIVE RECOVERY PATH** | M3 was Engineer of Record and remains a plausible independent custodian |
+| 1996 NAPP stereo identification | **COMPLETE** | Exact September 28, 1996 roll 9519 frames 108/109/110 confirmed in EarthExplorer |
+| 1996 NAPP scan acquisition | **NEXT / BLOCKED ON DOWNLOAD ACCESS** | Metadata confirmed; actual scan product/resolution still requires EarthExplorer download access |
+| Step 4 photogrammetric/depth acceptance thresholds | **FROZEN** | Gates above preregistered before reconstruction |
+| Direct 1996-to-modern subtraction as cover depth | **BLOCKED pending Gates 4A and 4B** | 1996 is not automatically the immediate pre-cover subgrade and must pass independent validation |
 | GPR / active local sensing | **HELD** | Physically direct but usually per-AOI field work and not the preferred automatic/free path |
-| More independent measured-depth sites / empirical model | **HELD** | Only after physically direct elevation routes are exhausted; requires strict site-level holdout |
-| Numerical depth in app | **BLOCKED** | No replacement route has passed validation |
+| More empirical satellite features | **STOPPED** | Prior independent physical feature routes did not validate depth; do not resume random feature hunting |
+| Numerical depth in app | **BLOCKED** | No replacement route has yet passed the frozen gates |
 
 ## Exact next action
 
-1. While waiting for USGS, contact M3 Engineering's archive/project records team for project `03141.01` and the June 2004 3X BER/design surface.
-2. If M3 cannot provide it, try the owner-side Freeport-McMoRan Tyrone archive with the same precise identifiers.
-3. When USGS responds, obtain the exact NAPP frames and camera/scan metadata.
-4. Preregister both the photogrammetric vertical-accuracy gate and the grading-contamination gate before calculating depth.
-5. Only if those gates pass should `after elevation - historical/pre-cover elevation` be considered a candidate numerical-depth output.
+1. Obtain the actual scan products for `NP0NAPP009519108`, `NP0NAPP009519109`, and `NP0NAPP009519110` and record their pixel/scan resolution and file metadata.
+2. Before full reconstruction, calculate the expected photogrammetric vertical-error budget from the real scan resolution, focal length, frame geometry, overlap/baseline, control quality, and modern LiDAR reference.
+3. If that desk error budget is already clearly worse than the frozen Gate 4A/4B limits, stop before spending more effort on reconstruction.
+4. If the error budget is plausible, reconstruct once under the frozen rules and evaluate Gate 4A first.
+5. Only if Gate 4A passes, reveal the held-out Tyrone depths and evaluate Gate 4B.
+6. Continue the separate M3/Freeport 2004 native-surface recovery path in parallel; a genuine 2004 pre-cover surface would still be superior to the 1996 proxy.
 
 Do not return to random Sentinel/NISAR/NB feature hunting.
