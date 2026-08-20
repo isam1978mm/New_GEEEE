@@ -8,6 +8,7 @@ import requests
 
 OUT=Path("artifacts/tyrone_step3_aerial_inventory"); OUT.mkdir(parents=True,exist_ok=True)
 LAT,LON=32.7215,-108.4193; ALIAS="AERIAL_COMBIN"; ROOT="https://earthexplorer.usgs.gov/"
+DATE_START="01/01/1990"; DATE_END="12/31/1999"
 PREDEFINED=ROOT+"criteria?"+urlencode({"node":"EE","dataset_name":ALIAS,"aoiFilter":json.dumps([[LAT,LON]],separators=(",",":"))})
 def compact(t): return re.sub(r"\s+"," ",html_lib.unescape(t)).strip()
 def save(n,t): (OUT/n).write_text(t,encoding="utf-8")
@@ -34,8 +35,7 @@ def main():
   p=cats.text.upper().find(ALIAS); sn=cats.text[max(0,p-1200):p+1200]; ids=re.findall(r"data-datasetId=[\"']([^\"']+)[\"']",sn,re.I); cid=ids[-1] if ids else None
  if not cid: raise RuntimeError("AERIAL_COMBIN collection id not found")
  s.post(ROOT+"tabs/clear",timeout=120)
- # Browser payload uses one-coordinate polygon AOI and month indices 0..11.
- tab1=ps(s,{"tab":1,"destination":4,"coordinates":[{"c":"0","a":f"{LAT:.4f}","o":f"{LON:.4f}"}],"format":"dd","dStart":"01/01/2000","dEnd":"08/31/2004","searchType":"Std","includeUnknownCC":"1","maxCC":100,"minCC":0,"months":[str(i) for i in range(12)],"pType":"polygon"})
+ tab1=ps(s,{"tab":1,"destination":4,"coordinates":[{"c":"0","a":f"{LAT:.4f}","o":f"{LON:.4f}"}],"format":"dd","dStart":DATE_START,"dEnd":DATE_END,"searchType":"Std","includeUnknownCC":"1","maxCC":100,"minCC":0,"months":[str(i) for i in range(12)],"pType":"polygon"})
  tab2=ps(s,{"tab":2,"destination":4,"cList":[cid],"selected":cid})
  sel=s.post(ROOT+"dataset/select",data={"datasetId":cid},timeout=120)
  sr=s.post(ROOT+"scene/search",data={"datasetId":cid,"resultsPerPage":100},timeout=300); sr.raise_for_status(); save("scene_search_page1.html",sr.text)
@@ -45,6 +45,6 @@ def main():
   x=s.post(ROOT+"scene/search",data={"datasetId":cid,"resultsPerPage":100,"pageNum":pg},timeout=300)
   if x.ok: save(f"scene_search_page{pg}.html",x.text); rr.extend(rows(x.text,cid))
  rr=list({r["entity_id"]:r for r in rr}.values())
- result={"status":"STEP3_FAST_SCENE_LIST_COMPLETE","dataset_alias":ALIAS,"collection_id":cid,"collection_tag":tag,"point_wgs84":[LAT,LON],"date_start":"2000-01-01","date_end":"2004-08-31","tab1_save":tab1,"tab2_save":tab2,"dataset_select_status":sel.status_code,"scene_search_status":sr.status_code,"scene_search_chars":len(sr.text),"scene_count":len(rr),"scenes":rr,"imagery_downloaded":False,"depth_calculated":False,"production_code_modified":False}
+ result={"status":"STEP3_FAST_SCENE_LIST_COMPLETE","dataset_alias":ALIAS,"collection_id":cid,"point_wgs84":[LAT,LON],"date_start":"1990-01-01","date_end":"1999-12-31","tab1_save":tab1,"tab2_save":tab2,"dataset_select_status":sel.status_code,"scene_search_status":sr.status_code,"scene_search_chars":len(sr.text),"scene_count":len(rr),"scenes":rr,"imagery_downloaded":False,"depth_calculated":False,"production_code_modified":False}
  (OUT/"scene_list.json").write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8"); print(json.dumps(result,indent=2)); return 0
 if __name__=="__main__": raise SystemExit(main())
