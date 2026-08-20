@@ -1,0 +1,27 @@
+name: Temporary Tyrone NAPP archive check
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/temporary_tyrone_napp_archive_check.yml
+      - scripts/temporary_tyrone_napp_archive_check.sh
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 7zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+      - name: Inspect split archive
+        run: bash scripts/temporary_tyrone_napp_archive_check.sh
+      - name: Upload listing
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-napp-archive-listing
+          path: artifacts/tyrone_napp_archive_check
+          retention-days: 7
