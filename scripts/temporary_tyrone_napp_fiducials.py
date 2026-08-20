@@ -64,6 +64,16 @@ for tif in EX.glob("*.tif"):
 
 import os
 os.chdir(WORK)
+
+# Narrow compatibility shim only: pybob uses the old British-spelling names,
+# while current scikit-image exposes the same functions as graycomatrix/graycoprops.
+# This changes no photogrammetric calculations or parameters.
+import skimage.feature
+if not hasattr(skimage.feature, "greycomatrix") and hasattr(skimage.feature, "graycomatrix"):
+    skimage.feature.greycomatrix = skimage.feature.graycomatrix
+if not hasattr(skimage.feature, "greycoprops") and hasattr(skimage.feature, "graycoprops"):
+    skimage.feature.greycoprops = skimage.feature.graycoprops
+
 from spymicmac import matching
 
 images = sorted(Path(".").glob("NP0NAPP0095191*.tif"))
@@ -135,7 +145,7 @@ for fn in images:
         for candidate in Path("Ori-InterneScan").glob(f"*{fn.name}*.xml"):
             shutil.copy2(candidate, Path("..") / (fn.stem + "_" + candidate.name))
     except Exception as exc:
-        per_image.append({"image":fn.name, "ok":False,
+        per_image.append({"image":fn.name,"ok":False,
                           "error":f"{type(exc).__name__}: {exc}"})
 
 # Save camera coordinates and provenance outside WORK as compact evidence.
