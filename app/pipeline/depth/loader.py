@@ -19,8 +19,15 @@ from app.pipeline.depth.package import (
     LocalDepthPackageError,
     load_local_depth_package,
 )
+from app.pipeline.depth.recorded import (
+    RECORDED_METHOD_KIND,
+    RECORDED_PACKAGE_SCHEMA_VERSION,
+    RecordedDepthPackage,
+    RecordedDepthPackageError,
+    load_recorded_depth_package,
+)
 
-DepthPackage: TypeAlias = LocalDepthPackage | OperatorInterpolationPackage
+DepthPackage: TypeAlias = LocalDepthPackage | OperatorInterpolationPackage | RecordedDepthPackage
 
 
 class DepthPackageError(ValueError):
@@ -52,7 +59,16 @@ def load_depth_package(root: Path) -> DepthPackage:
             and method_kind == OPERATOR_METHOD_KIND
         ):
             return load_operator_interpolation_package(root)
-    except (LocalDepthPackageError, OperatorDepthPackageError) as exc:
+        if (
+            schema_version == RECORDED_PACKAGE_SCHEMA_VERSION
+            and method_kind == RECORDED_METHOD_KIND
+        ):
+            return load_recorded_depth_package(root)
+    except (
+        LocalDepthPackageError,
+        OperatorDepthPackageError,
+        RecordedDepthPackageError,
+    ) as exc:
         raise DepthPackageError(str(exc)) from exc
 
     raise DepthPackageError("unsupported depth package schema or method kind")
