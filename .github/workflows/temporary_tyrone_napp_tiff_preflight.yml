@@ -1,0 +1,33 @@
+name: Temporary Tyrone NAPP TIFF preflight
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/temporary_tyrone_napp_tiff_preflight.yml
+      - scripts/temporary_tyrone_napp_tiff_preflight.py
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+          python -m pip install --disable-pip-version-check pillow opencv-python-headless numpy
+      - name: Run TIFF preflight
+        run: python scripts/temporary_tyrone_napp_tiff_preflight.py
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-napp-tiff-preflight
+          path: artifacts/tyrone_napp_tiff_preflight
+          retention-days: 7
