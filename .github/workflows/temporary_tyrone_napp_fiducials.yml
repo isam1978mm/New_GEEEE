@@ -1,0 +1,37 @@
+name: Temporary Tyrone NAPP fiducial matching
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/temporary_tyrone_napp_fiducials.yml
+      - scripts/temporary_tyrone_napp_fiducials.py
+
+permissions:
+  contents: read
+
+jobs:
+  fiducials:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full gdal-bin libgdal-dev
+          python -m pip install --disable-pip-version-check spymicmac
+      - name: Match R2104 Zeiss fiducials
+        run: python scripts/temporary_tyrone_napp_fiducials.py
+      - name: Upload compact evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyrone-napp-fiducials
+          path: |
+            artifacts/tyrone_napp_fiducials/result.json
+            artifacts/tyrone_napp_fiducials/MeasuresCamera.xml
+            artifacts/tyrone_napp_fiducials/*MeasuresIm*.xml
+          retention-days: 7
