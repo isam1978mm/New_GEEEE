@@ -1,107 +1,73 @@
 #!/usr/bin/env python3
-"""Temporary research-only inventory probe for Tyrone historical aerial frames.
+"""Temporary research-only Tyrone aerial-photo inventory probe.
 
-Downloads the official USGS Aerial Photo Single Frames coverage shapefile and
-reports every archived frame/record whose geometry overlaps a small box around
-Tyrone Tailing Dam 3X. No imagery is downloaded and no app/runtime code is used.
+Uses the official EarthExplorer predefined-link mechanism for dataset alias
+AERIAL_COMBIN (Aerial Photo Single Frames) at the Tyrone 3X point. Saves only
+HTML/search diagnostics; no imagery, depth, model, or production code is used.
 """
 from __future__ import annotations
 
-import csv
 import json
-import zipfile
+import re
 from pathlib import Path
+from urllib.parse import urlencode
 
 import requests
-import shapefile
 
-URL = "https://dds.cr.usgs.gov/ee-data/coveragemaps/shp/ee/aerial_combin/aerial_combin.zip"
 OUT = Path("artifacts/tyrone_step3_aerial_inventory")
 OUT.mkdir(parents=True, exist_ok=True)
-ZIP = OUT / "aerial_combin.zip"
-EXTRACT = OUT / "coverage"
-# Tyrone 3X plus margin, WGS84 degrees.
-AOI = (-108.47, 32.67, -108.37, 32.77)
+POINT = [32.7215, -108.4193]
+BASE = "https://earthexplorer.usgs.gov/criteria"
+params = {
+    "node": "EE",
+    "dataset_name": "AERIAL_COMBIN",
+    "aoiFilter": json.dumps([POINT], separators=(",", ":")),
+}
+URL = BASE + "?" + urlencode(params)
 
 
-def overlaps(bbox, aoi):
-    xmin, ymin, xmax, ymax = bbox
-    axmin, aymin, axmax, aymax = aoi
-    return not (xmax < axmin or xmin > axmax or ymax < aymin or ymin > aymax)
+def snippets(text: str, pattern: str, radius: int = 350):
+    out = []
+    for m in re.finditer(pattern, text, re.I):
+        a = max(0, m.start() - radius)
+        b = min(len(text), m.end() + radius)
+        s = re.sub(r"\s+", " ", text[a:b])
+        if s not in out:
+            out.append(s)
+        if len(out) >= 20:
+            break
+    return out
 
 
 def main() -> int:
-    r = requests.get(URL, timeout=180)
+    s = requests.Session()
+    s.headers.update({"User-Agent": "Mozilla/5.0 Tyrone-research/1.0"})
+    r = s.get(URL, timeout=120, allow_redirects=True)
     r.raise_for_status()
-    ZIP.write_bytes(r.content)
-    EXTRACT.mkdir(exist_ok=True)
-    with zipfile.ZipFile(ZIP) as z:
-        names = z.namelist()
-        z.extractall(EXTRACT)
+    text = r.text
+    (OUT / "earthexplorer_predefined_response.html").write_text(text, encoding="utf-8")
 
-    shp_files = sorted(EXTRACT.rglob("*.shp"))
-    if not shp_files:
-        raise RuntimeError("No shapefile found in USGS coverage ZIP")
-
-    summary = {
-        "status": "STEP3_USGS_AERIAL_COVERAGE_INVENTORY_COMPLETE",
-        "source_url": URL,
-        "zip_bytes": len(r.content),
-        "zip_members": names,
-        "aoi_wgs84": AOI,
-        "layers": [],
+    patterns = [
+        "AERIAL_COMBIN", "Aerial Photo Single Frames", "32.7215", "-108.4193",
+        "result", "entity", "dataset", "scene", "search", "api", "ajax",
+        "acquisition", "frame", "roll", "stereo", "2004",
+    ]
+    diag = {
+        "status": "STEP3_EARTHEXPLORER_PREDEFINED_PROBED",
+        "request_url": URL,
+        "http_status": r.status_code,
+        "final_url": r.url,
+        "html_chars": len(text),
+        "cookies": sorted(s.cookies.keys()),
+        "pattern_counts": {p: len(re.findall(p, text, re.I)) for p in patterns},
+        "snippets": {p: snippets(text, p) for p in patterns if re.search(p, text, re.I)},
+        "links_or_endpoints": sorted(set(re.findall(r"(?:https?://[^\"'<> ]+|/[A-Za-z0-9_./?=&%-]{4,})", text)))[:500],
         "imagery_downloaded": False,
         "depth_calculated": False,
         "production_code_modified": False,
     }
-    all_rows = []
-
-    for shp_path in shp_files:
-        reader = shapefile.Reader(str(shp_path))
-        fields = [f[0] for f in reader.fields[1:]]
-        layer = {
-            "shapefile": str(shp_path.relative_to(EXTRACT)),
-            "shape_type": reader.shapeTypeName,
-            "record_count": len(reader),
-            "fields": fields,
-            "matches": 0,
-        }
-        for sr in reader.iterShapeRecords():
-            shape = sr.shape
-            try:
-                bbox = list(shape.bbox)
-            except Exception:
-                pts = shape.points
-                if not pts:
-                    continue
-                xs = [p[0] for p in pts]
-                ys = [p[1] for p in pts]
-                bbox = [min(xs), min(ys), max(xs), max(ys)]
-            if not overlaps(bbox, AOI):
-                continue
-            attrs = dict(zip(fields, list(sr.record)))
-            attrs["_layer"] = layer["shapefile"]
-            attrs["_bbox"] = bbox
-            all_rows.append(attrs)
-            layer["matches"] += 1
-        summary["layers"].append(layer)
-
-    # Preserve all matching fields without guessing their meanings.
-    (OUT / "matches.json").write_text(json.dumps(all_rows, indent=2, default=str) + "\n", encoding="utf-8")
-    summary["total_matches"] = len(all_rows)
-    (OUT / "summary.json").write_text(json.dumps(summary, indent=2, default=str) + "\n", encoding="utf-8")
-
-    # Flat CSV for quick inspection.
-    keys = sorted({k for row in all_rows for k in row.keys()})
-    with (OUT / "matches.csv").open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=keys)
-        w.writeheader()
-        for row in all_rows:
-            w.writerow({k: row.get(k) for k in keys})
-
-    print(json.dumps(summary, indent=2, default=str))
-    print("MATCH SAMPLE")
-    print(json.dumps(all_rows[:20], indent=2, default=str))
+    (OUT / "predefined_diagnostics.json").write_text(json.dumps(diag, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(diag, indent=2))
     return 0
 
 
