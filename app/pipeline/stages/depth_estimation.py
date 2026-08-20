@@ -16,10 +16,12 @@ from app.pipeline.depth.interpolation import (
 )
 from app.pipeline.depth.loader import DepthPackage, DepthPackageError, load_depth_package
 from app.pipeline.depth.package import PACKAGE_METHOD_KIND, LocalDepthPackage
+from app.pipeline.depth.recorded import RECORDED_METHOD_KIND, RecordedDepthPackage
 from app.pipeline.depth.schema import (
     DEPTH_STATUS_CALIBRATED_RANGE,
     DEPTH_STATUS_INSUFFICIENT_DATA,
     DEPTH_STATUS_NOT_AVAILABLE,
+    DEPTH_STATUS_RECORDED_MEASUREMENT,
     DEPTH_STATUS_VALIDATED_RANGE,
     CandidateDepthEstimate,
     CandidateDepthInput,
@@ -42,6 +44,17 @@ CSV_FIELDNAMES = [
     "estimated_depth_min_m",
     "estimated_depth_best_m",
     "estimated_depth_max_m",
+    "recorded_depth_mean_m",
+    "recorded_depth_ci95_low_m",
+    "recorded_depth_ci95_high_m",
+    "recorded_sample_min_m",
+    "recorded_sample_max_m",
+    "recorded_sample_count",
+    "reported_design_depth_m",
+    "measurement_source",
+    "measurement_date",
+    "measurement_method",
+    "measurement_timing",
     "depth_quality",
     "zone_id",
     "warnings",
@@ -124,6 +137,8 @@ def _write_estimates_csv(path: Path, estimates: list[CandidateDepthEstimate]) ->
 
 def _summary_status(estimates: list[CandidateDepthEstimate]) -> str:
     statuses = {estimate.depth_status for estimate in estimates}
+    if DEPTH_STATUS_RECORDED_MEASUREMENT in statuses:
+        return DEPTH_STATUS_RECORDED_MEASUREMENT
     if DEPTH_STATUS_VALIDATED_RANGE in statuses:
         return DEPTH_STATUS_VALIDATED_RANGE
     if DEPTH_STATUS_CALIBRATED_RANGE in statuses:
@@ -151,9 +166,60 @@ def _recoverable_package_load(
 def _package_method_kind(package: DepthPackage | None) -> str:
     if isinstance(package, OperatorInterpolationPackage):
         return OPERATOR_METHOD_KIND
+    if isinstance(package, RecordedDepthPackage):
+        return RECORDED_METHOD_KIND
     if isinstance(package, LocalDepthPackage):
         return PACKAGE_METHOD_KIND
     return ""
+
+
+def _build_recorded_estimates(
+    *,
+    candidates: list[DepthCandidate],
+    package: RecordedDepthPackage,
+) -> list[CandidateDepthEstimate]:
+    estimates: list[CandidateDepthEstimate] = []
+    for candidate in candidates:
+        if not isinstance(candidate, CandidateDepthInput):
+            estimates.append(
+                CandidateDepthEstimate.unavailable(
+                    candidate_id=candidate.candidate_id,
+                    status=DEPTH_STATUS_INSUFFICIENT_DATA,
+                    warnings=["candidate_input_not_supported_by_package"],
+                )
+            )
+            continue
+
+        zone = package.zone(candidate.zone_id)
+        if zone is None:
+            estimates.append(
+                CandidateDepthEstimate.unavailable(
+                    candidate_id=candidate.candidate_id,
+                    zone_id=candidate.zone_id,
+                    status=DEPTH_STATUS_NOT_AVAILABLE,
+                    warnings=[
+                        "no_recorded_measurement_for_zone",
+                        "no_predictive_extrapolation",
+                    ],
+                )
+            )
+            continue
+
+        estimates.append(
+            CandidateDepthEstimate.recorded(
+                candidate_id=candidate.candidate_id,
+                measurement=zone.measurement,
+                zone_id=candidate.zone_id,
+                warnings=[
+                    "recorded_measurement_only",
+                    "no_predictive_extrapolation",
+                    "reviewed_zone_only",
+                    *package.warnings,
+                    *zone.warnings,
+                ],
+            )
+        )
+    return estimates
 
 
 def _build_estimates(
@@ -175,6 +241,9 @@ def _build_estimates(
             )
             for candidate in candidates
         ]
+
+    if isinstance(package, RecordedDepthPackage):
+        return _build_recorded_estimates(candidates=candidates, package=package)
 
     quality_supported = run_quality_usable and run_quality_status == "PASS"
     if run_quality_status == "WARNING" and package.allow_run_quality_warning and run_quality_usable:
@@ -272,8 +341,9 @@ def write_depth_outputs(
         warnings.append(candidate_issue)
     if package_issue:
         warnings.append(package_issue)
-    if run_quality_status not in {"PASS", "WARNING"} or not run_quality_usable:
-        warnings.append("run_quality_not_supported")
+    if not isinstance(package, RecordedDepthPackage):
+        if run_quality_status not in {"PASS", "WARNING"} or not run_quality_usable:
+            warnings.append("run_quality_not_supported")
 
     estimates = _build_estimates(
         candidates=candidates,
@@ -285,7 +355,14 @@ def write_depth_outputs(
 
     status = _summary_status(estimates)
     method_version = package.method_version if package else ""
-    calibration_version = package.calibration_dataset_version if package else ""
+    calibration_version = (
+        package.calibration_dataset_version
+        if isinstance(package, LocalDepthPackage | OperatorInterpolationPackage)
+        else ""
+    )
+    record_dataset_version = (
+        package.record_dataset_version if isinstance(package, RecordedDepthPackage) else ""
+    )
     summary = {
         "schema_version": DEPTH_SUMMARY_SCHEMA,
         "stage": "depth_estimation",
@@ -295,6 +372,9 @@ def write_depth_outputs(
         "candidate_count": len(candidates),
         "estimated_count": _count_status(estimates, DEPTH_STATUS_CALIBRATED_RANGE)
         + _count_status(estimates, DEPTH_STATUS_VALIDATED_RANGE),
+        "recorded_measurement_count": _count_status(
+            estimates, DEPTH_STATUS_RECORDED_MEASUREMENT
+        ),
         "calibrated_range_count": _count_status(estimates, DEPTH_STATUS_CALIBRATED_RANGE),
         "validated_range_count": _count_status(estimates, DEPTH_STATUS_VALIDATED_RANGE),
         "insufficient_data_count": _count_status(estimates, DEPTH_STATUS_INSUFFICIENT_DATA),
@@ -302,6 +382,7 @@ def write_depth_outputs(
         "method_kind": _package_method_kind(package),
         "method_version": method_version,
         "calibration_dataset_version": calibration_version,
+        "record_dataset_version": record_dataset_version,
         "run_quality_status": run_quality_status,
         "warnings": sorted(set(warnings)),
     }
@@ -338,7 +419,7 @@ class DepthEstimationStage(Stage):
     name = "depth_estimation"
     parity_category = ParityCategory.PARITY_REPLACES
     parity_reason = (
-        "Adds a private local calibrated range stage without reusing unsupported depth-named proxies."
+        "Adds private local depth outputs without reusing unsupported depth-named proxies."
     )
 
     async def run(self, context: StageContext) -> StageResult:
@@ -352,6 +433,7 @@ class DepthEstimationStage(Stage):
                     "status": DEPTH_STATUS_NOT_AVAILABLE,
                     "candidate_count": 0,
                     "estimated_count": 0,
+                    "recorded_measurement_count": 0,
                     "warnings": ["local_depth_mode_disabled"],
                 }
             )
@@ -364,6 +446,7 @@ class DepthEstimationStage(Stage):
                     "status": DEPTH_STATUS_NOT_AVAILABLE,
                     "candidate_count": 0,
                     "estimated_count": 0,
+                    "recorded_measurement_count": 0,
                     "warnings": ["unsupported_local_depth_mode"],
                 }
             )
