@@ -1,0 +1,28 @@
+{
+  "status": "STEP3_FAST_SCENE_LIST_COMPLETE",
+  "dataset_alias": "AERIAL_COMBIN",
+  "collection_id": "5e83d8e4870f4473",
+  "collection_tag": "<span class=\"collection\" data-datasetId=\"5e83d8e4870f4473\" data-datasetAlias=\"aerial_combin\">",
+  "point_wgs84": [
+    32.7215,
+    -108.4193
+  ],
+  "date_start": "2000-01-01",
+  "date_end": "2004-08-31",
+  "tab1_save": [
+    200,
+    "1"
+  ],
+  "tab2_save": [
+    200,
+    "0"
+  ],
+  "dataset_select_status": 200,
+  "scene_search_status": 200,
+  "scene_search_chars": 558,
+  "scene_count": 0,
+  "scenes": [],
+  "imagery_downloaded": false,
+  "depth_calculated": false,
+  "production_code_modified": false
+}
