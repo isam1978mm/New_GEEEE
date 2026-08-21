@@ -46,13 +46,19 @@ def test_local_depth_preflight_rejects_common_operator_input_errors() -> None:
     assert "replace-with" in source
 
 
-def test_local_depth_panel_is_removed_from_visible_operator_ui() -> None:
+def test_local_depth_panel_exposes_recorded_lookup_without_calibration_ui() -> None:
     source = _read("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx")
 
-    assert "return null" in source
+    assert "Recorded measured depth" in source
+    assert "Load reviewed recorded measurements" in source
+    assert "not predicted from this run" in source
+    assert "return null" not in source
     assert "Local depth calibration" not in source
     assert "Run local depth calibration" not in source
     assert "Download blank GeoJSON template" not in source
+    assert "GeoJSON" not in source
+    assert "calibration_dataset_version" not in source
+    assert "anchor" not in source.lower()
 
 
 def test_env_example_keeps_operator_local_depth_default_off() -> None:
