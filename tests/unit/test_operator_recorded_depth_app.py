@@ -42,7 +42,6 @@ def test_record_payload_uses_recorded_fields_only(tmp_path: Path) -> None:
     package = load_recorded_depth_package(package_dir)
     zone = package.zone("tyrone_tp5")
     assert zone is not None
-
     payload = _measurement_payload(plot_id="TP5", zone=zone)
     assert payload["depth_status"] == "recorded_measurement"
     assert payload["recorded_depth_mean_m"] == 0.68072
@@ -56,18 +55,12 @@ def test_record_payload_uses_recorded_fields_only(tmp_path: Path) -> None:
 def test_stale_generated_package_is_rebuilt_and_reverified(tmp_path: Path) -> None:
     package_dir = tmp_path / "recorded"
     build_tyrone_recorded_depth_package(package_dir)
-
     manifest_path = package_dir / "depth_method_manifest.json"
-    manifest_path.write_text(
-        manifest_path.read_text(encoding="utf-8") + "\n",
-        encoding="utf-8",
-    )
-
+    manifest_path.write_text(manifest_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     package = _load_or_rebuild_recorded_package(package_dir)
     zone = package.zone("tyrone_tp5")
     assert zone is not None
     assert zone.measurement.mean_m == 0.68072
-
     reverified = load_recorded_depth_package(package_dir)
     assert reverified.zone("tyrone_tp6") is not None
 
@@ -83,28 +76,27 @@ def test_builder_checksum_survives_windows_text_newline_translation(tmp_path: Pa
     monkeypatch.setattr(Path, "write_text", windows_style_write_text)
     package_dir = tmp_path / "recorded"
     build_tyrone_recorded_depth_package(package_dir)
-
-    # The manifest is written as the exact bytes that were hashed, so simulated
-    # Windows text newline translation cannot invalidate a freshly built package.
     package = load_recorded_depth_package(package_dir)
     assert package.zone("tyrone_tp5") is not None
     assert b"\r\n" not in (package_dir / "depth_method_manifest.json").read_bytes()
-
     monkeypatch.setattr(Path, "write_text", original_write_text)
 
 
-def test_operator_panel_is_recorded_lookup_not_calibration_ui() -> None:
+def test_operator_panel_now_exposes_original_route_a_not_recorded_lookup() -> None:
     source = Path("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx").read_text(encoding="utf-8")
-    assert "Recorded measured depth" in source
-    assert "Load reviewed recorded measurements" in source
-    assert "not predicted from this run" in source
-    assert "GeoJSON" not in source
-    assert "calibration_dataset_version" not in source
-    assert "anchor" not in source.lower()
+    assert "Local depth — Route A" in source
+    assert "Run reviewed-zone depth" in source
+    assert "calibrated_range" in source
+    assert "NOT TRANSFERABLE" in source
+    assert "NOT PHYSICAL CONFIRMATION" in source
+    assert "Recorded measured depth" not in source
+    assert "Load reviewed recorded measurements" not in source
 
 
-def test_recorded_api_is_separate_from_calibration_endpoint() -> None:
+def test_recorded_api_remains_separate_and_route_a_has_own_endpoint() -> None:
     source = Path("app/api/operator_local_depth.py").read_text(encoding="utf-8")
+    assert '@router.post("/runs/{run_id}/operator/reviewed-zone-depth")' in source
     assert '@router.post("/runs/{run_id}/operator/recorded-depth")' in source
     assert '@router.post("/runs/{run_id}/operator/local-depth")' in source
+    assert "run_operator_tyrone_zone_depth_app" in source
     assert "run_operator_recorded_depth_app" in source

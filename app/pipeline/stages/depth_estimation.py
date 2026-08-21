@@ -296,8 +296,11 @@ def _build_estimates(
                 CandidateDepthEstimate.unavailable(
                     candidate_id=candidate.candidate_id,
                     zone_id=candidate.zone_id,
-                    status=DEPTH_STATUS_INSUFFICIENT_DATA,
-                    warnings=["candidate_outside_local_calibration_support"],
+                    status=DEPTH_STATUS_NOT_AVAILABLE,
+                    warnings=[
+                        "candidate_outside_local_calibration_support",
+                        "no_extrapolation_outside_reviewed_zones",
+                    ],
                 )
             )
             continue

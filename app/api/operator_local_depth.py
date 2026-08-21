@@ -17,6 +17,10 @@ from app.services.operator_local_depth_app import (
     run_operator_local_depth_app,
 )
 from app.services.operator_recorded_depth_app import run_operator_recorded_depth_app
+from app.services.operator_tyrone_zone_depth_app import (
+    OperatorTyroneZoneDepthError,
+    run_operator_tyrone_zone_depth_app,
+)
 
 router = APIRouter(tags=["operator-local-depth"])
 
@@ -39,6 +43,10 @@ class OperatorLocalDepthRequest(BaseModel):
 
 
 class OperatorRecordedDepthRequest(BaseModel):
+    operator_confirmed_review: bool = False
+
+
+class OperatorTyroneZoneDepthRequest(BaseModel):
     operator_confirmed_review: bool = False
 
 
@@ -81,6 +89,70 @@ def _access_or_denied(*, settings: Settings, run_id: str, auth_context: Any) -> 
     return JSONResponse(status_code=denied.status_code, content=denied.body)
 
 
+@router.post("/runs/{run_id}/operator/reviewed-zone-depth")
+async def run_operator_tyrone_zone_depth(
+    run_id: str,
+    payload: OperatorTyroneZoneDepthRequest,
+    settings: Settings = Depends(get_settings_from_request),
+    x_operator_authenticated: str | None = Header(default=None),
+    x_operator_id: str | None = Header(default=None),
+    x_operator_roles: str | None = Header(default=None),
+    x_operator_authorized_runs: str | None = Header(default=None),
+    x_request_id: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> JSONResponse:
+    """Run original Route A on classifier objects inside six reviewed Tyrone zones.
+
+    The endpoint assigns zones from private run-grid geometry, then reuses the
+    existing local depth package/stage output contract. It never returns geometry
+    or coordinates and never extrapolates metre values outside reviewed zones.
+    """
+
+    auth_context = _auth_context(
+        settings=settings,
+        x_operator_authenticated=x_operator_authenticated,
+        x_operator_id=x_operator_id,
+        x_operator_roles=x_operator_roles,
+        x_operator_authorized_runs=x_operator_authorized_runs,
+        x_request_id=x_request_id,
+        authorization=authorization,
+    )
+    denied = _access_or_denied(settings=settings, run_id=run_id, auth_context=auth_context)
+    if denied is not None:
+        return denied
+
+    try:
+        result = await run_in_threadpool(
+            run_operator_tyrone_zone_depth_app,
+            settings=settings,
+            run_id=run_id,
+            operator_confirmed_review=payload.operator_confirmed_review,
+        )
+    except (OperatorTyroneZoneDepthError, FileExistsError, FileNotFoundError, ValueError) as exc:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "outcome": "error",
+                "status": "reviewed_zone_depth_request_rejected",
+                "message": _safe_operator_message(exc),
+                "geometry_returned": False,
+                "filesystem_only": True,
+            },
+        )
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "outcome": "error",
+                "status": "reviewed_zone_depth_processing_failed",
+                "message": "Reviewed-zone depth processing could not be completed.",
+                "geometry_returned": False,
+                "filesystem_only": True,
+            },
+        )
+    return JSONResponse(status_code=200, content=result)
+
+
 @router.post("/runs/{run_id}/operator/recorded-depth")
 async def run_operator_recorded_depth(
     run_id: str,
@@ -93,12 +165,7 @@ async def run_operator_recorded_depth(
     x_request_id: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ) -> JSONResponse:
-    """Return official recorded measurements for reviewed Tyrone zones inside this run.
-
-    This endpoint performs no interpolation or prediction. It uses the private run
-    footprint only to decide whether a fixed reviewed plot is contained by the run.
-    Successful responses contain no geometry or coordinates.
-    """
+    """Return official recorded measurements for reviewed Tyrone zones inside this run."""
 
     auth_context = _auth_context(
         settings=settings,
@@ -157,12 +224,7 @@ async def run_operator_local_depth(
     x_request_id: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ) -> JSONResponse:
-    """Run private operator-calibrated local depth for a completed run.
-
-    Uploaded GeoJSON is accepted as JSON rather than streamed as a file. Denied
-    requests are rejected before any run file is read or written. Successful
-    responses contain no geometry, coordinates, local paths, or download URLs.
-    """
+    """Run private operator-calibrated local depth for a completed run."""
 
     auth_context = _auth_context(
         settings=settings,
@@ -226,4 +288,9 @@ def _safe_operator_message(exc: Exception) -> str:
     return message[:300]
 
 
-__all__ = ("OperatorLocalDepthRequest", "OperatorRecordedDepthRequest", "router")
+__all__ = (
+    "OperatorLocalDepthRequest",
+    "OperatorRecordedDepthRequest",
+    "OperatorTyroneZoneDepthRequest",
+    "router",
+)

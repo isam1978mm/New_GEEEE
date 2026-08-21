@@ -46,19 +46,24 @@ def test_local_depth_preflight_rejects_common_operator_input_errors() -> None:
     assert "replace-with" in source
 
 
-def test_local_depth_panel_exposes_recorded_lookup_without_calibration_ui() -> None:
+def test_local_depth_panel_exposes_original_route_a_six_zone_ranges() -> None:
     source = _read("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx")
 
-    assert "Recorded measured depth" in source
-    assert "Load reviewed recorded measurements" in source
-    assert "not predicted from this run" in source
+    assert "Local depth — Route A" in source
+    assert "PROVISIONAL LOCAL" in source
+    assert "TP1/TP2/TP3/TP5/TP6/TP7" in source
+    assert "Run reviewed-zone depth" in source
+    assert "calibrated_range" in source
+    assert "LOCAL ONLY" in source
+    assert "PROVISIONAL CALIBRATION" in source
+    assert "DERIVED GEOMETRY" in source
+    assert "NOT TRANSFERABLE" in source
+    assert "NOT PHYSICAL CONFIRMATION" in source
+    assert "outside those zones returns NOT AVAILABLE" in source
     assert "return null" not in source
-    assert "Local depth calibration" not in source
-    assert "Run local depth calibration" not in source
+    assert "Recorded measured depth" not in source
+    assert "Load reviewed recorded measurements" not in source
     assert "Download blank GeoJSON template" not in source
-    assert "GeoJSON" not in source
-    assert "calibration_dataset_version" not in source
-    assert "anchor" not in source.lower()
 
 
 def test_env_example_keeps_operator_local_depth_default_off() -> None:

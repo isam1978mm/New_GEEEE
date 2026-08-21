@@ -1,10 +1,10 @@
 import { Info, Loader2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import {
-  runOperatorRecordedDepth,
-  type OperatorRecordedDepthResult,
-} from "../api/operatorRecordedDepth";
+  runOperatorReviewedZoneDepth,
+  type OperatorReviewedZoneDepthResult,
+} from "../api/operatorReviewedZoneDepth";
 
 interface OperatorLocalDepthPanelProps {
   runId: string;
@@ -14,13 +14,17 @@ interface OperatorLocalDepthPanelProps {
 export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: OperatorLocalDepthPanelProps) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<OperatorRecordedDepthResult | null>(null);
+  const [result, setResult] = useState<OperatorReviewedZoneDepthResult | null>(null);
+  const calibrated = useMemo(
+    () => result?.estimates.filter((estimate) => estimate.depthStatus === "calibrated_range") ?? [],
+    [result],
+  );
 
-  async function loadRecordedDepth() {
+  async function runRouteA() {
     if (!confirmed || loading) return;
     setLoading(true);
     try {
-      const next = await runOperatorRecordedDepth(
+      const next = await runOperatorReviewedZoneDepth(
         runId,
         { operatorConfirmedReview: confirmed },
         { accessToken: operatorAccessToken },
@@ -42,22 +46,36 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
       >
         <div className="flex items-center gap-2">
           <span className="font-mono" style={{ fontSize: "10px", fontWeight: 700, color: "var(--gs-navy)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-            Recorded measured depth
+            Local depth — Route A
           </span>
           <span className="font-mono" style={{ fontSize: "9px", fontWeight: 700, color: "var(--gs-blue)", backgroundColor: "var(--gs-blue-bg)", border: "1px solid var(--gs-blue-border)", padding: "1px 5px", borderRadius: "3px" }}>
-            REVIEWED ZONES ONLY
+            PROVISIONAL LOCAL
           </span>
         </div>
         {loading && (
           <span className="flex items-center gap-1" style={{ fontSize: "10.5px", color: "var(--gs-slate)" }}>
-            <Loader2 size={11} className="animate-spin" /> Loading
+            <Loader2 size={11} className="animate-spin" /> Processing
           </span>
         )}
       </div>
 
       <div className="px-4 py-3 flex flex-col gap-3">
         <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-          Official recorded measurements for reviewed Tyrone plots that fall inside this run footprint. These metres are not predicted from this run, are not interpolated, and are never transferred to unknown zones.
+          Classifier objects are checked against the six reviewed Tyrone plots TP1/TP2/TP3/TP5/TP6/TP7. An object fully inside a reviewed plot receives that plot&apos;s provisional local metre range. Every object outside those zones returns NOT AVAILABLE.
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            "LOCAL ONLY",
+            "PROVISIONAL CALIBRATION",
+            "DERIVED GEOMETRY",
+            "NOT TRANSFERABLE",
+            "NOT PHYSICAL CONFIRMATION",
+          ].map((label) => (
+            <span key={label} className="font-mono" style={{ fontSize: "8.5px", padding: "2px 5px", borderRadius: "3px", border: "1px solid rgba(28,43,94,0.14)", color: "var(--gs-slate)", backgroundColor: "var(--accent)" }}>
+              {label}
+            </span>
+          ))}
         </div>
 
         <label className="flex items-start gap-2" style={{ fontSize: "11px", color: "var(--gs-slate)", lineHeight: "1.45" }}>
@@ -70,13 +88,13 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
             }}
             style={{ marginTop: "2px" }}
           />
-          <span>I understand this is a lookup of reviewed official measurements, not a depth estimate for classifier objects or unknown areas.</span>
+          <span>I understand these metre ranges apply only to classifier objects fully contained in the six reviewed Tyrone zones and are not transferable to unknown ground.</span>
         </label>
 
         <div>
           <button
             type="button"
-            onClick={() => void loadRecordedDepth()}
+            onClick={() => void runRouteA()}
             disabled={!confirmed || loading}
             className="rounded px-3 py-2"
             style={{
@@ -88,49 +106,54 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
               opacity: !confirmed || loading ? 0.55 : 1,
             }}
           >
-            Load reviewed recorded measurements
+            Run reviewed-zone depth
           </button>
         </div>
 
-        {result?.outcome === "denied" && (
-          <Message>Operator access is not available for this run.</Message>
-        )}
-        {result?.outcome === "error" && (
-          <Message>{result.message ?? "Recorded measurement lookup could not be completed."}</Message>
-        )}
-        {result?.outcome === "completed" && result.status === "not_available" && (
-          <Message>No reviewed Tyrone TP5/TP6 recorded-measurement zone is contained in this run footprint. No metre value is returned.</Message>
-        )}
+        {result?.outcome === "denied" && <Message>Operator access is not available for this run.</Message>}
+        {result?.outcome === "error" && <Message>{result.message ?? "Reviewed-zone depth processing could not be completed."}</Message>}
 
-        {result?.outcome === "completed" && result.records.length > 0 && (
+        {result?.outcome === "completed" && (
           <>
-            <div className="overflow-auto" style={{ border: "1px solid rgba(28,43,94,0.12)", borderRadius: "4px" }}>
-              <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "920px" }}>
-                <thead>
-                  <tr style={{ backgroundColor: "var(--accent)" }}>
-                    {["Reviewed plot", "Recorded mean", "95% CI", "Sample range", "n", "Design depth", "Measurement method", "Timing"].map((header) => (
-                      <th key={header} className="font-mono" style={headerStyle}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.records.map((record) => (
-                    <tr key={record.zoneId}>
-                      <td style={cellStyle}>{record.plotId}</td>
-                      <td style={depthCellStyle}>{formatM(record.recordedDepthMeanM)}</td>
-                      <td style={cellStyle}>{formatRange(record.recordedDepthCi95LowM, record.recordedDepthCi95HighM)}</td>
-                      <td style={cellStyle}>{formatRange(record.recordedSampleMinM, record.recordedSampleMaxM)}</td>
-                      <td style={cellStyle}>{record.recordedSampleCount || "—"}</td>
-                      <td style={cellStyle}>{formatM(record.reportedDesignDepthM)}</td>
-                      <td style={cellStyle}>{record.measurementMethod || "—"}</td>
-                      <td style={cellStyle}>{record.measurementTiming || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <Stat label="Classifier objects" value={String(result.candidateCount)} />
+              <Stat label="Inside reviewed zones" value={String(result.spatialMatchCount)} />
+              <Stat label="Calibrated ranges" value={String(result.estimatedCount)} />
+              <Stat label="Not available" value={String(result.notAvailableCount)} />
+              <Stat label="Run quality" value={result.runQualityStatus} />
             </div>
+
+            {calibrated.length === 0 ? (
+              <Message>No classifier object is fully inside a reviewed Tyrone zone. No metre estimate is returned; outside-zone candidates remain NOT AVAILABLE.</Message>
+            ) : (
+              <div className="overflow-auto" style={{ border: "1px solid rgba(28,43,94,0.12)", borderRadius: "4px", maxHeight: "360px" }}>
+                <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "760px" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "var(--accent)" }}>
+                      {["Candidate", "Reviewed zone", "Status", "Min", "Best", "Max", "Quality"].map((header) => (
+                        <th key={header} className="font-mono" style={headerStyle}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calibrated.map((estimate) => (
+                      <tr key={estimate.candidateId}>
+                        <td style={cellStyle}>{estimate.candidateId}</td>
+                        <td style={cellStyle}>{displayZone(estimate.zoneId)}</td>
+                        <td style={cellStyle}>{estimate.depthStatus}</td>
+                        <td style={cellStyle}>{formatM(estimate.estimatedDepthMinM)}</td>
+                        <td style={depthCellStyle}>{formatM(estimate.estimatedDepthBestM)}</td>
+                        <td style={cellStyle}>{formatM(estimate.estimatedDepthMaxM)}</td>
+                        <td style={cellStyle}>{estimate.depthQuality}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-              Source: official 2006 3X as-built report. Method: {result.methodKind}. Prediction = no · interpolation = no · extrapolation = no.
+              Method: {result.methodKind || "operator_zone_lookup_v1"}. Validation status: {result.validationStatus}. These are known-zone provisional ranges; this does not validate numerical depth for new unknown locations.
             </div>
           </>
         )}
@@ -148,6 +171,15 @@ function Message({ children }: { children: ReactNode }) {
   );
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded px-2 py-2" style={{ border: "1px solid rgba(28,43,94,0.12)", backgroundColor: "var(--accent)" }}>
+      <div className="font-mono" style={{ fontSize: "8.5px", color: "var(--gs-slate)", textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--gs-navy)", marginTop: "2px" }}>{value}</div>
+    </div>
+  );
+}
+
 const headerStyle = {
   padding: "7px 8px",
   textAlign: "left" as const,
@@ -157,7 +189,6 @@ const headerStyle = {
   whiteSpace: "nowrap" as const,
   borderBottom: "1px solid rgba(28,43,94,0.12)",
 };
-
 const cellStyle = {
   padding: "7px 8px",
   fontSize: "10.5px",
@@ -165,17 +196,11 @@ const cellStyle = {
   whiteSpace: "nowrap" as const,
   borderBottom: "1px solid rgba(28,43,94,0.08)",
 };
-
-const depthCellStyle = {
-  ...cellStyle,
-  fontWeight: 700,
-  color: "var(--gs-navy)",
-};
+const depthCellStyle = { ...cellStyle, fontWeight: 700, color: "var(--gs-navy)" };
 
 function formatM(value: number | null): string {
   return value === null ? "NOT AVAILABLE" : `${value.toFixed(3)} m`;
 }
-
-function formatRange(low: number | null, high: number | null): string {
-  return low === null || high === null ? "NOT AVAILABLE" : `${low.toFixed(3)}–${high.toFixed(3)} m`;
+function displayZone(zoneId: string): string {
+  return zoneId.startsWith("tyrone_") ? zoneId.replace("tyrone_", "").toUpperCase() : zoneId || "—";
 }
