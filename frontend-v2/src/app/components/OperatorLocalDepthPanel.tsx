@@ -61,7 +61,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
 
       <div className="px-4 py-3 flex flex-col gap-3">
         <div style={{ fontSize: "11.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-          Classifier objects are checked against the six reviewed Tyrone plots TP1/TP2/TP3/TP5/TP6/TP7. An object fully inside a reviewed plot receives that plot&apos;s provisional local metre range. Every object outside those zones returns NOT AVAILABLE.
+          The six reviewed Tyrone plots TP1/TP2/TP3/TP5/TP6/TP7 are checked against this run footprint. Each reviewed plot fully contained by the run becomes a Route A candidate and receives its provisional local metre range. The classifier is not used for this lookup.
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -88,7 +88,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
             }}
             style={{ marginTop: "2px" }}
           />
-          <span>I understand these metre ranges apply only to classifier objects fully contained in the six reviewed Tyrone zones and are not transferable to unknown ground.</span>
+          <span>I understand these metre ranges apply only to the six reviewed Tyrone zones contained by this run footprint and are not transferable to unknown ground.</span>
         </label>
 
         <div>
@@ -116,15 +116,15 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
         {result?.outcome === "completed" && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              <Stat label="Classifier objects" value={String(result.candidateCount)} />
-              <Stat label="Inside reviewed zones" value={String(result.spatialMatchCount)} />
+              <Stat label="Reviewed candidates" value={String(result.candidateCount)} />
+              <Stat label="Inside run footprint" value={String(result.spatialMatchCount)} />
               <Stat label="Calibrated ranges" value={String(result.estimatedCount)} />
               <Stat label="Not available" value={String(result.notAvailableCount)} />
               <Stat label="Run quality" value={result.runQualityStatus} />
             </div>
 
             {calibrated.length === 0 ? (
-              <Message>No classifier object is fully inside a reviewed Tyrone zone. No metre estimate is returned; outside-zone candidates remain NOT AVAILABLE.</Message>
+              <Message>No reviewed Tyrone zone is fully inside this run footprint, or run quality does not support Route A. No metre estimate is returned.</Message>
             ) : (
               <div className="overflow-auto" style={{ border: "1px solid rgba(28,43,94,0.12)", borderRadius: "4px", maxHeight: "360px" }}>
                 <table className="w-full" style={{ borderCollapse: "collapse", minWidth: "760px" }}>
@@ -153,7 +153,7 @@ export function OperatorLocalDepthPanel({ runId, operatorAccessToken }: Operator
             )}
 
             <div style={{ fontSize: "10.5px", color: "var(--gs-slate)", lineHeight: "1.5" }}>
-              Method: {result.methodKind || "operator_zone_lookup_v1"}. Validation status: {result.validationStatus}. These are known-zone provisional ranges; this does not validate numerical depth for new unknown locations.
+              Method: {result.methodKind || "operator_zone_lookup_v1"}. Validation status: {result.validationStatus}. Classifier used = no. These are known-zone provisional ranges; this does not validate numerical depth for new unknown locations.
             </div>
           </>
         )}
