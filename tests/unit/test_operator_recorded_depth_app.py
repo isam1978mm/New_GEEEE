@@ -7,6 +7,7 @@ from pyproj import Transformer
 from app.services.operator_recorded_depth_app import (
     REVIEWED_PLOT_TO_ZONE,
     _geometry_inside_run_bounds,
+    _load_or_rebuild_recorded_package,
     _measurement_payload,
 )
 from app.pipeline.depth.recorded import load_recorded_depth_package
@@ -50,6 +51,25 @@ def test_record_payload_uses_recorded_fields_only(tmp_path: Path) -> None:
     assert payload["recorded_sample_count"] == 5
     assert "estimated_depth_best_m" not in payload
     assert "no_predictive_extrapolation" in payload["warnings"]
+
+
+def test_stale_generated_package_is_rebuilt_and_reverified(tmp_path: Path) -> None:
+    package_dir = tmp_path / "recorded"
+    build_tyrone_recorded_depth_package(package_dir)
+
+    manifest_path = package_dir / "depth_method_manifest.json"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8") + "\n",
+        encoding="utf-8",
+    )
+
+    package = _load_or_rebuild_recorded_package(package_dir)
+    zone = package.zone("tyrone_tp5")
+    assert zone is not None
+    assert zone.measurement.mean_m == 0.68072
+
+    reverified = load_recorded_depth_package(package_dir)
+    assert reverified.zone("tyrone_tp6") is not None
 
 
 def test_operator_panel_is_recorded_lookup_not_calibration_ui() -> None:
