@@ -1,0 +1,13 @@
+point_id,easting_ft_va_south_nad83,northing_ft_va_south_nad83,measured_thickness_ft,measured_thickness_m,source_sheet,coordinate_status
+A1,11542698.3,3782722.0,0.66,0.2012,CBR-02,digitized_from_printed_state_plane_grid
+A2,11542694.6,3782703.7,0.78,0.2377,CBR-02,digitized_from_printed_state_plane_grid
+A3,11542690.0,3782684.9,0.84,0.2560,CBR-02,digitized_from_printed_state_plane_grid
+A4,11542687.1,3782666.7,0.52,0.1585,CBR-02,digitized_from_printed_state_plane_grid
+A5,11542681.4,3782648.7,0.77,0.2347,CBR-02,digitized_from_printed_state_plane_grid
+A6,11542676.8,3782630.8,0.60,0.1829,CBR-02,digitized_from_printed_state_plane_grid
+B1,11542717.5,3782718.3,0.59,0.1798,CBR-02,digitized_from_printed_state_plane_grid
+B2,11542712.9,3782700.5,0.66,0.2012,CBR-02,digitized_from_printed_state_plane_grid
+B3,11542709.6,3782682.1,0.54,0.1646,CBR-02,digitized_from_printed_state_plane_grid
+B4,11542705.0,3782663.3,0.58,0.1768,CBR-02,digitized_from_printed_state_plane_grid
+B5,11542700.4,3782645.4,0.55,0.1676,CBR-02,digitized_from_printed_state_plane_grid
+B6,11542695.0,3782627.5,0.50,0.1524,CBR-02,digitized_from_printed_state_plane_grid
