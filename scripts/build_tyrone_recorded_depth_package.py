@@ -85,13 +85,16 @@ def build_tyrone_recorded_depth_package(
     }
 
     manifest_text = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    manifest_bytes = manifest_text.encode("utf-8")
     manifest_path = output_dir / MANIFEST_NAME
-    manifest_path.write_text(manifest_text, encoding="utf-8")
+    # Write the exact bytes that are hashed. Text-mode writes can translate LF to
+    # CRLF on Windows and would make a freshly generated package fail checksum
+    # verification immediately.
+    manifest_path.write_bytes(manifest_bytes)
 
-    digest = hashlib.sha256(manifest_text.encode("utf-8")).hexdigest()
-    (output_dir / CHECKSUMS_NAME).write_text(
-        f"{digest}  {MANIFEST_NAME}\n",
-        encoding="utf-8",
+    digest = hashlib.sha256(manifest_bytes).hexdigest()
+    (output_dir / CHECKSUMS_NAME).write_bytes(
+        f"{digest}  {MANIFEST_NAME}\n".encode("utf-8")
     )
 
     candidate_template = {
@@ -107,10 +110,8 @@ def build_tyrone_recorded_depth_package(
             },
         ],
     }
-    (output_dir / CANDIDATE_TEMPLATE_NAME).write_text(
-        json.dumps(candidate_template, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    candidate_text = json.dumps(candidate_template, indent=2, sort_keys=True) + "\n"
+    (output_dir / CANDIDATE_TEMPLATE_NAME).write_bytes(candidate_text.encode("utf-8"))
 
     return {
         "status": "created",

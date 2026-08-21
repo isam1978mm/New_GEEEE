@@ -72,6 +72,27 @@ def test_stale_generated_package_is_rebuilt_and_reverified(tmp_path: Path) -> No
     assert reverified.zone("tyrone_tp6") is not None
 
 
+def test_builder_checksum_survives_windows_text_newline_translation(tmp_path: Path, monkeypatch) -> None:
+    original_write_text = Path.write_text
+
+    def windows_style_write_text(self: Path, data: str, *args, **kwargs) -> int:
+        encoding = kwargs.get("encoding") or "utf-8"
+        translated = data.replace("\r\n", "\n").replace("\n", "\r\n")
+        return self.write_bytes(translated.encode(encoding))
+
+    monkeypatch.setattr(Path, "write_text", windows_style_write_text)
+    package_dir = tmp_path / "recorded"
+    build_tyrone_recorded_depth_package(package_dir)
+
+    # The manifest is written as the exact bytes that were hashed, so simulated
+    # Windows text newline translation cannot invalidate a freshly built package.
+    package = load_recorded_depth_package(package_dir)
+    assert package.zone("tyrone_tp5") is not None
+    assert b"\r\n" not in (package_dir / "depth_method_manifest.json").read_bytes()
+
+    monkeypatch.setattr(Path, "write_text", original_write_text)
+
+
 def test_operator_panel_is_recorded_lookup_not_calibration_ui() -> None:
     source = Path("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx").read_text(encoding="utf-8")
     assert "Recorded measured depth" in source
