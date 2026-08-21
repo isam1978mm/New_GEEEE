@@ -27,6 +27,7 @@ def test_builder_creates_loadable_six_zone_route_a_package(tmp_path: Path) -> No
     assert result["zone_count"] == 6
     assert package.method_version == "tyrone-local-six-zone-v1"
     assert package.validation_status == "provisional"
+    assert package.allow_run_quality_warning is False
     assert set(package.zones) == {
         "tyrone_tp1", "tyrone_tp2", "tyrone_tp3", "tyrone_tp5", "tyrone_tp6", "tyrone_tp7"
     }
@@ -45,6 +46,13 @@ def test_builder_creates_loadable_six_zone_route_a_package(tmp_path: Path) -> No
     assert "coordinate" not in manifest_text.casefold()
     assert "polygon" not in manifest_text.casefold()
     assert "private source" not in manifest_text.casefold()
+
+
+def test_builder_warning_allowance_is_explicit_opt_in(tmp_path: Path) -> None:
+    package_dir = tmp_path / "warning-allowed"
+    build_tyrone_local_depth_package(package_dir, allow_run_quality_warning=True)
+    package = load_local_depth_package(package_dir)
+    assert package.allow_run_quality_warning is True
 
 
 def test_six_zone_ranges_use_only_frozen_ci_or_measured_envelope() -> None:
