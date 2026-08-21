@@ -14,13 +14,14 @@ from app.services.roi_contract import ROI_CONTRACT_RELATIVE_PATH
 from app.services.storage import get_run_dir
 from scripts.build_tyrone_local_depth_package import build_tyrone_local_depth_package
 
-CLASSIFICATIONS_RELATIVE_PATH = Path("classifier") / "classifications.csv"
 REFERENCE_RELATIVE_PATH = Path("data") / "depth_reference" / "tyrone_3x_six_plot_reference_v1_wgs84.geojson"
+RUN_QUALITY_RELATIVE_PATH = Path("QA") / "run_quality" / "run_quality_summary.json"
 WORK_ROOT_RELATIVE_PATH = Path("operator") / "tyrone_six_zone_depth"
 PACKAGE_DIR_NAME = "package"
-ROUTE_A_SOURCE = "tyrone_reviewed_six_zone_route_a_v1"
+ROUTE_A_SOURCE = "tyrone_reviewed_six_zone_route_a_v2"
 OUTSIDE_ZONE_ID = "outside_reviewed_tyrone_zones"
 REVIEWED_PLOT_IDS = ("TP1", "TP2", "TP3", "TP5", "TP6", "TP7")
+CLASSIFIER_ONLY_WARNING = "classifier_no_objects_classified"
 
 
 class OperatorTyroneZoneDepthError(ValueError):
@@ -43,151 +44,52 @@ def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     return payload
 
 
-def _load_classifications(path: Path) -> list[dict[str, str]]:
-    if not path.is_file():
-        raise OperatorTyroneZoneDepthError("Classifier objects are unavailable for this run.")
-    with path.open("r", encoding="utf-8", newline="") as handle:
-        rows = list(csv.DictReader(handle))
-    required = {"object_id", "row_min", "row_max", "col_min", "col_max"}
-    if not rows:
-        return []
-    if not required.issubset(rows[0]):
-        raise OperatorTyroneZoneDepthError("Classifier object geometry is unavailable for this run.")
-    return rows
+def _iter_xy(coordinates: Any) -> Iterable[tuple[float, float]]:
+    if isinstance(coordinates, (list, tuple)):
+        if len(coordinates) >= 2 and all(
+            isinstance(value, (int, float)) for value in coordinates[:2]
+        ):
+            yield float(coordinates[0]), float(coordinates[1])
+            return
+        for item in coordinates:
+            yield from _iter_xy(item)
 
 
-def _parse_int(row: dict[str, str], key: str) -> int:
-    try:
-        return int(str(row.get(key) or "").strip())
-    except ValueError as exc:
-        raise OperatorTyroneZoneDepthError("Classifier object geometry is invalid.") from exc
-
-
-def _transform_xy(transform: list[float], *, col: float, row: float) -> tuple[float, float]:
-    if len(transform) != 6:
-        raise OperatorTyroneZoneDepthError("Run grid transform is invalid.")
-    a, b, c, d, e, f = (float(value) for value in transform)
-    return a * col + b * row + c, d * col + e * row + f
-
-
-def _candidate_rectangle(row: dict[str, str], transform: list[float]) -> tuple[float, float, float, float]:
-    row_min = _parse_int(row, "row_min")
-    row_max = _parse_int(row, "row_max")
-    col_min = _parse_int(row, "col_min")
-    col_max = _parse_int(row, "col_max")
-    if row_min < 0 or col_min < 0 or row_max < row_min or col_max < col_min:
-        raise OperatorTyroneZoneDepthError("Classifier object geometry is invalid.")
-
-    corners = [
-        _transform_xy(transform, col=float(col_min), row=float(row_min)),
-        _transform_xy(transform, col=float(col_max + 1), row=float(row_min)),
-        _transform_xy(transform, col=float(col_max + 1), row=float(row_max + 1)),
-        _transform_xy(transform, col=float(col_min), row=float(row_max + 1)),
-    ]
-    xs = [point[0] for point in corners]
-    ys = [point[1] for point in corners]
-    return min(xs), min(ys), max(xs), max(ys)
-
-
-def _point_on_segment(
-    point: tuple[float, float],
-    start: tuple[float, float],
-    end: tuple[float, float],
+def _geometry_inside_run_bounds(
+    geometry: dict[str, Any],
     *,
-    tolerance: float = 1.0e-7,
+    transformer: Transformer,
+    bounds: dict[str, Any],
 ) -> bool:
-    px, py = point
-    ax, ay = start
-    bx, by = end
-    cross = (px - ax) * (by - ay) - (py - ay) * (bx - ax)
-    if abs(cross) > tolerance:
+    if geometry.get("type") not in {"Polygon", "MultiPolygon"}:
         return False
-    dot = (px - ax) * (bx - ax) + (py - ay) * (by - ay)
-    if dot < -tolerance:
+    points = list(_iter_xy(geometry.get("coordinates")))
+    if not points:
         return False
-    length_sq = (bx - ax) ** 2 + (by - ay) ** 2
-    return dot <= length_sq + tolerance
-
-
-def _point_strictly_inside_ring(point: tuple[float, float], ring: list[tuple[float, float]]) -> bool:
-    if len(ring) < 4:
+    try:
+        xmin = float(bounds["xmin"])
+        ymin = float(bounds["ymin"])
+        xmax = float(bounds["xmax"])
+        ymax = float(bounds["ymax"])
+    except (KeyError, TypeError, ValueError):
         return False
-    for start, end in zip(ring, ring[1:]):
-        if _point_on_segment(point, start, end):
-            return False
-
-    x, y = point
-    inside = False
-    for start, end in zip(ring, ring[1:]):
-        x1, y1 = start
-        x2, y2 = end
-        if (y1 > y) == (y2 > y):
-            continue
-        crossing_x = (x2 - x1) * (y - y1) / (y2 - y1) + x1
-        if x < crossing_x:
-            inside = not inside
-    return inside
-
-
-def _orientation(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> float:
-    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-
-
-def _segments_intersect(
-    a: tuple[float, float],
-    b: tuple[float, float],
-    c: tuple[float, float],
-    d: tuple[float, float],
-) -> bool:
-    o1 = _orientation(a, b, c)
-    o2 = _orientation(a, b, d)
-    o3 = _orientation(c, d, a)
-    o4 = _orientation(c, d, b)
-    eps = 1.0e-7
-    if ((o1 > eps and o2 < -eps) or (o1 < -eps and o2 > eps)) and (
-        (o3 > eps and o4 < -eps) or (o3 < -eps and o4 > eps)
-    ):
-        return True
-    if abs(o1) <= eps and _point_on_segment(c, a, b):
-        return True
-    if abs(o2) <= eps and _point_on_segment(d, a, b):
-        return True
-    if abs(o3) <= eps and _point_on_segment(a, c, d):
-        return True
-    if abs(o4) <= eps and _point_on_segment(b, c, d):
-        return True
-    return False
-
-
-def _rectangle_fully_inside_ring(
-    rectangle: tuple[float, float, float, float],
-    ring: list[tuple[float, float]],
-) -> bool:
-    xmin, ymin, xmax, ymax = rectangle
-    if xmax <= xmin or ymax <= ymin:
-        return False
-    corners = [
-        (xmin, ymin),
-        (xmax, ymin),
-        (xmax, ymax),
-        (xmin, ymax),
-    ]
-    # Boundary-touching candidates abstain. This keeps zone assignment conservative.
-    if not all(_point_strictly_inside_ring(point, ring) for point in corners):
-        return False
-
-    # Reject concave-boundary intrusions through the rectangle.
-    for x, y in ring[:-1]:
-        if xmin < x < xmax and ymin < y < ymax:
-            return False
-    rectangle_edges = list(zip(corners, corners[1:] + corners[:1]))
-    for start, end in zip(ring, ring[1:]):
-        if any(_segments_intersect(start, end, edge_start, edge_end) for edge_start, edge_end in rectangle_edges):
+    for lon, lat in points:
+        x, y = transformer.transform(lon, lat)
+        if not (xmin <= x <= xmax and ymin <= y <= ymax):
             return False
     return True
 
 
-def _load_reviewed_rings(*, target_crs: str) -> dict[str, list[tuple[float, float]]]:
+def _reviewed_plot_ids_inside_run(run_dir: Path) -> list[str]:
+    roi = _load_json_object(run_dir / ROI_CONTRACT_RELATIVE_PATH, label="Run footprint")
+    grid = roi.get("grid")
+    if not isinstance(grid, dict):
+        raise OperatorTyroneZoneDepthError("Run footprint is invalid.")
+    target_crs = str(grid.get("crs") or "").strip()
+    bounds = grid.get("bounds_m")
+    if not target_crs or not isinstance(bounds, dict):
+        raise OperatorTyroneZoneDepthError("Run footprint is invalid.")
+
     reference = _load_json_object(
         _repo_root() / REFERENCE_RELATIVE_PATH,
         label="Reviewed Tyrone geometry",
@@ -195,80 +97,101 @@ def _load_reviewed_rings(*, target_crs: str) -> dict[str, list[tuple[float, floa
     raw_features = reference.get("features")
     if not isinstance(raw_features, list):
         raise OperatorTyroneZoneDepthError("Reviewed Tyrone geometry is invalid.")
+
     transformer = Transformer.from_crs("EPSG:4326", target_crs, always_xy=True)
-    rings: dict[str, list[tuple[float, float]]] = {}
-    for feature in raw_features:
-        if not isinstance(feature, dict):
+    matched: list[str] = []
+    for raw_feature in raw_features:
+        if not isinstance(raw_feature, dict):
             continue
-        properties = feature.get("properties")
-        geometry = feature.get("geometry")
+        properties = raw_feature.get("properties")
+        geometry = raw_feature.get("geometry")
         if not isinstance(properties, dict) or not isinstance(geometry, dict):
             continue
         plot_id = str(properties.get("plot_id") or "").strip().upper()
-        if plot_id not in REVIEWED_PLOT_IDS or geometry.get("type") != "Polygon":
+        if plot_id not in REVIEWED_PLOT_IDS:
             continue
-        coordinates = geometry.get("coordinates")
-        if not isinstance(coordinates, list) or not coordinates or not isinstance(coordinates[0], list):
-            continue
-        ring: list[tuple[float, float]] = []
-        for point in coordinates[0]:
-            if not isinstance(point, list | tuple) or len(point) < 2:
-                continue
-            x, y = transformer.transform(float(point[0]), float(point[1]))
-            ring.append((float(x), float(y)))
-        if ring and ring[0] != ring[-1]:
-            ring.append(ring[0])
-        if len(ring) >= 4:
-            rings[plot_id] = ring
-    if set(rings) != set(REVIEWED_PLOT_IDS):
-        raise OperatorTyroneZoneDepthError("Reviewed Tyrone geometry is incomplete.")
-    return rings
+        if _geometry_inside_run_bounds(geometry, transformer=transformer, bounds=bounds):
+            matched.append(plot_id)
+
+    matched_set = set(matched)
+    return [plot_id for plot_id in REVIEWED_PLOT_IDS if plot_id in matched_set]
 
 
-def _assign_zone(rectangle: tuple[float, float, float, float], rings: dict[str, list[tuple[float, float]]]) -> str:
-    matches = [
-        plot_id
-        for plot_id in REVIEWED_PLOT_IDS
-        if _rectangle_fully_inside_ring(rectangle, rings[plot_id])
-    ]
-    if len(matches) != 1:
-        return OUTSIDE_ZONE_ID
-    return f"tyrone_{matches[0].lower()}"
+def _classifier_only_warning_is_safe(run_dir: Path) -> bool:
+    """Allow only the exact usable classifier-zero warning for Route A.
+
+    Route A does not consume classifier output. An otherwise usable run may proceed
+    when its sole warning is that the classifier produced zero objects. Every other
+    warning stays subject to the normal depth-stage fail-closed quality gate.
+    """
+
+    payload = _load_json_object(run_dir / RUN_QUALITY_RELATIVE_PATH, label="Run quality")
+    if str(payload.get("status") or "").strip().upper() != "WARNING":
+        return False
+    if not bool(payload.get("is_usable", False)):
+        return False
+
+    warnings = payload.get("warnings")
+    if not isinstance(warnings, list) or set(map(str, warnings)) != {CLASSIFIER_ONLY_WARNING}:
+        return False
+    if payload.get("blocking_reasons") not in ([], None):
+        return False
+    if payload.get("unknowns") not in ([], None):
+        return False
+
+    checks = payload.get("checks")
+    if not isinstance(checks, list) or not checks:
+        return False
+
+    classifier_seen = False
+    for check in checks:
+        if not isinstance(check, dict):
+            return False
+        name = str(check.get("name") or "").strip()
+        status = str(check.get("status") or "").strip().upper()
+        if name == "classifier":
+            classifier_seen = True
+            details = check.get("details")
+            if status != "WARNING" or not isinstance(details, dict):
+                return False
+            try:
+                object_count = int(details.get("object_count"))
+            except (TypeError, ValueError):
+                return False
+            if object_count != 0:
+                return False
+            continue
+        if status != "PASS":
+            return False
+
+    return classifier_seen
 
 
 def _build_candidate_payload(run_dir: Path) -> tuple[dict[str, Any], int]:
-    roi = _load_json_object(run_dir / ROI_CONTRACT_RELATIVE_PATH, label="Run grid")
-    grid = roi.get("grid")
-    if not isinstance(grid, dict):
-        raise OperatorTyroneZoneDepthError("Run grid is invalid.")
-    target_crs = str(grid.get("crs") or "").strip()
-    raw_transform = grid.get("crs_transform")
-    if not target_crs or not isinstance(raw_transform, list) or len(raw_transform) != 6:
-        raise OperatorTyroneZoneDepthError("Run grid is invalid.")
-    transform = [float(value) for value in raw_transform]
-    rings = _load_reviewed_rings(target_crs=target_crs)
-    rows = _load_classifications(run_dir / CLASSIFICATIONS_RELATIVE_PATH)
+    """Build reviewed Route A candidates without reading classifier outputs."""
 
-    candidates: list[dict[str, str]] = []
-    matched_count = 0
-    for row in rows:
-        object_id = str(_parse_int(row, "object_id"))
-        rectangle = _candidate_rectangle(row, transform)
-        zone_id = _assign_zone(rectangle, rings)
-        if zone_id != OUTSIDE_ZONE_ID:
-            matched_count += 1
-        candidates.append({"candidate_id": f"object-{object_id}", "zone_id": zone_id})
+    plot_ids = _reviewed_plot_ids_inside_run(run_dir)
+    candidates = [
+        {
+            "candidate_id": f"reviewed-zone-{plot_id.lower()}",
+            "zone_id": f"tyrone_{plot_id.lower()}",
+        }
+        for plot_id in plot_ids
+    ]
     return {
         "schema_version": "local_depth_candidates_v1",
         "source": ROUTE_A_SOURCE,
         "candidates": candidates,
-    }, matched_count
+    }, len(plot_ids)
 
 
 def _write_route_a_candidates(path: Path, payload: dict[str, Any]) -> None:
     if path.is_file():
         existing = _load_json_object(path, label="Existing depth candidate input")
-        if existing.get("source") != ROUTE_A_SOURCE:
+        if existing.get("source") not in {
+            ROUTE_A_SOURCE,
+            "tyrone_reviewed_six_zone_route_a_v1",
+        }:
             raise OperatorTyroneZoneDepthError(
                 "This run already has a different local-depth candidate input."
             )
@@ -310,7 +233,7 @@ def run_operator_tyrone_zone_depth_app(
     run_id: str,
     operator_confirmed_review: bool = False,
 ) -> dict[str, Any]:
-    """Run original Route A on classifier objects using six reviewed Tyrone zones."""
+    """Run Route A using reviewed Tyrone-zone candidates inside the run footprint."""
 
     if not operator_confirmed_review:
         raise OperatorTyroneZoneDepthError(
@@ -320,17 +243,33 @@ def run_operator_tyrone_zone_depth_app(
     if not run_dir.is_dir():
         raise OperatorTyroneZoneDepthError("The selected completed run is unavailable.")
 
+    allow_classifier_only_warning = _classifier_only_warning_is_safe(run_dir)
+
     work_root = run_dir / WORK_ROOT_RELATIVE_PATH
     package_dir = work_root / PACKAGE_DIR_NAME
     if package_dir.exists():
         shutil.rmtree(package_dir)
     package_dir.mkdir(parents=True, exist_ok=True)
-    build_tyrone_local_depth_package(package_dir, force=True)
+    build_tyrone_local_depth_package(
+        package_dir,
+        force=True,
+        allow_run_quality_warning=allow_classifier_only_warning,
+    )
 
     candidate_payload, spatial_match_count = _build_candidate_payload(run_dir)
     _write_route_a_candidates(run_dir / DEPTH_INPUT_RELATIVE_PATH, candidate_payload)
     paths, summary = write_depth_outputs(run_dir=run_dir, package_dir=package_dir)
     estimates = _read_depth_estimates(paths.estimates_csv)
+
+    service_warnings = [
+        "local_only",
+        "provisional_calibration",
+        "derived_geometry",
+        "not_transferable",
+        "not_physical_confirmation",
+    ]
+    if allow_classifier_only_warning:
+        service_warnings.append("classifier_only_warning_irrelevant_to_route_a")
 
     return {
         "outcome": "completed",
@@ -348,33 +287,27 @@ def run_operator_tyrone_zone_depth_app(
         "not_available_count": summary["not_available_count"],
         "insufficient_data_count": summary["insufficient_data_count"],
         "estimates": estimates,
-        "warnings": sorted(
-            set(
-                [
-                    "local_only",
-                    "provisional_calibration",
-                    "derived_geometry",
-                    "not_transferable",
-                    "not_physical_confirmation",
-                    *summary.get("warnings", []),
-                ]
-            )
-        ),
+        "warnings": sorted(set(service_warnings)),
+        "classifier_used": False,
+        "prediction": False,
+        "interpolation": False,
+        "extrapolation": False,
+        "transferable": False,
+        "geometry_returned": False,
         "filesystem_only": True,
         "http_servable": False,
-        "geometry_returned": False,
-        "transferable": False,
-        "validated": False,
     }
 
 
 __all__ = (
+    "CLASSIFIER_ONLY_WARNING",
     "OUTSIDE_ZONE_ID",
     "REVIEWED_PLOT_IDS",
     "ROUTE_A_SOURCE",
     "OperatorTyroneZoneDepthError",
-    "_assign_zone",
-    "_candidate_rectangle",
-    "_rectangle_fully_inside_ring",
+    "_build_candidate_payload",
+    "_classifier_only_warning_is_safe",
+    "_geometry_inside_run_bounds",
+    "_reviewed_plot_ids_inside_run",
     "run_operator_tyrone_zone_depth_app",
 )
