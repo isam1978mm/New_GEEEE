@@ -96,13 +96,22 @@ def _write_utf8_bytes(path: Path, text: str) -> bytes:
     return payload
 
 
-def build_tyrone_local_depth_package(output_dir: Path, *, force: bool = False) -> dict[str, Any]:
+def build_tyrone_local_depth_package(
+    output_dir: Path,
+    *,
+    force: bool = False,
+    allow_run_quality_warning: bool = False,
+) -> dict[str, Any]:
     """Create the private provisional six-zone Tyrone Route A package.
 
     The package stores source-reviewed metre ranges only. Geometry stays in the
-    separate source-controlled WGS84 reference and is used only to assign a
-    classifier object to a reviewed zone. No classifier or NB output is used to
-    create the metre values.
+    separate source-controlled WGS84 reference and is used only to determine
+    which reviewed Tyrone zones are fully contained by the selected run footprint.
+    No classifier or NB output is used to create candidates or metre values.
+
+    ``allow_run_quality_warning`` is deliberately opt-in. The operator service
+    enables it only after proving the run's sole warning is the irrelevant
+    ``classifier_no_objects_classified`` condition.
     """
 
     output_dir = Path(output_dir)
@@ -117,7 +126,7 @@ def build_tyrone_local_depth_package(output_dir: Path, *, force: bool = False) -
         "calibration_dataset_version": "tyrone-3x-six-plot-reference-2026-08-18",
         "site_id": "tyrone_3x",
         "validation_status": "provisional",
-        "allow_run_quality_warning": False,
+        "allow_run_quality_warning": bool(allow_run_quality_warning),
         "warnings": [
             "local_only",
             "provisional_calibration",
