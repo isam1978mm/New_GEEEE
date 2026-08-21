@@ -46,28 +46,13 @@ def test_local_depth_preflight_rejects_common_operator_input_errors() -> None:
     assert "replace-with" in source
 
 
-def test_local_depth_panel_exposes_classifier_free_route_a_six_zone_ranges() -> None:
-    source = _read("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx")
+def test_route_a_panel_is_removed_from_operator_overlay() -> None:
+    source = _read("frontend-v2/src/app/components/OperatorPrivateOverlayPanel.tsx")
 
-    assert "Local depth — Route A" in source
-    assert "PROVISIONAL LOCAL" in source
-    assert "TP1/TP2/TP3/TP5/TP6/TP7" in source
-    assert "Run reviewed-zone depth" in source
-    assert "calibrated_range" in source
-    assert "LOCAL ONLY" in source
-    assert "PROVISIONAL CALIBRATION" in source
-    assert "DERIVED GEOMETRY" in source
-    assert "NOT TRANSFERABLE" in source
-    assert "NOT PHYSICAL CONFIRMATION" in source
-    assert "The classifier is not used for this lookup" in source
-    assert "Classifier used = no" in source
-    assert "Reviewed candidates" in source
-    assert "Inside run footprint" in source
-    assert "classifier objects fully contained" not in source.lower()
-    assert "return null" not in source
-    assert "Recorded measured depth" not in source
-    assert "Load reviewed recorded measurements" not in source
-    assert "Download blank GeoJSON template" not in source
+    assert "OperatorLocalDepthPanel" not in source
+    assert "Local depth — Route A" not in source
+    assert not (REPO_ROOT / "frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx").exists()
+    assert not (REPO_ROOT / "frontend-v2/src/app/api/operatorReviewedZoneDepth.ts").exists()
 
 
 def test_env_example_keeps_operator_local_depth_default_off() -> None:
