@@ -93,14 +93,14 @@ def test_route_a_end_to_end_assigns_tp6_and_abstains_outside(tmp_path: Path) -> 
     run_dir = tmp_path / "runs" / run_id
     run_dir.mkdir(parents=True)
 
-    # A tiny EPSG:4326 synthetic grid is sufficient to exercise the same affine
-    # classifier-bbox -> reviewed-WGS84-polygon path used by a real run.
+    # Match the real run contract: UTM Zone 12N with 10 m north-up pixels.
+    # Pixel (0, 0) is centered safely inside the reviewed TP6 polygon.
     _write_json(
         run_dir / ROI_CONTRACT_RELATIVE_PATH,
         {
             "grid": {
-                "crs": "EPSG:4326",
-                "crs_transform": [0.00001, 0.0, -108.41828, 0.0, -0.00001, 32.72187],
+                "crs": "EPSG:32612",
+                "crs_transform": [10.0, 0.0, 741958.2482431115, 0.0, -10.0, 3623404.398004249],
             }
         },
     )
