@@ -7,7 +7,12 @@ from typing import Any, Iterable
 from pyproj import Transformer
 
 from app.config import Settings
-from app.pipeline.depth.recorded import RECORDED_METHOD_KIND, load_recorded_depth_package
+from app.pipeline.depth.recorded import (
+    RECORDED_METHOD_KIND,
+    RecordedDepthPackage,
+    RecordedDepthPackageError,
+    load_recorded_depth_package,
+)
 from app.services.operator_local_depth_app import OperatorLocalDepthAppError
 from app.services.roi_contract import ROI_CONTRACT_RELATIVE_PATH
 from app.services.storage import get_run_dir
@@ -101,6 +106,26 @@ def _reviewed_plot_ids_inside_run(run_dir: Path) -> list[str]:
     return sorted(set(matched))
 
 
+def _load_or_rebuild_recorded_package(package_dir: Path) -> RecordedDepthPackage:
+    """Load the deterministic generated package, rebuilding one stale copy if needed.
+
+    The package is generated entirely from reviewed repository constants. A stale or
+    partially generated run-local copy is safe to replace. The rebuilt copy is always
+    verified again, so a genuinely invalid generated package still fails closed.
+    """
+
+    package_dir = Path(package_dir)
+    if not package_dir.is_dir():
+        package_dir.mkdir(parents=True, exist_ok=True)
+        build_tyrone_recorded_depth_package(package_dir)
+
+    try:
+        return load_recorded_depth_package(package_dir)
+    except RecordedDepthPackageError:
+        build_tyrone_recorded_depth_package(package_dir, force=True)
+        return load_recorded_depth_package(package_dir)
+
+
 def _measurement_payload(*, plot_id: str, zone: Any) -> dict[str, Any]:
     measurement = zone.measurement
     return {
@@ -145,10 +170,7 @@ def run_operator_recorded_depth_app(
     matched_plot_ids = _reviewed_plot_ids_inside_run(run_dir)
     work_root = run_dir / WORK_ROOT_RELATIVE_PATH
     package_dir = work_root / PACKAGE_DIR_NAME
-    if not package_dir.is_dir():
-        package_dir.mkdir(parents=True, exist_ok=True)
-        build_tyrone_recorded_depth_package(package_dir)
-    package = load_recorded_depth_package(package_dir)
+    package = _load_or_rebuild_recorded_package(package_dir)
 
     records: list[dict[str, Any]] = []
     for plot_id in matched_plot_ids:
@@ -188,6 +210,7 @@ def run_operator_recorded_depth_app(
 __all__ = (
     "REVIEWED_PLOT_TO_ZONE",
     "_geometry_inside_run_bounds",
+    "_load_or_rebuild_recorded_package",
     "_reviewed_plot_ids_inside_run",
     "run_operator_recorded_depth_app",
 )
