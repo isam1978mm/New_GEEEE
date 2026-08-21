@@ -5,7 +5,6 @@ import {
   type OperatorPrivateOverlayPreview,
 } from "../api/operatorOverlays";
 import { H5OperatorAggregateSummaryPanel } from "./H5OperatorAggregateSummaryPanel";
-import { OperatorLocalDepthPanel } from "./OperatorLocalDepthPanel";
 import { useOperatorAccessToken } from "./OperatorSessionContext";
 import { V6PrivatePackagePanel } from "./V6PrivatePackagePanel";
 
@@ -104,7 +103,6 @@ export function OperatorPrivateOverlayPanel({ runId, operatorAccessToken }: Oper
           </div>
         </details>
       </section>
-      <OperatorLocalDepthPanel runId={runId} operatorAccessToken={resolvedOperatorAccessToken} />
       <V6PrivatePackagePanel runId={runId} operatorAccessToken={resolvedOperatorAccessToken} />
     </>
   );
