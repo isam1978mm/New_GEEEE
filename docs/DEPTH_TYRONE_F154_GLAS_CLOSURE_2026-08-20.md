@@ -12,9 +12,23 @@ The ICESat-1 / GLAS branch was screened because Laser-3A operated during the use
 
 The screen used the real project-derived 3X WGS84 footprint rather than an approximate Tyrone point.
 
-## Exact CMR query executed
+## CMR query executed
 
-The user executed this NASA CMR granule query from PowerShell:
+The user executed a NASA CMR GLAH14 granule query from PowerShell using:
+
+- `short_name=GLAH14`
+- `version=034`
+- `provider=NSIDC_CPRD`
+- the exact 3X WGS84 bounding box derived from the project geometry
+- the Laser-3A temporal window `2004-10-03T00:00:00Z` through `2004-11-08T23:59:59Z`
+
+The exact site coordinate pair is intentionally not duplicated in this Markdown file. The canonical reviewed geometry remains in:
+
+`data/depth_reference/tyrone_3x_six_plot_reference_v1_wgs84.geojson`
+
+For reproducibility, derive the query bounding box from that canonical geometry rather than copying a second coordinate literal into documentation.
+
+The query logic was equivalent to:
 
 ```powershell
 $uri = "https://cmr.earthdata.nasa.gov/search/granules.json?" +
@@ -22,7 +36,7 @@ $uri = "https://cmr.earthdata.nasa.gov/search/granules.json?" +
 "&short_name=GLAH14" +
 "&version=034" +
 "&provider=NSIDC_CPRD" +
-"&bounding_box=-108.42141,32.71940,-108.41672,32.72338" +
+"&bounding_box=<BBOX_FROM_CANONICAL_3X_WGS84_REFERENCE>" +
 "&temporal=2004-10-03T00:00:00Z,2004-11-08T23:59:59Z"
 
 $r = Invoke-RestMethod -Uri $uri
