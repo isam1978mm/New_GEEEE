@@ -41,6 +41,7 @@ export interface OperatorRecordedDepthResult {
 
 export async function runOperatorRecordedDepth(
   runId: string,
+  input: { operatorConfirmedReview: boolean },
   options?: { accessToken?: string | null },
 ): Promise<OperatorRecordedDepthResult> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -51,7 +52,7 @@ export async function runOperatorRecordedDepth(
     const response = await fetch(`/runs/${encodeURIComponent(runId)}/operator/recorded-depth`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ operator_confirmed_review: true }),
+      body: JSON.stringify({ operator_confirmed_review: input.operatorConfirmedReview }),
     });
     const payload = await readJson(response);
     if (response.status === 403) return mapResult(payload, runId, "denied");
