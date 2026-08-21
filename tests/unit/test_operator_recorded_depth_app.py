@@ -82,21 +82,10 @@ def test_builder_checksum_survives_windows_text_newline_translation(tmp_path: Pa
     monkeypatch.setattr(Path, "write_text", original_write_text)
 
 
-def test_operator_panel_now_exposes_original_route_a_not_recorded_lookup() -> None:
-    source = Path("frontend-v2/src/app/components/OperatorLocalDepthPanel.tsx").read_text(encoding="utf-8")
-    assert "Local depth — Route A" in source
-    assert "Run reviewed-zone depth" in source
-    assert "calibrated_range" in source
-    assert "NOT TRANSFERABLE" in source
-    assert "NOT PHYSICAL CONFIRMATION" in source
-    assert "Recorded measured depth" not in source
-    assert "Load reviewed recorded measurements" not in source
-
-
-def test_recorded_api_remains_separate_and_route_a_has_own_endpoint() -> None:
+def test_route_a_endpoint_is_removed_but_other_private_depth_endpoints_remain() -> None:
     source = Path("app/api/operator_local_depth.py").read_text(encoding="utf-8")
-    assert '@router.post("/runs/{run_id}/operator/reviewed-zone-depth")' in source
+    assert '/operator/reviewed-zone-depth' not in source
+    assert "run_operator_tyrone_zone_depth_app" not in source
     assert '@router.post("/runs/{run_id}/operator/recorded-depth")' in source
     assert '@router.post("/runs/{run_id}/operator/local-depth")' in source
-    assert "run_operator_tyrone_zone_depth_app" in source
     assert "run_operator_recorded_depth_app" in source

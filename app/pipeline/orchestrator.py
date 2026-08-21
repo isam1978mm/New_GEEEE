@@ -36,7 +36,6 @@ class Orchestrator:
         self.settings = settings
         self.session_factory = session_factory
         self.stages = self._with_optional_surface_change_stage(list(stages))
-        self.stages = self._with_optional_local_depth_stage(self.stages)
         self._validate_stage_registry()
 
     def _with_optional_surface_change_stage(self, stages: list[Stage]) -> list[Stage]:
@@ -60,29 +59,6 @@ class Orchestrator:
         return [
             *stages[:insertion_index],
             SurfaceChangeStage(),
-            *stages[insertion_index:],
-        ]
-
-    def _with_optional_local_depth_stage(self, stages: list[Stage]) -> list[Stage]:
-        mode = str(getattr(self.settings, "local_depth_mode", "off")).strip().lower()
-        if mode != "local_calibrated":
-            return stages
-        if any(stage.name == "depth_estimation" for stage in stages):
-            return stages
-
-        run_quality_index = next(
-            (index for index, stage in enumerate(stages) if stage.name == "run_quality"),
-            None,
-        )
-        if run_quality_index is None:
-            return stages
-
-        from app.pipeline.stages.depth_estimation import DepthEstimationStage
-
-        insertion_index = run_quality_index + 1
-        return [
-            *stages[:insertion_index],
-            DepthEstimationStage(),
             *stages[insertion_index:],
         ]
 
