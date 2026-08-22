@@ -27,13 +27,76 @@ jobs:
           init-shell: bash
           cache-environment: true
 
-      - name: Build 2015 and 2021 ground DTMs
+      - name: Prepare target and same-grid pipelines
         shell: bash -el {0}
         run: |
           set -euxo pipefail
           python scripts/tangerine_lidar_execution.py prepare \
-            --output-dir data/research/tangerine_live \
-            --execute
+            --output-dir data/research/tangerine_live
+
+      - name: Resolve live USGS EPT aliases and build DTMs
+        shell: bash -el {0}
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          bucket = "https://usgs-lidar-public.s3.us-west-2.amazonaws.com"
+          prefixes = []
+          for start in ("AZ_", "USGS_LPC_AZ_"):
+              url = bucket + "/?list-type=2&delimiter=%2F&max-keys=1000&prefix=" + urllib.parse.quote(start)
+              with urllib.request.urlopen(url, timeout=60) as response:
+                  root = ET.fromstring(response.read())
+              ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
+              prefixes.extend(
+                  node.text.rstrip("/")
+                  for node in root.findall("s3:CommonPrefixes/s3:Prefix", ns)
+                  if node.text
+              )
+
+          matches = sorted({p for p in prefixes if "pima" in p.lower()})
+          print("PIMA_EPT_PREFIXES=", matches)
+          pre_candidates = [p for p in matches if "2015" in p and "eastern" in p.lower()]
+          if not pre_candidates:
+              pre_candidates += [p for p in prefixes if "2015" in p and "pima" in p.lower()]
+          print("PRE_CANDIDATES=", pre_candidates)
+
+          resolved_pre = None
+          for candidate in pre_candidates:
+              url = f"{bucket}/{candidate}/ept.json"
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as response:
+                      if response.status == 200:
+                          resolved_pre = url
+                          print("RESOLVED_PRE_EPT=", url)
+                          break
+              except Exception as exc:
+                  print("PRE_PROBE_FAIL", candidate, repr(exc))
+
+          post_url = f"{bucket}/AZ_PimaCo_2_2021/ept.json"
+          with urllib.request.urlopen(post_url, timeout=30) as response:
+              print("POST_EPT_STATUS=", response.status)
+
+          if resolved_pre is None:
+              raise SystemExit("No public EPT mirror found for the 2015 Eastern Pima project")
+
+          pre_path = Path("data/research/tangerine_live/pdal_2015_ground_dtm.json")
+          pre = json.loads(pre_path.read_text())
+          pre["pipeline"][0]["filename"] = resolved_pre
+          pre_path.write_text(json.dumps(pre, indent=2))
+
+          post_path = Path("data/research/tangerine_live/pdal_2021_ground_dtm.json")
+          post = json.loads(post_path.read_text())
+          post["pipeline"][0]["filename"] = post_url
+          post_path.write_text(json.dumps(post, indent=2))
+          PY
+
+          pdal pipeline data/research/tangerine_live/pdal_2015_ground_dtm.json
+          pdal pipeline data/research/tangerine_live/pdal_2021_ground_dtm.json
 
       - name: Run frozen stable-ground co-registration gates
         shell: bash -el {0}
