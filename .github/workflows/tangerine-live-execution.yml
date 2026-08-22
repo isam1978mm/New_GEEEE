@@ -27,89 +27,117 @@ jobs:
           init-shell: bash
           cache-environment: true
 
-      - name: Prepare target and same-grid pipelines
+      - name: Prepare target and analysis bounds
         shell: bash -el {0}
         run: |
           set -euxo pipefail
           python scripts/tangerine_lidar_execution.py prepare \
             --output-dir data/research/tangerine_live
 
-      - name: Resolve live USGS EPT aliases and build DTMs
+      - name: Discover official USGS DEM products intersecting Tangerine
         shell: bash -el {0}
         run: |
           set -euxo pipefail
           python - <<'PY'
+          import html
           import json
+          import re
           import urllib.parse
           import urllib.request
-          import xml.etree.ElementTree as ET
           from pathlib import Path
+          from pyproj import Transformer
 
-          bucket = "https://usgs-lidar-public.s3.us-west-2.amazonaws.com"
-          prefixes = []
-          for start in ("AZ_", "USGS_LPC_AZ_"):
-              url = bucket + "/?list-type=2&delimiter=%2F&max-keys=1000&prefix=" + urllib.parse.quote(start)
-              with urllib.request.urlopen(url, timeout=60) as response:
-                  root = ET.fromstring(response.read())
-              ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
-              prefixes.extend(
-                  node.text.rstrip("/")
-                  for node in root.findall("s3:CommonPrefixes/s3:Prefix", ns)
-                  if node.text
-              )
+          out = Path("data/research/tangerine_live")
+          prep = json.loads((out / "prepare_summary.json").read_text())
+          xmin, ymin, xmax, ymax = prep["analysis_bounds_utm12n"]
+          tr = Transformer.from_crs("EPSG:32612", "EPSG:4326", always_xy=True)
+          west, south = tr.transform(xmin, ymin)
+          east, north = tr.transform(xmax, ymax)
+          bbox = (west, south, east, north)
+          print("TANGERINE_WGS84_BBOX=", bbox)
 
-          matches = sorted({p for p in prefixes if "pima" in p.lower()})
-          print("PIMA_EPT_PREFIXES=", matches)
-          pre_candidates = [p for p in matches if "2015" in p and "eastern" in p.lower()]
-          if not pre_candidates:
-              pre_candidates += [p for p in prefixes if "2015" in p and "pima" in p.lower()]
-          print("PRE_CANDIDATES=", pre_candidates)
+          discovery = {"bbox_wgs84": bbox, "tnm": [], "waf": {}}
 
-          resolved_pre = None
-          for candidate in pre_candidates:
-              url = f"{bucket}/{candidate}/ept.json"
+          params = {
+              "datasets": "Digital Elevation Model (DEM) 1 meter",
+              "bbox": ",".join(f"{x:.8f}" for x in bbox),
+              "max": "100",
+              "outputFormat": "JSON",
+          }
+          api = "https://tnmaccess.nationalmap.gov/api/v1/products?" + urllib.parse.urlencode(params)
+          try:
+              with urllib.request.urlopen(api, timeout=60) as response:
+                  payload = json.load(response)
+              print("TNM_TOTAL=", payload.get("total"))
+              for item in payload.get("items", []):
+                  row = {k: item.get(k) for k in (
+                      "title", "publicationDate", "lastUpdated", "downloadURL",
+                      "sourceId", "sourceName", "format", "sizeInBytes"
+                  )}
+                  discovery["tnm"].append(row)
+                  print("TNM_ITEM=", json.dumps(row, sort_keys=True))
+          except Exception as exc:
+              print("TNM_API_ERROR=", repr(exc))
+
+          projects = {
+              "pre_2015": "AZ_Eastern_PimaCO_2015",
+              "post_2021": "AZ_PimaCo_2_2021",
+          }
+          base = "https://thor-f5.er.usgs.gov/ngtoc/metadata/waf/elevation/opr_dem/geotiff/"
+          href_re = re.compile(r'href=[\"\']([^\"\']+)[\"\']', re.I)
+          url_re = re.compile(r'https?://[^\s<>\"\']+', re.I)
+
+          def first_float(xml, tag):
+              m = re.search(fr"<{tag}[^>]*>\s*([-+0-9.eE]+)\s*</{tag}>", xml, re.I)
+              return float(m.group(1)) if m else None
+
+          def intersects(bb):
+              w, s, e, n = bb
+              return not (e < west or w > east or n < south or s > north)
+
+          for label, project in projects.items():
+              index_url = base + project + "/"
               try:
-                  with urllib.request.urlopen(url, timeout=30) as response:
-                      if response.status == 200:
-                          resolved_pre = url
-                          print("RESOLVED_PRE_EPT=", url)
-                          break
+                  with urllib.request.urlopen(index_url, timeout=60) as response:
+                      index = response.read().decode("utf-8", "replace")
               except Exception as exc:
-                  print("PRE_PROBE_FAIL", candidate, repr(exc))
+                  print("WAF_INDEX_ERROR=", label, index_url, repr(exc))
+                  discovery["waf"][label] = {"index_url": index_url, "error": repr(exc)}
+                  continue
+              hrefs = [html.unescape(x) for x in href_re.findall(index)]
+              xml_hrefs = sorted({x for x in hrefs if ".xml" in x.lower()})
+              print("WAF_XML_COUNT=", label, len(xml_hrefs), "INDEX=", index_url)
+              hits = []
+              for href in xml_hrefs:
+                  meta_url = urllib.parse.urljoin(index_url, href)
+                  try:
+                      with urllib.request.urlopen(meta_url, timeout=30) as response:
+                          xml = response.read().decode("utf-8", "replace")
+                  except Exception as exc:
+                      print("WAF_META_ERROR=", meta_url, repr(exc))
+                      continue
+                  w = first_float(xml, "westbc")
+                  e = first_float(xml, "eastbc")
+                  n = first_float(xml, "northbc")
+                  s = first_float(xml, "southbc")
+                  if None in (w, s, e, n) or not intersects((w, s, e, n)):
+                      continue
+                  urls = sorted({html.unescape(u).rstrip(".,;)'") for u in url_re.findall(xml)})
+                  tif_urls = [u for u in urls if ".tif" in u.lower()]
+                  hit = {
+                      "metadata_url": meta_url,
+                      "bbox": [w, s, e, n],
+                      "tif_urls": tif_urls,
+                      "all_urls": urls[:30],
+                  }
+                  hits.append(hit)
+                  print("WAF_HIT=", label, json.dumps(hit, sort_keys=True))
+              discovery["waf"][label] = {"index_url": index_url, "hits": hits}
 
-          post_url = f"{bucket}/AZ_PimaCo_2_2021/ept.json"
-          with urllib.request.urlopen(post_url, timeout=30) as response:
-              print("POST_EPT_STATUS=", response.status)
-
-          if resolved_pre is None:
-              raise SystemExit("No public EPT mirror found for the 2015 Eastern Pima project")
-
-          pre_path = Path("data/research/tangerine_live/pdal_2015_ground_dtm.json")
-          pre = json.loads(pre_path.read_text())
-          pre["pipeline"][0]["filename"] = resolved_pre
-          pre_path.write_text(json.dumps(pre, indent=2))
-
-          post_path = Path("data/research/tangerine_live/pdal_2021_ground_dtm.json")
-          post = json.loads(post_path.read_text())
-          post["pipeline"][0]["filename"] = post_url
-          post_path.write_text(json.dumps(post, indent=2))
+          (out / "official_dem_discovery.json").write_text(json.dumps(discovery, indent=2, sort_keys=True))
           PY
 
-          pdal pipeline data/research/tangerine_live/pdal_2015_ground_dtm.json
-          pdal pipeline data/research/tangerine_live/pdal_2021_ground_dtm.json
-
-      - name: Run frozen stable-ground co-registration gates
-        shell: bash -el {0}
-        run: |
-          set -euxo pipefail
-          python scripts/tangerine_lidar_execution.py analyze \
-            --pre-dtm data/research/tangerine_live/tangerine_2015_ground_dtm.tif \
-            --post-dtm data/research/tangerine_live/tangerine_2021_ground_dtm.tif \
-            --target-geojson data/research/tangerine_live/tangerine_target.geojson \
-            --output-json data/research/tangerine_live/tangerine_analysis_result.json
-          cat data/research/tangerine_live/tangerine_analysis_result.json
-
-      - name: Upload compact reproducibility outputs
+      - name: Upload discovery
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -119,6 +147,4 @@ jobs:
           path: |
             data/research/tangerine_live/prepare_summary.json
             data/research/tangerine_live/tangerine_target.geojson
-            data/research/tangerine_live/pdal_2015_ground_dtm.json
-            data/research/tangerine_live/pdal_2021_ground_dtm.json
-            data/research/tangerine_live/tangerine_analysis_result.json
+            data/research/tangerine_live/official_dem_discovery.json
