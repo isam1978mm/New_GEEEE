@@ -9,56 +9,143 @@ on:
 jobs:
   execute-tangerine:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Query official TNM products at Tangerine
+      - name: Set up geospatial analysis environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: tangerine
+          create-args: >-
+            python=3.11
+            pdal
+            numpy
+            rasterio
+            pyproj
+          init-shell: bash
+          cache-environment: true
+
+      - name: Prepare exact Tangerine target grid
+        shell: bash -el {0}
         run: |
           set -euxo pipefail
-          mkdir -p data/research/tangerine_live
+          python scripts/tangerine_lidar_execution.py prepare --output-dir data/research/tangerine_live
+
+      - name: Download the two official USGS 1m bare-earth DEM tiles
+        shell: bash -el {0}
+        run: |
+          set -euxo pipefail
+          cd data/research/tangerine_live
+          curl --fail --location --retry 4 --retry-delay 2 \
+            -o source_2015.tif \
+            'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/AZ_Eastern_PimaCO_2015/TIFF/USGS_one_meter_x48y359_AZ_Eastern_PimaCO_2015.tif'
+          curl --fail --location --retry 4 --retry-delay 2 \
+            -o source_2021.tif \
+            'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/AZ_PimaCounty_2021_B21/TIFF/USGS_1M_12_x48y359_AZ_PimaCounty_2021_B21.tif'
+          ls -lh source_2015.tif source_2021.tif
+
+      - name: Inspect and normalize both DEMs onto the exact same 1m grid
+        shell: bash -el {0}
+        run: |
+          set -euxo pipefail
           python - <<'PY'
           import json
-          import urllib.parse
-          import urllib.request
           from pathlib import Path
+          import numpy as np
+          import rasterio
+          from rasterio.transform import from_origin
+          from rasterio.warp import reproject, Resampling
 
-          bbox = (-111.20391848, 32.41001929, -111.17003061, 32.43513044)
-          queries = [
-              {"datasets": "Digital Elevation Model (DEM) 1 meter", "bbox": ",".join(map(str,bbox)), "max": "500", "outputFormat": "JSON"},
-              {"q": "Eastern Pima", "bbox": ",".join(map(str,bbox)), "max": "500", "outputFormat": "JSON"},
-              {"q": "PimaCo 2 2021", "bbox": ",".join(map(str,bbox)), "max": "500", "outputFormat": "JSON"},
-          ]
-          results = []
-          for params in queries:
-              url = "https://tnmaccess.nationalmap.gov/api/v1/products?" + urllib.parse.urlencode(params)
-              print("QUERY_URL=", url, flush=True)
-              try:
-                  with urllib.request.urlopen(url, timeout=60) as response:
-                      payload = json.load(response)
-              except Exception as exc:
-                  print("QUERY_ERROR=", repr(exc), flush=True)
-                  results.append({"params": params, "error": repr(exc)})
-                  continue
-              print("TOTAL=", payload.get("total"), flush=True)
-              rows = []
-              for item in payload.get("items", []):
-                  row = {k: item.get(k) for k in item.keys() if k in {
-                      "title","publicationDate","lastUpdated","downloadURL","sourceId","sourceName",
-                      "format","sizeInBytes","boundingBox","urls","metaUrl","datasets","extent"
-                  }}
-                  rows.append(row)
-                  print("ITEM=", json.dumps(row, sort_keys=True), flush=True)
-              results.append({"params": params, "total": payload.get("total"), "items": rows})
-          Path("data/research/tangerine_live/tnm_products.json").write_text(json.dumps({"bbox":bbox,"queries":results},indent=2,sort_keys=True))
+          out = Path('data/research/tangerine_live')
+          prep = json.loads((out / 'prepare_summary.json').read_text())
+          xmin, ymin, xmax, ymax = map(float, prep['analysis_bounds_utm12n'])
+          res = 1.0
+          width = int(round((xmax - xmin) / res))
+          height = int(round((ymax - ymin) / res))
+          transform = from_origin(xmin, ymax, res, res)
+          dst_crs = 'EPSG:32612'
+          nodata = -9999.0
+          inspection = {}
+
+          for epoch in ('2015', '2021'):
+              src_path = out / f'source_{epoch}.tif'
+              dst_path = out / f'tangerine_{epoch}_ground_dtm.tif'
+              with rasterio.open(src_path) as src:
+                  print(f'{epoch}_CRS={src.crs}', flush=True)
+                  print(f'{epoch}_RES={src.res}', flush=True)
+                  print(f'{epoch}_BOUNDS={src.bounds}', flush=True)
+                  print(f'{epoch}_NODATA={src.nodata}', flush=True)
+                  print(f'{epoch}_UNITS={src.units}', flush=True)
+                  print(f'{epoch}_TAGS={json.dumps(src.tags(), sort_keys=True)}', flush=True)
+                  print(f'{epoch}_BAND_TAGS={json.dumps(src.tags(1), sort_keys=True)}', flush=True)
+                  dst = np.full((height, width), nodata, dtype=np.float32)
+                  reproject(
+                      source=rasterio.band(src, 1),
+                      destination=dst,
+                      src_transform=src.transform,
+                      src_crs=src.crs,
+                      src_nodata=src.nodata,
+                      dst_transform=transform,
+                      dst_crs=dst_crs,
+                      dst_nodata=nodata,
+                      resampling=Resampling.bilinear,
+                  )
+                  valid = dst != nodata
+                  values = dst[valid]
+                  if values.size < 1000:
+                      raise RuntimeError(f'{epoch}: too few valid pixels after normalization')
+                  stats = {
+                      'source_path': str(src_path),
+                      'source_crs': str(src.crs),
+                      'source_resolution': list(src.res),
+                      'source_bounds': list(src.bounds),
+                      'source_nodata': src.nodata,
+                      'source_units': list(src.units),
+                      'normalized_crs': dst_crs,
+                      'normalized_resolution_m': res,
+                      'normalized_width': width,
+                      'normalized_height': height,
+                      'valid_pixels': int(values.size),
+                      'min_elevation_m': float(np.min(values)),
+                      'median_elevation_m': float(np.median(values)),
+                      'max_elevation_m': float(np.max(values)),
+                      'vertical_unit_basis': 'USGS_standard_1m_DEM_decimal_meters_NAVD88',
+                  }
+                  inspection[epoch] = stats
+                  print(f'{epoch}_NORMALIZED_STATS={json.dumps(stats, sort_keys=True)}', flush=True)
+                  profile = {
+                      'driver': 'GTiff', 'height': height, 'width': width, 'count': 1,
+                      'dtype': 'float32', 'crs': dst_crs, 'transform': transform,
+                      'nodata': nodata, 'compress': 'deflate', 'tiled': True,
+                  }
+                  with rasterio.open(dst_path, 'w', **profile) as dst_src:
+                      dst_src.write(dst, 1)
+
+          (out / 'dem_normalization.json').write_text(json.dumps(inspection, indent=2, sort_keys=True))
           PY
 
-      - name: Upload discovery
+      - name: Run frozen stable-ground co-registration and residual gates
+        shell: bash -el {0}
+        run: |
+          set -euxo pipefail
+          python scripts/tangerine_lidar_execution.py analyze \
+            --pre-dtm data/research/tangerine_live/tangerine_2015_ground_dtm.tif \
+            --post-dtm data/research/tangerine_live/tangerine_2021_ground_dtm.tif \
+            --target-geojson data/research/tangerine_live/tangerine_target.geojson \
+            --output-json data/research/tangerine_live/tangerine_analysis_result.json
+          cat data/research/tangerine_live/tangerine_analysis_result.json
+
+      - name: Upload compact reproducibility outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tangerine-live-result
           if-no-files-found: warn
           retention-days: 30
-          path: data/research/tangerine_live/tnm_products.json
+          path: |
+            data/research/tangerine_live/prepare_summary.json
+            data/research/tangerine_live/tangerine_target.geojson
+            data/research/tangerine_live/dem_normalization.json
+            data/research/tangerine_live/tangerine_analysis_result.json
