@@ -9,133 +9,49 @@ on:
 jobs:
   execute-tangerine:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up geospatial analysis environment
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-name: tangerine
-          create-args: >-
-            python=3.11
-            pdal
-            numpy
-            rasterio
-            pyproj
-          init-shell: bash
-          cache-environment: true
-
-      - name: Prepare target and analysis bounds
-        shell: bash -el {0}
+      - name: Query official TNM products at Tangerine
         run: |
           set -euxo pipefail
-          python scripts/tangerine_lidar_execution.py prepare --output-dir data/research/tangerine_live
-
-      - name: Discover official USGS DEM products intersecting Tangerine
-        shell: bash -el {0}
-        run: |
-          set -euxo pipefail
+          mkdir -p data/research/tangerine_live
           python - <<'PY'
-          import concurrent.futures
-          import html
           import json
-          import re
           import urllib.parse
           import urllib.request
           from pathlib import Path
-          from pyproj import Transformer
 
-          out = Path("data/research/tangerine_live")
-          prep = json.loads((out / "prepare_summary.json").read_text())
-          xmin, ymin, xmax, ymax = prep["analysis_bounds_utm12n"]
-          tr = Transformer.from_crs("EPSG:32612", "EPSG:4326", always_xy=True)
-          west, south = tr.transform(xmin, ymin)
-          east, north = tr.transform(xmax, ymax)
-          bbox = (west, south, east, north)
-          print("TANGERINE_WGS84_BBOX=", bbox, flush=True)
-          discovery = {"bbox_wgs84": bbox, "tnm": [], "waf": {}}
-
-          params = {
-              "datasets": "Digital Elevation Model (DEM) 1 meter",
-              "bbox": ",".join(f"{x:.8f}" for x in bbox),
-              "max": "100",
-              "outputFormat": "JSON",
-          }
-          api = "https://tnmaccess.nationalmap.gov/api/v1/products?" + urllib.parse.urlencode(params)
-          try:
-              with urllib.request.urlopen(api, timeout=30) as response:
-                  payload = json.load(response)
-              print("TNM_TOTAL=", payload.get("total"), flush=True)
-              for item in payload.get("items", []):
-                  row = {k: item.get(k) for k in (
-                      "title", "publicationDate", "lastUpdated", "downloadURL",
-                      "sourceId", "sourceName", "format", "sizeInBytes"
-                  )}
-                  discovery["tnm"].append(row)
-                  print("TNM_ITEM=", json.dumps(row, sort_keys=True), flush=True)
-          except Exception as exc:
-              print("TNM_API_ERROR=", repr(exc), flush=True)
-
-          projects = {
-              "pre_2015": "AZ_Eastern_PimaCO_2015",
-              "post_2021": "AZ_PimaCo_2_2021",
-          }
-          base = "https://thor-f5.er.usgs.gov/ngtoc/metadata/waf/elevation/opr_dem/geotiff/"
-          href_re = re.compile(r'href=[\"\']([^\"\']+)[\"\']', re.I)
-          url_re = re.compile(r'https?://[^\s<>\"\']+', re.I)
-
-          def first_float(xml, tag):
-              m = re.search(fr"<{tag}[^>]*>\s*([-+0-9.eE]+)\s*</{tag}>", xml, re.I)
-              return float(m.group(1)) if m else None
-
-          def intersects(bb):
-              w, s, e, n = bb
-              return not (e < west or w > east or n < south or s > north)
-
-          def inspect(meta_url):
+          bbox = (-111.20391848, 32.41001929, -111.17003061, 32.43513044)
+          queries = [
+              {"datasets": "Digital Elevation Model (DEM) 1 meter", "bbox": ",".join(map(str,bbox)), "max": "500", "outputFormat": "JSON"},
+              {"q": "Eastern Pima", "bbox": ",".join(map(str,bbox)), "max": "500", "outputFormat": "JSON"},
+              {"q": "PimaCo 2 2021", "bbox": ",".join(map(str,bbox)), "max": "500", "outputFormat": "JSON"},
+          ]
+          results = []
+          for params in queries:
+              url = "https://tnmaccess.nationalmap.gov/api/v1/products?" + urllib.parse.urlencode(params)
+              print("QUERY_URL=", url, flush=True)
               try:
-                  with urllib.request.urlopen(meta_url, timeout=12) as response:
-                      xml = response.read().decode("utf-8", "replace")
-              except Exception:
-                  return None
-              w = first_float(xml, "westbc")
-              e = first_float(xml, "eastbc")
-              n = first_float(xml, "northbc")
-              s = first_float(xml, "southbc")
-              if None in (w, s, e, n) or not intersects((w, s, e, n)):
-                  return None
-              urls = sorted({html.unescape(u).rstrip(".,;)'") for u in url_re.findall(xml)})
-              return {
-                  "metadata_url": meta_url,
-                  "bbox": [w, s, e, n],
-                  "tif_urls": [u for u in urls if ".tif" in u.lower()],
-                  "all_urls": urls[:50],
-              }
-
-          for label, project in projects.items():
-              index_url = base + project + "/"
-              try:
-                  with urllib.request.urlopen(index_url, timeout=30) as response:
-                      index = response.read().decode("utf-8", "replace")
+                  with urllib.request.urlopen(url, timeout=60) as response:
+                      payload = json.load(response)
               except Exception as exc:
-                  print("WAF_INDEX_ERROR=", label, index_url, repr(exc), flush=True)
-                  discovery["waf"][label] = {"index_url": index_url, "error": repr(exc)}
+                  print("QUERY_ERROR=", repr(exc), flush=True)
+                  results.append({"params": params, "error": repr(exc)})
                   continue
-              hrefs = [html.unescape(x) for x in href_re.findall(index)]
-              xml_urls = [urllib.parse.urljoin(index_url, x) for x in sorted({x for x in hrefs if ".xml" in x.lower()})]
-              print("WAF_XML_COUNT=", label, len(xml_urls), "INDEX=", index_url, flush=True)
-              hits = []
-              with concurrent.futures.ThreadPoolExecutor(max_workers=24) as pool:
-                  for hit in pool.map(inspect, xml_urls):
-                      if hit:
-                          hits.append(hit)
-                          print("WAF_HIT=", label, json.dumps(hit, sort_keys=True), flush=True)
-              discovery["waf"][label] = {"index_url": index_url, "hits": hits}
-              print("WAF_HIT_COUNT=", label, len(hits), flush=True)
-
-          (out / "official_dem_discovery.json").write_text(json.dumps(discovery, indent=2, sort_keys=True))
+              print("TOTAL=", payload.get("total"), flush=True)
+              rows = []
+              for item in payload.get("items", []):
+                  row = {k: item.get(k) for k in item.keys() if k in {
+                      "title","publicationDate","lastUpdated","downloadURL","sourceId","sourceName",
+                      "format","sizeInBytes","boundingBox","urls","metaUrl","datasets","extent"
+                  }}
+                  rows.append(row)
+                  print("ITEM=", json.dumps(row, sort_keys=True), flush=True)
+              results.append({"params": params, "total": payload.get("total"), "items": rows})
+          Path("data/research/tangerine_live/tnm_products.json").write_text(json.dumps({"bbox":bbox,"queries":results},indent=2,sort_keys=True))
           PY
 
       - name: Upload discovery
@@ -145,7 +61,4 @@ jobs:
           name: tangerine-live-result
           if-no-files-found: warn
           retention-days: 30
-          path: |
-            data/research/tangerine_live/prepare_summary.json
-            data/research/tangerine_live/tangerine_target.geojson
-            data/research/tangerine_live/official_dem_discovery.json
+          path: data/research/tangerine_live/tnm_products.json
