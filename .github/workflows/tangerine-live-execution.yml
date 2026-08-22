@@ -1,0 +1,61 @@
+name: Tangerine live lidar execution
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/tangerine-live-execution.yml"
+  workflow_dispatch:
+
+jobs:
+  execute-tangerine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up geospatial analysis environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: tangerine
+          create-args: >-
+            python=3.11
+            pdal
+            numpy
+            rasterio
+            pyproj
+          init-shell: bash
+          cache-environment: true
+
+      - name: Build 2015 and 2021 ground DTMs
+        shell: bash -el {0}
+        run: |
+          set -euxo pipefail
+          python scripts/tangerine_lidar_execution.py prepare \
+            --output-dir data/research/tangerine_live \
+            --execute
+
+      - name: Run frozen stable-ground co-registration gates
+        shell: bash -el {0}
+        run: |
+          set -euxo pipefail
+          python scripts/tangerine_lidar_execution.py analyze \
+            --pre-dtm data/research/tangerine_live/tangerine_2015_ground_dtm.tif \
+            --post-dtm data/research/tangerine_live/tangerine_2021_ground_dtm.tif \
+            --target-geojson data/research/tangerine_live/tangerine_target.geojson \
+            --output-json data/research/tangerine_live/tangerine_analysis_result.json
+          cat data/research/tangerine_live/tangerine_analysis_result.json
+
+      - name: Upload compact reproducibility outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tangerine-live-result
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            data/research/tangerine_live/prepare_summary.json
+            data/research/tangerine_live/tangerine_target.geojson
+            data/research/tangerine_live/pdal_2015_ground_dtm.json
+            data/research/tangerine_live/pdal_2021_ground_dtm.json
+            data/research/tangerine_live/tangerine_analysis_result.json
