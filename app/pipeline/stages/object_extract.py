@@ -122,11 +122,15 @@ def _raw_score_threshold(values: np.ndarray) -> float:
     if finite.size == 0:
         raise StageError("Raw PCA score threshold requires finite values.")
     median = float(np.median(finite))
+    max_value = float(np.max(finite))
     mad = float(np.median(np.abs(finite - median)))
     if np.isfinite(mad) and mad > 0.0:
+        percentile_99 = float(np.percentile(finite, 99.0))
         robust_sigma = 1.4826 * mad
-        return max(float(np.percentile(finite, 99.0)), median + 6.0 * robust_sigma)
-    max_value = float(np.max(finite))
+        robust_threshold = median + 6.0 * robust_sigma
+        if robust_threshold >= max_value:
+            return percentile_99
+        return max(percentile_99, robust_threshold)
     if np.isfinite(max_value) and max_value > median:
         return median + 0.5 * (max_value - median)
     return max_value + 1e-6
